@@ -287,6 +287,8 @@ function ICalUrlForm({ hostId, onClose, onConnected }: { hostId: string; onClose
       provider_account_email: '',
       calendar_name: name.trim() || 'iCal subscription',
       sync_enabled: true,
+      use_for_scheduling: true,
+      use_for_reminders: true,
       calendar_id: normalised,
     });
     if (insertErr) { setError(insertErr.message); setSaving(false); return; }
@@ -509,6 +511,12 @@ export function CalendarConnections({ compact = false }: CalendarConnectionsProp
 
   const load = useCallback(async () => {
     if (!profile) return;
+    // One-time backfill: ensure both calendar purpose flags are enabled
+    await supabase
+      .from('connected_calendars')
+      .update({ use_for_scheduling: true, use_for_reminders: true })
+      .eq('host_id', profile.id)
+      .or('use_for_scheduling.eq.false,use_for_reminders.eq.false');
     const { data, error } = await supabase
       .from('connected_calendars')
       .select('id,host_id,provider,provider_account_email,calendar_name,sync_enabled,last_synced_at,token_expires_at,calendar_id')

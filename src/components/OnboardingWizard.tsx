@@ -346,10 +346,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
       const next = { ...prev };
       for (const c of list) {
         if (!next[c.id]) {
-          next[c.id] = {
-            scheduling: (c as ConnectedCalendar & { use_for_scheduling?: boolean }).use_for_scheduling ?? true,
-            reminders: (c as ConnectedCalendar & { use_for_reminders?: boolean }).use_for_reminders ?? true,
-          };
+          next[c.id] = { scheduling: true, reminders: true };
         }
       }
       return next;
@@ -1079,7 +1076,12 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                             className="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                           />
                           <div>
-                            <p className="text-sm font-medium text-slate-800 dark:text-slate-200 group-hover:text-slate-900">{opt.label}</p>
+                            <p className="text-sm font-medium text-slate-800 dark:text-slate-200 group-hover:text-slate-900 flex flex-wrap items-center gap-1.5">
+                              {opt.label}
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
+                                Recommended
+                              </span>
+                            </p>
                             <p className="text-xs text-slate-400 dark:text-slate-500">{opt.desc}</p>
                           </div>
                         </label>
