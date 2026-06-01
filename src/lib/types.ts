@@ -37,6 +37,7 @@ export interface Profile {
   booking_page_header: string;
   phone: string | null;
   whatsapp_number: string | null;
+  default_reminder_channel: 'email' | 'sms' | 'whatsapp' | 'voice' | null;
   schedule_breaks: ScheduleBreak[];
   meeting_buffer_minutes: number;
   onboarding_completed: boolean;

@@ -40,12 +40,12 @@ Deno.serve(async (req: Request) => {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('critical_alert_phone, critical_alerts_enabled')
+      .select('phone, critical_alert_phone, critical_alerts_enabled')
       .eq('id', user.id)
       .maybeSingle();
 
-    const toPhone = profile?.critical_alert_phone;
-    if (!toPhone) return jsonResponse({ error: 'No phone number configured for critical alerts' }, 400);
+    const toPhone = profile?.phone || profile?.critical_alert_phone;
+    if (!toPhone) return jsonResponse({ error: 'No phone number configured. Add one in Settings → Profile.' }, 400);
 
     const twiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">This is a test of your PinOnIt critical meeting alert system. Your voice call alerts are working correctly.</Say></Response>`;
 

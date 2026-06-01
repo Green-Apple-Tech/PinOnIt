@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { PageChecklist } from '../components/PageChecklist';
@@ -11,6 +12,7 @@ import {
   ArrowRight, CheckCircle2, BellRing, Phone, Save, PhoneCall,
 } from 'lucide-react';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
+import { resolveDefaultReminderChannel } from '../lib/reminderChannels';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -142,22 +144,39 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
   const { user, profile, subscription } = useAuth();
   const isPro = (subscription?.plan ?? profile?.plan ?? 'free') === 'pro';
 
+  // Contact channels (profiles.phone / whatsapp_number)
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactWhatsapp, setContactWhatsapp] = useState('');
+  const [editingContact, setEditingContact] = useState(false);
+  const [savingContact, setSavingContact] = useState(false);
+
   // Critical alerts
   const [criticalAlertsEnabled, setCriticalAlertsEnabled] = useState(profile?.critical_alerts_enabled !== false);
-  const [criticalAlertPhone, setCriticalAlertPhone] = useState(profile?.critical_alert_phone ?? '');
   const [savingCritical, setSavingCritical] = useState(false);
   const [savedCritical, setSavedCritical] = useState(false);
   const [testingCall, setTestingCall] = useState(false);
   const [testCallMsg, setTestCallMsg] = useState('');
 
+  const defaultWizardChannel = resolveDefaultReminderChannel(profile?.default_reminder_channel);
+
+  const getDefaultWizardChannels = useCallback(
+    () => new Set<Channel>([defaultWizardChannel]),
+    [defaultWizardChannel],
+  );
+
+  useEffect(() => {
+    const ch = resolveDefaultReminderChannel(profile?.default_reminder_channel);
+    setWizardChannels(new Set([ch]));
+    setPreviewChannel(ch);
+    const storedPhone = profile?.phone ?? '';
+    setContactPhone(storedPhone ? blurFormatPhone(storedPhone) : '');
+  }, [profile?.default_reminder_channel, profile?.phone]);
+
   const handleSaveCriticalAlerts = async () => {
     if (!user) return;
     setSavingCritical(true);
-    const normalized = normalizePhoneE164(criticalAlertPhone);
-    if (normalized) setCriticalAlertPhone(blurFormatPhone(normalized));
     await supabase.from('profiles').update({
       critical_alerts_enabled: criticalAlertsEnabled,
-      critical_alert_phone: normalized || null,
     }).eq('id', user.id);
     setSavingCritical(false);
     setSavedCritical(true);
@@ -165,7 +184,7 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
   };
 
   const handleTestCall = async () => {
-    if (!criticalAlertPhone.trim()) return;
+    if (!contactPhone.trim()) return;
     setTestingCall(true);
     setTestCallMsg('');
     try {
@@ -198,21 +217,15 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
   const [savingSlot, setSavingSlot] = useState<string | null>(null);
   const [applyingQuick, setApplyingQuick] = useState<string | null>(null);
 
-  // Contact channels
-  const [contactPhone, setContactPhone] = useState('');
-  const [contactWhatsapp, setContactWhatsapp] = useState('');
-  const [editingContact, setEditingContact] = useState(false);
-  const [savingContact, setSavingContact] = useState(false);
-
   // Add-reminder wizard
   const [showAddForm, setShowAddForm] = useState(false);
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
   const [wizardTiming, setWizardTiming] = useState<string>('reminder_24h');
-  const [wizardChannels, setWizardChannels] = useState<Set<Channel>>(new Set(['email']));
+  const [wizardChannels, setWizardChannels] = useState<Set<Channel>>(() => new Set(['whatsapp']));
   const [wizardBodies, setWizardBodies] = useState<Record<Channel, string>>({ email: '', sms: '', whatsapp: '', voice: '' });
   const [wizardSubject, setWizardSubject] = useState('');
   const [wizardSaving, setWizardSaving] = useState(false);
-  const [previewChannel, setPreviewChannel] = useState<Channel>('email');
+  const [previewChannel, setPreviewChannel] = useState<Channel>('whatsapp');
 
   // Test SMS
   const [showTestSms, setShowTestSms] = useState(false);
@@ -411,7 +424,7 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
     }
     setShowAddForm(false);
     setWizardStep(1);
-    setWizardChannels(new Set(['email']));
+    setWizardChannels(getDefaultWizardChannels());
     setWizardBodies({ email: '', sms: '', whatsapp: '', voice: '' });
     setWizardSubject('');
     setWizardSaving(false);
@@ -587,6 +600,23 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
       )}
 
       {/* ── Header ── */}
+      {!profile?.phone && (
+        <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-950/20">
+          <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <p className="text-sm text-amber-900 dark:text-amber-200">
+              Add your phone number in Settings → Profile to receive SMS and voice call reminders.
+            </p>
+            <Link
+              to="/dashboard/settings?tab=profile"
+              className="inline-flex items-center gap-1 mt-1.5 text-sm font-semibold text-amber-700 dark:text-amber-300 hover:underline"
+            >
+              Add phone number →
+            </Link>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Reminders &amp; Messages</h1>
@@ -596,7 +626,7 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
         </div>
         {hasAnyReminders && (
           <button
-            onClick={() => { setShowAddForm(true); setWizardStep(1); }}
+            onClick={() => { setWizardChannels(getDefaultWizardChannels()); setPreviewChannel(defaultWizardChannel); setShowAddForm(true); setWizardStep(1); }}
             className="shrink-0 inline-flex items-center gap-2 px-4 py-2 text-white text-sm font-semibold rounded-xl transition-all hover:opacity-90" style={{ backgroundColor: '#5864C6' }}
           >
             <Plus className="h-4 w-4" /> Add Reminder
@@ -635,7 +665,7 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
           </div>
 
           <button
-            onClick={() => { setShowAddForm(true); setWizardStep(1); }}
+            onClick={() => { setWizardChannels(getDefaultWizardChannels()); setPreviewChannel(defaultWizardChannel); setShowAddForm(true); setWizardStep(1); }}
             className="inline-flex items-center gap-2 px-8 py-3.5 text-white font-bold rounded-xl transition-all shadow-lg text-base hover:opacity-90" style={{ backgroundColor: '#5864C6' }}
           >
             <Zap className="h-5 w-5" /> Set Up My First Reminder
@@ -816,10 +846,16 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
                     })}
                   </div>
                 </div>
-                {(wizardChannels.has('sms') && !contactPhone) || (wizardChannels.has('whatsapp') && !contactWhatsapp) ? (
-                  <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-xl text-xs text-amber-700 dark:text-amber-400">
-                    {wizardChannels.has('sms') && !contactPhone && <p>Add a phone number in your contact settings to enable SMS reminders.</p>}
-                    {wizardChannels.has('whatsapp') && !contactWhatsapp && <p>Add a WhatsApp number to enable WhatsApp reminders.</p>}
+                {(wizardChannels.has('sms') && !contactPhone) || (wizardChannels.has('whatsapp') && !contactWhatsapp) || (wizardChannels.has('voice') && !contactPhone) ? (
+                  <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-xl text-xs text-amber-700 dark:text-amber-400 space-y-1">
+                    {(wizardChannels.has('sms') || wizardChannels.has('voice')) && !contactPhone && (
+                      <p>
+                        Add a phone number in{' '}
+                        <Link to="/dashboard/settings?tab=profile" className="font-semibold underline">Settings → Profile</Link>
+                        {' '}to enable SMS and voice reminders to you.
+                      </p>
+                    )}
+                    {wizardChannels.has('whatsapp') && !contactWhatsapp && <p>Add a WhatsApp number in your contact settings below to enable WhatsApp reminders.</p>}
                   </div>
                 ) : null}
                 <div className="flex items-center gap-3">
@@ -1033,7 +1069,7 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
           <p className="text-base font-semibold text-slate-700 dark:text-slate-300 mb-1">Your guests won't receive any notifications yet</p>
           <p className="text-sm text-slate-400 dark:text-slate-500 mb-5">Add a reminder to start sending automated messages.</p>
           <button
-            onClick={() => { setShowAddForm(true); setWizardStep(1); }}
+            onClick={() => { setWizardChannels(getDefaultWizardChannels()); setPreviewChannel(defaultWizardChannel); setShowAddForm(true); setWizardStep(1); }}
             className="inline-flex items-center gap-2 px-5 py-2.5 text-white font-semibold rounded-xl transition-all hover:opacity-90" style={{ backgroundColor: '#5864C6' }}
           >
             <Plus className="h-4 w-4" /> Add First Reminder
@@ -1532,15 +1568,17 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
 
                   <div>
                     <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Call me at</label>
-                    <input
-                      type="tel"
-                      value={criticalAlertPhone}
-                      onChange={e => setCriticalAlertPhone(e.target.value)}
-                      onBlur={e => { if (e.target.value.trim()) setCriticalAlertPhone(blurFormatPhone(e.target.value)); }}
-                      placeholder={PHONE_PLACEHOLDER}
-                      className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-400 transition"
-                    />
-                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{PHONE_HINT}</p>
+                    {contactPhone ? (
+                      <p className="text-sm text-slate-800 dark:text-slate-200 font-mono">{contactPhone}</p>
+                    ) : (
+                      <p className="text-sm text-slate-400 italic">No phone number on file.</p>
+                    )}
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                      Uses your profile phone number.{' '}
+                      <Link to="/dashboard/settings?tab=profile" className="font-medium text-brand-500 hover:underline">
+                        {contactPhone ? 'Update in Settings → Profile' : 'Add phone number →'}
+                      </Link>
+                    </p>
                   </div>
 
                   <div className="flex items-center gap-3 flex-wrap">
@@ -1555,7 +1593,7 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
                     </button>
                     <button
                       onClick={handleTestCall}
-                      disabled={testingCall || !criticalAlertPhone.trim()}
+                      disabled={testingCall || !contactPhone.trim()}
                       className="flex items-center gap-1.5 px-4 py-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 text-slate-700 dark:text-slate-300 text-sm font-medium rounded-lg transition-all"
                     >
                       {testingCall ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Phone className="h-3.5 w-3.5" />}

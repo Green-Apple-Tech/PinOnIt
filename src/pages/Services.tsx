@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import type { Service, BookingQuestion, MeetingType, RecurrenceFrequency } from '../lib/types';
 import { getRecurrenceEndType, type RecurrenceEndType } from '../lib/recurring';
+import { resolveDefaultReminderChannel } from '../lib/reminderChannels';
 import { LOCATION_TYPES, MEETING_TYPE_META } from '../lib/types';
 import {
   Plus, Trash2, X, Check, Loader2, MapPin, Clock, Settings2, MessageSquare,
@@ -399,10 +400,20 @@ export function ServicesPage() {
   const [addingReminder, setAddingReminder] = useState(false);
   const [recurrenceEndType, setRecurrenceEndType] = useState<RecurrenceEndType>('never');
   const [newReminderOffsets, setNewReminderOffsets] = useState<Set<number>>(new Set([-1440]));
-  const [newReminderChannels, setNewReminderChannels] = useState<Set<'email' | 'sms' | 'whatsapp'>>(new Set(['email']));
+  const [newReminderChannels, setNewReminderChannels] = useState<Set<'email' | 'sms' | 'whatsapp'>>(() => new Set(['whatsapp']));
   const [savingReminder, setSavingReminder] = useState(false);
   const [customOffset, setCustomOffset] = useState(false);
   const [customOffsetVal, setCustomOffsetVal] = useState('');
+
+  useEffect(() => {
+    if (!profile) return;
+    const ch = resolveDefaultReminderChannel(profile.default_reminder_channel);
+    if (ch === 'voice') {
+      setNewReminderChannels(new Set(['whatsapp']));
+    } else {
+      setNewReminderChannels(new Set([ch as 'email' | 'sms' | 'whatsapp']));
+    }
+  }, [profile?.default_reminder_channel]);
 
   useEffect(() => {
     if (!profile) return;

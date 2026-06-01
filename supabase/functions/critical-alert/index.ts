@@ -69,7 +69,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: bookings5m } = await supabase
       .from('bookings')
-      .select('*, profiles(id, full_name, critical_alert_phone, critical_alerts_enabled), services(name)')
+      .select('*, profiles(id, full_name, phone, critical_alert_phone, critical_alerts_enabled), services(name)')
       .eq('is_critical', true)
       .eq('critical_alert_sent_5m', false)
       .eq('status', 'confirmed')
@@ -78,7 +78,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: bookings1m } = await supabase
       .from('bookings')
-      .select('*, profiles(id, full_name, critical_alert_phone, critical_alerts_enabled), services(name)')
+      .select('*, profiles(id, full_name, phone, critical_alert_phone, critical_alerts_enabled), services(name)')
       .eq('is_critical', true)
       .eq('critical_alert_sent_1m', false)
       .eq('status', 'confirmed')
@@ -90,7 +90,7 @@ Deno.serve(async (req: Request) => {
     const processBooking = async (booking: Record<string, unknown>, minutes: 5 | 1) => {
       const host = booking.profiles as Record<string, unknown>;
       const alertsEnabled = (host?.critical_alerts_enabled as boolean) !== false;
-      const hostPhone = host?.critical_alert_phone as string | null;
+      const hostPhone = (host?.phone as string | null) || (host?.critical_alert_phone as string | null);
       const serviceName = ((booking.services as Record<string, unknown>)?.name as string) ?? 'Meeting';
       const guestName = booking.guest_name as string;
       const startTime = booking.start_time as string;

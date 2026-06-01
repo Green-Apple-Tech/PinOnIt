@@ -5,10 +5,12 @@ import { supabase } from '../lib/supabase';
 import { TIMEZONES } from '../lib/types';
 import type { EmergencyContact } from '../lib/types';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
+import { resolveDefaultReminderChannel, type ReminderChannelPreference } from '../lib/reminderChannels';
 import {
   Save, Loader2, Copy, Check, Code, Palette, ExternalLink, Upload, X,
   ImagePlus, CheckCircle2, AlertCircle, Link2, QrCode, Users, Gift,
   TrendingUp, DollarSign, Calendar, Video, Wifi, WifiOff, BellRing, Plus, Trash2, Phone, PhoneCall,
+  Mail, Smartphone, MessageSquare,
 } from 'lucide-react';
 import { QRModal } from '../components/QRModal';
 import { ColorSwatchRow } from '../components/ColorSwatchRow';
@@ -28,6 +30,15 @@ const SESSION_TIMEOUT_OPTIONS: { label: string; minutes: number | null }[] = [
   { label: '8 hours', minutes: 480 },
   { label: '1 day', minutes: 1440 },
 ];
+
+const REMINDER_CHANNEL_OPTIONS: { value: ReminderChannelPreference; label: string; icon: typeof Mail }[] = [
+  { value: 'email', label: 'Email', icon: Mail },
+  { value: 'sms', label: 'SMS', icon: Smartphone },
+  { value: 'whatsapp', label: 'WhatsApp', icon: MessageSquare },
+  { value: 'voice', label: 'Voice Call', icon: PhoneCall },
+];
+
+const GENERAL_TABS: SettingsTab[] = ['profile', 'booking_page', 'branding', 'embed', 'referrals', 'integrations'];
 
 // ── Color picker ──────────────────────────────────────────────────────────────
 
@@ -353,12 +364,19 @@ export function SettingsPage() {
   // Read ?tab= query param to allow deep-linking from redirects
   const initialSection = (): SettingsSection => {
     const p = new URLSearchParams(location.search).get('tab');
+    if (p && GENERAL_TABS.includes(p as SettingsTab)) return 'general';
     if (p === 'analytics' || p === 'billing' || p === 'availability' || p === 'reminders') return p;
     return 'general';
   };
 
+  const initialTab = (): SettingsTab => {
+    const p = new URLSearchParams(location.search).get('tab');
+    if (p && GENERAL_TABS.includes(p as SettingsTab)) return p as SettingsTab;
+    return 'profile';
+  };
+
   const [section, setSection] = useState<SettingsSection>(initialSection);
-  const [tab, setTab] = useState<SettingsTab>('profile');
+  const [tab, setTab] = useState<SettingsTab>(initialTab);
 
   const [fullName, setFullName] = useState(
     profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || ''
@@ -376,6 +394,10 @@ export function SettingsPage() {
   const [showWizardButton, setShowWizardButton] = useState(profile?.show_wizard_button !== false);
   const [defaultLinkExpiryDays, setDefaultLinkExpiryDays] = useState<number | null>(profile?.default_link_expiry_days ?? 7);
   const [sessionTimeoutMinutes, setSessionTimeoutMinutes] = useState<number | null>(profile?.session_timeout_minutes ?? null);
+
+  // Notifications (profile phone + default reminder channel)
+  const [notificationPhone, setNotificationPhone] = useState('');
+  const [defaultReminderChannel, setDefaultReminderChannel] = useState<ReminderChannelPreference>('whatsapp');
 
   // Voice reminders
   const [voiceReminderEnabled, setVoiceReminderEnabled] = useState(profile?.voice_reminder_enabled ?? false);
@@ -428,10 +450,23 @@ export function SettingsPage() {
   }, [user]);
 
   useEffect(() => {
+    const p = new URLSearchParams(location.search).get('tab');
+    if (p && GENERAL_TABS.includes(p as SettingsTab)) {
+      setSection('general');
+      setTab(p as SettingsTab);
+    } else if (p === 'analytics' || p === 'billing' || p === 'availability' || p === 'reminders') {
+      setSection(p);
+    }
+  }, [location.search]);
+
+  useEffect(() => {
     if (profile) {
       setSessionTimeoutMinutes(profile.session_timeout_minutes ?? null);
+      const storedPhone = profile.phone ?? '';
+      setNotificationPhone(storedPhone ? blurFormatPhone(storedPhone) : '');
+      setDefaultReminderChannel(resolveDefaultReminderChannel(profile.default_reminder_channel));
     }
-  }, [profile?.session_timeout_minutes]);
+  }, [profile?.session_timeout_minutes, profile?.phone, profile?.default_reminder_channel]);
 
   const handleAddEmergencyContact = async () => {
     if (!user || !newContactLabel.trim() || !newContactPhone.trim()) return;
@@ -512,6 +547,8 @@ export function SettingsPage() {
         show_wizard_button: showWizardButton,
         default_link_expiry_days: defaultLinkExpiryDays,
         session_timeout_minutes: sessionTimeoutMinutes,
+        phone: normalizePhoneE164(notificationPhone) || null,
+        default_reminder_channel: defaultReminderChannel,
       })
       .eq('id', user.id);
     await refreshProfile();
@@ -631,6 +668,52 @@ export function SettingsPage() {
               className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition">
               {TIMEZONES.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
             </select>
+          </div>
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Notifications</h3>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">SMS, voice, and default reminder preferences for your account.</p>
+            </div>
+            <div>
+              <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">Phone number</label>
+              <input
+                type="tel"
+                value={notificationPhone}
+                onChange={e => setNotificationPhone(e.target.value)}
+                onBlur={e => { if (e.target.value.trim()) setNotificationPhone(blurFormatPhone(e.target.value)); }}
+                placeholder={PHONE_PLACEHOLDER}
+                className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+              />
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{PHONE_HINT}</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Used for SMS and voice call reminders sent to you.</p>
+            </div>
+            <div>
+              <label className="block text-xs text-slate-500 dark:text-slate-400 mb-2">Default reminder channel</label>
+              <div className="flex flex-wrap gap-2">
+                {REMINDER_CHANNEL_OPTIONS.map(({ value, label, icon: Icon }) => {
+                  const active = defaultReminderChannel === value;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setDefaultReminderChannel(value)}
+                      className={[
+                        'inline-flex items-center gap-1.5 min-h-[40px] px-4 py-2 rounded-full text-sm font-semibold border transition-all',
+                        active
+                          ? 'bg-emerald-500 text-white border-emerald-500'
+                          : 'bg-transparent text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600',
+                      ].join(' ')}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 leading-relaxed">
+                This is the channel used by default when you create new reminders. You can always change it per reminder.
+              </p>
+            </div>
           </div>
           <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
             <label className="flex items-center justify-between gap-4 cursor-pointer">
