@@ -3,7 +3,7 @@ import { Navigate, useNavigate, useSearchParams, useLocation, Link } from 'react
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { DEFAULT_CALENDAR_CONFLICT_SETTINGS, type CalendarConflictSettings } from '../lib/types';
-import { PHONE_PLACEHOLDER, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
+import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import { Plus, X, ChevronRight, ChevronLeft, Users, Clock, MapPin, MessageSquare, Check, Loader2, Trash2, AlertCircle, ArrowRight, Phone, Calendar, RefreshCw, CheckCircle2, Sparkles } from 'lucide-react';
 
 const BRAND = '#5864C6';
@@ -1621,6 +1621,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
                       readOnly={phoneMasked[i]}
                     />
                   </div>
+                  <p className="text-xs text-slate-400 mt-1.5">{PHONE_HINT}</p>
                 </div>
 
                 {/* Role */}

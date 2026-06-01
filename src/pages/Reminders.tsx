@@ -10,7 +10,7 @@ import {
   MoreVertical, AlertTriangle, Smartphone, Pencil, Zap,
   ArrowRight, CheckCircle2, BellRing, Phone, Save, PhoneCall,
 } from 'lucide-react';
-import { PHONE_PLACEHOLDER, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
+import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -1061,8 +1061,8 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
         {editingContact ? (
           <div className="px-5 py-4 space-y-3">
             {[
-              { label: 'Phone (SMS)', icon: Smartphone, value: contactPhone, setter: setContactPhone, placeholder: PHONE_PLACEHOLDER, hint: 'US 10-digit or international with +' },
-              { label: 'WhatsApp number', icon: MessageSquare, value: contactWhatsapp, setter: setContactWhatsapp, placeholder: PHONE_PLACEHOLDER, hint: 'US 10-digit or international with +' },
+              { label: 'Phone (SMS)', icon: Smartphone, value: contactPhone, setter: setContactPhone, placeholder: PHONE_PLACEHOLDER, hint: PHONE_HINT },
+              { label: 'WhatsApp number', icon: MessageSquare, value: contactWhatsapp, setter: setContactWhatsapp, placeholder: PHONE_PLACEHOLDER, hint: PHONE_HINT },
             ].map(({ label, icon: Icon, value, setter, placeholder, hint }) => (
               <div key={label} className="flex items-center gap-3">
                 <div className="w-8 flex justify-center shrink-0">
@@ -1156,6 +1156,7 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
                   {testSmsSending ? 'Sending…' : 'Send test'}
                 </button>
               </div>
+              <p className="text-xs text-slate-400 dark:text-slate-500">{PHONE_HINT}</p>
               {testSmsResult && (
                 <div className={`flex items-start gap-2 px-3 py-2.5 rounded-lg text-sm ${
                   testSmsResult.ok
@@ -1539,7 +1540,7 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
                       placeholder={PHONE_PLACEHOLDER}
                       className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-400 transition"
                     />
-                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">US 10-digit numbers work without +1 — it is added automatically.</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{PHONE_HINT}</p>
                   </div>
 
                   <div className="flex items-center gap-3 flex-wrap">

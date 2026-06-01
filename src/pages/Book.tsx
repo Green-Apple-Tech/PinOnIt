@@ -12,7 +12,7 @@ import {
   getUpcomingRecurrenceDates,
   shouldStopRecurrence,
 } from '../lib/recurring';
-import { PHONE_PLACEHOLDER, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
+import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import {
   Calendar,
   Clock,
@@ -367,6 +367,9 @@ function ReminderWizard({
               placeholder={CHANNELS.find((c) => c.key === addingChannel)?.placeholder}
               className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
             />
+            {addingChannel !== 'email' && (
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">{PHONE_HINT}</p>
+            )}
             {addingChannel === 'voice' && (
               <p className="text-xs text-violet-600 dark:text-violet-400 mt-1.5">Required for voice call reminders. You will receive an automated call at this number.</p>
             )}
@@ -1242,16 +1245,21 @@ export function BookPage() {
                           ))}
                         </div>
                       ) : (
-                        <input type={q.field_type === 'phone' ? 'tel' : q.field_type === 'url' ? 'url' : 'text'}
-                          value={answers[q.id] ?? ''}
-                          onChange={(e) => setAnswers((p) => ({ ...p, [q.id]: e.target.value }))}
-                          onBlur={(e) => {
-                            if (q.field_type === 'phone' && e.target.value.trim()) {
-                              setAnswers((p) => ({ ...p, [q.id]: blurFormatPhone(e.target.value) }));
-                            }
-                          }}
-                          placeholder={q.field_type === 'phone' ? PHONE_PLACEHOLDER : undefined}
-                          className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition" />
+                        <>
+                          <input type={q.field_type === 'phone' ? 'tel' : q.field_type === 'url' ? 'url' : 'text'}
+                            value={answers[q.id] ?? ''}
+                            onChange={(e) => setAnswers((p) => ({ ...p, [q.id]: e.target.value }))}
+                            onBlur={(e) => {
+                              if (q.field_type === 'phone' && e.target.value.trim()) {
+                                setAnswers((p) => ({ ...p, [q.id]: blurFormatPhone(e.target.value) }));
+                              }
+                            }}
+                            placeholder={q.field_type === 'phone' ? PHONE_PLACEHOLDER : undefined}
+                            className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition" />
+                          {q.field_type === 'phone' && (
+                            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{PHONE_HINT}</p>
+                          )}
+                        </>
                       )}
                     </div>
                   ))}

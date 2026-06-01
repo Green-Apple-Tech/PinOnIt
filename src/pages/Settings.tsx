@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { TIMEZONES } from '../lib/types';
 import type { EmergencyContact } from '../lib/types';
-import { PHONE_PLACEHOLDER, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
+import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import {
   Save, Loader2, Copy, Check, Code, Palette, ExternalLink, Upload, X,
   ImagePlus, CheckCircle2, AlertCircle, Link2, QrCode, Users, Gift,
@@ -762,6 +762,7 @@ export function SettingsPage() {
                     placeholder={PHONE_PLACEHOLDER}
                     className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-400 transition"
                   />
+                  <p className="text-xs text-slate-400 mt-1">{PHONE_HINT}</p>
                 </div>
               </div>
               <button
