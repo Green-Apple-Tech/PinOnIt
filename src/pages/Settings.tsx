@@ -40,6 +40,13 @@ const REMINDER_CHANNEL_OPTIONS: { value: ReminderChannelPreference; label: strin
 
 const GENERAL_TABS: SettingsTab[] = ['profile', 'booking_page', 'branding', 'embed', 'referrals', 'integrations'];
 
+const SINGLE_USE_LINK_EXPIRY_OPTIONS: { value: number; label: string }[] = [
+  { value: 0, label: '1 use' },
+  { value: 1, label: 'After 24 hours' },
+  { value: 7, label: 'After 7 days' },
+  { value: 30, label: 'After 30 days' },
+];
+
 // ── Color picker ──────────────────────────────────────────────────────────────
 
 function isValidHex(v: string) {
@@ -392,7 +399,8 @@ export function SettingsPage() {
   const [logoUrl, setLogoUrl] = useState(profile?.avatar_url ?? '');
 
   const [showWizardButton, setShowWizardButton] = useState(profile?.show_wizard_button !== false);
-  const [defaultLinkExpiryDays, setDefaultLinkExpiryDays] = useState<number | null>(profile?.default_link_expiry_days ?? 7);
+  const [singleUseLinksEnabled, setSingleUseLinksEnabled] = useState(profile?.single_use_links_enabled ?? false);
+  const [defaultLinkExpiryDays, setDefaultLinkExpiryDays] = useState<number>(profile?.default_link_expiry_days ?? 0);
   const [sessionTimeoutMinutes, setSessionTimeoutMinutes] = useState<number | null>(profile?.session_timeout_minutes ?? null);
 
   // Notifications (profile phone + default reminder channel)
@@ -401,7 +409,7 @@ export function SettingsPage() {
 
   // Voice reminders
   const [voiceReminderEnabled, setVoiceReminderEnabled] = useState(profile?.voice_reminder_enabled ?? false);
-  const defaultVoiceScript = 'Hi, this is a reminder from {{host_name}} that you have a {{service_name}} scheduled for {{date}} at {{time}}. We look forward to speaking with you.';
+  const defaultVoiceScript = 'Hi {{host_name}}, reminder: you have a {{service_name}} with {{guest_name}} scheduled for {{date}} at {{time}}. This is your PinOnIt reminder.';
   const [voiceMessageTemplate, setVoiceMessageTemplate] = useState(profile?.voice_message_template ?? '');
   const [savingVoice, setSavingVoice] = useState(false);
   const [savedVoice, setSavedVoice] = useState(false);
@@ -465,8 +473,12 @@ export function SettingsPage() {
       const storedPhone = profile.phone ?? '';
       setNotificationPhone(storedPhone ? blurFormatPhone(storedPhone) : '');
       setDefaultReminderChannel(resolveDefaultReminderChannel(profile.default_reminder_channel));
+      setSingleUseLinksEnabled(profile.single_use_links_enabled ?? false);
+      if (profile.default_link_expiry_days != null) {
+        setDefaultLinkExpiryDays(profile.default_link_expiry_days);
+      }
     }
-  }, [profile?.session_timeout_minutes, profile?.phone, profile?.default_reminder_channel]);
+  }, [profile?.session_timeout_minutes, profile?.phone, profile?.default_reminder_channel, profile?.single_use_links_enabled, profile?.default_link_expiry_days]);
 
   const handleAddEmergencyContact = async () => {
     if (!user || !newContactLabel.trim() || !newContactPhone.trim()) return;
@@ -545,7 +557,8 @@ export function SettingsPage() {
         booking_page_header: bookingHeader,
         avatar_url: avatarUrl || null,
         show_wizard_button: showWizardButton,
-        default_link_expiry_days: defaultLinkExpiryDays,
+        single_use_links_enabled: singleUseLinksEnabled,
+        default_link_expiry_days: singleUseLinksEnabled ? defaultLinkExpiryDays : null,
         session_timeout_minutes: sessionTimeoutMinutes,
         phone: normalizePhoneE164(notificationPhone) || null,
         default_reminder_channel: defaultReminderChannel,
@@ -730,23 +743,36 @@ export function SettingsPage() {
               </button>
             </label>
           </div>
-          <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-            <div>
-              <p className="text-sm font-medium text-slate-800 dark:text-slate-200 mb-0.5">Default link expiration</p>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">When sharing your booking link, optionally expire it after this many days. Select "Never" to disable expiry by default.</p>
-              <select
-                value={defaultLinkExpiryDays ?? ''}
-                onChange={(e) => setDefaultLinkExpiryDays(e.target.value === '' ? null : parseInt(e.target.value, 10))}
-                className="w-full sm:w-48 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#5864C6] transition"
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-3">
+            <label className="flex items-center justify-between gap-4 cursor-pointer">
+              <div>
+                <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Single use links</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                  When enabled, each booking link can only be used once. After one booking is made, the link expires.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSingleUseLinksEnabled(v => !v)}
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none ${singleUseLinksEnabled ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}
               >
-                <option value="">Never</option>
-                <option value="1">1 day</option>
-                <option value="3">3 days</option>
-                <option value="7">7 days</option>
-                <option value="14">14 days</option>
-                <option value="30">30 days</option>
-              </select>
-            </div>
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${singleUseLinksEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </label>
+            {singleUseLinksEnabled && (
+              <div>
+                <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">Link expires after</label>
+                <select
+                  value={defaultLinkExpiryDays}
+                  onChange={(e) => setDefaultLinkExpiryDays(parseInt(e.target.value, 10))}
+                  className="w-full sm:w-56 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#5864C6] transition"
+                >
+                  {SINGLE_USE_LINK_EXPIRY_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
           <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-3">
             <div>
@@ -876,7 +902,7 @@ export function SettingsPage() {
             </div>
             <div>
               <h2 className="text-base font-semibold text-slate-900 dark:text-white">Voice Reminders</h2>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Automated phone call reminders to guests before their meetings.</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Automated phone call reminders to you before your meetings.</p>
             </div>
           </div>
 
@@ -884,7 +910,9 @@ export function SettingsPage() {
           <label className="flex items-center justify-between cursor-pointer">
             <div>
               <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Enable voice call reminders</p>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">When enabled, guests will receive an automated voice call reminder before their meeting.</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                When enabled, YOU will receive an automated voice call reminder before your meetings start. Guests are never called — this is for you only.
+              </p>
             </div>
             <button
               onClick={() => setVoiceReminderEnabled((v) => !v)}
@@ -897,7 +925,7 @@ export function SettingsPage() {
           {/* Voice message preview/customization */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Voice message script</label>
-            <p className="text-xs text-slate-400 dark:text-slate-500">Leave blank to use the default script. Supports <code className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-[11px]">{'{{host_name}}'}</code>, <code className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-[11px]">{'{{service_name}}'}</code>, <code className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-[11px]">{'{{date}}'}</code>, <code className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-[11px]">{'{{time}}'}</code>.</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">Leave blank to use the default script. Supports <code className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-[11px]">{'{{host_name}}'}</code>, <code className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-[11px]">{'{{guest_name}}'}</code>, <code className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-[11px]">{'{{service_name}}'}</code>, <code className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-[11px]">{'{{date}}'}</code>, <code className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-[11px]">{'{{time}}'}</code>.</p>
             <textarea
               value={voiceMessageTemplate}
               onChange={(e) => setVoiceMessageTemplate(e.target.value)}
@@ -905,6 +933,7 @@ export function SettingsPage() {
               placeholder={defaultVoiceScript}
               className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500 transition resize-none"
             />
+            <p className="text-xs text-slate-400 dark:text-slate-500">This message is read by an automated voice. Keep it short and clear.</p>
           </div>
 
           {/* Preview box */}
@@ -913,6 +942,7 @@ export function SettingsPage() {
             <p className="text-sm text-violet-800 dark:text-violet-300 leading-relaxed italic">
               "{(voiceMessageTemplate.trim() || defaultVoiceScript)
                 .replace('{{host_name}}', 'Jane Smith')
+                .replace('{{guest_name}}', 'John Doe')
                 .replace('{{service_name}}', '60 Minute Consultation')
                 .replace('{{date}}', 'Monday, June 2')
                 .replace('{{time}}', '2:00 PM')}"

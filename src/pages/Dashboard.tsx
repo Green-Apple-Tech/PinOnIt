@@ -523,12 +523,14 @@ function SharePanel({
   userId,
   onSlugChange,
   selectedServiceIds,
+  singleUseLinksEnabled,
   defaultExpiryDays,
 }: {
   slug: string;
   userId: string;
   onSlugChange: (newSlug: string) => void;
   selectedServiceIds: Set<string>;
+  singleUseLinksEnabled: boolean;
   defaultExpiryDays: number | null;
 }) {
   const [currentSlug, setCurrentSlug] = useState(slug);
@@ -544,7 +546,7 @@ function SharePanel({
     if (selectedServiceIds.size > 0) {
       params.set('types', Array.from(selectedServiceIds).join(','));
     }
-    if (useExpiry && defaultExpiryDays !== null) {
+    if (useExpiry && defaultExpiryDays !== null && defaultExpiryDays > 0) {
       const expireAt = Date.now() + defaultExpiryDays * 24 * 60 * 60 * 1000;
       params.set('expires', expireAt.toString());
     }
@@ -586,7 +588,7 @@ function SharePanel({
       </div>
 
       {/* Expiring link checkbox */}
-      {defaultExpiryDays !== null && (
+      {singleUseLinksEnabled && defaultExpiryDays !== null && defaultExpiryDays > 0 && (
         <label className="flex items-center gap-2 mb-3 cursor-pointer select-none">
           <span
             className={`h-4 w-4 rounded flex items-center justify-center shrink-0 border-2 transition-colors ${
@@ -1183,6 +1185,7 @@ export function Dashboard() {
                 userId={profile.id}
                 onSlugChange={(s) => setLiveSlug(s)}
                 selectedServiceIds={selectedServiceIds}
+                singleUseLinksEnabled={profile.single_use_links_enabled ?? false}
                 defaultExpiryDays={profile.default_link_expiry_days ?? null}
               />
             )}

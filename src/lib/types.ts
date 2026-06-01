@@ -53,6 +53,7 @@ export interface Profile {
   show_wizard_button: boolean | null;
   wizard_active: boolean | null;
   default_link_expiry_days: number | null;
+  single_use_links_enabled: boolean;
   session_timeout_minutes: number | null;
   calendar_conflict_settings: CalendarConflictSettings | null;
   created_at: string;
