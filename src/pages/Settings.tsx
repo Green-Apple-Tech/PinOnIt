@@ -405,6 +405,7 @@ export function SettingsPage() {
 
   // Notifications (profile phone + default reminder channel)
   const [notificationPhone, setNotificationPhone] = useState('');
+  const [notificationWhatsapp, setNotificationWhatsapp] = useState('');
   const [defaultReminderChannel, setDefaultReminderChannel] = useState<ReminderChannelPreference>('whatsapp');
 
   // Voice reminders
@@ -472,13 +473,15 @@ export function SettingsPage() {
       setSessionTimeoutMinutes(profile.session_timeout_minutes ?? null);
       const storedPhone = profile.phone ?? '';
       setNotificationPhone(storedPhone ? blurFormatPhone(storedPhone) : '');
+      const storedWhatsapp = profile.whatsapp_number ?? '';
+      setNotificationWhatsapp(storedWhatsapp ? blurFormatPhone(storedWhatsapp) : '');
       setDefaultReminderChannel(resolveDefaultReminderChannel(profile.default_reminder_channel));
       setSingleUseLinksEnabled(profile.single_use_links_enabled ?? false);
       if (profile.default_link_expiry_days != null) {
         setDefaultLinkExpiryDays(profile.default_link_expiry_days);
       }
     }
-  }, [profile?.session_timeout_minutes, profile?.phone, profile?.default_reminder_channel, profile?.single_use_links_enabled, profile?.default_link_expiry_days]);
+  }, [profile?.session_timeout_minutes, profile?.phone, profile?.whatsapp_number, profile?.default_reminder_channel, profile?.single_use_links_enabled, profile?.default_link_expiry_days]);
 
   const handleAddEmergencyContact = async () => {
     if (!user || !newContactLabel.trim() || !newContactPhone.trim()) return;
@@ -561,6 +564,7 @@ export function SettingsPage() {
         default_link_expiry_days: singleUseLinksEnabled ? defaultLinkExpiryDays : null,
         session_timeout_minutes: sessionTimeoutMinutes,
         phone: normalizePhoneE164(notificationPhone) || null,
+        whatsapp_number: normalizePhoneE164(notificationWhatsapp) || null,
         default_reminder_channel: defaultReminderChannel,
       })
       .eq('id', user.id);
@@ -698,7 +702,21 @@ export function SettingsPage() {
                 className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
               />
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{PHONE_HINT}</p>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Used for SMS and voice call reminders sent to you.</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Used for SMS reminders and voice call alerts.</p>
+            </div>
+            <div>
+              <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">WhatsApp number</label>
+              <input
+                type="tel"
+                value={notificationWhatsapp}
+                onChange={e => setNotificationWhatsapp(e.target.value)}
+                onBlur={e => { if (e.target.value.trim()) setNotificationWhatsapp(blurFormatPhone(e.target.value)); }}
+                placeholder={PHONE_PLACEHOLDER}
+                className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+              />
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 leading-relaxed">
+                Leave blank to use your phone number above for WhatsApp. Enter a different number if your WhatsApp is on a separate device.
+              </p>
             </div>
             <div>
               <label className="block text-xs text-slate-500 dark:text-slate-400 mb-2">Default reminder channel</label>
@@ -724,7 +742,7 @@ export function SettingsPage() {
                 })}
               </div>
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 leading-relaxed">
-                This is the channel used by default when you create new reminders. You can always change it per reminder.
+                Pre-selected when creating new reminders
               </p>
             </div>
           </div>

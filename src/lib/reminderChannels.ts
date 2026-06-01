@@ -19,3 +19,12 @@ export function getHostPhone(profile: {
   if (!profile) return null;
   return profile.phone || profile.critical_alert_phone || null;
 }
+
+/** Host WhatsApp destination — whatsapp_number if set, otherwise phone. */
+export function getWhatsappNumber(profile: {
+  whatsapp_number?: string | null;
+  phone?: string | null;
+} | null | undefined): string | null {
+  if (!profile) return null;
+  return profile.whatsapp_number || profile.phone || null;
+}

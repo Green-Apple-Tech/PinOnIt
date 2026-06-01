@@ -12,7 +12,7 @@ import {
   ArrowRight, CheckCircle2, BellRing, Phone, Save, PhoneCall,
 } from 'lucide-react';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
-import { resolveDefaultReminderChannel } from '../lib/reminderChannels';
+import { resolveDefaultReminderChannel, getWhatsappNumber } from '../lib/reminderChannels';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -158,6 +158,7 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
   const [testCallMsg, setTestCallMsg] = useState('');
 
   const defaultWizardChannel = resolveDefaultReminderChannel(profile?.default_reminder_channel);
+  const effectiveWhatsapp = getWhatsappNumber(profile);
 
   const getDefaultWizardChannels = useCallback(
     () => new Set<Channel>([defaultWizardChannel]),
@@ -594,7 +595,7 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
           items={[
             { id: 'template', label: 'Create your first reminder template', why: 'Templates are the messages sent to guests before meetings', done: templates.length > 0 },
             { id: 'rule', label: 'Set up a reminder rule', why: 'Rules control which template fires and how far in advance', done: rules.length > 0 },
-            { id: 'phone', label: 'Add your phone number for SMS/WhatsApp', why: 'Required to receive SMS and WhatsApp reminders yourself', done: !!(contactPhone || contactWhatsapp) },
+            { id: 'phone', label: 'Add your phone number for SMS/WhatsApp', why: 'Required to receive SMS and WhatsApp reminders yourself', done: !!(contactPhone || effectiveWhatsapp) },
           ]}
         />
       )}
@@ -846,7 +847,7 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
                     })}
                   </div>
                 </div>
-                {(wizardChannels.has('sms') && !contactPhone) || (wizardChannels.has('whatsapp') && !contactWhatsapp) || (wizardChannels.has('voice') && !contactPhone) ? (
+                {(wizardChannels.has('sms') && !contactPhone) || (wizardChannels.has('whatsapp') && !effectiveWhatsapp) || (wizardChannels.has('voice') && !contactPhone) ? (
                   <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-xl text-xs text-amber-700 dark:text-amber-400 space-y-1">
                     {(wizardChannels.has('sms') || wizardChannels.has('voice')) && !contactPhone && (
                       <p>
@@ -855,7 +856,13 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
                         {' '}to enable SMS and voice reminders to you.
                       </p>
                     )}
-                    {wizardChannels.has('whatsapp') && !contactWhatsapp && <p>Add a WhatsApp number in your contact settings below to enable WhatsApp reminders.</p>}
+                    {wizardChannels.has('whatsapp') && !effectiveWhatsapp && (
+                      <p>
+                        Add a phone or WhatsApp number in{' '}
+                        <Link to="/dashboard/settings?tab=profile" className="font-semibold underline">Settings → Profile</Link>
+                        {' '}to enable WhatsApp reminders.
+                      </p>
+                    )}
                   </div>
                 ) : null}
                 <div className="flex items-center gap-3">
@@ -1137,7 +1144,7 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
             </div>
             {[
               { label: 'SMS', icon: Smartphone, value: contactPhone, placeholder: 'Add phone to enable SMS' },
-              { label: 'WhatsApp', icon: MessageSquare, value: contactWhatsapp, placeholder: 'Add number to enable WhatsApp' },
+              { label: 'WhatsApp', icon: MessageSquare, value: contactWhatsapp || (effectiveWhatsapp && !contactWhatsapp ? blurFormatPhone(effectiveWhatsapp) : ''), placeholder: 'Add number to enable WhatsApp' },
             ].map(({ label, icon: Icon, value, placeholder }) => (
               <div key={label} className="flex items-center gap-3 px-5 py-3">
                 <Icon className="h-4 w-4 text-slate-400 shrink-0" />

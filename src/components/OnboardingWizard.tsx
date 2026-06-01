@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { TIMEZONES } from '../lib/types';
+import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import {
   ArrowRight, ArrowLeft, Check, X, Loader2, Copy, ExternalLink, Pencil,
   Calendar, Mail, Video, Phone, Globe, Zap, QrCode, Sparkles,
@@ -34,6 +35,7 @@ const STEPS = [
   'calendar',
   'calendar_purpose',
   'contacts',
+  'profile',
   'booking_link',
   'video',
   'qr_code',
@@ -234,6 +236,8 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
   const [eventColor, setEventColor] = useState(BRAND_SWATCHES[8].hex);
   const [slug, setSlug] = useState('');
   const [timezone, setTimezone] = useState(profile?.timezone ?? 'America/New_York');
+  const [profilePhone, setProfilePhone] = useState('');
+  const [profileWhatsapp, setProfileWhatsapp] = useState('');
   const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle');
   const [createdServiceId, setCreatedServiceId] = useState<string | null>(null);
   const [bookingUrl, setBookingUrl] = useState('');
@@ -356,6 +360,14 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
   useEffect(() => { loadCalendars(); }, [loadCalendars]);
 
   // ── Slug from name ───────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!profile) return;
+    const storedPhone = profile.phone ?? '';
+    setProfilePhone(storedPhone ? blurFormatPhone(storedPhone) : '');
+    const storedWhatsapp = profile.whatsapp_number ?? '';
+    setProfileWhatsapp(storedWhatsapp ? blurFormatPhone(storedWhatsapp) : '');
+  }, [profile?.phone, profile?.whatsapp_number]);
+
   useEffect(() => {
     if (profile?.slug) { setSlug(profile.slug); return; }
     if (profile?.full_name) {
@@ -569,6 +581,20 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
       setCalError(String(e));
       setCalConnecting(null);
     }
+  };
+
+  // ── Save profile contact info (profile step) ───────────────────────────────
+  const handleSaveProfileStep = async () => {
+    if (!user) return;
+    setSaving(true);
+    await supabase.from('profiles').update({
+      phone: normalizePhoneE164(profilePhone) || null,
+      whatsapp_number: normalizePhoneE164(profileWhatsapp) || null,
+    }).eq('id', user.id);
+    await refreshProfile();
+    await saveStep(STEPS.indexOf('profile') + 1);
+    setSaving(false);
+    goNext();
   };
 
   // ── Create booking link (Step 5) ─────────────────────────────────────────────
@@ -1186,7 +1212,59 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
           </div>
         );
 
-      // ── Step 4: Booking link ──────────────────────────────────────────────────
+      // ── Step: Profile / notifications ───────────────────────────────────────
+      case 'profile':
+        return (
+          <div>
+            <div className="mb-5">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">How should we reach you?</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Add your phone numbers for SMS, voice, and WhatsApp reminders. You can change these anytime in Settings.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">Phone number</label>
+                <input
+                  type="tel"
+                  value={profilePhone}
+                  onChange={e => setProfilePhone(e.target.value)}
+                  onBlur={e => { if (e.target.value.trim()) setProfilePhone(blurFormatPhone(e.target.value)); }}
+                  placeholder={PHONE_PLACEHOLDER}
+                  className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                />
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{PHONE_HINT}</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Used for SMS reminders and voice call alerts.</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">WhatsApp number</label>
+                <input
+                  type="tel"
+                  value={profileWhatsapp}
+                  onChange={e => setProfileWhatsapp(e.target.value)}
+                  onBlur={e => { if (e.target.value.trim()) setProfileWhatsapp(blurFormatPhone(e.target.value)); }}
+                  placeholder={PHONE_PLACEHOLDER}
+                  className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                />
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 leading-relaxed">
+                  Leave blank to use your phone number above for WhatsApp. Enter a different number if your WhatsApp is on a separate device.
+                </p>
+              </div>
+            </div>
+
+            <NavButtons
+              onBack={goBack}
+              onNext={handleSaveProfileStep}
+              onSkip={async () => { await saveStep(STEPS.indexOf('profile') + 1); goNext(); }}
+              nextLabel="Continue"
+              loading={saving}
+            />
+          </div>
+        );
+
+      // ── Step: Booking link ──────────────────────────────────────────────────
       case 'booking_link': {
         const buildSvcUrl = (svcId: string) =>
           profile?.slug
@@ -1239,7 +1317,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
 
               <NavButtons
                 onBack={goBack}
-                onNext={async () => { await saveStep(5); goNext(); }}
+                onNext={async () => { await saveStep(STEPS.indexOf('booking_link') + 1); goNext(); }}
                 nextLabel="Continue"
               />
             </div>
@@ -1428,8 +1506,8 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
 
             <NavButtons
               onBack={goBack}
-              onNext={async () => { await saveStep(6); goNext(); }}
-              onSkip={async () => { await saveStep(6); goNext(); }}
+              onNext={async () => { await saveStep(STEPS.indexOf('video') + 1); goNext(); }}
+              onSkip={async () => { await saveStep(STEPS.indexOf('video') + 1); goNext(); }}
               nextLabel="Continue"
             />
           </div>
@@ -1485,7 +1563,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
 
             <NavButtons
               onBack={goBack}
-              onNext={async () => { await saveStep(7); goNext(); }}
+              onNext={async () => { await saveStep(STEPS.indexOf('qr_code') + 1); goNext(); }}
               nextLabel="Finish setup"
             />
           </div>

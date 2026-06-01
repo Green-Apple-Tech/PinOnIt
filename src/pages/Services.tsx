@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import type { Service, BookingQuestion, MeetingType, RecurrenceFrequency } from '../lib/types';
 import { getRecurrenceEndType, type RecurrenceEndType } from '../lib/recurring';
 import { resolveDefaultReminderChannel } from '../lib/reminderChannels';
+import { computeSingleUseExpiresAt, formatSingleUseExpiryLabel } from '../lib/singleUseLinks';
 import { LOCATION_TYPES, MEETING_TYPE_META } from '../lib/types';
 import {
   Plus, Trash2, X, Check, Loader2, MapPin, Clock, Settings2, MessageSquare,
@@ -382,6 +383,34 @@ export function ServicesPage() {
     setSingleUseLinks((prev) => ({ ...prev, [serviceId]: (data as SingleUseLink[]) ?? [] }));
   };
 
+  const openSingleUsePanel = async (serviceId: string) => {
+    if (singleUsePanel === serviceId) {
+      setSingleUsePanel(null);
+      return;
+    }
+    setSingleUsePanel(serviceId);
+    await loadSingleUseLinks(serviceId);
+  };
+
+  const generateSingleUseLink = async (serviceId: string) => {
+    if (!profile) return;
+    setGeneratingLink(true);
+    const expiresAt = profile.single_use_links_enabled
+      ? computeSingleUseExpiresAt(profile.default_link_expiry_days)
+      : null;
+    const { data } = await supabase.from('single_use_links').insert({
+      host_id: profile.id,
+      service_id: serviceId,
+      label: newLinkLabel.trim() || null,
+      expires_at: expiresAt,
+    }).select().maybeSingle();
+    if (data) {
+      setSingleUseLinks((prev) => ({ ...prev, [serviceId]: [data as SingleUseLink, ...(prev[serviceId] ?? [])] }));
+    }
+    setNewLinkLabel('');
+    setGeneratingLink(false);
+  };
+
   // Calendar
   const [connectedCalendars, setConnectedCalendars] = useState<{ id: string; provider: string; calendar_name: string; provider_account_email: string }[]>([]);
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
@@ -735,6 +764,18 @@ export function ServicesPage() {
                       {copiedKey === `url-${svc.id}` ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Link2 className="h-3.5 w-3.5" />}
                       {copiedKey === `url-${svc.id}` ? 'Copied!' : 'Copy link'}
                     </button>
+                    {profile?.single_use_links_enabled && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); void openSingleUsePanel(svc.id); }}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border rounded-full transition-all ${
+                          singleUsePanel === svc.id
+                            ? 'border-amber-400 dark:border-amber-600 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/20'
+                            : 'border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:border-amber-400 dark:hover:border-amber-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20'
+                        }`}
+                      >
+                        <Zap className="h-3.5 w-3.5" /> Single-use
+                      </button>
+                    )}
                     <button
                       onClick={(e) => { e.stopPropagation(); setQrService(svc); setQrUrl(null); }}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-gray-200 dark:border-slate-700 rounded-full text-gray-700 dark:text-slate-300 hover:border-brand-400 dark:hover:border-brand-500 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/20 transition-all"
@@ -771,21 +812,16 @@ export function ServicesPage() {
                         <X className="h-3.5 w-3.5" />
                       </button>
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-slate-400 -mt-2">Each link works exactly once. After booking, the link is disabled automatically.</p>
+                    <p className="text-xs text-gray-500 dark:text-slate-400 -mt-2">
+                      Each link works exactly once. After booking, the link is disabled automatically.
+                      {profile?.default_link_expiry_days != null && profile.default_link_expiry_days > 0 && (
+                        <> Links also expire {profile.default_link_expiry_days === 1 ? 'after 24 hours' : `after ${profile.default_link_expiry_days} days`}.</>
+                      )}
+                    </p>
                     <div className="flex gap-2">
-                      <input type="text" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)} placeholder="Label (optional)" onKeyDown={(e) => e.key === 'Enter' && (async () => {
-                        if (!profile) return; setGeneratingLink(true);
-                        const { data } = await supabase.from('single_use_links').insert({ host_id: profile.id, service_id: svc.id, label: newLinkLabel.trim() || null }).select().maybeSingle();
-                        if (data) setSingleUseLinks((prev) => ({ ...prev, [svc.id]: [data as SingleUseLink, ...(prev[svc.id] ?? [])] }));
-                        setNewLinkLabel(''); setGeneratingLink(false);
-                      })()}
+                      <input type="text" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)} placeholder="Label (optional)" onKeyDown={(e) => e.key === 'Enter' && void generateSingleUseLink(svc.id)}
                         className="flex-1 px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 transition" />
-                      <button onClick={async () => {
-                        if (!profile) return; setGeneratingLink(true);
-                        const { data } = await supabase.from('single_use_links').insert({ host_id: profile.id, service_id: svc.id, label: newLinkLabel.trim() || null }).select().maybeSingle();
-                        if (data) setSingleUseLinks((prev) => ({ ...prev, [svc.id]: [data as SingleUseLink, ...(prev[svc.id] ?? [])] }));
-                        setNewLinkLabel(''); setGeneratingLink(false);
-                      }} disabled={generatingLink} className="flex items-center gap-1.5 px-3 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 shrink-0">
+                      <button onClick={() => void generateSingleUseLink(svc.id)} disabled={generatingLink} className="flex items-center gap-1.5 px-3 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 shrink-0">
                         {generatingLink ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />} Generate
                       </button>
                     </div>
@@ -801,6 +837,7 @@ export function ServicesPage() {
                             <div className="flex-1 min-w-0">
                               {link.label && <p className="font-semibold text-gray-800 dark:text-slate-200 truncate">{link.label}</p>}
                               <p className="font-mono text-gray-400 dark:text-slate-500 truncate">{url}</p>
+                              <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-0.5">{formatSingleUseExpiryLabel(link.expires_at, link.used)}</p>
                             </div>
                             {!link.used && (
                               <div className="flex gap-1 shrink-0">
