@@ -1,0 +1,78 @@
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
+};
+
+// Microsoft Identity Platform OAuth 2.0 scopes
+// Contacts.Read is included so the same OAuth flow covers both calendar and contacts sync.
+const SCOPES = [
+  "offline_access",
+  "Calendars.Read",
+  "Contacts.Read",
+  "User.Read",
+  "OnlineMeetings.ReadWrite",
+].join(" ");
+
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 200, headers: corsHeaders });
+  }
+
+  try {
+    const clientId = Deno.env.get("AZURE_CLIENT_ID");
+    const clientSecret = Deno.env.get("AZURE_CLIENT_SECRET");
+
+    if (!clientId || !clientSecret) {
+      return new Response(
+        JSON.stringify({ error: "Microsoft OAuth credentials are not configured." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verify the caller is an authenticated user
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const { data: { user }, error: authErr } = await supabase.auth.getUser();
+    if (authErr || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Encode the user id and source in state so the callback knows who authorized and where to redirect
+    const source = new URL(req.url).searchParams.get("source") ?? "calendar";
+    const state = btoa(JSON.stringify({ uid: user.id, source }));
+    // Must exactly match the redirect URI registered in the Azure app registration
+    const redirectUri = `${Deno.env.get("SUPABASE_URL")}/functions/v1/outlook-calendar-callback`;
+
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: "code",
+      scope: SCOPES,
+      response_mode: "query",
+      state,
+    });
+
+    const url = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${params}`;
+
+    return new Response(
+      JSON.stringify({ url }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (err) {
+    return new Response(
+      JSON.stringify({ error: (err as Error).message ?? "Unknown error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});

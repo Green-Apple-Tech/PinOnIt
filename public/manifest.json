@@ -1,0 +1,38 @@
+{
+  "name": "Pin on It",
+  "short_name": "Pin on It",
+  "description": "Scheduling that actually shows up. Automated reminders, AI messages, paid bookings.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#5864C6",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/pinonit_logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/pinonit_logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "My Bookings",
+      "url": "/dashboard",
+      "description": "View your upcoming bookings"
+    },
+    {
+      "name": "Book Appointment",
+      "url": "/",
+      "description": "Find a time to book"
+    }
+  ],
+  "categories": ["productivity", "business"],
+  "screenshots": []
+}

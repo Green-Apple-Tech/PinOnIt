@@ -1,0 +1,20 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /tmp/cc-agent/66248711/project && npm run build 2>&1 | tail -20",
+            "timeout": 60,
+            "statusMessage": "Building project...",
+            "asyncRewake": true,
+            "rewakeMessage": "Build failed after code edit. Errors:",
+            "rewakeSummary": "Build failed — fix the errors"
+          }
+        ]
+      }
+    ]
+  }
+}

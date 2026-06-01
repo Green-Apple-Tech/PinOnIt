@@ -1,0 +1,1499 @@
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+import type { Profile, Service, AvailabilitySlot, Booking, BookingQuestion, DateOverride, PaidBookingSettings, CalendarConflictSettings, RecurrenceFrequency } from '../lib/types';
+import { LOCATION_TYPES, TIMEZONES, DEFAULT_CALENDAR_CONFLICT_SETTINGS } from '../lib/types';
+import {
+  addRecurrence,
+  countRecurringSeriesOnSlot,
+  formatRecurrenceBadge,
+  formatRecurrencePeriod,
+  getRecurrenceEndType,
+  getUpcomingRecurrenceDates,
+  shouldStopRecurrence,
+} from '../lib/recurring';
+import {
+  Calendar,
+  Clock,
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Loader2,
+  MapPin,
+  User,
+  Mail,
+  Globe,
+  ChevronLeft,
+  ChevronRight,
+  Phone,
+  Video,
+  AlertCircle,
+  Bell,
+  MessageSquare,
+  Plus,
+  X,
+  Smartphone,
+  Shield,
+  Zap,
+  ExternalLink,
+} from 'lucide-react';
+
+type ReminderChannel = 'email' | 'sms' | 'whatsapp' | 'voice';
+type ReminderTiming = { value: number; label: string };
+
+const REMINDER_TIMINGS: ReminderTiming[] = [
+  { value: 15, label: '15 minutes before' },
+  { value: 30, label: '30 minutes before' },
+  { value: 60, label: '1 hour before' },
+  { value: 120, label: '2 hours before' },
+  { value: 1440, label: '1 day before' },
+  { value: 2880, label: '2 days before' },
+];
+
+interface ReminderEntry {
+  id: string;
+  channel: ReminderChannel;
+  minutesBefore: number;
+  contactValue: string;
+}
+
+function generateId() {
+  return crypto.randomUUID();
+}
+
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAY_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+function formatTime12(time: string): string {
+  const [h, m] = time.split(':');
+  const hour = parseInt(h);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const display = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+  return `${display}:${m} ${ampm}`;
+}
+
+function toDateKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function getLocationIcon(type: Service['location_type']) {
+  switch (type) {
+    case 'video': return Video;
+    case 'phone': return Phone;
+    case 'in_person': return MapPin;
+    default: return Globe;
+  }
+}
+
+interface BusyPeriod { start: Date; end: Date }
+
+interface CalendarEvent {
+  start_at: string;
+  end_at: string;
+  all_day: boolean;
+  show_status: string | null;
+  transparency: string | null;
+  attendee_self_status: string | null;
+  is_birthday_cal: boolean;
+  is_holiday_cal: boolean;
+  title: string;
+}
+
+const BLOCKING_TITLE_KEYWORDS = [
+  "vacation", "pto", "out of office", "ooo", "leave", "sick day", "sick leave",
+  "annual leave", "personal day", "time off", "parental leave",
+];
+
+function titleIndicatesBlocking(title: string): boolean {
+  const t = (title ?? "").toLowerCase();
+  return BLOCKING_TITLE_KEYWORDS.some((kw) => t.includes(kw));
+}
+
+/**
+ * Decides whether a synced calendar event should block a booking slot.
+ * Returns true = block this time, false = ignore it.
+ */
+function shouldBlockCalendarEvent(
+  e: CalendarEvent,
+  settings: CalendarConflictSettings,
+): boolean {
+  // Always ignore cancelled events (shouldn't be synced, but defensive)
+  if (e.show_status === "cancelled") return false;
+
+  // iCal TRANSP:TRANSPARENT / Google transparency=transparent → explicitly free
+  // UNLESS it's an OOF or the title says vacation/PTO
+  const isExplicitlyFree = e.transparency === "transparent" || e.show_status === "free";
+  const isOOF = e.show_status === "oof";
+  const isTentative = e.show_status === "tentative";
+  const isDeclined = e.attendee_self_status === "declined";
+  const isBirthdayOrHoliday = e.is_birthday_cal || e.is_holiday_cal;
+
+  // Declined events
+  if (isDeclined) {
+    return settings.block_declined;
+  }
+
+  // Tentative events
+  if (isTentative) {
+    return settings.block_tentative;
+  }
+
+  // All-day events
+  if (e.all_day) {
+    // OOF all-day always blocks (regardless of settings) — it's always truly unavailable
+    if (isOOF) return true;
+
+    // Title-keyed blocking (Vacation, PTO, etc.) always blocks
+    if (titleIndicatesBlocking(e.title)) return true;
+
+    // Birthday/holiday calendar events
+    if (isBirthdayOrHoliday) {
+      return settings.block_free_all_day;
+    }
+
+    // Free all-day (e.g. public holidays not in a holidays cal, reminders)
+    if (isExplicitlyFree) {
+      return settings.block_free_all_day;
+    }
+
+    // Busy all-day (vacation, PTO, generic blocked day)
+    return settings.block_all_day_busy;
+  }
+
+  // Timed (non-all-day) events: explicitly free = never block
+  if (isExplicitlyFree && !isOOF) return false;
+
+  // All other timed events are busy — block
+  return true;
+}
+
+function buildSlots(availability: AvailabilitySlot[], existingBookings: Booking[], service: Service, dateOverrides: DateOverride[], year: number, month: number, busyTimes: BusyPeriod[] = []): Map<string, string[]> {
+  const result = new Map<string, string[]>();
+  const now = new Date();
+  const minNotice = new Date(now.getTime() + service.min_notice_hours * 3600000);
+  const windowEnd = new Date(now);
+  windowEnd.setDate(windowEnd.getDate() + service.booking_window_days);
+
+  const availByDay = new Map<number, AvailabilitySlot[]>();
+  for (const a of availability) {
+    if (!a.is_active) continue;
+    const list = availByDay.get(a.day_of_week) ?? [];
+    list.push(a);
+    availByDay.set(a.day_of_week, list);
+  }
+
+  const overrideMap = new Map<string, DateOverride>();
+  for (const ov of dateOverrides) overrideMap.set(ov.override_date, ov);
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(year, month, d);
+    const dk = toDateKey(date);
+    if (date < now || date > windowEnd) continue;
+
+    const override = overrideMap.get(dk);
+    if (override?.is_blocked) continue;
+
+    let windows: { start: string; end: string }[] = [];
+    if (override && !override.is_blocked && override.start_time && override.end_time) {
+      windows = [{ start: override.start_time, end: override.end_time }];
+    } else {
+      const daySlots = availByDay.get(date.getDay()) ?? [];
+      windows = daySlots.map((s) => ({ start: s.start_time, end: s.end_time }));
+    }
+    if (!windows.length) continue;
+
+    const bookingsOnDay = existingBookings.filter((b) => toDateKey(new Date(b.start_time)) === dk);
+    if (service.max_bookings_per_day !== null && bookingsOnDay.length >= service.max_bookings_per_day) continue;
+
+    const slots: string[] = [];
+    for (const win of windows) {
+      const [sh, sm] = win.start.split(':').map(Number);
+      const [eh, em] = win.end.split(':').map(Number);
+      const endMinutes = eh * 60 + em;
+      const increment = service.slot_increment_minutes || 30;
+      let cur = sh * 60 + sm;
+      while (cur + service.duration_minutes + service.buffer_after_minutes <= endMinutes) {
+        const slotH = Math.floor(cur / 60);
+        const slotM = cur % 60;
+        const slotKey = `${String(slotH).padStart(2,'0')}:${String(slotM).padStart(2,'0')}`;
+        const slotStart = new Date(year, month, d, slotH, slotM);
+        const slotEnd = new Date(slotStart.getTime() + (service.duration_minutes + service.buffer_after_minutes) * 60000);
+        const blockStart = new Date(slotStart.getTime() - service.buffer_before_minutes * 60000);
+        if (slotStart < minNotice) { cur += increment; continue; }
+        const bookingConflict = existingBookings.some((b) => {
+          const bStart = new Date(b.start_time);
+          const bEnd = new Date(b.end_time);
+          return blockStart < bEnd && slotEnd > bStart;
+        });
+        const calendarConflict = busyTimes.some((b) => blockStart < b.end && slotEnd > b.start);
+        if (!bookingConflict && !calendarConflict) slots.push(slotKey);
+        cur += increment;
+      }
+    }
+    if (slots.length) result.set(dk, slots);
+  }
+  return result;
+}
+
+function ReminderWizard({
+  brandColor,
+  guestEmail,
+  reminders,
+  setReminders,
+  onDone,
+}: {
+  brandColor: string;
+  guestEmail: string;
+  reminders: ReminderEntry[];
+  setReminders: React.Dispatch<React.SetStateAction<ReminderEntry[]>>;
+  onDone: () => void;
+}) {
+  const [addingChannel, setAddingChannel] = useState<ReminderChannel | null>(null);
+  const [draftContact, setDraftContact] = useState('');
+  const [draftMinutes, setDraftMinutes] = useState(60);
+
+  const CHANNELS: { key: ReminderChannel; label: string; icon: typeof Mail; placeholder: string; note?: string }[] = [
+    { key: 'email', label: 'Email', icon: Mail, placeholder: guestEmail },
+    { key: 'sms', label: 'SMS', icon: Smartphone, placeholder: '+1 555 000 0000' },
+    { key: 'whatsapp', label: 'WhatsApp', icon: MessageSquare, placeholder: '+1 555 000 0000' },
+    { key: 'voice', label: 'Voice Call', icon: Phone, placeholder: '+1 555 000 0000', note: 'Required for voice call reminders' },
+  ];
+
+  const startAdding = (channel: ReminderChannel) => {
+    setAddingChannel(channel);
+    setDraftContact(channel === 'email' ? guestEmail : '');
+    setDraftMinutes(60);
+  };
+
+  const cancelAdding = () => { setAddingChannel(null); setDraftContact(''); };
+
+  const addReminder = () => {
+    if (!addingChannel || !draftContact.trim()) return;
+    setReminders((prev) => [
+      ...prev,
+      { id: generateId(), channel: addingChannel, minutesBefore: draftMinutes, contactValue: draftContact.trim() },
+    ]);
+    setAddingChannel(null);
+    setDraftContact('');
+  };
+
+  const removeReminder = (id: string) => setReminders((prev) => prev.filter((r) => r.id !== id));
+
+  const channelIcon = (ch: ReminderChannel) => {
+    if (ch === 'sms') return Smartphone;
+    if (ch === 'whatsapp') return MessageSquare;
+    if (ch === 'voice') return Phone;
+    return Mail;
+  };
+
+  const channelLabel = (ch: ReminderChannel) => {
+    if (ch === 'sms') return 'SMS';
+    if (ch === 'whatsapp') return 'WhatsApp';
+    if (ch === 'voice') return 'Voice Call';
+    return 'Email';
+  };
+
+  const timingLabel = (min: number) => REMINDER_TIMINGS.find((t) => t.value === min)?.label ?? `${min} min before`;
+
+  return (
+    <div className="py-8 max-w-md mx-auto">
+      <div className="mb-6">
+        <button onClick={onDone} className="flex items-center gap-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 text-sm transition-colors mb-4">
+          <ArrowLeft className="h-4 w-4" /> Back to confirmation
+        </button>
+        <div className="flex items-center gap-2 mb-1">
+          <Bell className="h-5 w-5" style={{ color: brandColor }} />
+          <h2 className="text-xl font-bold">Add more reminders</h2>
+        </div>
+        <p className="text-sm text-slate-500 dark:text-slate-400">Choose how and when you'd like to be reminded about your appointment.</p>
+      </div>
+
+      {/* Default reminder (always on) */}
+      <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-800 mb-4">
+        <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: brandColor + '22' }}>
+          <Mail className="h-4 w-4" style={{ color: brandColor }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium">Email · 1 hour before</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500">{guestEmail}</p>
+        </div>
+        <span className="text-xs text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">Default</span>
+      </div>
+
+      {/* Added reminders */}
+      {reminders.map((r) => {
+        const Icon = channelIcon(r.channel);
+        return (
+          <div key={r.id} className="flex items-center gap-3 p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 mb-2">
+            <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: brandColor + '22' }}>
+              <Icon className="h-4 w-4" style={{ color: brandColor }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium">{channelLabel(r.channel)} · {timingLabel(r.minutesBefore)}</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{r.contactValue}</p>
+            </div>
+            <button onClick={() => removeReminder(r.id)} className="p-1 text-slate-300 dark:text-slate-600 hover:text-red-400 transition-colors rounded">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        );
+      })}
+
+      {/* Add form */}
+      {addingChannel ? (
+        <div className="mt-4 p-4 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900/50 space-y-3">
+          <div className="flex items-center gap-2 mb-1">
+            {(() => { const cfg = CHANNELS.find((c) => c.key === addingChannel)!; const Icon = cfg.icon; return <Icon className="h-4 w-4" style={{ color: brandColor }} />; })()}
+            <span className="text-sm font-semibold">{channelLabel(addingChannel)} reminder</span>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">
+              {addingChannel === 'email' ? 'Email address' : 'Phone number (with country code)'}
+            </label>
+            <input
+              type={addingChannel === 'email' ? 'email' : 'tel'}
+              value={draftContact}
+              onChange={(e) => setDraftContact(e.target.value)}
+              placeholder={CHANNELS.find((c) => c.key === addingChannel)?.placeholder}
+              className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+            />
+            {addingChannel === 'voice' && (
+              <p className="text-xs text-violet-600 dark:text-violet-400 mt-1.5">Required for voice call reminders. You will receive an automated call at this number.</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">When to send</label>
+            <select
+              value={draftMinutes}
+              onChange={(e) => setDraftMinutes(Number(e.target.value))}
+              className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition">
+              {REMINDER_TIMINGS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button onClick={cancelAdding} className="flex-1 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+              Cancel
+            </button>
+            <button onClick={addReminder} disabled={!draftContact.trim()} className="flex-1 py-2 text-sm font-semibold text-white rounded-lg transition-all disabled:opacity-40"
+              style={{ backgroundColor: brandColor }}>
+              Add reminder
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          {CHANNELS.map((ch) => {
+            const Icon = ch.icon;
+            return (
+              <button key={ch.key} onClick={() => startAdding(ch.key)}
+                className="flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-opacity-100 transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 group"
+                style={{ '--brand': brandColor } as React.CSSProperties}>
+                <div className="h-9 w-9 rounded-full flex items-center justify-center group-hover:opacity-90 transition-all" style={{ backgroundColor: brandColor + '18' }}>
+                  <Icon className="h-4 w-4" style={{ color: brandColor }} />
+                </div>
+                <span className="text-xs font-medium">{ch.label}</span>
+                <Plus className="h-3 w-3 opacity-50" />
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+        <button onClick={onDone} className="w-full py-3 text-sm font-semibold text-white rounded-lg transition-all hover:opacity-90"
+          style={{ backgroundColor: brandColor }}>
+          {reminders.length > 0 ? `Save ${reminders.length + 1} reminder${reminders.length + 1 > 1 ? 's' : ''} & finish` : 'Finish without adding more'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+interface SingleUseLinkRecord {
+  id: string;
+  host_id: string;
+  service_id: string;
+  token: string;
+  label: string | null;
+  used: boolean;
+  expires_at: string | null;
+}
+
+export function BookPage() {
+  const { slug, token } = useParams<{ slug?: string; token?: string }>();
+  const [searchParams] = useSearchParams();
+  const [host, setHost] = useState<Profile | null>(null);
+  const [services, setServices] = useState<Service[]>([]);
+  const [linkExpired, setLinkExpired] = useState(false);
+  const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [dateOverrides, setDateOverrides] = useState<DateOverride[]>([]);
+  const [calendarBusyTimes, setCalendarBusyTimes] = useState<BusyPeriod[]>([]);
+  const [questions, setQuestions] = useState<BookingQuestion[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [singleUseLink, setSingleUseLink] = useState<SingleUseLinkRecord | null>(null);
+  const [singleUseLinkInvalid, setSingleUseLinkInvalid] = useState(false);
+
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [step, setStep] = useState<'service' | 'datetime' | 'details' | 'confirmed' | 'reminders'>('service');
+  const [reminders, setReminders] = useState<ReminderEntry[]>([]);
+  const [remindersDone, setRemindersDone] = useState(false);
+
+  const today = new Date();
+  const [calYear, setCalYear] = useState(today.getFullYear());
+  const [calMonth, setCalMonth] = useState(today.getMonth());
+
+  const [guestName, setGuestName] = useState('');
+  const [guestEmail, setGuestEmail] = useState('');
+  const [guestTimezone, setGuestTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York');
+  const [guestNotes, setGuestNotes] = useState('');
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [termsAgreed, setTermsAgreed] = useState(false);
+  const [ndaAgreed, setNdaAgreed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [confirmedBooking, setConfirmedBooking] = useState<Booking | null>(null);
+  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+  const [recurringAcknowledged, setRecurringAcknowledged] = useState(false);
+
+  useEffect(() => {
+    if (!slug && !token) return;
+
+    // Check expiry param before loading anything
+    const expiresParam = searchParams.get('expires');
+    if (expiresParam) {
+      const expiresAt = parseInt(expiresParam, 10);
+      if (!isNaN(expiresAt) && Date.now() > expiresAt) {
+        setLinkExpired(true);
+        setLoading(false);
+        return;
+      }
+    }
+
+    (async () => {
+      let hostId: string;
+      let serviceId: string | null = null;
+      let loadedProfile: Profile | null = null;
+
+      if (token) {
+        // Single-use link flow: look up by token
+        const { data: link } = await supabase
+          .from('single_use_links')
+          .select('*')
+          .eq('token', token)
+          .maybeSingle();
+
+        if (!link) { setSingleUseLinkInvalid(true); setLoading(false); return; }
+
+        const linkRecord = link as SingleUseLinkRecord;
+
+        if (linkRecord.used) { setSingleUseLinkInvalid(true); setLoading(false); return; }
+        if (linkRecord.expires_at && new Date(linkRecord.expires_at) < new Date()) {
+          setSingleUseLinkInvalid(true); setLoading(false); return;
+        }
+
+        setSingleUseLink(linkRecord);
+        hostId = linkRecord.host_id;
+        serviceId = linkRecord.service_id;
+
+        const { data: profile } = await supabase.from('profiles').select('*').eq('id', hostId).maybeSingle();
+        if (!profile) { setLoading(false); return; }
+        loadedProfile = profile as Profile;
+        setHost(loadedProfile);
+      } else {
+        const { data: profile } = await supabase.from('profiles').select('*').eq('slug', slug!).maybeSingle();
+        if (!profile) { setLoading(false); return; }
+        loadedProfile = profile as Profile;
+        setHost(loadedProfile);
+        hostId = profile.id;
+      }
+
+      const [svcRes, availRes, bookRes, ovRes, calEvtRes] = await Promise.all([
+        serviceId
+          ? supabase.from('services').select('*').eq('id', serviceId).eq('is_active', true)
+          : supabase.from('services').select('*').eq('host_id', hostId).eq('is_active', true),
+        supabase.from('availability').select('*').eq('host_id', hostId).eq('is_active', true),
+        supabase.from('bookings').select('*').eq('host_id', hostId).in('status', ['confirmed']),
+        supabase.from('date_overrides').select('*').eq('host_id', hostId),
+        supabase.from('calendar_events').select('start_at,end_at,all_day,show_status,transparency,attendee_self_status,is_birthday_cal,is_holiday_cal,title').eq('host_id', hostId),
+      ]);
+
+      const allServices = (svcRes.data as Service[]) ?? [];
+      const typesParam = searchParams.get('types');
+      const filteredServices = typesParam
+        ? allServices.filter((s) => typesParam.split(',').includes(s.id))
+        : allServices;
+      setServices(filteredServices);
+
+      setAvailability(availRes.data ?? []);
+      setBookings(bookRes.data ?? []);
+      setDateOverrides((ovRes.data as DateOverride[]) ?? []);
+
+      // Resolve the host's calendar conflict settings (with defaults)
+      const conflictSettings: CalendarConflictSettings = {
+        ...DEFAULT_CALENDAR_CONFLICT_SETTINGS,
+        ...(loadedProfile?.calendar_conflict_settings ?? {}),
+      };
+
+      const rawEvents = (calEvtRes.data ?? []) as CalendarEvent[];
+      const busyPeriods: BusyPeriod[] = [];
+      for (const e of rawEvents) {
+        if (!shouldBlockCalendarEvent(e, conflictSettings)) continue;
+        if (e.all_day) {
+          // All-day events span entire calendar days — convert to UTC day boundaries
+          const startDay = new Date(e.start_at);
+          startDay.setUTCHours(0, 0, 0, 0);
+          const endDay = new Date(e.end_at);
+          // Google/iCal end date for all-day is exclusive (next day); Outlook is inclusive midnight
+          // We use the stored end_at as-is since it already covers the full day
+          endDay.setUTCHours(23, 59, 59, 999);
+          busyPeriods.push({ start: startDay, end: endDay });
+        } else {
+          busyPeriods.push({ start: new Date(e.start_at), end: new Date(e.end_at) });
+        }
+      }
+      setCalendarBusyTimes(busyPeriods);
+      setLoading(false);
+    })();
+  }, [slug, token, searchParams]);
+
+  // Auto-select service for single-use links (only one service is loaded)
+  useEffect(() => {
+    if (singleUseLink && services.length === 1 && !selectedService) {
+      handleSelectService(services[0]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [singleUseLink, services]);
+
+  const slotMap = useMemo(() => {
+    if (!selectedService) return new Map<string, string[]>();
+    return buildSlots(availability, bookings, selectedService, dateOverrides, calYear, calMonth, calendarBusyTimes);
+  }, [selectedService, availability, bookings, dateOverrides, calYear, calMonth, calendarBusyTimes]);
+
+  const isRecurringService = !!(selectedService?.is_recurring && selectedService.recurrence_frequency);
+
+  const recurringPreviewDates = useMemo(() => {
+    if (!isRecurringService || !selectedService?.recurrence_frequency || !selectedDate || !selectedSlot) return [];
+    const [y, m, d] = selectedDate.split('-').map(Number);
+    const [sh, sm] = selectedSlot.split(':').map(Number);
+    const start = new Date(y, m - 1, d, sh, sm);
+    return getUpcomingRecurrenceDates(start, selectedService.recurrence_frequency, 4);
+  }, [isRecurringService, selectedService, selectedDate, selectedSlot]);
+
+  const recurringFrequencyLabel = selectedService?.recurrence_frequency
+    ? formatRecurrenceBadge(selectedService.recurrence_frequency)
+    : '';
+
+  const displaySlotMap = useMemo(() => {
+    if (!selectedService?.is_recurring) return slotMap;
+    const maxClients = selectedService.max_recurring_clients ?? 1;
+    const next = new Map<string, string[]>();
+    slotMap.forEach((slots, dk) => {
+      const filtered = slots.filter(slot =>
+        countRecurringSeriesOnSlot(bookings, selectedService.id, dk, slot) < maxClients
+      );
+      if (filtered.length) next.set(dk, filtered);
+    });
+    return next;
+  }, [slotMap, selectedService, bookings]);
+
+  const handleSelectService = async (svc: Service) => {
+    setSelectedService(svc);
+    setSelectedDate(null); setSelectedSlot(null); setAnswers({});
+    setRecurringAcknowledged(false);
+    const { data } = await supabase.from('booking_questions').select('*').eq('service_id', svc.id).order('sort_order');
+    setQuestions((data as BookingQuestion[]) ?? []);
+    setStep('datetime');
+  };
+
+  const handleBook = async () => {
+    if (!selectedService) return;
+    setSubmitting(true);
+    const booking = await createBookingRecord();
+    if (booking) {
+      setConfirmedBooking(booking);
+      setStep('confirmed');
+      if (selectedService.confirmation_redirect_url) {
+        try {
+          const redirectUrl = new URL(selectedService.confirmation_redirect_url);
+          if (redirectUrl.protocol === 'https:') window.location.href = redirectUrl.href;
+        } catch { /* invalid URL */ }
+      }
+    }
+    setSubmitting(false);
+  };
+
+  const createBookingRecord = useCallback(async () => {
+    if (!selectedService || !selectedDate || !selectedSlot || !host) return null;
+    const [y, m, d] = selectedDate.split('-').map(Number);
+    const [sh, sm] = selectedSlot.split(':').map(Number);
+    const startTime = new Date(y, m - 1, d, sh, sm);
+    const endTime = new Date(startTime.getTime() + selectedService.duration_minutes * 60000);
+    const isRecurring = !!(selectedService.is_recurring && selectedService.recurrence_frequency);
+    const { data } = await supabase.from('bookings').insert({
+      service_id: selectedService.id,
+      host_id: host.id,
+      guest_name: guestName,
+      guest_email: guestEmail,
+      guest_timezone: guestTimezone,
+      start_time: startTime.toISOString(),
+      end_time: endTime.toISOString(),
+      notes: guestNotes,
+      status: 'confirmed',
+      is_recurring: isRecurring,
+      recurrence_frequency: isRecurring ? selectedService.recurrence_frequency : null,
+    }).select().maybeSingle();
+    if (data) {
+      // Mark single-use link as used
+      if (singleUseLink) {
+        await supabase.from('single_use_links').update({
+          used: true,
+          used_at: new Date().toISOString(),
+          booking_id: data.id,
+        }).eq('id', singleUseLink.id);
+      }
+
+      if (questions.length > 0 && Object.keys(answers).length > 0) {
+        const answerRows = questions.filter((q) => answers[q.id] !== undefined).map((q) => ({ booking_id: data.id, question_id: q.id, answer: answers[q.id] ?? '' }));
+        if (answerRows.length) await supabase.from('booking_answers').insert(answerRows);
+      }
+
+      // Create Google Meet link if host has Google Calendar connected
+      try {
+        const meetPayload = {
+          booking_id: data.id,
+          host_id: host.id,
+          start_time: startTime.toISOString(),
+          end_time: endTime.toISOString(),
+          summary: `${selectedService.name} with ${guestName}`,
+          description: `Booked via PinOnIt\nGuest: ${guestName} (${guestEmail})${guestNotes ? `\nNotes: ${guestNotes}` : ''}`,
+          guest_email: guestEmail,
+          guest_name: guestName,
+        };
+        const meetRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-google-meet`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
+          body: JSON.stringify(meetPayload),
+        });
+        if (meetRes.ok) {
+          const meetData = await meetRes.json();
+          if (meetData.meet_link) (data as Booking).meet_link = meetData.meet_link;
+        }
+      } catch { /* non-blocking */ }
+
+      // Create Teams meeting link if host has Outlook Calendar connected
+      try {
+        const teamsPayload = {
+          booking_id: data.id,
+          host_id: host.id,
+          start_time: startTime.toISOString(),
+          end_time: endTime.toISOString(),
+          summary: `${selectedService.name} with ${guestName}`,
+          guest_email: guestEmail,
+          guest_name: guestName,
+        };
+        const teamsRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-teams-meeting`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
+          body: JSON.stringify(teamsPayload),
+        });
+        if (teamsRes.ok) {
+          const teamsData = await teamsRes.json();
+          if (teamsData.teams_link && !(data as Booking).meet_link) {
+            (data as Booking).meet_link = teamsData.teams_link;
+          }
+        }
+      } catch { /* non-blocking */ }
+
+      // Create Zoom meeting if host has Zoom connected and no video link yet
+      try {
+        if (!(data as Booking).meet_link) {
+          const zoomRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-zoom-meeting`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
+            body: JSON.stringify({
+              booking_id: data.id,
+              host_id: host.id,
+              start_time: startTime.toISOString(),
+              end_time: endTime.toISOString(),
+              summary: `${selectedService.name} with ${guestName}`,
+              guest_email: guestEmail,
+              guest_name: guestName,
+            }),
+          });
+          if (zoomRes.ok) {
+            const zoomData = await zoomRes.json();
+            if (zoomData.zoom_link) (data as Booking).meet_link = zoomData.zoom_link;
+          }
+        }
+      } catch { /* non-blocking */ }
+
+      if (isRecurring && selectedService.recurrence_frequency) {
+        const freq = selectedService.recurrence_frequency;
+        const endType = getRecurrenceEndType(selectedService.recurrence_end_date, selectedService.recurrence_end_occurrences);
+        const nextStart = addRecurrence(startTime, freq);
+        if (!shouldStopRecurrence(nextStart, 2, endType, selectedService.recurrence_end_date, selectedService.recurrence_end_occurrences)) {
+          const nextEnd = new Date(nextStart.getTime() + selectedService.duration_minutes * 60000);
+          await supabase.from('bookings').insert({
+            service_id: selectedService.id,
+            host_id: host.id,
+            guest_name: guestName,
+            guest_email: guestEmail,
+            guest_timezone: guestTimezone,
+            start_time: nextStart.toISOString(),
+            end_time: nextEnd.toISOString(),
+            notes: guestNotes,
+            status: 'confirmed',
+            is_recurring: true,
+            recurrence_frequency: freq,
+            parent_booking_id: data.id,
+          });
+        }
+      }
+
+      try {
+        const { data: rules } = await supabase.from('reminder_rules').select('template_id').eq('host_id', host.id).eq('is_active', true);
+        if (rules?.length) {
+          for (const rule of rules) {
+            fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-reminder`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
+              body: JSON.stringify({ booking_id: data.id, template_id: rule.template_id }),
+            }).catch(() => {});
+          }
+        }
+      } catch { /* non-blocking */ }
+    }
+    return data as Booking | null;
+  }, [selectedService, selectedDate, selectedSlot, host, guestName, guestEmail, guestTimezone, guestNotes, questions, answers, singleUseLink]);
+
+  const calendarDays = useMemo(() => {
+    const firstDay = new Date(calYear, calMonth, 1).getDay();
+    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+    const days: (number | null)[] = [];
+    for (let i = 0; i < firstDay; i++) days.push(null);
+    for (let d = 1; d <= daysInMonth; d++) days.push(d);
+    return days;
+  }, [calYear, calMonth]);
+
+  const prevMonth = () => { if (calMonth === 0) { setCalYear(y => y - 1); setCalMonth(11); } else setCalMonth(m => m - 1); setSelectedDate(null); setSelectedSlot(null); };
+  const nextMonth = () => { if (calMonth === 11) { setCalYear(y => y + 1); setCalMonth(0); } else setCalMonth(m => m + 1); setSelectedDate(null); setSelectedSlot(null); };
+
+  const brandColor = host?.brand_color ?? '#5864C6';
+
+  // ── Theme system ──────────────────────────────────────────────────────────────
+  type ThemeId = 'clean' | 'bold' | 'warm';
+  interface ThemeDef {
+    id: ThemeId; bg: string; surface: string; border: string;
+    text: string; muted: string; btnBg: string; btnText: string; accentBar: string;
+  }
+  const THEMES_BOOK: ThemeDef[] = [
+    { id: 'clean', bg: '#ffffff', surface: '#f8fafc', border: '#e2e8f0', text: '#0f172a', muted: '#64748b', btnBg: '#5864C6', btnText: '#ffffff', accentBar: '#5864C6' },
+    { id: 'bold',  bg: '#141414', surface: '#1e1e1e', border: '#2a2a2a', text: '#f5f5f5', muted: '#a0a0a0', btnBg: '#ffffff', btnText: '#141414', accentBar: '#ffffff' },
+    { id: 'warm',  bg: '#fdf6ec', surface: '#fef9f3', border: '#e8d5bc', text: '#3b2a1a', muted: '#8a6a50', btnBg: '#c0622a', btnText: '#ffffff', accentBar: '#c0622a' },
+  ];
+  const pbsThemeId = (((host as any)?.paid_booking_theme ?? 'clean') as ThemeId);
+  const pbsTheme = THEMES_BOOK.find((t) => t.id === pbsThemeId) ?? THEMES_BOOK[0];
+  const isBoldTheme = pbsThemeId === 'bold';
+
+  const pbs = (host as any)?.paid_booking_settings as PaidBookingSettings | undefined;
+  const pbsBtnColor = pbs?.btn_color || pbsTheme.btnBg;
+  const pbsBtnLabel = pbs?.btn_label || 'Book';
+  const pbsBgColor = pbs?.bg_color || pbsTheme.bg;
+  const pbsLayout = pbs?.layout ?? 'list';
+  const pbsShowDesc = pbs?.show_descriptions ?? true;
+  const pbsShowImages = pbs?.show_images ?? false;
+  const pbsUseCategories = pbs?.use_categories ?? false;
+  const pbsCategories = pbs?.categories ?? [];
+  const pbsDisplayName = pbs?.display_name || host?.full_name || '';
+  const pbsTagline = pbs?.tagline || host?.booking_page_header || '';
+  const pbsBio = pbs?.bio || host?.bio || '';
+  const pbsBusinessPhoto = pbs?.business_photo_url || host?.avatar_url || null;
+  const pbsTextColor = pbsTheme.text;
+  const pbsMutedColor = pbsTheme.muted;
+  const pbsSurfaceColor = pbsTheme.surface;
+  const pbsBorderColor = pbsTheme.border;
+  const isPaidService = selectedService ? selectedService.price_cents > 0 : false;
+  const requiredAnswersMissing = questions.some((q) => q.required && !answers[q.id]?.trim())
+    || ((selectedService as any)?.require_terms && !termsAgreed)
+    || ((selectedService as any)?.require_nda && !ndaAgreed)
+    || (isPaidService && !paymentConfirmed && !(isRecurringService && selectedService?.price_cents > 0))
+    || (isRecurringService && !recurringAcknowledged);
+
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950 transition-colors">
+      <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
+    </div>
+  );
+
+  if (singleUseLinkInvalid) return (
+    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950 text-slate-900 dark:text-white transition-colors">
+      <div className="text-center max-w-sm px-6">
+        <div className="h-16 w-16 rounded-2xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mx-auto mb-4">
+          <Shield className="h-8 w-8 text-amber-500" />
+        </div>
+        <h1 className="text-xl font-bold mb-2">Link no longer valid</h1>
+        <p className="text-slate-500 dark:text-slate-400 text-sm">This single-use booking link has already been used or has expired. Contact the host for a new link.</p>
+        <Link to="/" className="mt-6 inline-block text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 text-sm font-medium">Go home</Link>
+      </div>
+    </div>
+  );
+
+  if (linkExpired) return (
+    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950 text-slate-900 dark:text-white transition-colors">
+      <div className="text-center max-w-sm px-6">
+        <div className="h-16 w-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-4">
+          <Clock className="h-8 w-8 text-slate-400" />
+        </div>
+        <h1 className="text-xl font-bold mb-2">This link has expired</h1>
+        <p className="text-slate-500 dark:text-slate-400 text-sm">This scheduling link has expired. Please request a new link from your host.</p>
+        <Link to="/" className="mt-6 inline-block text-[#5864C6] hover:opacity-80 text-sm font-medium">Go home</Link>
+      </div>
+    </div>
+  );
+
+  if (!host) return (
+    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950 text-slate-900 dark:text-white transition-colors">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold mb-2">Page not found</h1>
+        <p className="text-slate-500 dark:text-slate-400">This scheduling page doesn't exist.</p>
+        <Link to="/" className="mt-4 inline-block text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 text-sm">Go home</Link>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen transition-colors" style={{ backgroundColor: pbsBgColor, color: pbsTextColor }}>
+      <div className="h-1.5 w-full" style={{ backgroundColor: pbsTheme.accentBar }} />
+      <header className="border-b sticky top-0 z-40 backdrop-blur-xl transition-colors"
+        style={{ borderColor: pbsBorderColor, backgroundColor: pbsBgColor + 'cc' }}>
+        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-1.5 transition-colors text-sm" style={{ color: pbsMutedColor }}>
+            <ArrowLeft className="h-4 w-4" /> Back
+          </Link>
+          <div className="flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500">
+            {singleUseLink && (
+              <span className="flex items-center gap-1 px-2 py-1 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 rounded-full font-semibold text-[11px]">
+                <Zap className="h-3 w-3" />
+                Single-use link
+              </span>
+            )}
+            {host?.plan === 'free' ? (
+              <Link
+                to="/"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors font-medium"
+              >
+                <img src="/Screenshot_2026-04-29_at_2.49.32_PM.png" alt="Pin on It" className="h-4 w-auto opacity-70" />
+                <span>Powered by Pin on It</span>
+              </Link>
+            ) : (
+              <img src="/Screenshot_2026-04-29_at_2.49.32_PM.png" alt="Pin on It" className="h-5 w-auto opacity-40" />
+            )}
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-5xl mx-auto px-4 py-6 md:py-8">
+        <div className="grid lg:grid-cols-[280px_1fr] gap-6 md:gap-8">
+          <aside className="space-y-4">
+            <div className="flex items-center gap-3">
+              {pbsBusinessPhoto ? (
+                <img src={pbsBusinessPhoto} alt={pbsDisplayName} className="h-14 w-14 rounded-full object-cover" />
+              ) : (
+                <div className="h-14 w-14 rounded-full flex items-center justify-center text-white font-bold text-lg"
+                  style={{ backgroundColor: pbsBtnColor + '33', border: `2px solid ${pbsBtnColor}` }}>
+                  {(pbsDisplayName || 'H').charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div>
+                <h1 className="font-semibold text-base" style={{ color: pbsTextColor }}>{pbsDisplayName || 'Host'}</h1>
+                {pbsTagline && <p className="text-xs" style={{ color: pbsMutedColor }}>{pbsTagline}</p>}
+              </div>
+            </div>
+            {pbsBio && <p className="text-sm leading-relaxed" style={{ color: pbsMutedColor }}>{pbsBio}</p>}
+            {selectedService && (
+              <div className="p-4 rounded-xl space-y-2.5 text-sm border"
+                style={{ backgroundColor: pbsSurfaceColor, borderColor: pbsBorderColor }}>
+                <div className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: selectedService.color }} />
+                  <span className="font-medium" style={{ color: pbsTextColor }}>{selectedService.name}</span>
+                </div>
+                <div className="flex items-center gap-1.5" style={{ color: pbsMutedColor }}><Clock className="h-3.5 w-3.5" />{selectedService.duration_minutes} min</div>
+                {selectedService.location && (
+                  <div className="flex items-center gap-1.5" style={{ color: pbsMutedColor }}>
+                    {(() => { const Icon = getLocationIcon(selectedService.location_type); return <Icon className="h-3.5 w-3.5" />; })()}
+                    {LOCATION_TYPES[selectedService.location_type]}
+                  </div>
+                )}
+                {selectedService.price_cents > 0 && <div className="font-medium" style={{ color: pbsBtnColor }}>${(selectedService.price_cents / 100).toFixed(2)}</div>}
+                {selectedDate && (
+                  <div className="flex items-center gap-1.5 border-t pt-2" style={{ color: pbsTextColor, borderColor: pbsBorderColor }}>
+                    <Calendar className="h-3.5 w-3.5" />
+                    {new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                  </div>
+                )}
+                {selectedSlot && <div className="flex items-center gap-1.5" style={{ color: pbsTextColor }}><Clock className="h-3.5 w-3.5" />{formatTime12(selectedSlot)}</div>}
+              </div>
+            )}
+          </aside>
+
+          <div>
+            {step === 'service' && (
+              <div>
+                <h2 className="text-xl font-bold mb-1" style={{ color: pbsTextColor }}>Book an appointment</h2>
+                <p className="text-sm mb-6" style={{ color: pbsMutedColor }}>Select a service to get started.</p>
+                {(() => {
+                  const renderSvc = (svc: Service) => {
+                    const ext = svc as Service & { banner_image_url?: string | null; category?: string | null };
+                    if (pbsLayout === 'grid') {
+                      return (
+                        <button key={svc.id} onClick={() => handleSelectService(svc)}
+                          className="flex flex-col rounded-xl overflow-hidden transition-all text-left shadow-sm border"
+                          style={{ backgroundColor: pbsSurfaceColor, borderColor: pbsBorderColor }}>
+                          {pbsShowImages && ext.banner_image_url
+                            ? <img src={ext.banner_image_url} alt={svc.name} className="w-full h-28 object-cover" />
+                            : pbsShowImages && <div className="w-full h-20 flex items-center justify-center" style={{ backgroundColor: pbsBorderColor }}><span className="h-3 w-3 rounded-full" style={{ backgroundColor: svc.color }} /></div>
+                          }
+                          <div className="p-3.5 flex-1 flex flex-col gap-2">
+                            <p className="font-semibold text-sm" style={{ color: pbsTextColor }}>{svc.name}</p>
+                            {pbsShowDesc && ((svc as any).show_description_on_booking_page ?? true) && svc.description && <p className="text-xs line-clamp-2 flex-1" style={{ color: pbsMutedColor }}>{svc.description}</p>}
+                            <div className="flex items-center justify-between gap-2 mt-auto">
+                              <span className="text-xs" style={{ color: pbsMutedColor }}>{svc.duration_minutes} min{svc.price_cents > 0 ? ` · $${(svc.price_cents / 100).toFixed(2)}` : ' · Free'}</span>
+                              <span style={{ backgroundColor: pbsBtnColor, color: pbsTheme.btnText }} className="px-3 py-1.5 text-xs font-semibold rounded-lg">{pbsBtnLabel}</span>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    }
+                    return (
+                      <button key={svc.id} onClick={() => handleSelectService(svc)}
+                        className={`w-full p-4 rounded-xl transition-all text-left border ${isBoldTheme ? 'shadow-none' : 'shadow-sm'}`}
+                        style={{ backgroundColor: pbsSurfaceColor, borderColor: pbsBorderColor }}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3 flex-1 min-w-0">
+                            {pbsShowImages && (ext.banner_image_url
+                              ? <img src={ext.banner_image_url} alt={svc.name} className={`rounded-lg object-cover shrink-0 ${isBoldTheme ? 'h-16 w-16' : 'h-14 w-14'}`} />
+                              : <div className={`rounded-lg shrink-0 flex items-center justify-center ${isBoldTheme ? 'h-16 w-16' : 'h-14 w-14'}`} style={{ backgroundColor: pbsBorderColor }}><span className="h-3 w-3 rounded-full" style={{ backgroundColor: svc.color }} /></div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                {!pbsShowImages && <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: svc.color }} />}
+                                <span className={`font-semibold ${isBoldTheme ? 'text-base' : ''}`} style={{ color: pbsTextColor }}>{svc.name}</span>
+                              </div>
+                              {pbsShowDesc && ((svc as any).show_description_on_booking_page ?? true) && svc.description && <p className="text-sm mb-1.5" style={{ color: pbsMutedColor }}>{svc.description}</p>}
+                              <p className="text-xs" style={{ color: pbsMutedColor }}>
+                                {svc.duration_minutes} min
+                                {svc.price_cents > 0
+                                  ? <span className="ml-2 font-semibold" style={{ color: pbsBtnColor }}>${(svc.price_cents / 100).toFixed(2)}</span>
+                                  : <span className="ml-2" style={{ color: pbsMutedColor }}>Free</span>}
+                              </p>
+                            </div>
+                          </div>
+                          <span style={{ backgroundColor: pbsBtnColor, color: pbsTheme.btnText }} className="shrink-0 px-3 py-1.5 text-xs font-semibold rounded-lg whitespace-nowrap self-center">{pbsBtnLabel}</span>
+                        </div>
+                      </button>
+                    );
+                  };
+                  if (pbsUseCategories && pbsCategories.length > 0) {
+                    const grouped = pbsCategories.map((cat) => ({ cat, svcs: services.filter((s) => (s as any).category === cat) })).filter((g) => g.svcs.length > 0);
+                    const ungrouped = services.filter((s) => !pbsCategories.includes((s as any).category));
+                    return (
+                      <div className="space-y-6">
+                        {grouped.map(({ cat, svcs }) => (
+                          <div key={cat}>
+                            <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: pbsMutedColor }}>{cat}</p>
+                            <div className={pbsLayout === 'grid' ? 'grid grid-cols-2 gap-3' : 'space-y-3'}>{svcs.map(renderSvc)}</div>
+                          </div>
+                        ))}
+                        {ungrouped.length > 0 && <div className={pbsLayout === 'grid' ? 'grid grid-cols-2 gap-3' : 'space-y-3'}>{ungrouped.map(renderSvc)}</div>}
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className={pbsLayout === 'grid' ? 'grid grid-cols-2 gap-3' : 'space-y-3'}>
+                      {services.map(renderSvc)}
+                      {services.length === 0 && <p className="text-sm py-4" style={{ color: pbsMutedColor }}>No services available.</p>}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {step === 'datetime' && selectedService && (
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold" style={{ color: pbsTextColor }}>Select date & time</h2>
+                  <button onClick={() => { setStep('service'); setSelectedService(null); setSelectedDate(null); setSelectedSlot(null); }}
+                    className="text-sm transition-colors" style={{ color: pbsMutedColor }}>Change service</button>
+                </div>
+                {/* Calendar + time slots — stacks vertically on mobile */}
+              <div className="flex flex-col gap-6">
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <button onClick={prevMonth} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+                        <ChevronLeft className="h-5 w-5" />
+                      </button>
+                      <h3 className="font-semibold text-base">{MONTH_NAMES[calMonth]} {calYear}</h3>
+                      <button onClick={nextMonth} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+                        <ChevronRight className="h-5 w-5" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-7 mb-2">
+                      {DAY_SHORT.map((d) => <div key={d} className="text-center text-xs text-slate-400 dark:text-slate-500 font-medium py-1">{d}</div>)}
+                    </div>
+                    <div className="grid grid-cols-7 gap-1">
+                      {calendarDays.map((d, i) => {
+                        if (!d) return <div key={`empty-${i}`} />;
+                        const dk = `${calYear}-${String(calMonth + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                        const hasSlots = displaySlotMap.has(dk);
+                        const isSelected = selectedDate === dk;
+                        const isPast = new Date(calYear, calMonth, d) < today && toDateKey(new Date(calYear, calMonth, d)) !== toDateKey(today);
+                        return (
+                          <button key={dk} disabled={!hasSlots || isPast} onClick={() => { setSelectedDate(dk); setSelectedSlot(null); }}
+                            className={`aspect-square flex items-center justify-center rounded-lg text-sm font-medium transition-all ${
+                              isSelected ? 'text-white' : hasSlots && !isPast ? 'text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800' : 'text-slate-300 dark:text-slate-700 cursor-not-allowed'
+                            }`}
+                            style={isSelected ? { backgroundColor: brandColor } : hasSlots && !isPast ? { border: `1px solid ${brandColor}33` } : {}}>
+                            {d}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  {selectedDate && (
+                    <div>
+                      <h4 className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-3">
+                        {new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                      </h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 gap-2">
+                        {(displaySlotMap.get(selectedDate) ?? []).map((slot) => (
+                          <button key={slot} onClick={() => { setSelectedSlot(slot); }}
+                            className={`py-3 px-3 rounded-lg text-sm font-medium transition-all min-h-[48px] ${
+                              selectedSlot === slot ? 'text-white' : 'bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-600 text-slate-900 dark:text-white'
+                            }`}
+                            style={selectedSlot === slot ? { backgroundColor: brandColor } : {}}>
+                            {formatTime12(slot)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {!selectedDate && (
+                    <p className="text-sm text-slate-400 dark:text-slate-500">Select a date to see available times.</p>
+                  )}
+                </div>
+                {selectedDate && selectedSlot && isRecurringService && (
+                  <div className="mt-4 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50/60 dark:bg-emerald-950/20 space-y-3">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">This is a recurring booking</p>
+                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">
+                        {recurringFrequencyLabel}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">Your upcoming appointments:</p>
+                      <ul className="space-y-1.5">
+                        {recurringPreviewDates.map((dt, i) => (
+                          <li key={i} className="text-sm text-slate-700 dark:text-slate-300">
+                            ✓ {dt.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} at{' '}
+                            {dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 italic">
+                        ...and {selectedService?.recurrence_frequency === 'monthly' ? 'every month' : selectedService?.recurrence_frequency === 'biweekly' ? 'every 2 weeks' : 'every week'} after that
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {selectedDate && selectedSlot && (
+                  <div className="mt-4 flex justify-end">
+                    <button onClick={() => setStep('details')} className="w-full sm:w-auto px-5 py-3 text-white font-semibold rounded-lg transition-colors inline-flex items-center justify-center gap-2 min-h-[48px]" style={{ backgroundColor: brandColor }}>
+                      Continue <ArrowRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {step === 'details' && selectedService && selectedDate && selectedSlot && (
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold" style={{ color: pbsTextColor }}>Your details</h2>
+                  <button onClick={() => setStep('datetime')} className="text-sm transition-colors" style={{ color: pbsMutedColor }}>Change time</button>
+                </div>
+                {/* Required fields legend */}
+                <p className="text-xs text-slate-400 dark:text-slate-500 mb-4 flex items-center gap-1">
+                  <span className="text-red-400 font-bold">*</span> Required fields
+                </p>
+                <div className="space-y-4">
+                  {isRecurringService && selectedService.recurrence_frequency && (
+                    <div className="p-4 rounded-xl border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50/60 dark:bg-emerald-950/20 space-y-3">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">This is a recurring booking</p>
+                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">
+                          {recurringFrequencyLabel}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">Your upcoming appointments:</p>
+                        <ul className="space-y-1.5">
+                          {recurringPreviewDates.map((dt, i) => (
+                            <li key={i} className="text-sm text-slate-700 dark:text-slate-300">
+                              ✓ {dt.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} at{' '}
+                              {dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 italic">
+                          ...and {selectedService.recurrence_frequency === 'monthly' ? 'every month' : selectedService.recurrence_frequency === 'biweekly' ? 'every 2 weeks' : 'every week'} after that
+                        </p>
+                      </div>
+                      <label className="flex items-start gap-2.5 cursor-pointer">
+                        <input type="checkbox" checked={recurringAcknowledged} onChange={(e) => setRecurringAcknowledged(e.target.checked)}
+                          className="mt-0.5 h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-emerald-500 focus:ring-emerald-500 shrink-0" />
+                        <span className="text-sm text-slate-700 dark:text-slate-300">
+                          I understand this is a recurring booking and I will be scheduled each {formatRecurrencePeriod(selectedService.recurrence_frequency)}
+                          {isPaidService ? ' (payment to be arranged with host)' : ''}
+                        </span>
+                      </label>
+                      {isPaidService && (
+                        <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+                          Recurring payment setup coming soon — host will be in touch to set up payment.
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                        Full name <span className="text-red-400">*</span>
+                      </label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500" />
+                        <input type="text" placeholder="Jane Smith" value={guestName} onChange={(e) => setGuestName(e.target.value)} required
+                          className={`w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition ${!guestName ? 'border-slate-300 dark:border-slate-700' : 'border-emerald-400 dark:border-emerald-600'}`} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                        Email address <span className="text-red-400">*</span>
+                      </label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500" />
+                        <input type="email" placeholder="jane@example.com" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} required
+                          className={`w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition ${!guestEmail ? 'border-slate-300 dark:border-slate-700' : 'border-emerald-400 dark:border-emerald-600'}`} />
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Your timezone</label>
+                    <div className="relative">
+                      <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500" />
+                      <select value={guestTimezone} onChange={(e) => setGuestTimezone(e.target.value)}
+                        className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition">
+                        {TIMEZONES.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  {questions.map((q) => (
+                    <div key={q.id}>
+                      <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                        {q.label} {q.required && <span className="text-red-400">*</span>}
+                        {!q.required && <span className="text-slate-400 dark:text-slate-500 font-normal ml-1">(optional)</span>}
+                      </label>
+                      {q.field_type === 'textarea' ? (
+                        <textarea value={answers[q.id] ?? ''} onChange={(e) => setAnswers((p) => ({ ...p, [q.id]: e.target.value }))} rows={3}
+                          className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition resize-none" />
+                      ) : q.field_type === 'select' ? (
+                        <select value={answers[q.id] ?? ''} onChange={(e) => setAnswers((p) => ({ ...p, [q.id]: e.target.value }))}
+                          className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition">
+                          <option value="">Select...</option>
+                          {(q.options ?? []).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
+                      ) : q.field_type === 'checkbox' ? (
+                        <div className="flex items-center gap-6">
+                          {['Yes', 'No'].map((opt) => (
+                            <label key={opt} className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name={`checkbox-${q.id}`}
+                                checked={answers[q.id] === opt.toLowerCase()}
+                                onChange={() => setAnswers((p) => ({ ...p, [q.id]: opt.toLowerCase() }))}
+                                className="text-emerald-500 border-slate-300 dark:border-slate-600 focus:ring-emerald-500"
+                              />
+                              <span className="text-sm text-slate-700 dark:text-slate-300">{opt}</span>
+                            </label>
+                          ))}
+                        </div>
+                      ) : (
+                        <input type={q.field_type === 'phone' ? 'tel' : q.field_type === 'url' ? 'url' : 'text'}
+                          value={answers[q.id] ?? ''} onChange={(e) => setAnswers((p) => ({ ...p, [q.id]: e.target.value }))}
+                          className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition" />
+                      )}
+                    </div>
+                  ))}
+                  <div>
+                    <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">Additional notes (optional)</label>
+                    <textarea value={guestNotes} onChange={(e) => setGuestNotes(e.target.value)} rows={2}
+                      placeholder="Anything else you'd like your host to know..."
+                      className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition resize-none" />
+                  </div>
+                  {selectedService.cancellation_policy && (
+                    <div className="p-3 bg-amber-50 dark:bg-slate-800/50 border border-amber-200 dark:border-slate-700/50 rounded-lg flex gap-2 text-xs text-slate-600 dark:text-slate-400">
+                      <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-amber-500" />
+                      <span><strong className="text-slate-700 dark:text-slate-300">Cancellation policy:</strong> {selectedService.cancellation_policy}</span>
+                    </div>
+                  )}
+                  {(selectedService as any)?.require_terms && (
+                    <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl space-y-3">
+                      <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">By booking this appointment you agree to our cancellation policy. Cancellations must be made at least 24 hours in advance. No-shows may be charged the full session fee. Payment is due at time of booking.</p>
+                      <label className="flex items-start gap-2.5 cursor-pointer">
+                        <input type="checkbox" checked={termsAgreed} onChange={(e) => setTermsAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-emerald-500 focus:ring-emerald-500 shrink-0" />
+                        <span className="text-sm text-slate-700 dark:text-slate-300">I have read and agree to the terms above <span className="text-red-500">*</span></span>
+                      </label>
+                    </div>
+                  )}
+                  {(selectedService as any)?.require_nda && (
+                    <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl space-y-3">
+                      <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">The parties agree to keep confidential all information shared during this session. Neither party shall disclose any proprietary, confidential, or sensitive information shared during or after this consultation to any third party without prior written consent.</p>
+                      <label className="flex items-start gap-2.5 cursor-pointer">
+                        <input type="checkbox" checked={ndaAgreed} onChange={(e) => setNdaAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-emerald-500 focus:ring-emerald-500 shrink-0" />
+                        <span className="text-sm text-slate-700 dark:text-slate-300">I agree to the Non-Disclosure Agreement above <span className="text-red-500">*</span></span>
+                      </label>
+                    </div>
+                  )}
+
+                  {(!guestName || !guestEmail || requiredAnswersMissing) && !submitting && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5 mt-1">
+                      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                      {!guestName ? 'Full name is required.' : !guestEmail ? 'Email address is required.' : 'Please answer all required questions above.'}
+                    </p>
+                  )}
+
+                  {selectedService.price_cents > 0 && (() => {
+                    const svc = selectedService as Service & {
+                      payment_provider?: string;
+                      paypal_me_link?: string | null;
+                      paypal_currency?: string;
+                      venmo_handle?: string | null;
+                      cashapp_tag?: string | null;
+                      zelle_contact?: string | null;
+                    };
+                    const provider = svc.payment_provider ?? 'none';
+                    const amount = `$${(svc.price_cents / 100).toFixed(2)}`;
+                    const currency = svc.paypal_currency ?? 'USD';
+
+                    const paymentMethods: { label: string; handle: string; url: string }[] = [];
+                    if (provider === 'paypal' && svc.paypal_me_link) {
+                      const base = svc.paypal_me_link.replace(/^https?:\/\//, '').replace(/^www\./, '');
+                      const href = `https://${base}/${(svc.price_cents / 100).toFixed(2)}${currency !== 'USD' ? `?country.x=${currency}&locale.x=en_${currency.slice(0,2).toUpperCase()}` : ''}`;
+                      paymentMethods.push({ label: 'Pay with PayPal', handle: svc.paypal_me_link, url: href });
+                    }
+                    if (provider === 'p2p') {
+                      if (svc.venmo_handle) paymentMethods.push({ label: 'Pay with Venmo', handle: svc.venmo_handle, url: `https://venmo.com/${svc.venmo_handle.replace(/^@/, '')}?txn=pay&amount=${(svc.price_cents / 100).toFixed(2)}&note=${encodeURIComponent(svc.name)}` });
+                      if (svc.cashapp_tag) paymentMethods.push({ label: 'Pay with Cash App', handle: svc.cashapp_tag, url: `https://cash.app/${svc.cashapp_tag.replace(/^\$/, '')}/${(svc.price_cents / 100).toFixed(2)}` });
+                      if (svc.zelle_contact) paymentMethods.push({ label: 'Pay with Zelle', handle: svc.zelle_contact, url: 'https://www.zellepay.com/' });
+                    }
+
+                    if (paymentMethods.length === 0) return null;
+
+                    return (
+                      <div className="mt-2 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                        <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700" style={{ backgroundColor: brandColor + '18' }}>
+                          <p className="text-sm font-bold" style={{ color: brandColor }}>Complete Your Payment</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Send {amount} using one of the options below, then confirm below to finalize your booking.</p>
+                        </div>
+                        <div className="p-4 space-y-2.5">
+                          {paymentMethods.map((pm) => (
+                            <a
+                              key={pm.url}
+                              href={pm.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center justify-between gap-3 w-full px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-600 transition-colors group"
+                            >
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-slate-900 dark:text-white">{pm.label}</p>
+                                <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{pm.handle}</p>
+                              </div>
+                              <ExternalLink className="h-4 w-4 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 shrink-0 transition-colors" />
+                            </a>
+                          ))}
+                          <label className="flex items-start gap-3 cursor-pointer pt-1">
+                            <input
+                              type="checkbox"
+                              checked={paymentConfirmed}
+                              onChange={(e) => setPaymentConfirmed(e.target.checked)}
+                              className="mt-0.5 h-4 w-4 rounded border-slate-300 dark:border-slate-600 focus:ring-2 shrink-0"
+                              style={{ accentColor: brandColor }}
+                            />
+                            <span className="text-sm text-slate-700 dark:text-slate-300">
+                              I confirm I have sent payment of {amount} <span className="text-red-500">*</span>
+                            </span>
+                          </label>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  <button onClick={handleBook} disabled={submitting || !guestName || !guestEmail || requiredAnswersMissing}
+                    className="w-full py-3 text-white font-semibold rounded-lg transition-all disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
+                    style={{ backgroundColor: (!guestName || !guestEmail || requiredAnswersMissing) ? '#9ca3af' : brandColor }}>
+                    {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Confirm meeting
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {step === 'confirmed' && confirmedBooking && selectedService && (
+              <div className="py-8 max-w-md mx-auto">
+                {/* Confirmation header */}
+                <div className="text-center mb-8">
+                  <div className="h-14 w-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: brandColor + '22' }}>
+                    <Check className="h-7 w-7" style={{ color: brandColor }} />
+                  </div>
+                  <h2 className="text-2xl font-bold mb-1">You're booked!</h2>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm">
+                    Confirmation sent to <span className="font-medium text-slate-700 dark:text-slate-300">{guestEmail}</span>
+                  </p>
+                </div>
+
+                {/* Booking detail card */}
+                <div className="p-5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-sm space-y-3 mb-8 shadow-sm dark:shadow-none">
+                  <div className="flex items-center gap-2 font-semibold text-base">
+                    <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: selectedService.color }} />
+                    {selectedService.name}
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                    <Calendar className="h-4 w-4 shrink-0" />
+                    {new Date(confirmedBooking.start_time).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                    <Clock className="h-4 w-4 shrink-0" />
+                    {new Date(confirmedBooking.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                    <span className="text-slate-400 dark:text-slate-600">·</span>
+                    <span>{selectedService.duration_minutes} min</span>
+                  </div>
+                  {selectedService.location && (
+                    <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                      {(() => { const Icon = getLocationIcon(selectedService.location_type); return <Icon className="h-4 w-4 shrink-0" />; })()}
+                      <span>{selectedService.location}</span>
+                    </div>
+                  )}
+                  {confirmedBooking.meet_link && (
+                    <a
+                      href={confirmedBooking.meet_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 font-semibold text-brand-600 dark:text-brand-400 hover:underline"
+                    >
+                      <Video className="h-4 w-4 shrink-0" />
+                      {confirmedBooking.meet_link.includes('teams.microsoft') ? 'Join Microsoft Teams' : confirmedBooking.meet_link.includes('zoom.us') ? 'Join Zoom Meeting' : 'Join Google Meet'}
+                    </a>
+                  )}
+                </div>
+
+                {/* Part 2 prompt */}
+                <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                  <div className="px-5 py-4 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2">
+                    <Bell className="h-4 w-4" style={{ color: brandColor }} />
+                    <span className="font-semibold text-sm">Reminder set</span>
+                  </div>
+                  <div className="px-5 py-4 space-y-4">
+                    <div className="flex items-center gap-3 p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                      <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: brandColor + '22' }}>
+                        <Mail className="h-4 w-4" style={{ color: brandColor }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">Email reminder</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">1 hour before · {guestEmail}</p>
+                      </div>
+                      <Check className="h-4 w-4 shrink-0" style={{ color: brandColor }} />
+                    </div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Want to add more reminders — SMS, WhatsApp, or another email?</p>
+                    <button
+                      onClick={() => setStep('reminders')}
+                      className="w-full py-2.5 text-sm font-semibold rounded-lg border-2 transition-all hover:opacity-90"
+                      style={{ borderColor: brandColor, color: brandColor }}>
+                      Set up additional reminders
+                    </button>
+                    <button
+                      onClick={() => setRemindersDone(true)}
+                      className="w-full py-2 text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+                      No thanks, I'm done
+                    </button>
+                  </div>
+                </div>
+
+                {remindersDone && (
+                  <div className="mt-6 text-center">
+                    {(selectedService.allow_cancellation || selectedService.allow_reschedule) && (
+                      <p className="text-xs text-slate-400 mb-4">
+                        Need to cancel or reschedule? Check your confirmation email for links.
+                      </p>
+                    )}
+                    {host?.plan === 'free' ? (
+                      <div className="mt-2 pt-5 border-t border-slate-100 dark:border-slate-800">
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">Scheduling powered by</p>
+                        <Link
+                          to="/"
+                          className="inline-flex flex-col items-center gap-2 group"
+                        >
+                          <img src="/Screenshot_2026-04-29_at_2.49.32_PM.png" alt="Pin on It" className="h-6 w-auto opacity-70 group-hover:opacity-100 transition-opacity" />
+                          <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 group-hover:underline transition-all">
+                            Get your free scheduling page →
+                          </span>
+                        </Link>
+                      </div>
+                    ) : (
+                      <Link to="/" className="inline-flex items-center gap-1.5 opacity-30 hover:opacity-60 transition-opacity">
+                        <img src="/Screenshot_2026-04-29_at_2.49.32_PM.png" alt="Pin on It" className="h-5 w-auto" />
+                      </Link>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {step === 'reminders' && confirmedBooking && selectedService && (
+              <ReminderWizard
+                brandColor={brandColor}
+                guestEmail={guestEmail}
+                reminders={reminders}
+                setReminders={setReminders}
+                onDone={() => { setRemindersDone(true); setStep('confirmed'); }}
+              />
+            )}
+          </div>
+        </div>
+      </main>
+      <footer className="border-t py-4 px-6" style={{ borderColor: pbsBorderColor, backgroundColor: pbsSurfaceColor }}>
+        {host?.plan === 'free' && (
+          <div className="flex items-center justify-center gap-2 mb-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors group"
+            >
+              <img src="/Screenshot_2026-04-29_at_2.49.32_PM.png" alt="Pin on It" className="h-4 w-auto opacity-70 group-hover:opacity-100 transition-opacity" />
+              <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                Powered by Pin on It — free scheduling for anyone
+              </span>
+              <ArrowRight className="h-3 w-3 text-emerald-500 group-hover:translate-x-0.5 transition-transform" />
+            </Link>
+          </div>
+        )}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-xs text-slate-400 dark:text-slate-500">
+          <Link to="/terms" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Terms of Service</Link>
+          <span className="hidden sm:inline">|</span>
+          <Link to="/privacy" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Privacy Policy</Link>
+          <span className="hidden sm:inline">|</span>
+          <span>&copy; 2025 Pin on It. All rights reserved.</span>
+        </div>
+      </footer>
+    </div>
+  );
+}

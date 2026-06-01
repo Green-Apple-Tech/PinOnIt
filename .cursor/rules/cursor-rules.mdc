@@ -1,0 +1,47 @@
+---
+description: Project conventions and architecture for CalSync appointment scheduling app
+globs: ["**/*.{ts,tsx}"]
+---
+
+# CalSync - Appointment Scheduling App
+
+## Tech Stack
+- **Frontend**: React 18 + TypeScript + Vite
+- **Styling**: Tailwind CSS (dark theme, slate-950 base, emerald accent)
+- **Auth**: Supabase Auth (email/password)
+- **Database**: Supabase Postgres with RLS
+- **Billing**: Stripe via Supabase Edge Functions
+- **Icons**: lucide-react only
+- **Routing**: react-router-dom
+- **Deploy**: Bolt Cloud (frontend) + Supabase Edge Functions via CLI
+
+## Architecture
+- `src/lib/` - Supabase client, types (Profile, Service, AvailabilitySlot, Booking, Subscription)
+- `src/hooks/` - Auth context (useAuth)
+- `src/components/` - Shared components (Auth, ProtectedRoute)
+- `src/pages/` - Route-level views:
+  - `Landing.tsx` - Marketing page
+  - `Book.tsx` - Public booking page (by slug)
+  - `Dashboard.tsx` - Host dashboard with bookings list + sidebar nav + Outlet
+  - `Services.tsx` - CRUD for appointment types
+  - `Availability.tsx` - Weekly recurring schedule
+  - `Settings.tsx` - Profile, slug, timezone
+  - `Billing.tsx` - Stripe plan management
+- `supabase/functions/` - Edge functions (stripe-checkout, stripe-portal, stripe-webhook)
+
+## Database Schema
+- `profiles` - hosts with slug for public booking page
+- `services` - appointment types (name, duration, price, color)
+- `availability` - recurring weekly slots (day_of_week, start_time, end_time)
+- `bookings` - confirmed appointments (guest info, time, status)
+- `subscriptions` - Stripe billing state
+
+## Conventions
+- Use `useAuth()` hook for auth state
+- All Supabase queries use `maybeSingle()` for zero-or-one results
+- RLS is always enabled; service_role key only in edge functions
+- Dark theme only: bg-slate-950 base, emerald-500/600 accent
+- No purple/indigo colors
+- No emojis in UI text
+- Booking page is public (anon access) at `/:slug`
+- Dashboard routes use nested Outlet pattern

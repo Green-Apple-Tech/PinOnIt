@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "ScheduleFlow",
+  "version": "1.0.0",
+  "description": "Quick access to your bookings, availability, and scheduling link.",
+  "permissions": ["storage", "alarms", "notifications"],
+  "host_permissions": [
+    "https://adlusgtlwgcfyxgeoias.supabase.co/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.svg",
+      "32": "icons/icon32.svg",
+      "48": "icons/icon48.svg",
+      "128": "icons/icon128.svg"
+    },
+    "default_title": "ScheduleFlow"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "icons": {
+    "16": "icons/icon16.svg",
+    "32": "icons/icon32.svg",
+    "48": "icons/icon48.svg",
+    "128": "icons/icon128.svg"
+  }
+}
