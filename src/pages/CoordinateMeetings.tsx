@@ -3,6 +3,7 @@ import { Navigate, useNavigate, useSearchParams, useLocation, Link } from 'react
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { DEFAULT_CALENDAR_CONFLICT_SETTINGS, type CalendarConflictSettings } from '../lib/types';
+import { PHONE_PLACEHOLDER, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import { Plus, X, ChevronRight, ChevronLeft, Users, Clock, MapPin, MessageSquare, Check, Loader2, Trash2, AlertCircle, ArrowRight, Phone, Calendar, RefreshCw, CheckCircle2, Sparkles } from 'lucide-react';
 
 const BRAND = '#5864C6';
@@ -1289,7 +1290,9 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
   };
 
   const handlePhoneBlur = (i: number) => {
-    if (participants[i].phone.trim()) {
+    const phone = participants[i].phone.trim();
+    if (phone) {
+      updateParticipant(i, 'phone', blurFormatPhone(phone));
       setPhoneMasked(m => m.map((v, idx) => idx === i ? true : v));
     }
   };
@@ -1350,7 +1353,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
       return {
         meeting_id: meeting.id,
         name: p.name.trim(),
-        phone: p.phone.trim(),
+        phone: normalizePhoneE164(p.phone.trim()),
         role: p.role.trim(),
         availability_response: known || null,
         availability_pre_entered: !!known,
@@ -1613,7 +1616,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
                       onChange={e => { if (!phoneMasked[i]) updateParticipant(i, 'phone', e.target.value); }}
                       onBlur={() => handlePhoneBlur(i)}
                       onClick={() => { if (phoneMasked[i]) handlePhoneClick(i); }}
-                      placeholder="+1 (555) 000-0000"
+                      placeholder={PHONE_PLACEHOLDER}
                       className={INP + ' pl-11' + (phoneMasked[i] ? ' cursor-pointer text-slate-500' : '')}
                       readOnly={phoneMasked[i]}
                     />

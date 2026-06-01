@@ -10,29 +10,9 @@ import {
   MoreVertical, AlertTriangle, Smartphone, Pencil, Zap,
   ArrowRight, CheckCircle2, BellRing, Phone, Save, PhoneCall,
 } from 'lucide-react';
+import { PHONE_PLACEHOLDER, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
-
-function formatPhone(raw: string): string {
-  const digits = raw.replace(/\D/g, '');
-  if (digits.length === 0) return '';
-  if (digits.length === 10) return `+1 (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-  if (digits.length === 11 && digits[0] === '1') return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
-  // International: keep as-is but ensure leading +
-  if (raw.trimStart().startsWith('+')) return raw;
-  return `+${digits}`;
-}
-
-function handlePhoneInput(e: React.ChangeEvent<HTMLInputElement>, setter: (v: string) => void) {
-  const raw = e.target.value;
-  // Allow free-form typing — only auto-format on blur
-  setter(raw);
-}
-
-function handlePhoneBlur(value: string, setter: (v: string) => void) {
-  if (!value.trim()) return;
-  setter(formatPhone(value));
-}
 
 function formatOffset(minutes: number): string {
   if (minutes === 0) return 'At booking time';
@@ -173,14 +153,8 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
   const handleSaveCriticalAlerts = async () => {
     if (!user) return;
     setSavingCritical(true);
-    // Normalize: auto-prepend +1 for bare 10-digit US numbers
-    const raw = criticalAlertPhone.trim().replace(/[\s\-().]/g, '');
-    const normalized = raw.length === 10 && /^\d+$/.test(raw)
-      ? `+1${raw}`
-      : raw.length === 11 && /^1\d{10}$/.test(raw)
-      ? `+${raw}`
-      : criticalAlertPhone.trim();
-    if (normalized !== criticalAlertPhone) setCriticalAlertPhone(normalized);
+    const normalized = normalizePhoneE164(criticalAlertPhone);
+    if (normalized) setCriticalAlertPhone(blurFormatPhone(normalized));
     await supabase.from('profiles').update({
       critical_alerts_enabled: criticalAlertsEnabled,
       critical_alert_phone: normalized || null,
@@ -293,8 +267,12 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
         supabase.from('message_log').select('*').eq('host_id', profile.id).order('created_at', { ascending: false }).limit(50),
         supabase.from('services').select('*').eq('host_id', profile.id),
       ]);
-      setContactPhone((profile as { phone?: string }).phone ?? '');
-      setContactWhatsapp((profile as { whatsapp_number?: string }).whatsapp_number ?? '');
+      const storedPhone = (profile as { phone?: string }).phone ?? '';
+      setContactPhone(storedPhone ? blurFormatPhone(storedPhone) : '');
+      setContactWhatsapp((() => {
+        const stored = (profile as { whatsapp_number?: string }).whatsapp_number ?? '';
+        return stored ? blurFormatPhone(stored) : '';
+      })());
       const loadedTemplates = tplRes.data ?? [];
       setTemplates(loadedTemplates);
       setRules((ruleRes.data ?? []).map((r: Record<string, unknown>) => ({
@@ -332,8 +310,8 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
     if (!profile) return;
     setSavingContact(true);
     await supabase.from('profiles').update({
-      phone: contactPhone.trim() || null,
-      whatsapp_number: contactWhatsapp.trim() || null,
+      phone: normalizePhoneE164(contactPhone) || null,
+      whatsapp_number: normalizePhoneE164(contactWhatsapp) || null,
     }).eq('id', profile.id);
     setSavingContact(false);
     setEditingContact(false);
@@ -543,7 +521,7 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
   const hasAnyReminders = templates.length > 0;
 
   const handleTestSms = async () => {
-    const to = testSmsPhone.trim();
+    const to = normalizePhoneE164(testSmsPhone);
     if (!to) return;
     setTestSmsSending(true);
     setTestSmsResult(null);
@@ -1083,8 +1061,8 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
         {editingContact ? (
           <div className="px-5 py-4 space-y-3">
             {[
-              { label: 'Phone (SMS)', icon: Smartphone, value: contactPhone, setter: setContactPhone, placeholder: '+1 (555) 000-0000', hint: 'US 10-digit or international with +' },
-              { label: 'WhatsApp number', icon: MessageSquare, value: contactWhatsapp, setter: setContactWhatsapp, placeholder: '+1 (555) 000-0000', hint: 'US 10-digit or international with +' },
+              { label: 'Phone (SMS)', icon: Smartphone, value: contactPhone, setter: setContactPhone, placeholder: PHONE_PLACEHOLDER, hint: 'US 10-digit or international with +' },
+              { label: 'WhatsApp number', icon: MessageSquare, value: contactWhatsapp, setter: setContactWhatsapp, placeholder: PHONE_PLACEHOLDER, hint: 'US 10-digit or international with +' },
             ].map(({ label, icon: Icon, value, setter, placeholder, hint }) => (
               <div key={label} className="flex items-center gap-3">
                 <div className="w-8 flex justify-center shrink-0">
@@ -1095,8 +1073,8 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
                   <input
                     type="tel"
                     value={value}
-                    onChange={(e) => handlePhoneInput(e, setter)}
-                    onBlur={() => handlePhoneBlur(value, setter)}
+                    onChange={(e) => setter(e.target.value)}
+                    onBlur={() => { if (value.trim()) setter(blurFormatPhone(value)); }}
                     placeholder={placeholder}
                     className={inputCls}
                   />
@@ -1165,8 +1143,8 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
                   type="tel"
                   value={testSmsPhone}
                   onChange={(e) => { setTestSmsPhone(e.target.value); setTestSmsResult(null); }}
-                  onBlur={(e) => handlePhoneBlur(e.target.value, setTestSmsPhone)}
-                  placeholder="+1 (555) 000-0000"
+                  onBlur={(e) => { if (e.target.value.trim()) setTestSmsPhone(blurFormatPhone(e.target.value)); }}
+                  placeholder={PHONE_PLACEHOLDER}
                   className="flex-1 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5864C6] transition"
                 />
                 <button
@@ -1557,10 +1535,11 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
                       type="tel"
                       value={criticalAlertPhone}
                       onChange={e => setCriticalAlertPhone(e.target.value)}
-                      placeholder="e.g. 5550001234 or +15550001234"
+                      onBlur={e => { if (e.target.value.trim()) setCriticalAlertPhone(blurFormatPhone(e.target.value)); }}
+                      placeholder={PHONE_PLACEHOLDER}
                       className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-400 transition"
                     />
-                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Enter a 10-digit US number — +1 will be added automatically.</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">US 10-digit numbers work without +1 — it is added automatically.</p>
                   </div>
 
                   <div className="flex items-center gap-3 flex-wrap">

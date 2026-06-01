@@ -12,6 +12,7 @@ import {
   getUpcomingRecurrenceDates,
   shouldStopRecurrence,
 } from '../lib/recurring';
+import { PHONE_PLACEHOLDER, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import {
   Calendar,
   Clock,
@@ -255,9 +256,9 @@ function ReminderWizard({
 
   const CHANNELS: { key: ReminderChannel; label: string; icon: typeof Mail; placeholder: string; note?: string }[] = [
     { key: 'email', label: 'Email', icon: Mail, placeholder: guestEmail },
-    { key: 'sms', label: 'SMS', icon: Smartphone, placeholder: '+1 555 000 0000' },
-    { key: 'whatsapp', label: 'WhatsApp', icon: MessageSquare, placeholder: '+1 555 000 0000' },
-    { key: 'voice', label: 'Voice Call', icon: Phone, placeholder: '+1 555 000 0000', note: 'Required for voice call reminders' },
+    { key: 'sms', label: 'SMS', icon: Smartphone, placeholder: PHONE_PLACEHOLDER },
+    { key: 'whatsapp', label: 'WhatsApp', icon: MessageSquare, placeholder: PHONE_PLACEHOLDER },
+    { key: 'voice', label: 'Voice Call', icon: Phone, placeholder: PHONE_PLACEHOLDER, note: 'Required for voice call reminders' },
   ];
 
   const startAdding = (channel: ReminderChannel) => {
@@ -270,9 +271,12 @@ function ReminderWizard({
 
   const addReminder = () => {
     if (!addingChannel || !draftContact.trim()) return;
+    const contactValue = addingChannel === 'email'
+      ? draftContact.trim()
+      : normalizePhoneE164(draftContact);
     setReminders((prev) => [
       ...prev,
-      { id: generateId(), channel: addingChannel, minutesBefore: draftMinutes, contactValue: draftContact.trim() },
+      { id: generateId(), channel: addingChannel, minutesBefore: draftMinutes, contactValue },
     ]);
     setAddingChannel(null);
     setDraftContact('');
@@ -349,12 +353,17 @@ function ReminderWizard({
           </div>
           <div>
             <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">
-              {addingChannel === 'email' ? 'Email address' : 'Phone number (with country code)'}
+              {addingChannel === 'email' ? 'Email address' : 'Phone number'}
             </label>
             <input
               type={addingChannel === 'email' ? 'email' : 'tel'}
               value={draftContact}
               onChange={(e) => setDraftContact(e.target.value)}
+              onBlur={(e) => {
+                if (addingChannel !== 'email' && e.target.value.trim()) {
+                  setDraftContact(blurFormatPhone(e.target.value));
+                }
+              }}
               placeholder={CHANNELS.find((c) => c.key === addingChannel)?.placeholder}
               className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
             />
@@ -656,7 +665,11 @@ export function BookPage() {
       }
 
       if (questions.length > 0 && Object.keys(answers).length > 0) {
-        const answerRows = questions.filter((q) => answers[q.id] !== undefined).map((q) => ({ booking_id: data.id, question_id: q.id, answer: answers[q.id] ?? '' }));
+        const answerRows = questions.filter((q) => answers[q.id] !== undefined).map((q) => ({
+          booking_id: data.id,
+          question_id: q.id,
+          answer: q.field_type === 'phone' ? normalizePhoneE164(answers[q.id] ?? '') : (answers[q.id] ?? ''),
+        }));
         if (answerRows.length) await supabase.from('booking_answers').insert(answerRows);
       }
 
@@ -1230,7 +1243,14 @@ export function BookPage() {
                         </div>
                       ) : (
                         <input type={q.field_type === 'phone' ? 'tel' : q.field_type === 'url' ? 'url' : 'text'}
-                          value={answers[q.id] ?? ''} onChange={(e) => setAnswers((p) => ({ ...p, [q.id]: e.target.value }))}
+                          value={answers[q.id] ?? ''}
+                          onChange={(e) => setAnswers((p) => ({ ...p, [q.id]: e.target.value }))}
+                          onBlur={(e) => {
+                            if (q.field_type === 'phone' && e.target.value.trim()) {
+                              setAnswers((p) => ({ ...p, [q.id]: blurFormatPhone(e.target.value) }));
+                            }
+                          }}
+                          placeholder={q.field_type === 'phone' ? PHONE_PLACEHOLDER : undefined}
                           className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition" />
                       )}
                     </div>
