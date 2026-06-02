@@ -466,6 +466,7 @@ export function SettingsPage() {
     }
   }, [location.search]);
 
+  // Sync notification/session fields whenever profile changes (safe — not edited in-page before save)
   useEffect(() => {
     if (profile) {
       setSessionTimeoutMinutes(profile.session_timeout_minutes ?? null);
@@ -474,10 +475,18 @@ export function SettingsPage() {
       const storedWhatsapp = profile.whatsapp_number ?? '';
       setNotificationWhatsapp(storedWhatsapp ? blurFormatPhone(storedWhatsapp) : '');
       setDefaultReminderChannel(resolveDefaultReminderChannel(profile.default_reminder_channel));
+    }
+  }, [profile?.session_timeout_minutes, profile?.phone, profile?.whatsapp_number, profile?.default_reminder_channel]);
+
+  // Sync single-use link settings only when the profile first loads (profile.id change),
+  // not on background token refreshes — otherwise mid-edit state gets clobbered.
+  useEffect(() => {
+    if (profile) {
       setSingleUseLinksEnabled(isSingleUseLinksEnabled(profile));
       setLinkExpiry(resolveLinkExpiry(profile));
     }
-  }, [profile?.session_timeout_minutes, profile?.phone, profile?.whatsapp_number, profile?.default_reminder_channel, profile?.single_use_links, profile?.single_use_links_enabled, profile?.link_expiry, profile?.default_link_expiry_days]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.id]);
 
   const handleAddEmergencyContact = async () => {
     if (!user || !newContactLabel.trim() || !newContactPhone.trim()) return;
