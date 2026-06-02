@@ -509,25 +509,38 @@ function SlugEditor({ currentSlug, userId, onSaved }: { currentSlug: string; use
 
 // ── Share panel ───────────────────────────────────────────────────────────────
 
+function buildShareUrl(slug: string, services: Service[], selectedIds: Set<string>): string {
+  const base = `${window.location.origin}/${slug}`;
+  if (services.length === 0 || selectedIds.size === 0 || selectedIds.size >= services.length) {
+    return base;
+  }
+  return `${base}?types=${Array.from(selectedIds).join(',')}`;
+}
+
 function SharePanel({
   slug,
   userId,
   onSlugChange,
+  shareUrl,
+  selectedEventCount,
+  totalEventCount,
 }: {
   slug: string;
   userId: string;
   onSlugChange: (newSlug: string) => void;
+  shareUrl: string;
+  selectedEventCount: number;
+  totalEventCount: number;
 }) {
   const [currentSlug, setCurrentSlug] = useState(slug);
   const [showEditor, setShowEditor] = useState(false);
-  const displayUrl = `${window.location.origin}/${currentSlug}`;
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedSig, setCopiedSig] = useState(false);
   const [showSig, setShowSig] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [linkCopiedToast, setLinkCopiedToast] = useState(false);
 
-  const sigText = `Book a time with me: ${displayUrl}`;
+  const sigText = `Book a time with me: ${shareUrl}`;
 
   const copy = useCallback((text: string, which: 'url' | 'sig') => {
     navigator.clipboard.writeText(text).then(() => {
@@ -537,11 +550,11 @@ function SharePanel({
   }, []);
 
   const copyLink = useCallback(() => {
-    navigator.clipboard.writeText(displayUrl).then(() => {
+    navigator.clipboard.writeText(shareUrl).then(() => {
       setLinkCopiedToast(true);
       setTimeout(() => setLinkCopiedToast(false), 2000);
     });
-  }, [displayUrl]);
+  }, [shareUrl]);
 
   const handleSaved = (newSlug: string) => {
     setCurrentSlug(newSlug);
@@ -554,6 +567,11 @@ function SharePanel({
       <div className="flex items-center gap-2 mb-1">
         <Share2 className="h-4 w-4 text-brand-600" />
         <h2 className="font-semibold text-brand-900 text-sm">Your meeting link</h2>
+        {totalEventCount > 0 && (
+          <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-white border border-brand-200 text-brand-700">
+            {selectedEventCount} of {totalEventCount} events
+          </span>
+        )}
       </div>
       <p className="text-xs text-brand-700 mb-3">Share this link anywhere so people can schedule a meeting with you.</p>
 
@@ -561,16 +579,16 @@ function SharePanel({
       <div className="flex items-center gap-2 mb-2">
         <div className="flex-1 flex items-center gap-2 bg-white border border-brand-200 rounded-xl px-3 py-2.5 min-w-0">
           <Link2 className="h-3.5 w-3.5 text-brand-500 shrink-0" />
-          <span className="text-sm text-gray-700 truncate font-mono">{displayUrl}</span>
+          <span className="text-sm text-gray-700 truncate font-mono">{shareUrl}</span>
         </div>
       </div>
 
-      {/* Quick actions — copy link & QR */}
-      <div className="grid grid-cols-2 gap-2 mb-2">
+      {/* Quick actions — copy link & compact QR */}
+      <div className="flex items-center gap-2 mb-2">
         <button
           type="button"
           onClick={copyLink}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-white border border-brand-200 text-brand-700 hover:bg-brand-50 transition-colors"
+          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-white border border-brand-200 text-brand-700 hover:bg-brand-50 transition-colors"
         >
           <Copy className="h-4 w-4" />
           Copy Link
@@ -578,10 +596,11 @@ function SharePanel({
         <button
           type="button"
           onClick={() => setShowQR(true)}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-white border border-brand-200 text-brand-700 hover:bg-brand-50 transition-colors"
+          title="QR code"
+          className="shrink-0 inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold bg-white border border-brand-200 text-brand-600 hover:bg-brand-50 transition-colors"
         >
-          <QrCode className="h-4 w-4" />
-          QR Code
+          <QrCode className="h-3.5 w-3.5" />
+          QR
         </button>
       </div>
 
@@ -594,7 +613,7 @@ function SharePanel({
       {/* Primary share actions */}
       <div className="flex flex-col gap-2 mb-3">
         <button
-          onClick={() => copy(displayUrl, 'url')}
+          onClick={() => copy(shareUrl, 'url')}
           className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
             copiedUrl
               ? 'bg-[#5864C6] text-white'
@@ -605,7 +624,7 @@ function SharePanel({
           {copiedUrl ? 'Copied!' : 'Share your Availability'}
         </button>
         <a
-          href={displayUrl}
+          href={shareUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-white border border-brand-200 text-brand-700 hover:bg-brand-50 transition-colors"
@@ -618,7 +637,7 @@ function SharePanel({
       {showQR && (
         <QRModal
           variant="booking"
-          url={displayUrl}
+          url={shareUrl}
           title={currentSlug}
           onClose={() => setShowQR(false)}
         />
@@ -718,6 +737,7 @@ export function Dashboard() {
   const [trialToast, setTrialToast] = useState<{ message: string } | null>(null);
   const [serviceSearch, setServiceSearch] = useState('');
   const [serviceQrModal, setServiceQrModal] = useState<{ url: string; title: string } | null>(null);
+  const [selectedServiceIds, setSelectedServiceIds] = useState<Set<string>>(new Set());
   // Handle ?checkout=success return from Stripe — show toast, resume wizard at the right step
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -877,6 +897,26 @@ export function Dashboard() {
       setLoading(false);
     })();
   }, [profile]);
+
+  useEffect(() => {
+    setSelectedServiceIds(new Set(services.map((s) => s.id)));
+  }, [services]);
+
+  const bookingSlug = liveSlug ?? profile?.slug ?? '';
+  const shareUrl = bookingSlug ? buildShareUrl(bookingSlug, services, selectedServiceIds) : '';
+
+  const toggleServiceSelection = (serviceId: string) => {
+    setSelectedServiceIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(serviceId)) {
+        if (next.size <= 1) return prev;
+        next.delete(serviceId);
+      } else {
+        next.add(serviceId);
+      }
+      return next;
+    });
+  };
 
   // Seed default availability (Mon-Fri, 10am-12pm + 1pm-3pm) for users with none
   useEffect(() => {
@@ -1171,6 +1211,9 @@ export function Dashboard() {
                 slug={liveSlug ?? profile.slug!}
                 userId={profile.id}
                 onSlugChange={(s) => setLiveSlug(s)}
+                shareUrl={shareUrl}
+                selectedEventCount={selectedServiceIds.size}
+                totalEventCount={services.length}
               />
             )}
 
@@ -1236,35 +1279,50 @@ export function Dashboard() {
                   </button>
                 </div>
               ) : (
+                <>
+                <div className="mb-4">
+                  <p className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-slate-400">
+                    SELECT EVENTS TO INCLUDE IN YOUR LINK
+                  </p>
+                  <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">
+                    Only checked events appear when someone visits your booking link.
+                  </p>
+                </div>
                 <div className="space-y-2">
                   {services
                     .filter((s) => !serviceSearch || s.name.toLowerCase().includes(serviceSearch.toLowerCase()))
                     .map((svc) => {
-                      const bookingSlug = liveSlug ?? profile?.slug;
                       const eventTypeUrl = bookingSlug
-                        ? `${window.location.origin}/${bookingSlug}?types=${svc.id}`
+                        ? buildShareUrl(bookingSlug, [svc], new Set([svc.id]))
                         : null;
                       const meta = `${svc.duration_minutes} min · ${svc.price_cents ? `$${(svc.price_cents / 100).toFixed(2)}` : 'Free'} · ${(svc.location_type ?? 'video').replace('_', ' ')}`;
+                      const isSelected = selectedServiceIds.has(svc.id);
                       return (
                         <div
                           key={svc.id}
                           className="flex items-center gap-3 px-4 py-3.5 bg-white dark:bg-slate-900/50 border border-gray-200 dark:border-slate-800 rounded-xl transition-colors group hover:border-gray-300 dark:hover:border-slate-700"
                         >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleServiceSelection(svc.id)}
+                            className="h-4 w-4 rounded border-gray-300 dark:border-slate-600 text-brand-600 focus:ring-brand-500 shrink-0 cursor-pointer"
+                            aria-label={`Include ${svc.name} in booking link`}
+                          />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{svc.name}</p>
                             <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{meta}</p>
                           </div>
 
-                          {/* Actions — always visible */}
                           <div className="flex items-center gap-1.5 shrink-0">
                             {eventTypeUrl && (
                               <button
                                 type="button"
                                 onClick={() => setServiceQrModal({ url: eventTypeUrl, title: svc.name })}
-                                className="p-2 rounded-lg border border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 hover:border-brand-300 dark:hover:border-brand-600 hover:bg-brand-50 dark:hover:bg-brand-950/30 transition-colors"
+                                className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 hover:border-brand-300 dark:hover:border-brand-600 hover:bg-brand-50 dark:hover:bg-brand-950/30 transition-colors"
                                 title="QR code for this event type"
                               >
-                                <QrCode className="h-4 w-4" />
+                                <QrCode className="h-3.5 w-3.5" />
                               </button>
                             )}
                             <button
@@ -1281,6 +1339,7 @@ export function Dashboard() {
                       );
                     })}
                 </div>
+                </>
               )}
             </div>
 

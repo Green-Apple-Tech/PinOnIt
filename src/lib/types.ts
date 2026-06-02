@@ -54,6 +54,8 @@ export interface Profile {
   wizard_active: boolean | null;
   default_link_expiry_days: number | null;
   single_use_links_enabled: boolean;
+  single_use_links?: boolean;
+  link_expiry?: string;
   session_timeout_minutes: number | null;
   calendar_conflict_settings: CalendarConflictSettings | null;
   created_at: string;

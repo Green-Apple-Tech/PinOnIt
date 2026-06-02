@@ -13,6 +13,7 @@ import {
   Mail, Smartphone, MessageSquare,
 } from 'lucide-react';
 import { QRModal } from '../components/QRModal';
+import { LINK_EXPIRY_OPTIONS, isSingleUseLinksEnabled, linkExpiryToDays, resolveLinkExpiry } from '../lib/singleUseLinks';
 import { ColorSwatchRow } from '../components/ColorSwatchRow';
 import { AnalyticsPage } from './Analytics';
 import { BillingPage } from './Billing';
@@ -39,13 +40,6 @@ const REMINDER_CHANNEL_OPTIONS: { value: ReminderChannelPreference; label: strin
 ];
 
 const GENERAL_TABS: SettingsTab[] = ['profile', 'booking_page', 'branding', 'embed', 'referrals', 'integrations'];
-
-const SINGLE_USE_LINK_EXPIRY_OPTIONS: { value: number; label: string }[] = [
-  { value: 0, label: '1 booking' },
-  { value: 1, label: '24 hours' },
-  { value: 7, label: '7 days' },
-  { value: 30, label: '30 days' },
-];
 
 // ── Color picker ──────────────────────────────────────────────────────────────
 
@@ -399,8 +393,12 @@ export function SettingsPage() {
   const [logoUrl, setLogoUrl] = useState(profile?.avatar_url ?? '');
 
   const [showWizardButton, setShowWizardButton] = useState(profile?.show_wizard_button !== false);
-  const [singleUseLinksEnabled, setSingleUseLinksEnabled] = useState(profile?.single_use_links_enabled ?? false);
-  const [defaultLinkExpiryDays, setDefaultLinkExpiryDays] = useState<number>(profile?.default_link_expiry_days ?? 0);
+  const [singleUseLinksEnabled, setSingleUseLinksEnabled] = useState(
+    profile ? isSingleUseLinksEnabled(profile) : false,
+  );
+  const [linkExpiry, setLinkExpiry] = useState(
+    profile ? resolveLinkExpiry(profile) : '1_booking',
+  );
   const [sessionTimeoutMinutes, setSessionTimeoutMinutes] = useState<number | null>(profile?.session_timeout_minutes ?? null);
 
   // Notifications (profile phone + default reminder channel)
@@ -476,12 +474,10 @@ export function SettingsPage() {
       const storedWhatsapp = profile.whatsapp_number ?? '';
       setNotificationWhatsapp(storedWhatsapp ? blurFormatPhone(storedWhatsapp) : '');
       setDefaultReminderChannel(resolveDefaultReminderChannel(profile.default_reminder_channel));
-      setSingleUseLinksEnabled(profile.single_use_links_enabled ?? false);
-      if (profile.default_link_expiry_days != null) {
-        setDefaultLinkExpiryDays(profile.default_link_expiry_days);
-      }
+      setSingleUseLinksEnabled(isSingleUseLinksEnabled(profile));
+      setLinkExpiry(resolveLinkExpiry(profile));
     }
-  }, [profile?.session_timeout_minutes, profile?.phone, profile?.whatsapp_number, profile?.default_reminder_channel, profile?.single_use_links_enabled, profile?.default_link_expiry_days]);
+  }, [profile?.session_timeout_minutes, profile?.phone, profile?.whatsapp_number, profile?.default_reminder_channel, profile?.single_use_links, profile?.single_use_links_enabled, profile?.link_expiry, profile?.default_link_expiry_days]);
 
   const handleAddEmergencyContact = async () => {
     if (!user || !newContactLabel.trim() || !newContactPhone.trim()) return;
@@ -560,8 +556,10 @@ export function SettingsPage() {
         booking_page_header: bookingHeader,
         avatar_url: avatarUrl || null,
         show_wizard_button: showWizardButton,
+        single_use_links: singleUseLinksEnabled,
+        link_expiry: singleUseLinksEnabled ? linkExpiry : '1_booking',
         single_use_links_enabled: singleUseLinksEnabled,
-        default_link_expiry_days: singleUseLinksEnabled ? defaultLinkExpiryDays : null,
+        default_link_expiry_days: singleUseLinksEnabled ? linkExpiryToDays(linkExpiry) : null,
         session_timeout_minutes: sessionTimeoutMinutes,
         phone: normalizePhoneE164(notificationPhone) || null,
         whatsapp_number: normalizePhoneE164(notificationWhatsapp) || null,
@@ -994,12 +992,12 @@ export function SettingsPage() {
               className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition" />
           </div>
           <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/40 p-4 space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Single-use links</h3>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Single Use Links</h3>
             <label className="flex items-center justify-between gap-4 cursor-pointer">
               <div>
                 <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Enable single-use booking links</p>
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 leading-relaxed">
-                  Each booking link can only be used once. After one booking is made the link expires automatically.
+                  Each link can only be used once. After one booking is made the link expires.
                 </p>
               </div>
               <button
@@ -1016,13 +1014,13 @@ export function SettingsPage() {
               <div>
                 <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wide">Link expires after</label>
                 <div className="flex flex-wrap gap-2">
-                  {SINGLE_USE_LINK_EXPIRY_OPTIONS.map((opt) => (
+                  {LINK_EXPIRY_OPTIONS.map((opt) => (
                     <button
                       key={opt.value}
                       type="button"
-                      onClick={() => setDefaultLinkExpiryDays(opt.value)}
+                      onClick={() => setLinkExpiry(opt.value)}
                       className={`px-4 py-2 rounded-full text-sm font-semibold border transition-all min-h-[40px] ${
-                        defaultLinkExpiryDays === opt.value
+                        linkExpiry === opt.value
                           ? 'bg-[#5864C6] border-[#5864C6] text-white'
                           : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300'
                       }`}

@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 import type { Service, BookingQuestion, MeetingType, RecurrenceFrequency } from '../lib/types';
 import { getRecurrenceEndType, type RecurrenceEndType } from '../lib/recurring';
 import { resolveDefaultReminderChannel } from '../lib/reminderChannels';
-import { computeSingleUseExpiresAt, formatSingleUseExpiryLabel } from '../lib/singleUseLinks';
+import { computeSingleUseExpiresAtForProfile, formatLinkExpiryHint, formatSingleUseExpiryLabel, isSingleUseLinksEnabled } from '../lib/singleUseLinks';
 import { LOCATION_TYPES, MEETING_TYPE_META } from '../lib/types';
 import {
   Plus, Trash2, X, Check, Loader2, MapPin, Clock, Settings2, MessageSquare,
@@ -395,8 +395,8 @@ export function ServicesPage() {
   const generateSingleUseLink = async (serviceId: string) => {
     if (!profile) return;
     setGeneratingLink(true);
-    const expiresAt = profile.single_use_links_enabled
-      ? computeSingleUseExpiresAt(profile.default_link_expiry_days)
+    const expiresAt = profile && isSingleUseLinksEnabled(profile)
+      ? computeSingleUseExpiresAtForProfile(profile)
       : null;
     const { data } = await supabase.from('single_use_links').insert({
       host_id: profile.id,
@@ -764,7 +764,7 @@ export function ServicesPage() {
                       {copiedKey === `url-${svc.id}` ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Link2 className="h-3.5 w-3.5" />}
                       {copiedKey === `url-${svc.id}` ? 'Copied!' : 'Copy link'}
                     </button>
-                    {profile?.single_use_links_enabled && (
+                    {profile && isSingleUseLinksEnabled(profile) && (
                       <button
                         onClick={(e) => { e.stopPropagation(); void openSingleUsePanel(svc.id); }}
                         className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border rounded-full transition-all ${
@@ -814,8 +814,8 @@ export function ServicesPage() {
                     </div>
                     <p className="text-xs text-gray-500 dark:text-slate-400 -mt-2">
                       Each link works exactly once. After booking, the link is disabled automatically.
-                      {profile?.default_link_expiry_days != null && profile.default_link_expiry_days > 0 && (
-                        <> Links also expire {profile.default_link_expiry_days === 1 ? 'after 24 hours' : `after ${profile.default_link_expiry_days} days`}.</>
+                      {formatLinkExpiryHint(profile ?? {}) && (
+                        <> Links also expire {formatLinkExpiryHint(profile ?? {})}.</>
                       )}
                     </p>
                     <div className="flex gap-2">
@@ -1160,21 +1160,21 @@ export function ServicesPage() {
                   </div>
 
                   <div className={`flex items-center justify-between py-4 border rounded-xl px-4 min-h-[64px] ${
-                    profile?.single_use_links_enabled
+                    profile && isSingleUseLinksEnabled(profile)
                       ? 'border-amber-200 dark:border-amber-800/60 bg-amber-50/40 dark:bg-amber-950/20'
                       : 'border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/30 opacity-80'
                   }`}>
                     <div>
                       <p className="text-base font-semibold text-gray-900 dark:text-white">Single use</p>
                       <p className="text-sm text-gray-400 dark:text-slate-500 leading-relaxed">
-                        {profile?.single_use_links_enabled
+                        {profile && isSingleUseLinksEnabled(profile)
                           ? 'Hidden from your public booking page. Guests book only via a one-time link you generate.'
                           : 'Enable single-use links in Settings → General → Booking page first.'}
                       </p>
                     </div>
                     <button
                       type="button"
-                      disabled={!profile?.single_use_links_enabled}
+                      disabled={!(profile && isSingleUseLinksEnabled(profile))}
                       onClick={() => {
                         if (form.meeting_type === 'one_off') {
                           setField('meeting_type', 'one_on_one');
