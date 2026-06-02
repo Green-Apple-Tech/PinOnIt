@@ -125,7 +125,7 @@ function ProviderIcon({ provider }: { provider: string }) {
   if (provider === 'outlook') return <OutlookIcon />;
   if (provider === 'zoom') return <ZoomIcon />;
   if (provider === 'apple') return <span className="text-slate-700 dark:text-slate-200"><AppleIcon /></span>;
-  if (provider === 'ical') return <span className="text-emerald-600 dark:text-emerald-400"><ICalIcon /></span>;
+  if (provider === 'ical') return <span className="text-indigo-600 dark:text-indigo-500"><ICalIcon /></span>;
   return <Calendar className="h-5 w-5 text-slate-400" />;
 }
 
@@ -177,7 +177,7 @@ function AppleCalDAVForm({ onClose, onConnected }: { onClose: () => void; onConn
     }
   };
 
-  const inputCls = 'w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition';
+  const inputCls = 'w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition';
 
   return (
     <div className="space-y-4">
@@ -215,7 +215,7 @@ function AppleCalDAVForm({ onClose, onConnected }: { onClose: () => void; onConn
             href="https://appleid.apple.com/account/manage"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
+            className="text-xs text-indigo-600 dark:text-indigo-500 hover:underline flex items-center gap-1"
           >
             Generate at Apple ID <ExternalLink className="h-3 w-3" />
           </a>
@@ -295,7 +295,7 @@ function ICalUrlForm({ hostId, onClose, onConnected }: { hostId: string; onClose
     onConnected();
   };
 
-  const inputCls = 'w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition';
+  const inputCls = 'w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition';
 
   return (
     <div className="space-y-4">
@@ -307,7 +307,7 @@ function ICalUrlForm({ hostId, onClose, onConnected }: { hostId: string; onClose
       )}
 
       <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center gap-2.5">
-        <span className="text-emerald-600 dark:text-emerald-400"><ICalIcon /></span>
+        <span className="text-indigo-600 dark:text-indigo-500"><ICalIcon /></span>
         <div>
           <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">iCal / webcal URL subscription</p>
           <p className="text-xs text-slate-500 dark:text-slate-400">Paste any .ics or webcal:// link for conflict checking</p>
@@ -469,11 +469,11 @@ function ConnectWizard({ hostId, onClose, onConnected }: { hostId: string; onClo
               <button
                 onClick={() => setStep('ical')}
                 disabled={!!connecting}
-                className="w-full flex items-center gap-4 p-4 rounded-xl border-2 text-left transition-all hover:shadow-md disabled:opacity-60 hover:scale-[1.01] active:scale-100 bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/40"
+                className="w-full flex items-center gap-4 p-4 rounded-xl border-2 text-left transition-all hover:shadow-md disabled:opacity-60 hover:scale-[1.01] active:scale-100 bg-indigo-50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800/40"
               >
-                <div className="shrink-0 text-emerald-600 dark:text-emerald-400"><ICalIcon /></div>
+                <div className="shrink-0 text-indigo-600 dark:text-indigo-500"><ICalIcon /></div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">iCal / webcal URL</p>
+                  <p className="text-sm font-semibold text-indigo-700 dark:text-indigo-400">iCal / webcal URL</p>
                   <p className="text-xs text-slate-500 dark:text-slate-400">Subscribe to any .ics calendar feed</p>
                 </div>
                 <ChevronRight className="h-5 w-5 text-slate-300 dark:text-slate-600 shrink-0" />
@@ -586,7 +586,7 @@ export function CalendarConnections({ compact = false }: CalendarConnectionsProp
   if (loading) {
     return (
       <div className="flex items-center justify-center py-4">
-        <Loader2 className="h-4 w-4 animate-spin text-emerald-500" />
+        <Loader2 className="h-4 w-4 animate-spin text-indigo-600" />
       </div>
     );
   }
@@ -598,22 +598,22 @@ export function CalendarConnections({ compact = false }: CalendarConnectionsProp
       <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-3">
         <div className="flex items-center justify-between mb-2">
           <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
-            <Wifi className="h-3.5 w-3.5 text-emerald-500" />
+            <Wifi className="h-3.5 w-3.5 text-indigo-600" />
             Calendars
           </p>
           {calendars.length > 0 && (
-            <button onClick={handleSync} disabled={syncing} className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-200 font-medium transition-colors disabled:opacity-50 flex items-center gap-1">
+            <button onClick={handleSync} disabled={syncing} className="text-xs text-indigo-600 dark:text-indigo-500 hover:text-indigo-800 dark:hover:text-indigo-200 font-medium transition-colors disabled:opacity-50 flex items-center gap-1">
               <RefreshCw className={`h-3 w-3 ${syncing ? 'animate-spin' : ''}`} /> Sync
             </button>
           )}
         </div>
 
         {statusMsg && (
-          <p className={`text-xs mb-2 ${statusIsError ? 'text-red-500' : 'text-emerald-600 dark:text-emerald-400'}`}>{statusMsg}</p>
+          <p className={`text-xs mb-2 ${statusIsError ? 'text-red-500' : 'text-indigo-600 dark:text-indigo-500'}`}>{statusMsg}</p>
         )}
 
         {calendars.length === 0 ? (
-          <button onClick={() => setShowWizard(true)} className="w-full flex items-center gap-2 px-3 py-2.5 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-500 dark:text-slate-400 hover:border-emerald-400 dark:hover:border-emerald-600 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+          <button onClick={() => setShowWizard(true)} className="w-full flex items-center gap-2 px-3 py-2.5 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-500 dark:text-slate-400 hover:border-indigo-500 dark:hover:border-indigo-600 hover:text-indigo-600 dark:hover:text-indigo-500 transition-colors">
             <Calendar className="h-3.5 w-3.5" /> Connect a calendar
           </button>
         ) : (
@@ -626,14 +626,14 @@ export function CalendarConnections({ compact = false }: CalendarConnectionsProp
                   <p className="text-[10px] text-slate-400 dark:text-slate-500">{cal.sync_enabled ? `Synced ${timeAgo(cal.last_synced_at)}` : 'Sync paused'}</p>
                 </div>
                 <button onClick={() => handleToggleSync(cal)} className="shrink-0" title={cal.sync_enabled ? 'Pause sync' : 'Enable sync'}>
-                  {cal.sync_enabled ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <WifiOff className="h-3.5 w-3.5 text-slate-400" />}
+                  {cal.sync_enabled ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> : <WifiOff className="h-3.5 w-3.5 text-slate-400" />}
                 </button>
                 <button onClick={() => handleDisconnect(cal.id)} className="shrink-0 text-slate-300 dark:text-slate-600 hover:text-red-400 transition-colors" title="Disconnect">
                   <Trash2 className="h-3 w-3" />
                 </button>
               </div>
             ))}
-            <button onClick={() => setShowWizard(true)} className="w-full text-left text-xs text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors pt-1">
+            <button onClick={() => setShowWizard(true)} className="w-full text-left text-xs text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-500 transition-colors pt-1">
               + Add another calendar
             </button>
           </div>
@@ -652,7 +652,7 @@ export function CalendarConnections({ compact = false }: CalendarConnectionsProp
     <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-          <Wifi className="h-4 w-4 text-emerald-500" />
+          <Wifi className="h-4 w-4 text-indigo-600" />
           Connected Calendars
         </h2>
         <div className="flex items-center gap-2">
@@ -668,7 +668,7 @@ export function CalendarConnections({ compact = false }: CalendarConnectionsProp
       </div>
 
       {statusMsg && (
-        <div className={`mb-4 flex items-center gap-2 p-3 rounded-xl text-sm border ${statusIsError ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-400' : 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/50 text-emerald-700 dark:text-emerald-400'}`}>
+        <div className={`mb-4 flex items-center gap-2 p-3 rounded-xl text-sm border ${statusIsError ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-400' : 'bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800/50 text-indigo-700 dark:text-indigo-500'}`}>
           {statusIsError ? <AlertCircle className="h-4 w-4 shrink-0" /> : <CheckCircle2 className="h-4 w-4 shrink-0" />}
           {statusMsg}
         </div>
@@ -687,7 +687,7 @@ export function CalendarConnections({ compact = false }: CalendarConnectionsProp
               { label: 'Outlook', bgCls: 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800/50 text-blue-600 dark:text-blue-400', icon: <OutlookIcon /> },
               { label: 'Zoom', bgCls: 'bg-sky-50 dark:bg-sky-950/30 border-sky-200 dark:border-sky-800/50 text-sky-600 dark:text-sky-400', icon: <ZoomIcon /> },
               { label: 'Apple', bgCls: 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300', icon: <span className="text-slate-700 dark:text-slate-300"><AppleIcon /></span> },
-              { label: 'iCal URL', bgCls: 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/40 text-emerald-600 dark:text-emerald-400', icon: <span className="text-emerald-600 dark:text-emerald-400"><ICalIcon /></span> },
+              { label: 'iCal URL', bgCls: 'bg-indigo-50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800/40 text-indigo-600 dark:text-indigo-500', icon: <span className="text-indigo-600 dark:text-indigo-500"><ICalIcon /></span> },
             ].map(({ label, bgCls, icon }) => (
               <button key={label} onClick={() => setShowWizard(true)} className={`flex items-center gap-2 px-4 py-2.5 border-2 rounded-xl text-sm font-semibold hover:shadow-md transition-all ${bgCls}`}>
                 {icon} {label}
@@ -707,8 +707,8 @@ export function CalendarConnections({ compact = false }: CalendarConnectionsProp
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{cal.calendar_name || providerLabel(cal)}</p>
                       {cal.sync_enabled && !tokenExpired && (
-                        <span className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-1.5 py-0.5 rounded-full">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live
+                        <span className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 px-1.5 py-0.5 rounded-full">
+                          <span className="h-1.5 w-1.5 rounded-full bg-indigo-600 animate-pulse" /> Live
                         </span>
                       )}
                       {tokenExpired && <span className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-1.5 py-0.5 rounded-full">Token expired — reconnect</span>}
@@ -718,11 +718,11 @@ export function CalendarConnections({ compact = false }: CalendarConnectionsProp
                       {' · Synced '}{timeAgo(cal.last_synced_at)}
                     </p>
                   </div>
-                  <button onClick={() => handleToggleSync(cal)} className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors shrink-0 ${cal.sync_enabled ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}>
+                  <button onClick={() => handleToggleSync(cal)} className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors shrink-0 ${cal.sync_enabled ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-600'}`}>
                     <span className="inline-block h-3.5 w-3.5 rounded-full bg-white shadow transform transition-transform" style={{ transform: cal.sync_enabled ? 'translateX(18px)' : 'translateX(2px)' }} />
                   </button>
                   {cal.provider !== 'ical' && cal.provider !== 'apple' && cal.provider !== 'zoom' && (
-                    <button onClick={handleSync} disabled={syncing} className="p-1.5 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-lg transition-colors disabled:opacity-50" title="Sync now">
+                    <button onClick={handleSync} disabled={syncing} className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-500 rounded-lg transition-colors disabled:opacity-50" title="Sync now">
                       <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
                     </button>
                   )}
@@ -733,7 +733,7 @@ export function CalendarConnections({ compact = false }: CalendarConnectionsProp
               </div>
             );
           })}
-          <button onClick={() => setShowWizard(true)} className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-500 dark:text-slate-400 hover:border-emerald-400 dark:hover:border-emerald-600 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+          <button onClick={() => setShowWizard(true)} className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-500 dark:text-slate-400 hover:border-indigo-500 dark:hover:border-indigo-600 hover:text-indigo-600 dark:hover:text-indigo-500 transition-colors">
             <Calendar className="h-4 w-4" /> Add another calendar
           </button>
         </div>

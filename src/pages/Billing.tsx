@@ -182,7 +182,7 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
 
       {/* Success banner */}
       {successBanner && (
-        <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl">
+        <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl success">
           <Check className="h-5 w-5 text-emerald-600 shrink-0" />
           <div className="flex-1">
             <p className="text-sm font-semibold text-emerald-800">You're on Pro — $6/mo, cancel anytime in Billing.</p>
@@ -241,7 +241,7 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
                 'Referral program access',
               ].map((f) => (
                 <li key={f} className="flex items-center gap-2.5 text-sm text-gray-600">
-                  <Check className="h-4 w-4 text-emerald-500 shrink-0" />
+                  <Check className="h-4 w-4 text-indigo-600 shrink-0" />
                   {f}
                 </li>
               ))}
@@ -294,7 +294,7 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
                 'Priority support',
               ].map((f) => (
                 <li key={f} className="flex items-center gap-2.5 text-sm text-gray-600">
-                  <Check className="h-4 w-4 text-emerald-500 shrink-0" />
+                  <Check className="h-4 w-4 text-indigo-600 shrink-0" />
                   {f}
                 </li>
               ))}

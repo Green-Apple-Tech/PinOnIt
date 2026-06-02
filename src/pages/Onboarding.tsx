@@ -84,7 +84,7 @@ function ProgressBar({ current, total }: { current: number; total: number }) {
           <div
             key={i}
             className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${
-              i < current ? 'bg-emerald-500' : i === current ? 'bg-emerald-300' : 'bg-slate-200 dark:bg-slate-700'
+              i < current ? 'bg-indigo-600' : i === current ? 'bg-indigo-300' : 'bg-slate-200 dark:bg-slate-700'
             }`}
           />
         ))}
@@ -168,14 +168,14 @@ function SlugField({
 
   const statusIcon = () => {
     if (status === 'checking') return <Loader2 className="h-4 w-4 animate-spin text-slate-400" />;
-    if (status === 'available') return <Check className="h-4 w-4 text-emerald-500" />;
+    if (status === 'available') return <Check className="h-4 w-4 text-indigo-600" />;
     if (status === 'taken' || status === 'invalid') return <AlertCircle className="h-4 w-4 text-red-500" />;
     return null;
   };
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500 transition">
+      <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-indigo-600 transition">
         <span className="pl-3 pr-1 py-3 text-sm text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/50 border-r border-slate-200 dark:border-slate-700 whitespace-nowrap shrink-0">
           {origin}/
         </span>
@@ -192,7 +192,7 @@ function SlugField({
       </div>
 
       {status === 'available' && (
-        <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+        <p className="text-xs text-indigo-600 dark:text-indigo-500 font-medium flex items-center gap-1">
           <Check className="h-3.5 w-3.5" /> That URL is available!
         </p>
       )}
@@ -204,7 +204,7 @@ function SlugField({
               <button
                 key={s}
                 onClick={() => handleChange(s)}
-                className="text-xs px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 border border-slate-200 dark:border-slate-700 rounded-full transition-colors font-medium"
+                className="text-xs px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-slate-600 dark:text-slate-300 hover:text-indigo-700 dark:hover:text-indigo-500 border border-slate-200 dark:border-slate-700 rounded-full transition-colors font-medium"
               >
                 {s}
               </button>
@@ -223,7 +223,7 @@ function SlugField({
 
 function TrialBanner() {
   return (
-    <div className="mb-6 flex items-start gap-3 p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/50 rounded-2xl">
+    <div className="mb-6 flex items-start gap-3 p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/50 rounded-2xl success">
       <Gift className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
       <div>
         <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">You're on a free 14-day Pro trial — no credit card needed.</p>
@@ -412,19 +412,19 @@ export function Onboarding() {
     });
   };
 
-  const inputCls = 'w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition text-sm';
+  const inputCls = 'w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition text-sm';
 
   // ── Success screen (shared) ───────────────────────────────────────────────
 
   const SuccessScreen = () => (
     <div className="text-center py-4">
-      <div className="h-16 w-16 bg-emerald-100 dark:bg-emerald-500/20 rounded-3xl flex items-center justify-center mx-auto mb-5">
-        <Check className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+      <div className="h-16 w-16 bg-indigo-100 dark:bg-indigo-600/20 rounded-3xl flex items-center justify-center mx-auto mb-5">
+        <Check className="h-8 w-8 text-indigo-600 dark:text-indigo-500" />
       </div>
       <h1 className="text-2xl font-bold mb-1">You're all set!</h1>
       <p className="text-slate-500 dark:text-slate-400 text-sm mb-2">Your booking link is live.</p>
       {slug && (
-        <p className="text-emerald-600 dark:text-emerald-400 font-semibold text-lg mb-6">
+        <p className="text-indigo-600 dark:text-indigo-500 font-semibold text-lg mb-6">
           {window.location.origin.replace(/^https?:\/\//, '')}/{slug}
         </p>
       )}
@@ -467,8 +467,8 @@ export function Onboarding() {
     <div>
       <ProgressBar current={path === 'calendly' ? 3 : path === 'fresh' ? 2 : 1} total={path === 'calendly' ? 5 : 4} />
       <div className="mb-8">
-        <div className="h-12 w-12 bg-emerald-100 dark:bg-emerald-500/20 rounded-2xl flex items-center justify-center mb-4">
-          <Zap className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+        <div className="h-12 w-12 bg-indigo-100 dark:bg-indigo-600/20 rounded-2xl flex items-center justify-center mb-4">
+          <Zap className="h-6 w-6 text-indigo-600 dark:text-indigo-500" />
         </div>
         <h1 className="text-2xl font-bold mb-1">Claim your booking link</h1>
         <p className="text-slate-500 dark:text-slate-400 text-sm">This is the URL you'll share so people can book time with you.</p>
@@ -505,7 +505,7 @@ export function Onboarding() {
             className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
           >
             <CalendarDays className="h-4 w-4" />
-            Timezone: <span className="text-emerald-600 dark:text-emerald-400 font-medium">{timezone}</span>
+            Timezone: <span className="text-indigo-600 dark:text-indigo-500 font-medium">{timezone}</span>
             <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showTimezone ? 'rotate-180' : ''}`} />
           </button>
           {showTimezone && (
@@ -550,8 +550,8 @@ export function Onboarding() {
           {path === 'pick' && (
             <div>
               <div className="mb-8 text-center">
-                <div className="h-12 w-12 bg-emerald-100 dark:bg-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Sparkles className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                <div className="h-12 w-12 bg-indigo-100 dark:bg-indigo-600/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Sparkles className="h-6 w-6 text-indigo-600 dark:text-indigo-500" />
                 </div>
                 <h1 className="text-2xl font-bold mb-1">How are you setting up PinOnIt?</h1>
                 <p className="text-slate-500 dark:text-slate-400 text-sm">We'll tailor the setup to match your situation.</p>
@@ -572,7 +572,7 @@ export function Onboarding() {
                       <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Import your event types automatically. Free 14-day Pro trial included.</p>
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
-                      <span className="text-xs bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full font-semibold">Free trial</span>
+                      <span className="text-xs bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 px-2 py-0.5 rounded-full font-semibold">Free trial</span>
                       <ArrowRight className="h-4 w-4 text-slate-300 dark:text-slate-600 group-hover:text-blue-500 transition-colors mt-1" />
                     </div>
                   </div>
@@ -598,17 +598,17 @@ export function Onboarding() {
                 {/* Fresh card */}
                 <button
                   onClick={() => setPath('fresh')}
-                  className="w-full p-5 bg-white dark:bg-slate-900/50 border-2 border-slate-200 dark:border-slate-800 hover:border-emerald-400 dark:hover:border-emerald-600 rounded-2xl text-left transition-all group hover:shadow-md"
+                  className="w-full p-5 bg-white dark:bg-slate-900/50 border-2 border-slate-200 dark:border-slate-800 hover:border-indigo-500 dark:hover:border-indigo-600 rounded-2xl text-left transition-all group hover:shadow-md"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center shrink-0">
-                      <Sparkles className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                    <div className="h-10 w-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 flex items-center justify-center shrink-0">
+                      <Sparkles className="h-5 w-5 text-indigo-600 dark:text-indigo-500" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-base">Starting fresh</p>
                       <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">New to scheduling tools — we'll walk you through everything.</p>
                     </div>
-                    <ArrowRight className="h-4 w-4 text-slate-300 dark:text-slate-600 group-hover:text-emerald-500 transition-colors shrink-0" />
+                    <ArrowRight className="h-4 w-4 text-slate-300 dark:text-slate-600 group-hover:text-indigo-600 transition-colors shrink-0" />
                   </div>
                 </button>
               </div>
@@ -677,13 +677,13 @@ export function Onboarding() {
                     onClick={() => toggleEventSelection(i)}
                     className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
                       evt.selected
-                        ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-400 dark:border-emerald-600'
+                        ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-500 dark:border-indigo-600'
                         : 'bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 opacity-60'
                     }`}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
-                        evt.selected ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300 dark:border-slate-600'
+                        evt.selected ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 dark:border-slate-600'
                       }`}>
                         {evt.selected && <Check className="h-3.5 w-3.5 text-white" />}
                       </div>
@@ -822,11 +822,11 @@ export function Onboarding() {
                         setCustomColor(tpl.color);
                         setFreshStep(1);
                       }}
-                      className="p-4 bg-white dark:bg-slate-900/50 border-2 border-slate-200 dark:border-slate-800 hover:border-emerald-400 dark:hover:border-emerald-600 rounded-xl text-left transition-all group hover:shadow-sm"
+                      className="p-4 bg-white dark:bg-slate-900/50 border-2 border-slate-200 dark:border-slate-800 hover:border-indigo-500 dark:hover:border-indigo-600 rounded-xl text-left transition-all group hover:shadow-sm"
                     >
                       <div className="flex items-center gap-2 mb-1.5">
                         <span className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: tpl.color }} />
-                        <p className="font-semibold text-sm group-hover:text-emerald-700 dark:group-hover:text-emerald-300 transition-colors">
+                        <p className="font-semibold text-sm group-hover:text-indigo-700 dark:group-hover:text-indigo-300 transition-colors">
                           {isCustom ? 'Custom (blank)' : tpl.name}
                         </p>
                       </div>

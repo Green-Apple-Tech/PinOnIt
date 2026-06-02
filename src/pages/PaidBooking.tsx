@@ -255,7 +255,7 @@ function FullPreview({
       <div className="flex items-center gap-1.5 px-4 py-2.5 bg-slate-100 dark:bg-slate-800">
         <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
         <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
-        <span className="h-2.5 w-2.5 rounded-full bg-green-400" />
+        <span className="h-2.5 w-2.5 rounded-full bg-indigo-500" />
         <div className="flex-1 mx-3 px-3 py-1 bg-white dark:bg-slate-900 rounded text-xs text-slate-400 truncate font-mono">
           pinonit.com/smith-photo
         </div>

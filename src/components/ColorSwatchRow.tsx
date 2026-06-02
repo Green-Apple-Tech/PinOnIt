@@ -10,7 +10,7 @@ export const BRAND_SWATCHES = [
   { hex: '#E84040', label: 'Red' },
   { hex: '#9B59B6', label: 'Purple' },
   { hex: '#F06292', label: 'Pink' },
-  { hex: '#10B981', label: 'Green' },
+  { hex: '#4F46E5', label: 'Indigo' },
   { hex: '#F97316', label: 'Orange' },
 ];
 

@@ -156,7 +156,7 @@ function IntegrationCard({
   connecting?: boolean;
 }) {
   return (
-    <div className={`flex items-start gap-4 p-4 bg-white dark:bg-slate-900/60 border rounded-xl transition-colors ${connected ? 'border-indigo-200 dark:border-indigo-800/50' : 'border-slate-200 dark:border-slate-800'}`}>
+    <div className={`flex items-start gap-4 p-4 bg-white dark:bg-slate-900/60 border rounded-xl transition-colors ${connected ? 'border-emerald-200 dark:border-emerald-800/50' : 'border-slate-200 dark:border-slate-800'}`}>
       <div className="h-11 w-11 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center justify-center shrink-0">
         <ProviderLogo provider={provider} />
       </div>
@@ -164,7 +164,7 @@ function IntegrationCard({
         <div className="flex items-center gap-2 mb-0.5 flex-wrap">
           <p className="text-sm font-semibold text-slate-900 dark:text-white">{name}</p>
           {connected ? (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 text-xs font-medium rounded-full">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-medium rounded-full connected">
               <Check className="h-3 w-3" /> Connected
             </span>
           ) : (
@@ -174,7 +174,7 @@ function IntegrationCard({
           )}
         </div>
         <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
-          {connectedEmail ? <span className="text-indigo-600 dark:text-indigo-400 font-medium">{connectedEmail}</span> : description}
+          {connectedEmail ? <span className="text-emerald-600 dark:text-emerald-400 font-medium">{connectedEmail}</span> : description}
         </p>
         {autoNote && (
           <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 italic">{autoNote}</p>
@@ -1341,7 +1341,7 @@ function ReferralsTab({ userId, profile }: { userId: string | null; profile: imp
       </div>
 
       {totalConverted >= 7 && (
-        <div className="flex items-start gap-3 p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 rounded-xl">
+        <div className="flex items-start gap-3 p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 rounded-xl success">
           <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
           <div>
             <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">You're earning monthly payments!</p>
@@ -1352,7 +1352,7 @@ function ReferralsTab({ userId, profile }: { userId: string | null; profile: imp
         </div>
       )}
       {totalConverted >= 6 && totalConverted < 7 && (
-        <div className="flex items-start gap-3 p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 rounded-xl">
+        <div className="flex items-start gap-3 p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 rounded-xl success">
           <Check className="h-5 w-5 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
           <div>
             <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">Your plan is free!</p>
@@ -1397,9 +1397,9 @@ function ReferralsTab({ userId, profile }: { userId: string | null; profile: imp
               <p className="text-xs text-slate-500 dark:text-slate-400">Applied to date</p>
               <p className="text-lg font-bold text-slate-900 dark:text-white">${(appliedCreditsCents / 100).toFixed(2)}</p>
             </div>
-            <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
+            <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
               <p className="text-xs text-slate-500 dark:text-slate-400">Pending next cycle</p>
-              <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">${(pendingCreditsCents / 100).toFixed(2)}</p>
+              <p className="text-lg font-bold text-indigo-600 dark:text-indigo-500">${(pendingCreditsCents / 100).toFixed(2)}</p>
             </div>
           </div>
         </div>

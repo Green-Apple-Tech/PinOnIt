@@ -91,7 +91,7 @@ function buildSocialIconsHtml(d: SigData, size = 24): string {
 }
 
 function renderModern(d: SigData, logoW = 60, logoPos: LogoPosition = 'top-left'): string {
-  const a = d.accentColor||'#059669'; const hb = d.bookingUrl.trim()!=='';
+  const a = d.accentColor||'#4338CA'; const hb = d.bookingUrl.trim()!=='';
   const logoHtml = d.logoUrl ? logoImg(d.logoUrl, d.company, logoW, logoPos, a) : '';
   const ci: string[] = [];
   if(d.email) ci.push(`<p style="margin:0 0 2px 0;white-space:nowrap;color:#6b7280;font-size:12px;font-family:Arial,Helvetica,sans-serif;">${esc(d.email)}</p>`);
@@ -105,7 +105,7 @@ function renderModern(d: SigData, logoW = 60, logoPos: LogoPosition = 'top-left'
 }
 
 function renderClassic(d: SigData, logoW = 60, logoPos: LogoPosition = 'top-left'): string {
-  const a = d.accentColor||'#059669'; const rgb = hexToRgb(a); const hb = d.bookingUrl.trim()!=='';
+  const a = d.accentColor||'#4338CA'; const rgb = hexToRgb(a); const hb = d.bookingUrl.trim()!=='';
   const fp: string[] = [];
   if(d.email) fp.push(`<td style="padding:0 20px 0 0;white-space:nowrap;font-size:11px;color:#ffffff;font-family:Arial,Helvetica,sans-serif;">${esc(d.email)}</td>`);
   if(d.phone) fp.push(`<td style="padding:0 20px 0 0;white-space:nowrap;font-size:11px;color:#ffffff;font-family:Arial,Helvetica,sans-serif;">${esc(d.phone)}</td>`);
@@ -120,7 +120,7 @@ function renderClassic(d: SigData, logoW = 60, logoPos: LogoPosition = 'top-left
 }
 
 function renderMinimal(d: SigData, logoW = 60, _logoPos: LogoPosition = 'top-left'): string {
-  const a = d.accentColor||'#059669'; const rgb = hexToRgb(a); const hb = d.bookingUrl.trim()!=='';
+  const a = d.accentColor||'#4338CA'; const rgb = hexToRgb(a); const hb = d.bookingUrl.trim()!=='';
   const np = d.fullName.trim().split(/\s+/).filter(Boolean);
   const i1 = (np[0]?.[0]??'A').toUpperCase(); const i2 = (np.length>=2?np[np.length-1][0]:np[0]?.[1]??'B').toUpperCase();
   const sz = Math.min(logoW, 60);
@@ -134,7 +134,7 @@ function renderMinimal(d: SigData, logoW = 60, _logoPos: LogoPosition = 'top-lef
 }
 
 function renderPortrait(d: SigData, logoW = 80, _logoPos: LogoPosition = 'top-left'): string {
-  const a = d.accentColor||'#059669'; const rgb = hexToRgb(a); const hb = d.bookingUrl.trim()!=='';
+  const a = d.accentColor||'#4338CA'; const rgb = hexToRgb(a); const hb = d.bookingUrl.trim()!=='';
   const np = d.fullName.trim().split(/\s+/).filter(Boolean);
   const initials = ((np[0]?.[0]??'A')+(np[1]?.[0]??'B')).toUpperCase();
   const sz = Math.max(40, Math.min(logoW, 120));
@@ -145,7 +145,7 @@ function renderPortrait(d: SigData, logoW = 80, _logoPos: LogoPosition = 'top-le
 }
 
 function renderBanner(d: SigData, logoW = 60, _logoPos: LogoPosition = 'top-left'): string {
-  const a = d.accentColor||'#059669'; const lightBg = lightenHex(a,0.88); const hb = d.bookingUrl.trim()!=='';
+  const a = d.accentColor||'#4338CA'; const lightBg = lightenHex(a,0.88); const hb = d.bookingUrl.trim()!=='';
   const socialHtml = buildSocialIconsHtml(d, 24);
   const parts = (d.company||'').split(/\s+/);
   const compHtml = parts.length>=2?`<span style="font-weight:900;color:#ffffff;">${esc(parts[0])}</span><span style="font-weight:400;color:#ffffff;">${esc(parts.slice(1).join(' '))}</span>`:`<span style="font-weight:700;color:#ffffff;">${esc(d.company||'')}</span>`;
@@ -154,7 +154,7 @@ function renderBanner(d: SigData, logoW = 60, _logoPos: LogoPosition = 'top-left
 }
 
 function renderExecutive(d: SigData, logoW = 60, logoPos: LogoPosition = 'top-left'): string {
-  const a = d.accentColor||'#059669'; const hb = d.bookingUrl.trim()!=='';
+  const a = d.accentColor||'#4338CA'; const hb = d.bookingUrl.trim()!=='';
   const socialHtml = buildSocialIconsHtml(d, 20);
   const ic: string[] = [];
   if(d.phone) ic.push(`<tr><td style="padding:2px 0;white-space:nowrap;font-size:12px;color:#374151;font-family:Arial,Helvetica,sans-serif;"><span style="color:#9ca3af;font-weight:700;">T :</span> ${esc(d.phone)}</td></tr>`);
@@ -167,7 +167,7 @@ function renderExecutive(d: SigData, logoW = 60, logoPos: LogoPosition = 'top-le
 }
 
 function renderDivider(d: SigData, logoW = 60, _logoPos: LogoPosition = 'top-left'): string {
-  const a = d.accentColor||'#059669'; const hb = d.bookingUrl.trim()!=='';
+  const a = d.accentColor||'#4338CA'; const hb = d.bookingUrl.trim()!=='';
   const np = d.fullName.trim().split(/\s+/).filter(Boolean);
   const initials = ((np[0]?.[0]??'A')+(np[1]?.[0]??'B')).toUpperCase();
   const dLogo = d.logoUrl?`<img src="${esc(d.logoUrl)}" alt="${esc(d.company||'Logo')}" style="display:block;width:${Math.min(logoW,110)}px;height:auto;max-height:80px;margin:0 auto 10px auto;" />`:`<div style="width:72px;height:72px;border-radius:50%;border:2px solid ${a};background:#ffffff;font-family:Georgia,serif;font-size:20px;font-weight:700;color:${a};text-align:center;line-height:72px;margin:0 auto 10px auto;">${initials}</div>`;
@@ -175,13 +175,13 @@ function renderDivider(d: SigData, logoW = 60, _logoPos: LogoPosition = 'top-lef
 }
 
 function renderAgency(d: SigData, logoW = 60, _logoPos: LogoPosition = 'top-left'): string {
-  const a = d.accentColor||'#059669'; const hb = d.bookingUrl.trim()!=='';
+  const a = d.accentColor||'#4338CA'; const hb = d.bookingUrl.trim()!=='';
   const socialHtml = buildSocialIconsHtml(d, 24);
   return `<table cellpadding="0" cellspacing="0" border="0" style="font-family:Arial,Helvetica,sans-serif;width:520px;max-width:520px;background:#ffffff;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;"><tr><td valign="middle" style="width:130px;padding:18px 16px 18px 18px;">${d.logoUrl?`<img src="${esc(d.logoUrl)}" alt="${esc(d.company||'Logo')}" style="width:${Math.min(logoW,100)}px;height:auto;max-height:52px;display:block;margin-bottom:6px;" />`:''} ${d.company?`<p style="margin:0;font-size:11px;font-weight:700;color:#111827;font-family:Arial,Helvetica,sans-serif;">${esc(d.company)}</p>`:''}</td><td style="width:3px;padding:0;background:${a};"></td><td valign="middle" style="padding:18px 22px;"><p style="margin:0 0 8px 0;font-size:14px;font-family:Arial,Helvetica,sans-serif;"><span style="font-weight:800;color:${a};">${esc(d.fullName||'Your Name')}</span>${d.title?`<span style="font-weight:400;color:#374151;font-size:13px;"> ${esc(d.title)}</span>`:''}</p><table cellpadding="0" cellspacing="0" border="0">${d.email?`<tr><td style="padding:1px 6px 1px 0;font-size:11px;font-weight:700;color:${a};font-family:Arial,Helvetica,sans-serif;white-space:nowrap;vertical-align:middle;">e.</td><td style="padding:1px 16px 1px 0;font-size:12px;color:#374151;font-family:Arial,Helvetica,sans-serif;vertical-align:middle;">${esc(d.email)}</td>${d.website?`<td style="padding:1px 6px 1px 0;font-size:11px;font-weight:700;color:${a};font-family:Arial,Helvetica,sans-serif;white-space:nowrap;vertical-align:middle;">w.</td><td style="padding:1px 0;font-size:12px;font-family:Arial,Helvetica,sans-serif;vertical-align:middle;"><a href="${esc(d.website)}" style="color:#374151;text-decoration:none;">${esc(d.website.replace(/^https?:\/\//,''))}</a></td>`:''}</tr>`:''}${d.address?`<tr><td style="padding:1px 6px 1px 0;font-size:11px;font-weight:700;color:${a};font-family:Arial,Helvetica,sans-serif;white-space:nowrap;vertical-align:middle;">a.</td><td colspan="3" style="padding:1px 0;font-size:12px;color:#374151;font-family:Arial,Helvetica,sans-serif;vertical-align:middle;">${esc(d.address)}</td></tr>`:''}${socialHtml||hb?`<tr><td colspan="4" style="padding-top:10px;">${socialHtml}${hb?`<a href="${esc(d.bookingUrl)}" style="display:inline-block;background:${a};color:#ffffff;text-decoration:none;font-size:11px;font-weight:700;padding:5px 12px;border-radius:4px;font-family:Arial,Helvetica,sans-serif;margin-left:6px;vertical-align:middle;">&#128197; Schedule</a>`:''}</td></tr>`:''}</table></td></tr></table>`;
 }
 
 function renderCreative(d: SigData, logoW = 60, logoPos: LogoPosition = 'top-left'): string {
-  const a = d.accentColor||'#059669'; const lightBg = lightenHex(a,0.88); const rgb = hexToRgb(a); const hb = d.bookingUrl.trim()!=='';
+  const a = d.accentColor||'#4338CA'; const lightBg = lightenHex(a,0.88); const rgb = hexToRgb(a); const hb = d.bookingUrl.trim()!=='';
   const socialHtml = buildSocialIconsHtml(d, 24);
   const wsStrip = d.website?`<a href="${esc(d.website)}" style="display:inline-block;background:${lightBg};color:${a};text-decoration:none;font-size:12px;font-weight:700;padding:5px 14px;border-radius:3px;font-family:Arial,Helvetica,sans-serif;letter-spacing:0.3px;border:1px solid rgba(${rgb},0.2);">${esc(d.website.replace(/^https?:\/\//,'').toUpperCase())}</a>`:'';
   const contactLines = [d.email,d.phone].filter(Boolean).map(v=>`<p style="margin:0 0 2px 0;white-space:nowrap;font-size:12px;color:#6b7280;font-family:Arial,Helvetica,sans-serif;">${esc(v)}</p>`).join('');

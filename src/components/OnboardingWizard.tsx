@@ -972,7 +972,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
 
               <div className="space-y-2 mb-6">
                 {calendars.map(cal => (
-                  <div key={cal.id} className="flex items-center gap-3 px-4 py-3 bg-white dark:bg-slate-900/50 border border-indigo-200 dark:border-indigo-800/50 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/10">
+                  <div key={cal.id} className="flex items-center gap-3 px-4 py-3 bg-white dark:bg-slate-900/50 border border-emerald-200 dark:border-emerald-800/50 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/10">
                     <ProviderIcon provider={cal.provider} size={18} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
@@ -980,7 +980,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                       </p>
                       <p className="text-xs text-slate-400 capitalize">{cal.provider}</p>
                     </div>
-                    <span className="shrink-0 flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 font-semibold">
+                    <span className="shrink-0 flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-semibold connected">
                       <Check className="h-3.5 w-3.5" /> Connected
                     </span>
                   </div>
@@ -1024,7 +1024,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                     disabled={!!connected || calConnecting === provider}
                     className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 transition-all text-left ${
                       connected
-                        ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/20'
+                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20'
                         : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
                     }`}
                   >
@@ -1034,7 +1034,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                       <p className="text-xs text-slate-400 dark:text-slate-500">{connected ? connected.provider_account_email || 'Connected' : desc}</p>
                     </div>
                     {connected ? (
-                      <span className="shrink-0 flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 font-semibold">
+                      <span className="shrink-0 flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-semibold connected">
                         <Check className="h-4 w-4" /> Connected
                       </span>
                     ) : calConnecting === provider ? (
@@ -1472,7 +1472,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                     disabled={!!connected || calConnecting === provider}
                     className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 transition-all text-left ${
                       connected
-                        ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/20'
+                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20'
                         : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
                     }`}
                   >
@@ -1482,7 +1482,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                       <p className="text-xs text-slate-400 dark:text-slate-500">{connected ? (connected.provider_account_email || 'Connected') : desc}</p>
                     </div>
                     {connected ? (
-                      <span className="shrink-0 flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 font-semibold">
+                      <span className="shrink-0 flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
                         <Check className="h-4 w-4" /> Done
                       </span>
                     ) : calConnecting === provider ? (
@@ -1605,10 +1605,10 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
               </div>
 
               {bookingUrl && (
-                <div className="mb-5 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4">
-                  <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide mb-2">Your booking link</p>
+                <div className="mb-5 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-xl p-4">
+                  <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-500 uppercase tracking-wide mb-2">Your booking link</p>
                   <div className="flex items-center gap-2">
-                    <p className="flex-1 text-sm font-mono text-emerald-800 dark:text-emerald-300 truncate">{bookingUrl}</p>
+                    <p className="flex-1 text-sm font-mono text-indigo-800 dark:text-indigo-400 truncate">{bookingUrl}</p>
                     <button
                       onClick={() => { navigator.clipboard.writeText(bookingUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
                       className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-white text-xs font-semibold rounded-lg transition-colors hover:opacity-90"
@@ -1621,7 +1621,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                       href={bookingUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="shrink-0 p-1.5 text-emerald-600 hover:text-emerald-700 transition-colors"
+                      className="shrink-0 p-1.5 text-indigo-600 hover:text-indigo-700 transition-colors"
                     >
                       <ExternalLink className="h-4 w-4" />
                     </a>

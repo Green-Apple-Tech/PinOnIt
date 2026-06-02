@@ -64,8 +64,8 @@ const REMINDER_PRESETS = [
 ];
 const CHANNELS = [
   { key: 'email' as const, label: 'Email', icon: Mail, color: 'text-blue-500' },
-  { key: 'sms' as const, label: 'SMS', icon: Smartphone, color: 'text-green-600' },
-  { key: 'whatsapp' as const, label: 'WhatsApp', icon: MessageSquare, color: 'text-emerald-500' },
+  { key: 'sms' as const, label: 'SMS', icon: Smartphone, color: 'text-indigo-600' },
+  { key: 'whatsapp' as const, label: 'WhatsApp', icon: MessageSquare, color: 'text-indigo-600' },
   { key: 'voice' as const, label: 'Voice Call', icon: PhoneCall, color: 'text-violet-500' },
 ];
 
@@ -282,8 +282,8 @@ function PaymentTab({
           <div className="p-4 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="h-7 w-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                  <DollarSign className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                <div className="h-7 w-7 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+                  <DollarSign className="h-4 w-4 text-indigo-600 dark:text-indigo-500" />
                 </div>
                 <span className="text-sm font-semibold text-gray-900 dark:text-white">Cash App</span>
               </div>
@@ -757,7 +757,7 @@ export function ServicesPage() {
                       onClick={() => copyText(share.bookingUrl, `url-${svc.id}`)}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-gray-200 dark:border-slate-700 rounded-full text-gray-700 dark:text-slate-300 hover:border-gray-400 dark:hover:border-slate-500 hover:bg-gray-50 dark:hover:bg-slate-800 transition-all"
                     >
-                      {copiedKey === `url-${svc.id}` ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Link2 className="h-3.5 w-3.5" />}
+                      {copiedKey === `url-${svc.id}` ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Link2 className="h-3.5 w-3.5" />}
                       {copiedKey === `url-${svc.id}` ? 'Copied!' : 'Copy link'}
                     </button>
                     {profile && isSingleUseLinksEnabled(profile) && (
@@ -838,7 +838,7 @@ export function ServicesPage() {
                             {!link.used && (
                               <div className="flex gap-1 shrink-0">
                                 <button onClick={() => copyText(url, `sul-${link.id}`)} className="p-1.5 rounded-lg border border-gray-200 dark:border-slate-700 text-gray-500 hover:text-brand-600 transition-colors">
-                                  {copiedKey === `sul-${link.id}` ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                                  {copiedKey === `sul-${link.id}` ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
                                 </button>
                                 <button onClick={() => { setQrService(svc); setQrUrl(url); }} className="p-1.5 rounded-lg border border-gray-200 dark:border-slate-700 text-gray-500 hover:text-brand-600 transition-colors">
                                   <QrCode className="h-3 w-3" />
@@ -860,14 +860,14 @@ export function ServicesPage() {
                   <div className="border-t border-gray-100 dark:border-slate-800 px-5 pb-5 pt-4 space-y-3">
                     <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">Share via</p>
                     {[
-                      { key: `sms-${svc.id}`, label: 'SMS', icon: Smartphone, iconColor: 'text-green-600', text: share.smsMsg },
-                      { key: `wa-${svc.id}`, label: 'WhatsApp', icon: MessageSquare, iconColor: 'text-green-500', text: share.waMsg },
+                      { key: `sms-${svc.id}`, label: 'SMS', icon: Smartphone, iconColor: 'text-indigo-600', text: share.smsMsg },
+                      { key: `wa-${svc.id}`, label: 'WhatsApp', icon: MessageSquare, iconColor: 'text-indigo-600', text: share.waMsg },
                     ].map(({ key, label, icon: Icon, iconColor, text }) => (
                       <div key={key} className="bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl p-3">
                         <div className="flex items-center justify-between mb-1.5">
                           <div className="flex items-center gap-1.5"><Icon className={`h-3.5 w-3.5 ${iconColor}`} /><span className="text-xs font-semibold text-gray-700 dark:text-slate-300">{label}</span></div>
                           <button onClick={() => copyText(text, key)} className="flex items-center gap-1 px-2 py-1 text-[10px] font-semibold rounded-lg bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300 hover:border-gray-300 transition-colors">
-                            {copiedKey === key ? <><Check className="h-3 w-3 text-green-500" /> Copied!</> : <><Copy className="h-3 w-3" /> Copy</>}
+                            {copiedKey === key ? <><Check className="h-3 w-3 text-emerald-500" /> Copied!</> : <><Copy className="h-3 w-3" /> Copy</>}
                           </button>
                         </div>
                         <p className="text-xs text-gray-500 leading-relaxed whitespace-pre-line">{text}</p>
@@ -1073,7 +1073,7 @@ export function ServicesPage() {
                               <button key={key} type="button" onClick={() => setField('recurrence_frequency', key)}
                                 className={`px-4 py-2 rounded-full text-sm font-semibold border transition-all min-h-[40px] ${
                                   form.recurrence_frequency === key
-                                    ? 'bg-emerald-500 border-emerald-500 text-white'
+                                    ? 'bg-indigo-600 border-indigo-600 text-white'
                                     : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300'
                                 }`}>
                                 {label}
@@ -1206,8 +1206,8 @@ export function ServicesPage() {
                           <button key={val} type="button" onClick={() => setField(field, val)}
                             className={`px-4 py-2.5 rounded-full text-sm font-semibold border transition-all min-h-[44px] ${
                               selected
-                                ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm'
-                                : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:border-emerald-400 dark:hover:border-emerald-500'
+                                ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                                : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:border-indigo-500 dark:hover:border-indigo-600'
                             }`}
                           >
                             {val === 0 ? 'None' : `${val} min`}

@@ -23,14 +23,14 @@ interface ServiceStatus {
 const SERVICE_NAMES = ['Booking Page', 'Dashboard', 'Database', 'Email/SMS Reminders'];
 
 function statusIcon(s: ServiceStatus['status']) {
-  if (s === 'operational') return <CheckCircle className="h-5 w-5 text-emerald-500" />;
+  if (s === 'operational') return <CheckCircle className="h-5 w-5 text-indigo-600" />;
   if (s === 'degraded') return <AlertTriangle className="h-5 w-5 text-amber-500" />;
   if (s === 'down') return <XCircle className="h-5 w-5 text-red-500" />;
   return <Clock className="h-5 w-5 text-gray-400" />;
 }
 
 function statusBadge(s: ServiceStatus['status']) {
-  if (s === 'operational') return <span className="px-2.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-xs font-semibold rounded-full">Operational</span>;
+  if (s === 'operational') return <span className="px-2.5 py-0.5 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 text-xs font-semibold rounded-full">Operational</span>;
   if (s === 'degraded') return <span className="px-2.5 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-xs font-semibold rounded-full">Degraded</span>;
   if (s === 'down') return <span className="px-2.5 py-0.5 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 text-xs font-semibold rounded-full">Down</span>;
   return <span className="px-2.5 py-0.5 bg-gray-100 dark:bg-slate-800 text-gray-500 text-xs font-semibold rounded-full">Unknown</span>;
@@ -98,7 +98,7 @@ export function StatusPage() {
 
   const overall = overallStatus(services);
 
-  const overallBg = overall === 'operational' ? 'from-emerald-600 to-emerald-500'
+  const overallBg = overall === 'operational' ? 'from-indigo-700 to-indigo-600'
     : overall === 'degraded' ? 'from-amber-600 to-amber-500'
     : overall === 'down' ? 'from-red-600 to-red-500'
     : 'from-[#5864C6] to-[#4a56b8]';
@@ -183,7 +183,7 @@ export function StatusPage() {
           </div>
           {recentLogs.filter((l) => l.status !== 'ok').length === 0 ? (
             <div className="px-6 py-8 text-center">
-              <CheckCircle className="h-8 w-8 text-emerald-400 mx-auto mb-3" />
+              <CheckCircle className="h-8 w-8 text-indigo-500 mx-auto mb-3" />
               <p className="text-sm text-gray-500 dark:text-slate-400">No incidents in the last 90 days.</p>
             </div>
           ) : (

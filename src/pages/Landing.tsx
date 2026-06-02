@@ -221,8 +221,8 @@ export function Landing() {
                 title: 'SMS + WhatsApp Reminders',
                 desc: 'Reduce no-shows by 80%',
                 body: 'Automated reminders via Email, SMS, and WhatsApp for any event on any calendar. Not just your bookings.',
-                color: 'bg-emerald-50 dark:bg-emerald-900/20',
-                iconColor: 'text-emerald-600 dark:text-emerald-400',
+                color: 'bg-indigo-50 dark:bg-indigo-900/20',
+                iconColor: 'text-indigo-600 dark:text-indigo-500',
               },
               {
                 icon: Mail,
@@ -277,7 +277,7 @@ export function Landing() {
       <section id="compare" className="py-24 px-6 bg-slate-50 dark:bg-slate-900/30 scroll-mt-16">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-100 dark:bg-emerald-900/30 rounded-full text-emerald-700 dark:text-emerald-300 text-xs font-bold uppercase tracking-widest mb-5">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-100 dark:bg-indigo-900/30 rounded-full text-indigo-700 dark:text-indigo-400 text-xs font-bold uppercase tracking-widest mb-5">
               <Zap className="h-3.5 w-3.5" /> Switch in 5 minutes
             </div>
             <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
@@ -285,7 +285,7 @@ export function Landing() {
             </h2>
             <div className="inline-flex items-center gap-3 px-5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm shadow-sm">
               <span className="line-through text-slate-400">Calendly charges $16/mo.</span>
-              <span className="font-bold text-emerald-600 dark:text-emerald-400">You pay $6. That's $120/year back in your pocket.</span>
+              <span className="font-bold text-indigo-600 dark:text-indigo-500">You pay $6. That's $120/year back in your pocket.</span>
             </div>
           </div>
 
@@ -315,8 +315,8 @@ export function Landing() {
               <div className="grid grid-cols-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
                 <div className="p-4 text-sm font-semibold text-slate-500 dark:text-slate-400">Feature</div>
                 <div className="p-4 text-center">
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">PinOnIt</span>
-                  <div className="text-emerald-500 text-xs font-semibold mt-0.5">from $6/mo</div>
+                  <span className="font-bold text-indigo-600 dark:text-indigo-500 text-sm">PinOnIt</span>
+                  <div className="text-indigo-600 text-xs font-semibold mt-0.5">from $6/mo</div>
                 </div>
                 <div className="p-4 text-center">
                   <span className="font-semibold text-slate-500 dark:text-slate-400 text-sm">Calendly</span>
@@ -340,17 +340,17 @@ export function Landing() {
                 const Cell = ({ val }: { val: boolean | string | undefined }) => (
                   <div className="p-3.5 text-center flex items-center justify-center">
                     {val === true
-                      ? <Check className="h-4 w-4 text-emerald-500" />
+                      ? <Check className="h-4 w-4 text-indigo-600" />
                       : val === false
                         ? <X className="h-4 w-4 text-slate-300 dark:text-slate-600" />
-                        : <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 leading-tight">{val}</span>}
+                        : <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-500 leading-tight">{val}</span>}
                   </div>
                 );
                 const wins = row.pinonit !== false && (row.calendly === false || row.acuity === false);
                 return (
-                  <div key={row.feature} className={`grid grid-cols-4 hover:bg-emerald-50/30 dark:hover:bg-emerald-900/10 transition-colors ${!isLast ? 'border-b border-slate-100 dark:border-slate-800/50' : ''}`}>
+                  <div key={row.feature} className={`grid grid-cols-4 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-colors ${!isLast ? 'border-b border-slate-100 dark:border-slate-800/50' : ''}`}>
                     <div className="p-3.5 pl-4 text-sm text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                      {wins && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />}
+                      {wins && <span className="h-1.5 w-1.5 rounded-full bg-indigo-600 shrink-0" />}
                       {row.feature}
                     </div>
                     <Cell val={row.pinonit} />
@@ -376,7 +376,7 @@ export function Landing() {
         <div className="max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
           {[
             { val: users,    suffix: '+', label: 'Total users',             color: 'text-brand-500 dark:text-brand-400' },
-            { val: meetings, suffix: '+', label: 'Meetings scheduled',      color: 'text-emerald-600 dark:text-emerald-400' },
+            { val: meetings, suffix: '+', label: 'Meetings scheduled',      color: 'text-indigo-600 dark:text-indigo-500' },
             { val: reminders,suffix: '+', label: 'Reminders sent',          color: 'text-teal-600 dark:text-teal-400' },
             { val: earnings, prefix: '$', label: 'Referral earnings paid',  color: 'text-amber-500 dark:text-amber-400' },
           ].map(({ val, suffix, prefix, label, color }) => (
@@ -472,7 +472,7 @@ export function Landing() {
           </div>
 
           <p className="mt-6 text-center text-sm text-slate-400 dark:text-slate-500">
-            <span className="font-semibold text-emerald-600 dark:text-emerald-400">Refer 6 people → Pro is free forever.</span>{' '}
+            <span className="font-semibold text-indigo-600 dark:text-indigo-500">Refer 6 people → Pro is free forever.</span>{' '}
             Refer more → PinOnIt pays you $1/mo per person.
           </p>
         </div>
@@ -481,19 +481,19 @@ export function Landing() {
       {/* ── 6. REFERRAL EARNINGS CALCULATOR ── */}
       <section id="earn" className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 py-24 px-6 scroll-mt-16">
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-32 -right-32 h-96 w-96 rounded-full bg-emerald-500/10 blur-3xl" />
+          <div className="absolute -top-32 -right-32 h-96 w-96 rounded-full bg-indigo-600/10 blur-3xl" />
           <div className="absolute -bottom-16 -left-16 h-64 w-64 rounded-full bg-brand-500/8 blur-3xl" />
         </div>
 
         <div className="relative max-w-4xl mx-auto">
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-xs font-bold mb-5">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-indigo-600/30 bg-indigo-600/10 text-indigo-500 text-xs font-bold mb-5">
               <DollarSign className="h-3 w-3" /> Referral Earnings Program
             </div>
             <h2 className="text-3xl md:text-5xl font-black text-white leading-tight mb-4">
               Share PinOnIt.<br />
               Get paid every month.<br />
-              <span className="text-emerald-400">Forever.</span>
+              <span className="text-indigo-500">Forever.</span>
             </h2>
             <p className="text-slate-400 text-lg max-w-xl mx-auto mb-2">
               Earn <strong className="text-white">$1/month</strong> for every person you refer to Pro — permanently.
@@ -511,11 +511,11 @@ export function Landing() {
                 onClick={() => setRefs(m.refs)}
                 className={`text-left rounded-2xl border p-4 transition-all ${
                   refs === m.refs
-                    ? 'border-emerald-500 bg-emerald-500/15 shadow-lg shadow-emerald-500/10'
+                    ? 'border-indigo-600 bg-indigo-600/15 shadow-lg shadow-indigo-600/10'
                     : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/8'
                 }`}
               >
-                <p className={`text-xs font-bold mb-1.5 ${refs === m.refs ? 'text-emerald-400' : 'text-slate-500'}`}>{m.label}</p>
+                <p className={`text-xs font-bold mb-1.5 ${refs === m.refs ? 'text-indigo-500' : 'text-slate-500'}`}>{m.label}</p>
                 <p className="text-lg font-black text-white leading-tight">{m.result}</p>
                 <p className="text-xs text-slate-500 mt-1">{m.detail}</p>
               </button>
@@ -526,7 +526,7 @@ export function Landing() {
           <div className="bg-white/5 border border-white/10 rounded-3xl p-8">
             <div className="flex items-center justify-between mb-2">
               <p className="text-base font-semibold text-slate-300">How many people will you refer?</p>
-              <span className="text-4xl font-black text-emerald-400 tabular-nums">{refs}</span>
+              <span className="text-4xl font-black text-indigo-500 tabular-nums">{refs}</span>
             </div>
 
             <input
@@ -535,18 +535,18 @@ export function Landing() {
               max={1000}
               value={refs}
               onChange={(e) => setRefs(Number(e.target.value))}
-              className="w-full h-2 rounded-full bg-slate-700 accent-emerald-500 cursor-pointer mb-10"
+              className="w-full h-2 rounded-full bg-slate-700 accent-indigo-600 cursor-pointer mb-10"
             />
 
             <div className="grid grid-cols-3 gap-6 text-center">
               <div>
                 <p className="text-xs text-slate-500 uppercase tracking-widest mb-3">Monthly</p>
                 {calc.monthlyEarn > 0 ? (
-                  <p className="text-3xl md:text-4xl font-black text-emerald-400 leading-none">
+                  <p className="text-3xl md:text-4xl font-black text-indigo-500 leading-none">
                     +${calc.monthlyEarn.toLocaleString()}<span className="text-xl">/mo</span>
                   </p>
                 ) : calc.isFree ? (
-                  <p className="text-3xl md:text-4xl font-black text-emerald-400 leading-none">FREE</p>
+                  <p className="text-3xl md:text-4xl font-black text-indigo-500 leading-none">FREE</p>
                 ) : (
                   <p className="text-3xl md:text-4xl font-black text-white leading-none">
                     ${calc.monthlyCost}<span className="text-xl">/mo</span>
@@ -560,7 +560,7 @@ export function Landing() {
               <div className="border-x border-white/10">
                 <p className="text-xs text-slate-500 uppercase tracking-widest mb-3">Yearly</p>
                 {calc.yearlyEarn > 0 ? (
-                  <p className="text-3xl md:text-4xl font-black text-emerald-400 leading-none">
+                  <p className="text-3xl md:text-4xl font-black text-indigo-500 leading-none">
                     +${calc.yearlyEarn.toLocaleString()}<span className="text-xl">/yr</span>
                   </p>
                 ) : (
@@ -576,7 +576,7 @@ export function Landing() {
               <div>
                 <p className="text-xs text-slate-500 uppercase tracking-widest mb-3">Pro plan</p>
                 {calc.isFree ? (
-                  <p className="text-3xl md:text-4xl font-black text-emerald-400 leading-none">FREE</p>
+                  <p className="text-3xl md:text-4xl font-black text-indigo-500 leading-none">FREE</p>
                 ) : (
                   <p className="text-3xl md:text-4xl font-black text-white leading-none">
                     {6 - refs} <span className="text-xl">more</span>
@@ -605,7 +605,7 @@ export function Landing() {
       <section className="py-24 px-6 bg-white dark:bg-slate-950">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
-            <p className="text-xs font-bold text-emerald-500 uppercase tracking-widest mb-3">The referral program</p>
+            <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3">The referral program</p>
             <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
               How it works
             </h2>
@@ -621,10 +621,10 @@ export function Landing() {
               { icon: DollarSign,  n: '03', title: 'Earn $1/mo per subscriber forever', desc: 'Each time someone you referred pays their $6/mo, $1 flows to you. Automatically. Every single month.' },
             ].map((step) => (
               <div key={step.n} className="relative text-center">
-                <div className="hidden sm:block absolute top-10 left-[calc(50%+28px)] right-[calc(-50%+28px)] h-px bg-gradient-to-r from-emerald-300 to-transparent dark:from-emerald-700 pointer-events-none last:hidden" />
-                <div className="h-16 w-16 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mx-auto mb-5 relative">
-                  <step.icon className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
-                  <span className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-emerald-500 text-white text-xs font-black flex items-center justify-center">{step.n.replace('0', '')}</span>
+                <div className="hidden sm:block absolute top-10 left-[calc(50%+28px)] right-[calc(-50%+28px)] h-px bg-gradient-to-r from-indigo-300 to-transparent dark:from-indigo-700 pointer-events-none last:hidden" />
+                <div className="h-16 w-16 rounded-2xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center mx-auto mb-5 relative">
+                  <step.icon className="h-7 w-7 text-indigo-600 dark:text-indigo-500" />
+                  <span className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-indigo-600 text-white text-xs font-black flex items-center justify-center">{step.n.replace('0', '')}</span>
                 </div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">{step.title}</h3>
                 <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-xs mx-auto">{step.desc}</p>
@@ -633,12 +633,12 @@ export function Landing() {
           </div>
 
           {/* Permanent stake callout */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 to-teal-600 p-8 text-center">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-700 to-indigo-600 p-8 text-center">
             <div className="absolute inset-0 opacity-10">
               <div className="absolute top-2 left-4 text-8xl font-black text-white select-none">$</div>
               <div className="absolute bottom-2 right-4 text-8xl font-black text-white select-none">∞</div>
             </div>
-            <p className="relative text-emerald-100 text-sm font-semibold mb-2 uppercase tracking-widest">Social proof</p>
+            <p className="relative text-indigo-100 text-sm font-semibold mb-2 uppercase tracking-widest">Social proof</p>
             <p className="relative text-2xl md:text-3xl font-black text-white leading-snug max-w-2xl mx-auto">
               "Think of it as owning a permanent stake in every customer you bring in."
             </p>
@@ -651,7 +651,7 @@ export function Landing() {
               ].map((c) => (
                 <div key={c.n} className="bg-white/10 rounded-xl px-3 py-3">
                   <p className="text-xl font-black text-white">{c.n}</p>
-                  <p className="text-xs text-emerald-100 mt-0.5">{c.label}</p>
+                  <p className="text-xs text-indigo-100 mt-0.5">{c.label}</p>
                 </div>
               ))}
             </div>

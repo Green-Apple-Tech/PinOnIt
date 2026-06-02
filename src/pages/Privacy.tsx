@@ -69,10 +69,10 @@ const sections: Section[] = [
         <div className="mt-3 p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl">
           <p className="font-semibold text-slate-800 dark:text-slate-200 mb-2">Our commitments regarding Google data:</p>
           <ul className="space-y-2 pl-4">
-            <li className="flex gap-2"><span className="text-emerald-500 font-bold shrink-0">✓</span><span>We do <strong>not</strong> sell, share, or transfer your Google Calendar data to third parties.</span></li>
-            <li className="flex gap-2"><span className="text-emerald-500 font-bold shrink-0">✓</span><span>We do <strong>not</strong> use your Google data for advertising or any purpose unrelated to providing the scheduling service.</span></li>
-            <li className="flex gap-2"><span className="text-emerald-500 font-bold shrink-0">✓</span><span>We do <strong>not</strong> allow humans to read your calendar data except to provide support at your explicit request.</span></li>
-            <li className="flex gap-2"><span className="text-emerald-500 font-bold shrink-0">✓</span><span>Our use of Google API data complies with the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400 hover:underline">Google API Services User Data Policy</a>, including the Limited Use requirements.</span></li>
+            <li className="flex gap-2"><span className="text-indigo-600 font-bold shrink-0">✓</span><span>We do <strong>not</strong> sell, share, or transfer your Google Calendar data to third parties.</span></li>
+            <li className="flex gap-2"><span className="text-indigo-600 font-bold shrink-0">✓</span><span>We do <strong>not</strong> use your Google data for advertising or any purpose unrelated to providing the scheduling service.</span></li>
+            <li className="flex gap-2"><span className="text-indigo-600 font-bold shrink-0">✓</span><span>We do <strong>not</strong> allow humans to read your calendar data except to provide support at your explicit request.</span></li>
+            <li className="flex gap-2"><span className="text-indigo-600 font-bold shrink-0">✓</span><span>Our use of Google API data complies with the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400 hover:underline">Google API Services User Data Policy</a>, including the Limited Use requirements.</span></li>
           </ul>
         </div>
       </div>

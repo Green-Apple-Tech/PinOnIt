@@ -101,7 +101,7 @@ const DAY_HEADERS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 const STATUS_META: Record<CoordStatus, { label: string; color: string; bg: string; darkBg: string }> = {
   collecting_availability: { label: 'Collecting availability', color: '#d97706', bg: '#fef3c7', darkBg: 'rgba(217,119,6,0.15)' },
   match_found:             { label: 'Match found',             color: BRAND,     bg: '#eef0fb', darkBg: 'rgba(88,100,198,0.15)' },
-  confirmed:               { label: 'Confirmed',               color: '#059669', bg: '#d1fae5', darkBg: 'rgba(5,150,105,0.15)' },
+  confirmed:               { label: 'Confirmed',               color: '#4338CA', bg: '#d1fae5', darkBg: 'rgba(5,150,105,0.15)' },
   cancelled:               { label: 'Cancelled',               color: '#6b7280', bg: '#f3f4f6', darkBg: 'rgba(107,114,128,0.15)' },
 };
 
@@ -504,10 +504,10 @@ function MultiSelectCalendar({
                   isPast
                     ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed'
                     : isSelected
-                      ? 'bg-emerald-500 text-white shadow-sm'
+                      ? 'bg-indigo-600 text-white shadow-sm'
                       : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800',
-                  isToday && !isSelected ? 'ring-2 ring-emerald-400 ring-offset-1 dark:ring-offset-slate-950' : '',
-                  isToday && isSelected ? 'ring-2 ring-emerald-300 ring-offset-1 dark:ring-offset-slate-950' : '',
+                  isToday && !isSelected ? 'ring-2 ring-indigo-500 ring-offset-1 dark:ring-offset-slate-950' : '',
+                  isToday && isSelected ? 'ring-2 ring-indigo-400 ring-offset-1 dark:ring-offset-slate-950' : '',
                 ].join(' ')}
                 aria-label={`${isSelected ? 'Deselect' : 'Select'} ${dateStr}`}
                 aria-pressed={isSelected}
@@ -584,7 +584,7 @@ function ToggleSwitch({
       onClick={() => onChange(!checked)}
       className={[
         'relative inline-flex h-8 w-14 shrink-0 items-center rounded-full transition-colors',
-        checked ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600',
+        checked ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-600',
       ].join(' ')}
     >
       <span
@@ -809,7 +809,7 @@ function PerDayTimeSlotPicker({
                     key={preset}
                     type="button"
                     onClick={() => onApplyPreset(dateStr, preset)}
-                    className="min-h-[44px] px-4 rounded-full text-sm font-semibold border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:border-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors capitalize"
+                    className="min-h-[44px] px-4 rounded-full text-sm font-semibold border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:border-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-500 transition-colors capitalize"
                   >
                     {preset === 'morning' ? 'Morning only' : 'Afternoon only'}
                   </button>
@@ -831,7 +831,7 @@ function PerDayTimeSlotPicker({
                   checked={includeOffHours}
                   disabled={allowOffHoursGlobal}
                   onChange={() => !allowOffHoursGlobal && onToggleOffHours(dateStr)}
-                  className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-emerald-600 focus:ring-emerald-500 disabled:opacity-50"
+                  className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600 disabled:opacity-50"
                 />
                 <span className="text-sm text-slate-600 dark:text-slate-300">
                   Include off-hours{allowOffHoursGlobal ? ' (all days — global setting on)' : ''}
@@ -859,8 +859,8 @@ function PerDayTimeSlotPicker({
                         slotBusy
                           ? 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed opacity-70'
                           : isSelected
-                            ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm'
-                            : 'bg-transparent border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:border-emerald-400',
+                            ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                            : 'bg-transparent border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:border-indigo-500',
                       ].join(' ')}
                     >
                       <span>{formatTimeLabel(time)}</span>
@@ -884,7 +884,7 @@ function PerDayTimeSlotPicker({
                           'min-h-[44px] min-w-[54px] px-3 rounded-full text-[14px] font-semibold border transition-all',
                           slotBusy
                             ? 'bg-slate-100 dark:bg-slate-800 border-slate-200 text-slate-400'
-                            : 'bg-emerald-500 border-emerald-500 text-white shadow-sm',
+                            : 'bg-indigo-600 border-indigo-600 text-white shadow-sm',
                         ].join(' ')}
                       >
                         {formatTimeLabel(time)}
@@ -1672,7 +1672,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
                   durationMinutes={durationMinutes}
                 />
                 {useAdvancedSlots && (
-                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                  <p className="text-xs text-indigo-600 dark:text-indigo-500 font-medium">
                     Using specific times — SMS will list your selected slots.
                   </p>
                 )}
@@ -2117,7 +2117,7 @@ function MeetingDetail({ meeting: initialMeeting, onBack, onStatusChange }: {
           </span>
           {meeting.location && <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4" /> {meeting.location}</span>}
           {meeting.confirmed_time && (
-            <span className="flex items-center gap-1.5 font-semibold text-emerald-600 dark:text-emerald-400">
+            <span className="flex items-center gap-1.5 font-semibold text-indigo-600 dark:text-indigo-500">
               <CheckCircle2 className="h-4 w-4" /> {fmtDateTime(meeting.confirmed_time)}
             </span>
           )}
@@ -2182,7 +2182,7 @@ function MeetingDetail({ meeting: initialMeeting, onBack, onStatusChange }: {
                     <p className="font-semibold text-slate-800 dark:text-slate-200 truncate">{p.name}</p>
                     <span className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full ${
                       p.opted_out ? 'bg-slate-100 dark:bg-slate-800 text-slate-500' :
-                      p.confirmed ? 'text-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 dark:text-emerald-400' :
+                      p.confirmed ? 'text-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 dark:text-indigo-500' :
                       isPreEntered ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300' :
                       hasResponse ? 'text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400' :
                       'text-amber-700 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400'

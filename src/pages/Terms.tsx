@@ -47,10 +47,10 @@ const sections: Section[] = [
           <div className="p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl">
             <p className="font-semibold text-slate-800 dark:text-slate-200 mb-2">Free Plan</p>
             <ul className="space-y-1.5 text-xs text-slate-500 dark:text-slate-400">
-              <li className="flex gap-1.5"><span className="text-emerald-500">✓</span> Unlimited booking links</li>
-              <li className="flex gap-1.5"><span className="text-emerald-500">✓</span> Basic event types</li>
-              <li className="flex gap-1.5"><span className="text-emerald-500">✓</span> Email reminders</li>
-              <li className="flex gap-1.5"><span className="text-emerald-500">✓</span> Core scheduling features</li>
+              <li className="flex gap-1.5"><span className="text-indigo-600">✓</span> Unlimited booking links</li>
+              <li className="flex gap-1.5"><span className="text-indigo-600">✓</span> Basic event types</li>
+              <li className="flex gap-1.5"><span className="text-indigo-600">✓</span> Email reminders</li>
+              <li className="flex gap-1.5"><span className="text-indigo-600">✓</span> Core scheduling features</li>
             </ul>
           </div>
           <div className="p-4 bg-brand-50 dark:bg-brand-500/10 border border-brand-200 dark:border-brand-700/40 rounded-xl">
@@ -59,11 +59,11 @@ const sections: Section[] = [
               <span className="text-xs font-bold text-brand-700 dark:text-brand-300">$6/month</span>
             </div>
             <ul className="space-y-1.5 text-xs text-slate-500 dark:text-slate-400">
-              <li className="flex gap-1.5"><span className="text-emerald-500">✓</span> Everything in Free</li>
-              <li className="flex gap-1.5"><span className="text-emerald-500">✓</span> SMS & WhatsApp reminders</li>
-              <li className="flex gap-1.5"><span className="text-emerald-500">✓</span> Calendar integrations</li>
-              <li className="flex gap-1.5"><span className="text-emerald-500">✓</span> Advanced event types</li>
-              <li className="flex gap-1.5"><span className="text-emerald-500">✓</span> Priority support</li>
+              <li className="flex gap-1.5"><span className="text-indigo-600">✓</span> Everything in Free</li>
+              <li className="flex gap-1.5"><span className="text-indigo-600">✓</span> SMS & WhatsApp reminders</li>
+              <li className="flex gap-1.5"><span className="text-indigo-600">✓</span> Calendar integrations</li>
+              <li className="flex gap-1.5"><span className="text-indigo-600">✓</span> Advanced event types</li>
+              <li className="flex gap-1.5"><span className="text-indigo-600">✓</span> Priority support</li>
             </ul>
           </div>
         </div>

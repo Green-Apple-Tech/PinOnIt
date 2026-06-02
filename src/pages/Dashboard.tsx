@@ -1283,7 +1283,7 @@ export function Dashboard() {
                         className={`flex items-center gap-4 px-5 py-3.5 ${step.to ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors' : ''}`}
                         onClick={() => step.to && navigate(step.to)}
                       >
-                        <div className={`h-7 w-7 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${step.done ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 dark:border-slate-600'}`}>
+                        <div className={`h-7 w-7 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${step.done ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300 dark:border-slate-600'}`}>
                           {step.done && <Check className="h-4 w-4 text-white" />}
                           {!step.done && <span className="text-xs font-bold text-slate-400 dark:text-slate-500">{i + 1}</span>}
                         </div>

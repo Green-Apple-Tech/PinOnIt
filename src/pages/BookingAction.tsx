@@ -64,7 +64,7 @@ export function BookingActionPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
       </div>
     );
   }
@@ -161,7 +161,7 @@ export function BookingActionPage() {
                 {action !== 'confirm' && (
                   <Link
                     to={`/booking/${bookingId}/confirm/${actionToken}`}
-                    className="text-emerald-400 hover:text-emerald-300 transition-colors"
+                    className="text-indigo-500 hover:text-indigo-400 transition-colors"
                   >
                     Confirm instead
                   </Link>
@@ -187,8 +187,8 @@ export function BookingActionPage() {
 
         {result === 'confirmed' && (
           <div className="text-center py-12">
-            <div className="h-16 w-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Check className="h-8 w-8 text-emerald-400" />
+            <div className="h-16 w-16 bg-indigo-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Check className="h-8 w-8 text-indigo-500" />
             </div>
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Appointment confirmed!</h2>
             <p className="text-slate-500 dark:text-slate-400">You're all set. See you there.</p>
@@ -216,7 +216,7 @@ export function BookingActionPage() {
             {hostProfile?.slug && (
               <Link
                 to={`/${hostProfile.slug}`}
-                className="mt-4 inline-flex items-center gap-1 text-sm text-emerald-400 hover:text-emerald-300"
+                className="mt-4 inline-flex items-center gap-1 text-sm text-indigo-500 hover:text-indigo-400"
               >
                 Book a new time <ArrowRight className="h-3 w-3" />
               </Link>

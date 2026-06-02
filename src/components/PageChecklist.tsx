@@ -35,7 +35,7 @@ export function PageChecklist({ items, title = 'Get Started', storageKey }: Page
   return (
     <div className={`mb-5 rounded-2xl border overflow-hidden transition-all ${
       allDone
-        ? 'border-emerald-200 dark:border-emerald-800/50 bg-emerald-50 dark:bg-emerald-950/20'
+        ? 'border-indigo-200 dark:border-indigo-800/50 bg-indigo-50 dark:bg-indigo-950/20'
         : 'border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/10'
     }`}>
       <button
@@ -54,7 +54,7 @@ export function PageChecklist({ items, title = 'Get Started', storageKey }: Page
               ))}
             </div>
           )}
-          <span className={`text-sm font-semibold ${allDone ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-800 dark:text-amber-300'}`}>
+          <span className={`text-sm font-semibold ${allDone ? 'text-indigo-700 dark:text-indigo-500' : 'text-amber-800 dark:text-amber-300'}`}>
             {allDone ? `${title} — all done!` : `${title} — ${doneCount} of ${items.length} done`}
           </span>
         </div>
@@ -70,7 +70,7 @@ export function PageChecklist({ items, title = 'Get Started', storageKey }: Page
       {!collapsed && (
         <div className={`border-t divide-y ${
           allDone
-            ? 'border-emerald-200 dark:border-emerald-800/50 divide-emerald-100 dark:divide-emerald-900/30'
+            ? 'border-indigo-200 dark:border-indigo-800/50 divide-indigo-100 dark:divide-indigo-900/30'
             : 'border-amber-200 dark:border-amber-800/40 divide-amber-100 dark:divide-amber-900/20'
         }`}>
           {items.map(item => (

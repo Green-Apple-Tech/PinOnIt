@@ -41,7 +41,7 @@ const styles: Record<ToastType, string> = {
 };
 
 const iconStyles: Record<ToastType, string> = {
-  success: 'text-emerald-500',
+  success: 'text-emerald-600',
   error: 'text-red-500',
   warning: 'text-amber-500',
   info: 'text-blue-500',

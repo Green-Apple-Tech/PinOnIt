@@ -117,7 +117,7 @@ function AddEventModal({ services, defaultDate, onClose, onSaved }: AddEventModa
                 value={guestName}
                 onChange={e => setGuestName(e.target.value)}
                 placeholder="Jane Smith"
-                className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
               />
             </div>
             <div className="col-span-2">
@@ -127,7 +127,7 @@ function AddEventModal({ services, defaultDate, onClose, onSaved }: AddEventModa
                 value={guestEmail}
                 onChange={e => setGuestEmail(e.target.value)}
                 placeholder="jane@example.com"
-                className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
               />
             </div>
             <div className="col-span-2">
@@ -135,7 +135,7 @@ function AddEventModal({ services, defaultDate, onClose, onSaved }: AddEventModa
               <select
                 value={serviceId}
                 onChange={e => setServiceId(e.target.value)}
-                className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
               >
                 {services.map(s => (
                   <option key={s.id} value={s.id}>{s.name} ({s.duration_minutes}m)</option>
@@ -148,7 +148,7 @@ function AddEventModal({ services, defaultDate, onClose, onSaved }: AddEventModa
                 type="date"
                 value={date}
                 onChange={e => setDate(e.target.value)}
-                className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
               />
             </div>
             <div>
@@ -157,7 +157,7 @@ function AddEventModal({ services, defaultDate, onClose, onSaved }: AddEventModa
                 type="time"
                 value={time}
                 onChange={e => setTime(e.target.value)}
-                className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
               />
             </div>
           </div>
@@ -651,14 +651,14 @@ export function AppointmentsPage() {
                     key={dk}
                     onClick={() => { setSelectedDate(dk); setView('agenda'); }}
                     className={`aspect-square flex flex-col items-center justify-center rounded text-xs font-medium transition-all relative ${
-                      isSelected ? 'bg-emerald-600 text-white' :
-                      isToday ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 font-bold' :
+                      isSelected ? 'bg-indigo-700 text-white' :
+                      isToday ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-500 font-bold' :
                       'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                     }`}
                   >
                     {d}
                     {hasBooking && !isSelected && (
-                      <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-emerald-500" />
+                      <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-indigo-600" />
                     )}
                   </button>
                 );
@@ -668,14 +668,14 @@ export function AppointmentsPage() {
 
           {/* Quick links */}
           <div className="text-xs text-slate-500 dark:text-slate-400 space-x-2 flex flex-wrap gap-1">
-            <button onClick={() => { setSelectedDate(toDateKey(today)); setAgendaAnchor('future'); }} className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">today</button>
+            <button onClick={() => { setSelectedDate(toDateKey(today)); setAgendaAnchor('future'); }} className="hover:text-indigo-600 dark:hover:text-indigo-500 transition-colors">today</button>
             <span>|</span>
             <button onClick={() => {
               const t = new Date(today); t.setDate(t.getDate() + 1);
               setSelectedDate(toDateKey(t)); setAgendaAnchor('future');
-            }} className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">tomorrow</button>
+            }} className="hover:text-indigo-600 dark:hover:text-indigo-500 transition-colors">tomorrow</button>
             <span>|</span>
-            <button onClick={() => setAgendaAnchor('future')} className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">upcoming</button>
+            <button onClick={() => setAgendaAnchor('future')} className="hover:text-indigo-600 dark:hover:text-indigo-500 transition-colors">upcoming</button>
           </div>
 
           {/* Connected external calendars */}
@@ -722,14 +722,14 @@ export function AppointmentsPage() {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search meetings..."
-                className="w-full pl-8 pr-3 py-2 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                className="w-full pl-8 pr-3 py-2 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
               />
             </div>
           </div>
 
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
+              <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
             </div>
           ) : view === 'month' ? (
             /* ── MONTH VIEW ── */
@@ -957,18 +957,18 @@ export function AppointmentsPage() {
                     {/* Date header */}
                     <div className={`flex items-center justify-between px-4 py-2 sticky top-0 z-10 ${
                       isToday
-                        ? 'bg-emerald-50 dark:bg-emerald-950/30 border-y border-emerald-100 dark:border-emerald-900/40'
+                        ? 'bg-indigo-50 dark:bg-indigo-950/30 border-y border-indigo-100 dark:border-indigo-900/40'
                         : 'bg-slate-100 dark:bg-slate-800/60 border-y border-slate-200 dark:border-slate-700/50'
                     }`}>
                       <span className={`text-xs font-semibold uppercase tracking-wide ${
-                        isToday ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'
+                        isToday ? 'text-indigo-700 dark:text-indigo-500' : 'text-slate-500 dark:text-slate-400'
                       }`}>
                         {DAY_NAMES[date.getDay()]}, {MONTH_NAMES[date.getMonth()]} {date.getDate()}, {date.getFullYear()}
-                        {isToday && <span className="ml-2 text-emerald-500">· Today</span>}
+                        {isToday && <span className="ml-2 text-indigo-600">· Today</span>}
                       </span>
                       <button
                         onClick={() => { setSelectedDate(dk); setShowAddEvent(true); }}
-                        className="p-0.5 text-slate-400 hover:text-emerald-600 transition-colors rounded"
+                        className="p-0.5 text-slate-400 hover:text-indigo-600 transition-colors rounded"
                         title="Add event on this day"
                       >
                         <Plus className="h-3.5 w-3.5" />
@@ -1014,7 +1014,7 @@ export function AppointmentsPage() {
                             className={`flex items-start gap-4 px-4 py-3 bg-white dark:bg-slate-900/30 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors ${isInactive ? 'opacity-55' : ''} ${b.is_recurring ? 'cursor-pointer' : ''}`}>
                             <div className="pt-0.5 shrink-0">
                               <div className={`h-4 w-4 rounded border-2 flex items-center justify-center transition-all ${
-                                isCompleted ? 'bg-emerald-500 border-emerald-500' :
+                                isCompleted ? 'bg-indigo-600 border-indigo-600' :
                                 isCanceled ? 'border-red-300 dark:border-red-700' :
                                 isTentative ? 'border-amber-400 dark:border-amber-500' :
                                 isPendingApproval ? 'border-orange-400 dark:border-orange-500' :
@@ -1039,7 +1039,7 @@ export function AppointmentsPage() {
                                 {b.is_recurring && <Repeat className="h-3.5 w-3.5 text-slate-400 shrink-0" aria-label="Recurring booking" />}
                                 {b.is_critical && <span className="text-xs px-1.5 py-0.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-full font-semibold flex items-center gap-0.5"><BellRing className="h-3 w-3" />Critical</span>}
                                 {isCanceled && <span className="text-xs px-1.5 py-0.5 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-full">Canceled</span>}
-                                {isCompleted && <span className="text-xs px-1.5 py-0.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500 rounded-full">Completed</span>}
+                                {isCompleted && <span className="text-xs px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-full">Completed</span>}
                                 {isTentative && <span className="text-xs px-1.5 py-0.5 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-full">Tentative</span>}
                                 {isPendingApproval && <span className="text-xs px-1.5 py-0.5 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 rounded-full">Pending Approval</span>}
                               </div>
@@ -1076,7 +1076,7 @@ export function AppointmentsPage() {
                             {!isInactive && (
                               <div className="shrink-0 flex items-center gap-1">
                                 {(isTentative || isPendingApproval) && (
-                                  <button onClick={() => handleApproveBooking(b.id)} className="p-1.5 text-slate-300 dark:text-slate-600 hover:text-emerald-500 transition-colors rounded" title="Approve — confirm this booking">
+                                  <button onClick={() => handleApproveBooking(b.id)} className="p-1.5 text-slate-300 dark:text-slate-600 hover:text-indigo-600 transition-colors rounded" title="Approve — confirm this booking">
                                     <Check className="h-3.5 w-3.5" />
                                   </button>
                                 )}
@@ -1086,7 +1086,7 @@ export function AppointmentsPage() {
                                   </button>
                                 )}
                                 {!isTentative && !isPendingApproval && (
-                                  <button onClick={() => handleCompleteBooking(b.id)} className="p-1.5 text-slate-300 dark:text-slate-600 hover:text-emerald-500 transition-colors rounded" title="Mark complete">
+                                  <button onClick={() => handleCompleteBooking(b.id)} className="p-1.5 text-slate-300 dark:text-slate-600 hover:text-indigo-600 transition-colors rounded" title="Mark complete">
                                     <Check className="h-3.5 w-3.5" />
                                   </button>
                                 )}
@@ -1196,7 +1196,7 @@ export function AppointmentsPage() {
                     <select
                       value={newReminderChannel}
                       onChange={e => setNewReminderChannel(e.target.value as 'email' | 'sms' | 'whatsapp')}
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
                     >
                       <option value="email">Email</option>
                       <option value="sms">SMS</option>
@@ -1208,7 +1208,7 @@ export function AppointmentsPage() {
                     <select
                       value={newReminderOffset}
                       onChange={e => setNewReminderOffset(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
                     >
                       <option value={-15}>15 min before</option>
                       <option value={-30}>30 min before</option>
@@ -1227,7 +1227,7 @@ export function AppointmentsPage() {
                     onChange={e => setNewReminderMsg(e.target.value)}
                     rows={2}
                     placeholder="Leave blank to use your default reminder template"
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition resize-none"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition resize-none"
                   />
                 </div>
                 <button

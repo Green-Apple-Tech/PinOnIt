@@ -385,7 +385,7 @@ function ReminderWizard({
                 }
               }}
               placeholder={CHANNELS.find((c) => c.key === addingChannel)?.placeholder}
-              className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+              className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
             />
             {addingChannel !== 'email' && (
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">{PHONE_HINT}</p>
@@ -399,7 +399,7 @@ function ReminderWizard({
             <select
               value={draftMinutes}
               onChange={(e) => setDraftMinutes(Number(e.target.value))}
-              className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition">
+              className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition">
               {REMINDER_TIMINGS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>
@@ -879,7 +879,7 @@ export function BookPage() {
 
   const calendlyStyle = !isPaidBookingPage;
   const accentColor = calendlyStyle ? BOOKING_NAVY : pageBtnColor;
-  const focusRing = calendlyStyle ? 'focus:ring-[#1a1f36]' : 'focus:ring-emerald-500';
+  const focusRing = calendlyStyle ? 'focus:ring-[#1a1f36]' : 'focus:ring-indigo-600';
 
   const serviceShowsDescription = (svc: Service) => {
     if (!pageShowDesc || !svc.description) return false;
@@ -1230,10 +1230,10 @@ export function BookPage() {
                 </p>
                 <div className="space-y-4">
                   {isRecurringService && selectedService.recurrence_frequency && (
-                    <div className="p-4 rounded-xl border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50/60 dark:bg-emerald-950/20 space-y-3">
+                    <div className="p-4 rounded-xl border border-indigo-200 dark:border-indigo-800/50 bg-indigo-50/60 dark:bg-indigo-950/20 space-y-3">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">This is a recurring booking</p>
-                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">
+                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400">
                           {recurringFrequencyLabel}
                         </span>
                       </div>
@@ -1253,7 +1253,7 @@ export function BookPage() {
                       </div>
                       <label className="flex items-start gap-2.5 cursor-pointer">
                         <input type="checkbox" checked={recurringAcknowledged} onChange={(e) => setRecurringAcknowledged(e.target.checked)}
-                          className="mt-0.5 h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-emerald-500 focus:ring-emerald-500 shrink-0" />
+                          className="mt-0.5 h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600 shrink-0" />
                         <span className="text-sm text-slate-700 dark:text-slate-300">
                           I understand this is a recurring booking and I will be scheduled each {formatRecurrencePeriod(selectedService.recurrence_frequency)}
                           {isPaidService ? ' (payment to be arranged with host)' : ''}
@@ -1274,7 +1274,7 @@ export function BookPage() {
                       <div className="relative">
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500" />
                         <input type="text" placeholder="Jane Smith" value={guestName} onChange={(e) => setGuestName(e.target.value)} required
-                          className={`w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition ${!guestName ? 'border-slate-300 dark:border-slate-700' : 'border-emerald-400 dark:border-emerald-600'}`} />
+                          className={`w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition ${!guestName ? 'border-slate-300 dark:border-slate-700' : 'border-indigo-500 dark:border-indigo-600'}`} />
                       </div>
                     </div>
                     <div>
@@ -1284,7 +1284,7 @@ export function BookPage() {
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500" />
                         <input type="email" placeholder="jane@example.com" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} required
-                          className={`w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition ${!guestEmail ? 'border-slate-300 dark:border-slate-700' : 'border-emerald-400 dark:border-emerald-600'}`} />
+                          className={`w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition ${!guestEmail ? 'border-slate-300 dark:border-slate-700' : 'border-indigo-500 dark:border-indigo-600'}`} />
                       </div>
                     </div>
                   </div>
@@ -1293,7 +1293,7 @@ export function BookPage() {
                     <div className="relative">
                       <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500" />
                       <select value={guestTimezone} onChange={(e) => setGuestTimezone(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition">
+                        className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition">
                         {TIMEZONES.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
                       </select>
                     </div>
@@ -1306,10 +1306,10 @@ export function BookPage() {
                       </label>
                       {q.field_type === 'textarea' ? (
                         <textarea value={answers[q.id] ?? ''} onChange={(e) => setAnswers((p) => ({ ...p, [q.id]: e.target.value }))} rows={3}
-                          className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition resize-none" />
+                          className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition resize-none" />
                       ) : q.field_type === 'select' ? (
                         <select value={answers[q.id] ?? ''} onChange={(e) => setAnswers((p) => ({ ...p, [q.id]: e.target.value }))}
-                          className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition">
+                          className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition">
                           <option value="">Select...</option>
                           {(q.options ?? []).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                         </select>
@@ -1322,7 +1322,7 @@ export function BookPage() {
                                 name={`checkbox-${q.id}`}
                                 checked={answers[q.id] === opt.toLowerCase()}
                                 onChange={() => setAnswers((p) => ({ ...p, [q.id]: opt.toLowerCase() }))}
-                                className="text-emerald-500 border-slate-300 dark:border-slate-600 focus:ring-emerald-500"
+                                className="text-indigo-600 border-slate-300 dark:border-slate-600 focus:ring-indigo-600"
                               />
                               <span className="text-sm text-slate-700 dark:text-slate-300">{opt}</span>
                             </label>
@@ -1339,7 +1339,7 @@ export function BookPage() {
                               }
                             }}
                             placeholder={q.field_type === 'phone' ? PHONE_PLACEHOLDER : undefined}
-                            className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition" />
+                            className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition" />
                           {q.field_type === 'phone' && (
                             <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{PHONE_HINT}</p>
                           )}
@@ -1351,7 +1351,7 @@ export function BookPage() {
                     <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">Additional notes (optional)</label>
                     <textarea value={guestNotes} onChange={(e) => setGuestNotes(e.target.value)} rows={2}
                       placeholder="Anything else you'd like your host to know..."
-                      className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition resize-none" />
+                      className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition resize-none" />
                   </div>
                   {selectedService.cancellation_policy && (
                     <div className="p-3 bg-amber-50 dark:bg-slate-800/50 border border-amber-200 dark:border-slate-700/50 rounded-lg flex gap-2 text-xs text-slate-600 dark:text-slate-400">
@@ -1363,7 +1363,7 @@ export function BookPage() {
                     <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl space-y-3">
                       <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{termsDisplayText}</p>
                       <label className="flex items-start gap-2.5 cursor-pointer">
-                        <input type="checkbox" checked={termsAgreed} onChange={(e) => setTermsAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-emerald-500 focus:ring-emerald-500 shrink-0" />
+                        <input type="checkbox" checked={termsAgreed} onChange={(e) => setTermsAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600 shrink-0" />
                         <span className="text-sm text-slate-700 dark:text-slate-300">I have read and agree to the terms above <span className="text-red-500">*</span></span>
                       </label>
                     </div>
@@ -1372,7 +1372,7 @@ export function BookPage() {
                     <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl space-y-3">
                       <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">The parties agree to keep confidential all information shared during this session. Neither party shall disclose any proprietary, confidential, or sensitive information shared during or after this consultation to any third party without prior written consent.</p>
                       <label className="flex items-start gap-2.5 cursor-pointer">
-                        <input type="checkbox" checked={ndaAgreed} onChange={(e) => setNdaAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-emerald-500 focus:ring-emerald-500 shrink-0" />
+                        <input type="checkbox" checked={ndaAgreed} onChange={(e) => setNdaAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600 shrink-0" />
                         <span className="text-sm text-slate-700 dark:text-slate-300">I agree to the Non-Disclosure Agreement above <span className="text-red-500">*</span></span>
                       </label>
                     </div>
@@ -1556,7 +1556,7 @@ export function BookPage() {
                           className="inline-flex flex-col items-center gap-2 group"
                         >
                           <img src="/Screenshot_2026-04-29_at_2.49.32_PM.png" alt="Pin on It" className="h-6 w-auto opacity-70 group-hover:opacity-100 transition-opacity" />
-                          <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 group-hover:underline transition-all">
+                          <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-500 group-hover:underline transition-all">
                             Get your free scheduling page →
                           </span>
                         </Link>

@@ -57,7 +57,7 @@ function initials(name: string | null, email: string): string {
 
 function avatarColor(email: string): string {
   const colors = [
-    'bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-rose-500',
+    'bg-blue-500', 'bg-indigo-600', 'bg-violet-500', 'bg-rose-500',
     'bg-amber-500', 'bg-cyan-500', 'bg-teal-500', 'bg-pink-500',
   ];
   let hash = 0;
@@ -531,7 +531,7 @@ export function ContactsPage() {
             className={`${inputCls} resize-none`}
           />
           <div className="flex items-center justify-between mt-2">
-            <span className={`text-xs transition-opacity ${notesSaved ? 'text-emerald-500 opacity-100' : 'opacity-0'}`}>Saved!</span>
+            <span className={`text-xs transition-opacity ${notesSaved ? 'text-emerald-600 opacity-100' : 'opacity-0'}`}>Saved!</span>
             <button
               onClick={handleSaveNotes}
               disabled={savingNotes}
@@ -552,17 +552,17 @@ export function ContactsPage() {
           </div>
 
           {futureBookings.length > 0 && (
-            <div className="px-4 py-2 bg-emerald-50 dark:bg-emerald-950/20 border-b border-emerald-100 dark:border-emerald-900/30">
-              <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-2">Upcoming</p>
+            <div className="px-4 py-2 bg-indigo-50 dark:bg-indigo-950/20 border-b border-indigo-100 dark:border-indigo-900/30">
+              <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-500 mb-2">Upcoming</p>
               {futureBookings.map((b) => (
                 <div key={b.id} className="flex items-center gap-3 py-2">
-                  <div className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                  <div className="h-2 w-2 rounded-full bg-indigo-600 shrink-0" />
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-900 dark:text-white">{(b.services as Service)?.name ?? 'Meeting'}</p>
                     <p className="text-xs text-gray-500 dark:text-slate-400">{formatDateTime(b.start_time)}</p>
                   </div>
                   <span className={`ml-auto shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                    b.status === 'confirmed' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400'
+                    b.status === 'confirmed' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-500' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400'
                   }`}>{b.status}</span>
                 </div>
               ))}
@@ -707,14 +707,14 @@ export function ContactsPage() {
 
       {/* Gmail banner — connected state */}
       {gmailConnected ? (
-        <div className="mb-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/50 rounded-xl overflow-hidden">
+        <div className="mb-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/50 rounded-xl overflow-hidden connected">
           <div className="flex items-center gap-3 px-4 py-3">
             <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
               <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">Gmail connected</p>
-              <p className="text-xs text-emerald-600 dark:text-emerald-500 mt-0.5">
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">
                 {gmailContactsCount > 0
                   ? `${gmailContactsCount} contact${gmailContactsCount !== 1 ? 's' : ''} synced from Google Contacts`
                   : 'Google Contacts synced'}
@@ -730,7 +730,7 @@ export function ContactsPage() {
             </button>
             <button
               onClick={handleDisconnectGmail}
-              className="shrink-0 p-1.5 text-emerald-500 hover:text-red-500 dark:hover:text-red-400 rounded transition-colors"
+              className="shrink-0 p-1.5 text-indigo-600 hover:text-red-500 dark:hover:text-red-400 rounded transition-colors"
               title="Disconnect Gmail"
             >
               <X className="h-4 w-4" />
@@ -910,7 +910,7 @@ export function ContactsPage() {
                             {c.meetingCount} {c.meetingCount === 1 ? 'meeting' : 'meetings'}
                           </p>
                           {c.nextMeeting ? (
-                            <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5">
+                            <p className="text-[11px] text-indigo-600 dark:text-indigo-500 mt-0.5">
                               Next: {formatDate(c.nextMeeting)}
                             </p>
                           ) : c.lastMeeting ? (

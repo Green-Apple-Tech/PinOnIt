@@ -27,7 +27,7 @@ interface CoordMeeting {
 const STATUS_META: Record<CoordStatus, { label: string; color: string; bg: string }> = {
   collecting_availability: { label: 'Collecting availability', color: '#d97706', bg: '#fef3c7' },
   match_found: { label: 'Match found', color: BRAND, bg: '#eef0fb' },
-  confirmed: { label: 'Confirmed', color: '#059669', bg: '#d1fae5' },
+  confirmed: { label: 'Confirmed', color: '#4338CA', bg: '#d1fae5' },
   cancelled: { label: 'Cancelled', color: '#6b7280', bg: '#f3f4f6' },
 };
 
@@ -215,7 +215,7 @@ export function GroupSchedulingPage() {
           hint="💡 Best for external parties with unknown schedules — real estate, referrals, interviews"
           buttonLabel="Coordinate Unknown Availability →"
           onClick={() => navigate(COORDINATE_NEW_PATH)}
-          accent="#059669"
+          accent="#4338CA"
         />
       </div>
 
@@ -268,7 +268,7 @@ export function GroupSchedulingPage() {
             <button
               type="button"
               onClick={() => navigate(COORDINATE_NEW_PATH)}
-              className="mt-3 text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
+              className="mt-3 text-sm font-semibold text-indigo-600 dark:text-indigo-500 hover:underline"
             >
               Start a coordination →
             </button>
@@ -309,7 +309,7 @@ export function GroupSchedulingPage() {
                           </span>
                         )}
                         {m.confirmed_time && (
-                          <span className="flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400">
+                          <span className="flex items-center gap-1 font-medium text-indigo-600 dark:text-indigo-500">
                             <CheckCircle2 className="h-3 w-3" /> {fmtDateTime(m.confirmed_time)}
                           </span>
                         )}

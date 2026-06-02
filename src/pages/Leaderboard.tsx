@@ -55,7 +55,7 @@ export function LeaderboardPage() {
       <main className="max-w-3xl mx-auto px-6 py-12">
         {/* Hero */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-semibold rounded-full mb-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-500 text-xs font-semibold rounded-full mb-4">
             <Trophy className="h-3.5 w-3.5" />
             Referral Leaderboard
           </div>
@@ -75,7 +75,7 @@ export function LeaderboardPage() {
             { label: '7+ referrals', value: 'We pay you' },
           ].map((s) => (
             <div key={s.label} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 text-center">
-              <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{s.value}</p>
+              <p className="text-lg font-bold text-indigo-600 dark:text-indigo-500">{s.value}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{s.label}</p>
             </div>
           ))}
@@ -114,11 +114,11 @@ export function LeaderboardPage() {
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center shrink-0 overflow-hidden">
+                        <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center shrink-0 overflow-hidden">
                           {entry.avatar_url ? (
                             <img src={entry.avatar_url} alt="" className="h-full w-full object-cover" />
                           ) : (
-                            <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                            <span className="text-sm font-bold text-indigo-700 dark:text-indigo-500">
                               {(entry.full_name ?? '?').charAt(0).toUpperCase()}
                             </span>
                           )}
@@ -138,7 +138,7 @@ export function LeaderboardPage() {
                       <span className="text-xs text-slate-400 ml-1">Pro</span>
                     </td>
                     <td className="px-6 py-4 text-right hidden sm:table-cell">
-                      <span className={`text-sm font-bold ${entry.converted_count >= 7 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                      <span className={`text-sm font-bold ${entry.converted_count >= 7 ? 'text-indigo-600 dark:text-indigo-500' : 'text-slate-700 dark:text-slate-300'}`}>
                         {entry.converted_count >= 7
                           ? `+$${entry.converted_count - 6}/mo`
                           : entry.converted_count >= 6

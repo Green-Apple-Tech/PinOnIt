@@ -150,7 +150,7 @@ export function AuthForm() {
         </div>
 
         {refCode && view === 'signup' && (
-          <div className="mb-6 flex items-center gap-3 p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 rounded-xl text-sm text-emerald-700 dark:text-emerald-400">
+          <div className="mb-6 flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/40 rounded-xl text-sm text-indigo-700 dark:text-indigo-500">
             <span className="text-lg">🎁</span>
             <span>You were referred! Sign up and your friend earns a $1/month credit.</span>
           </div>
@@ -200,7 +200,7 @@ export function AuthForm() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
-                className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition"
               />
             </div>
           )}
@@ -213,7 +213,7 @@ export function AuthForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition"
             />
           </div>
 
@@ -227,7 +227,7 @@ export function AuthForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
-                className="w-full pl-10 pr-10 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                className="w-full pl-10 pr-10 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition"
               />
               <button
                 type="button"
@@ -247,7 +247,7 @@ export function AuthForm() {
           )}
 
           {success && (
-            <div className="p-3 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl text-emerald-600 dark:text-emerald-400 text-sm">
+            <div className="p-3 bg-indigo-50 dark:bg-indigo-600/10 border border-indigo-200 dark:border-indigo-600/20 rounded-xl text-indigo-600 dark:text-indigo-500 text-sm">
               {success}
             </div>
           )}
@@ -267,13 +267,13 @@ export function AuthForm() {
             <>
               <button
                 onClick={() => setView('forgot')}
-                className="text-sm text-slate-500 dark:text-slate-400 hover:text-emerald-500 transition-colors"
+                className="text-sm text-slate-500 dark:text-slate-400 hover:text-indigo-600 transition-colors"
               >
                 Forgot your password?
               </button>
               <p className="text-sm text-slate-400 dark:text-slate-500">
                 Don't have an account?{' '}
-                <button onClick={() => setView('signup')} className="text-emerald-500 hover:text-emerald-400 font-semibold transition-colors">
+                <button onClick={() => setView('signup')} className="text-indigo-600 hover:text-indigo-500 font-semibold transition-colors">
                   Sign up free
                 </button>
               </p>
@@ -282,7 +282,7 @@ export function AuthForm() {
           {view === 'signup' && (
             <p className="text-sm text-slate-400 dark:text-slate-500">
               Already have an account?{' '}
-              <button onClick={() => setView('login')} className="text-emerald-500 hover:text-emerald-400 font-semibold transition-colors">
+              <button onClick={() => setView('login')} className="text-indigo-600 hover:text-indigo-500 font-semibold transition-colors">
                 Sign in
               </button>
             </p>
@@ -290,7 +290,7 @@ export function AuthForm() {
           {view === 'forgot' && (
             <button
               onClick={() => setView('login')}
-              className="text-sm text-slate-500 dark:text-slate-400 hover:text-emerald-500 transition-colors inline-flex items-center gap-1"
+              className="text-sm text-slate-500 dark:text-slate-400 hover:text-indigo-600 transition-colors inline-flex items-center gap-1"
             >
               <ArrowLeft className="h-3 w-3" />
               Back to sign in
