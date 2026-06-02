@@ -22,6 +22,11 @@ export interface CoordPreferredTimesPayload {
   selectedSlots?: CoordSelectedSlotsMap;
   offHoursByDate?: Record<string, boolean>;
   allowOffHoursGlobal?: boolean;
+  /** ISO start times ranked best-first; host must confirm via SMS or dashboard. */
+  candidateSlots?: string[];
+  hostOptionIndex?: number;
+  awaitingHostConfirmation?: boolean;
+  noOverlap?: boolean;
 }
 
 export interface CoordParsedSlot {

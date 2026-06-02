@@ -1922,6 +1922,13 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
             </p>
           )}
 
+          <div className="p-4 bg-[#eef0fb] dark:bg-[#5864C6]/10 border border-[#5864C6]/20 rounded-xl">
+            <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+              After participants reply, you&apos;ll receive an SMS with the best available time.
+              You confirm before anything is booked.
+            </p>
+          </div>
+
           {sendError && (
             <div className="flex items-center gap-2 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400">
               <AlertCircle className="h-4 w-4 shrink-0" /> {sendError}
@@ -2062,7 +2069,9 @@ function MeetingDetail({ meeting: initialMeeting, onBack, onStatusChange }: {
     load();
   };
 
-  const findOverlaps = (): string[] => {
+  const getCandidateSlots = (): string[] => {
+    const stored = meeting.preferred_times?.candidateSlots;
+    if (stored?.length) return stored;
     if (active.length < 2) return [];
     const slotSets = active
       .map(p => p.parsed_slots ?? [])
@@ -2072,7 +2081,7 @@ function MeetingDetail({ meeting: initialMeeting, onBack, onStatusChange }: {
     return findParticipantOverlaps(slotSets, meeting.duration_minutes, hostBuckets);
   };
 
-  const overlapSlots = meeting.status === 'match_found' ? findOverlaps() : [];
+  const overlapSlots = meeting.status === 'match_found' ? getCandidateSlots() : [];
 
   return (
     <div className="max-w-2xl space-y-5 pb-8">
@@ -2113,7 +2122,7 @@ function MeetingDetail({ meeting: initialMeeting, onBack, onStatusChange }: {
       {meeting.status === 'match_found' && overlapSlots.length > 0 && (
         <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl space-y-3">
           <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-            <Sparkles className="h-4 w-4" style={{ color: BRAND }} /> Availability match found! Confirm a time:
+            <Sparkles className="h-4 w-4" style={{ color: BRAND }} /> Best match found — confirm via SMS (reply YES) or tap a time below:
           </p>
           {overlapSlots.map((iso, i) => (
             <button key={iso} onClick={() => handleConfirm(iso)}

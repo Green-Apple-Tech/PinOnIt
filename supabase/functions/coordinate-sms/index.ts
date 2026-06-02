@@ -293,6 +293,7 @@ function hostSelectedSlotsToBuckets(
   return buckets.size ? buckets : null;
 }
 
+/** ISO start times for candidate slots (up to 5), sorted soonest first. */
 function findOverlaps(
   participantSlots: ParsedSlot[][],
   durationMinutes: number,
@@ -321,7 +322,6 @@ function findOverlaps(
     } else {
       const prev = sorted[i - 1];
       const cur = sorted[i];
-      // Check if consecutive 15-min block
       const [pd, pt] = prev.split("T");
       const [cd, ct] = cur.split("T");
       const [ph, pm] = pt.split(":").map(Number);
@@ -338,13 +338,365 @@ function findOverlaps(
       const start = streak[streak.length - needed];
       const [date, time] = start.split("T");
       const [sh, sm] = time.split(":").map(Number);
-      const endMin = sh * 60 + sm + durationMinutes;
-      const endTime = `${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
-      windows.push(`${date} ${time}-${endTime}`);
-      if (windows.length >= 3) break;
+      windows.push(
+        `${date}T${String(sh).padStart(2, "0")}:${String(sm).padStart(2, "0")}:00`,
+      );
+      if (windows.length >= 5) break;
     }
   }
   return windows;
+}
+
+function phonesMatch(a: string, b: string): boolean {
+  const da = a.replace(/\D/g, "").slice(-10);
+  const db = b.replace(/\D/g, "").slice(-10);
+  return da.length >= 10 && da === db;
+}
+
+function formatSlotForHostSms(isoStart: string): { day: string; date: string; time: string } {
+  const d = new Date(isoStart);
+  return {
+    day: d.toLocaleDateString("en-US", { weekday: "long" }),
+    date: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    time: d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
+  };
+}
+
+function formatSlotForConfirmSms(isoStart: string, durationMinutes: number): string {
+  const start = new Date(isoStart);
+  const end = new Date(start.getTime() + durationMinutes * 60_000);
+  const day = start.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  const startT = start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  const endT = end.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  return `${day} ${startT}–${endT}`;
+}
+
+function getPreferredTimesExtras(preferredTimes: unknown): Record<string, unknown> {
+  if (!preferredTimes || typeof preferredTimes !== "object") return {};
+  return preferredTimes as Record<string, unknown>;
+}
+
+function candidateSlotsFromPreferred(preferredTimes: unknown): string[] {
+  const pt = getPreferredTimesExtras(preferredTimes);
+  const raw = pt.candidateSlots;
+  return Array.isArray(raw) ? (raw as string[]) : [];
+}
+
+function hostOptionIndexFromPreferred(preferredTimes: unknown): number {
+  const pt = getPreferredTimesExtras(preferredTimes);
+  return typeof pt.hostOptionIndex === "number" ? pt.hostOptionIndex : 0;
+}
+
+async function addCoordinatedEventToHostCalendar(
+  hostId: string,
+  meetingId: string,
+  title: string,
+  startIso: string,
+  endIso: string,
+): Promise<void> {
+  const { data: cal } = await supabase
+    .from("connected_calendars")
+    .select("id")
+    .eq("host_id", hostId)
+    .eq("sync_enabled", true)
+    .limit(1)
+    .maybeSingle();
+
+  if (!cal?.id) return;
+
+  await supabase.from("calendar_events").insert({
+    calendar_id: cal.id,
+    host_id: hostId,
+    provider_event_id: `coord-${meetingId}-${Date.now()}`,
+    title,
+    start_at: startIso,
+    end_at: endIso,
+    all_day: false,
+    show_status: "busy",
+    transparency: "opaque",
+  });
+}
+
+async function notifyHostBestMatch(
+  meeting: { id: string; title: string; duration_minutes: number; preferred_times: unknown },
+  candidateSlots: string[],
+  totalParticipants: number,
+  hostPhone: string,
+): Promise<void> {
+  const idx = 0;
+  const slot = candidateSlots[idx];
+  const { day, date, time } = formatSlotForHostSms(slot);
+  const pt = getPreferredTimesExtras(meeting.preferred_times);
+  const merged = {
+    ...pt,
+    candidateSlots,
+    hostOptionIndex: idx,
+    awaitingHostConfirmation: true,
+    noOverlap: false,
+  };
+
+  await supabase
+    .from("coordinated_meetings")
+    .update({
+      status: "match_found",
+      confirmed_time: null,
+      preferred_times: merged,
+    })
+    .eq("id", meeting.id);
+
+  await sendSms(
+    hostPhone,
+    `✅ Best match found for "${meeting.title}":\n${day} ${date} at ${time}\n(${totalParticipants} of ${totalParticipants} participants available)\nReply YES to confirm and notify everyone, or NO to see other options.`,
+  );
+}
+
+async function notifyHostNoOverlap(
+  meeting: { id: string; title: string; preferred_times: unknown },
+  hostPhone: string,
+): Promise<void> {
+  const pt = getPreferredTimesExtras(meeting.preferred_times);
+  await supabase
+    .from("coordinated_meetings")
+    .update({
+      preferred_times: { ...pt, noOverlap: true, awaitingHostConfirmation: true },
+    })
+    .eq("id", meeting.id);
+
+  await sendSms(
+    hostPhone,
+    `No overlap found for "${meeting.title}". Reply EXTEND to try next week, or visit pinonit.com to adjust.`,
+  );
+}
+
+async function notifyHostNextOption(
+  meeting: { id: string; title: string; duration_minutes: number; preferred_times: unknown },
+  hostPhone: string,
+  optionIndex: number,
+  totalParticipants: number,
+): Promise<void> {
+  const candidates = candidateSlotsFromPreferred(meeting.preferred_times);
+  const slot = candidates[optionIndex];
+  if (!slot) {
+    await sendSms(
+      hostPhone,
+      `No more options for "${meeting.title}". Visit pinonit.com to adjust or cancel.`,
+    );
+    return;
+  }
+  const { day, date, time } = formatSlotForHostSms(slot);
+  const pt = getPreferredTimesExtras(meeting.preferred_times);
+  await supabase
+    .from("coordinated_meetings")
+    .update({
+      preferred_times: { ...pt, hostOptionIndex: optionIndex },
+    })
+    .eq("id", meeting.id);
+
+  await sendSms(
+    hostPhone,
+    `Next best option:\n${day} ${date} at ${time}\n(${totalParticipants} of ${totalParticipants} available)\nReply YES to confirm or NO for more options.`,
+  );
+}
+
+async function extendMeetingWindow(meetingId: string): Promise<void> {
+  const { data: meeting } = await supabase
+    .from("coordinated_meetings")
+    .select("id, proposed_window_end, preferred_times")
+    .eq("id", meetingId)
+    .maybeSingle();
+
+  if (!meeting) return;
+
+  const end = meeting.proposed_window_end
+    ? new Date(meeting.proposed_window_end)
+    : new Date();
+  end.setDate(end.getDate() + 7);
+
+  const pt = getPreferredTimesExtras(meeting.preferred_times);
+  await supabase
+    .from("coordinated_meetings")
+    .update({
+      status: "collecting_availability",
+      proposed_window_end: end.toISOString(),
+      confirmed_time: null,
+      preferred_times: {
+        ...pt,
+        noOverlap: false,
+        awaitingHostConfirmation: false,
+        candidateSlots: [],
+        hostOptionIndex: 0,
+      },
+    })
+    .eq("id", meetingId);
+
+  await supabase
+    .from("coordinated_meeting_participants")
+    .update({ availability_response: null, parsed_slots: null })
+    .eq("meeting_id", meetingId)
+    .eq("availability_pre_entered", false)
+    .eq("opted_out", false);
+}
+
+async function findHostMeetingForPhone(
+  phone: string,
+): Promise<{ meeting: Record<string, unknown>; hostPhone: string } | null> {
+  const digits = phone.replace(/\D/g, "").slice(-10);
+  if (digits.length < 10) return null;
+
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, phone")
+    .not("phone", "is", null);
+
+  const hostProfile = (profiles ?? []).find((p) =>
+    p.phone && phonesMatch(p.phone as string, phone)
+  );
+  if (!hostProfile) return null;
+
+  const { data: meetings } = await supabase
+    .from("coordinated_meetings")
+    .select("*")
+    .eq("host_id", hostProfile.id)
+    .in("status", ["match_found", "collecting_availability"])
+    .order("updated_at", { ascending: false });
+
+  const awaiting = (meetings ?? []).find((m) => {
+    const pt = getPreferredTimesExtras(m.preferred_times);
+    return pt.awaitingHostConfirmation === true;
+  });
+
+  if (!awaiting) return null;
+  return { meeting: awaiting, hostPhone: hostProfile.phone as string };
+}
+
+async function processHostInbound(
+  meeting: Record<string, unknown>,
+  trimmedBody: string,
+  hostPhone: string,
+): Promise<Response> {
+  const meetingId = meeting.id as string;
+  const title = meeting.title as string;
+  const durationMinutes = meeting.duration_minutes as number;
+  const preferredTimes = meeting.preferred_times;
+  const pt = getPreferredTimesExtras(preferredTimes);
+
+  const { data: participants } = await supabase
+    .from("coordinated_meeting_participants")
+    .select("id, availability_pre_entered")
+    .eq("meeting_id", meetingId)
+    .eq("opted_out", false);
+
+  const totalParticipants = (participants ?? []).length;
+
+  if (/^EXTEND$/i.test(trimmedBody) && pt.noOverlap === true) {
+    await extendMeetingWindow(meetingId);
+    await sendSms(
+      hostPhone,
+      `Extended the window for "${title}" by one week. We'll text participants to share new availability.`,
+    );
+    await handleInitialSend(meetingId);
+    return new Response("OK", { status: 200 });
+  }
+
+  if (meeting.status !== "match_found") {
+    return new Response("OK", { status: 200 });
+  }
+
+  const candidates = candidateSlotsFromPreferred(preferredTimes);
+  const optionIndex = hostOptionIndexFromPreferred(preferredTimes);
+
+  if (/^YES$/i.test(trimmedBody)) {
+    const slotIso = candidates[optionIndex];
+    if (!slotIso) {
+      await sendSms(hostPhone, `No time slot selected. Visit pinonit.com to confirm "${title}".`);
+      return new Response("OK", { status: 200 });
+    }
+    await finalizeHostConfirmation(meetingId, slotIso);
+    return new Response("OK", { status: 200 });
+  }
+
+  if (/^NO$/i.test(trimmedBody)) {
+    const nextIndex = optionIndex + 1;
+    if (nextIndex >= candidates.length) {
+      await sendSms(
+        hostPhone,
+        `No more options for "${title}". Visit pinonit.com to adjust or cancel.`,
+      );
+      return new Response("OK", { status: 200 });
+    }
+    await notifyHostNextOption(
+      { id: meetingId, title, duration_minutes: durationMinutes, preferred_times: preferredTimes },
+      hostPhone,
+      nextIndex,
+      totalParticipants,
+    );
+    return new Response("OK", { status: 200 });
+  }
+
+  return new Response("OK", { status: 200 });
+}
+
+async function finalizeHostConfirmation(
+  meetingId: string,
+  slotIso: string,
+): Promise<void> {
+  const { data: meeting } = await supabase
+    .from("coordinated_meetings")
+    .select("id, host_id, title, duration_minutes, location, preferred_times")
+    .eq("id", meetingId)
+    .maybeSingle();
+
+  if (!meeting) return;
+
+  const start = new Date(slotIso);
+  const end = new Date(start.getTime() + meeting.duration_minutes * 60_000);
+  const startIso = start.toISOString();
+  const endIso = end.toISOString();
+  const timeLabel = formatSlotForConfirmSms(slotIso, meeting.duration_minutes);
+
+  await supabase
+    .from("coordinated_meetings")
+    .update({
+      status: "confirmed",
+      confirmed_time: startIso,
+      preferred_times: {
+        ...getPreferredTimesExtras(meeting.preferred_times),
+        awaitingHostConfirmation: false,
+      },
+    })
+    .eq("id", meetingId);
+
+  await supabase
+    .from("coordinated_meeting_participants")
+    .update({ confirmed: true })
+    .eq("meeting_id", meetingId)
+    .eq("opted_out", false);
+
+  const { data: participants } = await supabase
+    .from("coordinated_meeting_participants")
+    .select("name, phone")
+    .eq("meeting_id", meetingId)
+    .eq("opted_out", false);
+
+  const locationStr = meeting.location ? ` at ${meeting.location}` : "";
+  if (participants) {
+    await Promise.all(
+      participants.map((p) =>
+        sendSms(
+          p.phone,
+          `Hi ${p.name}! "${meeting.title}" is confirmed for ${timeLabel}${locationStr} (${meeting.duration_minutes} min). See you then!`,
+        )
+      ),
+    );
+  }
+
+  await addCoordinatedEventToHostCalendar(
+    meeting.host_id,
+    meetingId,
+    meeting.title,
+    startIso,
+    endIso,
+  );
 }
 
 async function checkAndRunOverlap(meetingId: string): Promise<void> {
@@ -355,6 +707,9 @@ async function checkAndRunOverlap(meetingId: string): Promise<void> {
     .maybeSingle();
 
   if (!meeting || meeting.status !== "collecting_availability") return;
+
+  const pt = getPreferredTimesExtras(meeting.preferred_times);
+  if (pt.awaitingHostConfirmation === true) return;
 
   const { data: allParticipants } = await supabase
     .from("coordinated_meeting_participants")
@@ -370,32 +725,20 @@ async function checkAndRunOverlap(meetingId: string): Promise<void> {
   const hostBuckets = hostSelectedSlotsToBuckets(meeting.preferred_times, meeting.duration_minutes);
   const overlaps = findOverlaps(allSlots, meeting.duration_minutes, hostBuckets);
 
-  if (overlaps.length === 0) {
-    await supabase
-      .from("coordinated_meetings")
-      .update({ status: "cancelled" })
-      .eq("id", meetingId);
-    return;
-  }
-
-  await supabase
-    .from("coordinated_meetings")
-    .update({ status: "match_found", confirmed_time: overlaps[0] })
-    .eq("id", meetingId);
-
   const { data: hostProfile } = await supabase
     .from("profiles")
     .select("phone, full_name")
     .eq("id", meeting.host_id)
     .maybeSingle();
 
-  if (hostProfile?.phone) {
-    const optionLines = overlaps.map((o, i) => `${i + 1}. ${o}`).join("\n");
-    await sendSms(
-      hostProfile.phone,
-      `Great news! All participants for "${meeting.title}" have responded.\n\nAvailable time slots:\n${optionLines}\n\nVisit your PinOnIt dashboard to confirm a time.`
-    );
+  if (!hostProfile?.phone) return;
+
+  if (overlaps.length === 0) {
+    await notifyHostNoOverlap(meeting, hostProfile.phone);
+    return;
   }
+
+  await notifyHostBestMatch(meeting, overlaps, active.length, hostProfile.phone);
 }
 
 async function handleInitialSend(meetingId: string): Promise<Response> {
@@ -453,6 +796,11 @@ async function handleInitialSend(meetingId: string): Promise<Response> {
 async function handleInboundSms(from: string, body: string): Promise<Response> {
   const trimmedBody = body.trim();
   const normalizedFrom = from.replace(/^whatsapp:/, "");
+
+  const hostContext = await findHostMeetingForPhone(normalizedFrom);
+  if (hostContext) {
+    return await processHostInbound(hostContext.meeting, trimmedBody, hostContext.hostPhone);
+  }
 
   // Find participant by phone
   const { data: participant, error: pErr } = await supabase
@@ -534,35 +882,7 @@ async function processInboundReply(
 }
 
 async function handleConfirm(meetingId: string, confirmedTime: string): Promise<Response> {
-  await supabase
-    .from("coordinated_meetings")
-    .update({ status: "confirmed", confirmed_time: confirmedTime })
-    .eq("id", meetingId);
-
-  const { data: meeting } = await supabase
-    .from("coordinated_meetings")
-    .select("title, duration_minutes, location")
-    .eq("id", meetingId)
-    .maybeSingle();
-
-  const { data: participants } = await supabase
-    .from("coordinated_meeting_participants")
-    .select("name, phone, availability_pre_entered")
-    .eq("meeting_id", meetingId)
-    .eq("opted_out", false);
-
-  if (meeting && participants) {
-    const locationStr = meeting.location ? ` at ${meeting.location}` : "";
-    const smsPromises = participants
-      .filter((p) => !p.availability_pre_entered)
-      .map((p) =>
-        sendSms(
-          p.phone,
-          `Hi ${p.name}! "${meeting.title}" has been scheduled for ${confirmedTime}${locationStr} (${meeting.duration_minutes} min). See you then!`
-        )
-      );
-    await Promise.all(smsPromises);
-  }
+  await finalizeHostConfirmation(meetingId, confirmedTime);
 
   return new Response(JSON.stringify({ ok: true }), {
     status: 200,

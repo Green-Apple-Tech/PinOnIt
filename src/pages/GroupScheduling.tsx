@@ -211,7 +211,7 @@ export function GroupSchedulingPage() {
           icon="💬"
           title="Coordinate Unknown Availability"
           subtitle="When you need to find a time between two or more people and nobody knows each other's schedule — just phone numbers required."
-          steps={['You set timeframe', 'SMS sent to all', 'Best time auto-confirmed']}
+          steps={['Set timeframe', 'SMS sent', 'You confirm']}
           hint="💡 Best for external parties with unknown schedules — real estate, referrals, interviews"
           buttonLabel="Coordinate Unknown Availability →"
           onClick={() => navigate(COORDINATE_NEW_PATH)}
