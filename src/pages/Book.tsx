@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useParams, useSearchParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, Link, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { Profile, Service, AvailabilitySlot, Booking, BookingQuestion, DateOverride, PaidBookingSettings, CalendarConflictSettings } from '../lib/types';
 import { LOCATION_TYPES, TIMEZONES, DEFAULT_CALENDAR_CONFLICT_SETTINGS } from '../lib/types';
@@ -422,6 +422,12 @@ function ReminderWizard({
   );
 }
 
+function displayBio(bio?: string | null): string {
+  const text = bio?.trim() ?? '';
+  if (!text || text.toLowerCase() === 'my bio') return '';
+  return text;
+}
+
 interface SingleUseLinkRecord {
   id: string;
   host_id: string;
@@ -434,7 +440,11 @@ interface SingleUseLinkRecord {
 
 export function BookPage() {
   const { slug, token } = useParams<{ slug?: string; token?: string }>();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
+  const isPaidBookingPage = Boolean(
+    slug && !token && location.pathname.replace(/\/$/, '').endsWith('/services'),
+  );
   const [host, setHost] = useState<Profile | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [linkExpired, setLinkExpired] = useState(false);
@@ -810,27 +820,47 @@ export function BookPage() {
     { id: 'bold',  bg: '#141414', surface: '#1e1e1e', border: '#2a2a2a', text: '#f5f5f5', muted: '#a0a0a0', btnBg: '#ffffff', btnText: '#141414', accentBar: '#ffffff' },
     { id: 'warm',  bg: '#fdf6ec', surface: '#fef9f3', border: '#e8d5bc', text: '#3b2a1a', muted: '#8a6a50', btnBg: '#c0622a', btnText: '#ffffff', accentBar: '#c0622a' },
   ];
-  const pbsThemeId = (((host as any)?.paid_booking_theme ?? 'clean') as ThemeId);
-  const pbsTheme = THEMES_BOOK.find((t) => t.id === pbsThemeId) ?? THEMES_BOOK[0];
-  const isBoldTheme = pbsThemeId === 'bold';
+  const cleanTheme = THEMES_BOOK[0];
+  const paidSettings = (host as any)?.paid_booking_settings as PaidBookingSettings | undefined;
+  const paidThemeId = (((host as any)?.paid_booking_theme ?? 'clean') as ThemeId);
 
-  const pbs = (host as any)?.paid_booking_settings as PaidBookingSettings | undefined;
-  const pbsBtnColor = pbs?.btn_color || pbsTheme.btnBg;
-  const pbsBtnLabel = pbs?.btn_label || 'Book';
-  const pbsBgColor = pbs?.bg_color || pbsTheme.bg;
-  const pbsLayout = pbs?.layout ?? 'list';
-  const pbsShowDesc = pbs?.show_descriptions ?? true;
-  const pbsShowImages = pbs?.show_images ?? false;
-  const pbsUseCategories = pbs?.use_categories ?? false;
-  const pbsCategories = pbs?.categories ?? [];
-  const pbsDisplayName = pbs?.display_name || host?.full_name || '';
-  const pbsTagline = pbs?.tagline || host?.booking_page_header || '';
-  const pbsBio = pbs?.bio || host?.bio || '';
-  const pbsBusinessPhoto = pbs?.business_photo_url || host?.avatar_url || null;
-  const pbsTextColor = pbsTheme.text;
-  const pbsMutedColor = pbsTheme.muted;
-  const pbsSurfaceColor = pbsTheme.surface;
-  const pbsBorderColor = pbsTheme.border;
+  const pageTheme = isPaidBookingPage
+    ? (THEMES_BOOK.find((t) => t.id === paidThemeId) ?? cleanTheme)
+    : cleanTheme;
+  const isBoldTheme = pageTheme.id === 'bold';
+
+  const pageBtnColor = isPaidBookingPage
+    ? (paidSettings?.btn_color || pageTheme.btnBg)
+    : (host?.brand_color ?? cleanTheme.btnBg);
+  const pageBtnLabel = isPaidBookingPage ? (paidSettings?.btn_label || 'Book') : 'Book';
+  const pageBgColor = isPaidBookingPage ? (paidSettings?.bg_color || pageTheme.bg) : cleanTheme.bg;
+  const pageLayout = isPaidBookingPage ? (paidSettings?.layout ?? 'list') : 'list';
+  const pageShowDesc = isPaidBookingPage ? (paidSettings?.show_descriptions ?? true) : true;
+  const pageShowImages = isPaidBookingPage ? (paidSettings?.show_images ?? false) : false;
+  const pageUseCategories = isPaidBookingPage ? (paidSettings?.use_categories ?? false) : false;
+  const pageCategories = isPaidBookingPage ? (paidSettings?.categories ?? []) : [];
+  const pageDisplayName = isPaidBookingPage
+    ? (paidSettings?.display_name || host?.full_name || '')
+    : (host?.full_name || '');
+  const pageTagline = isPaidBookingPage
+    ? (paidSettings?.tagline || host?.booking_page_header || '')
+    : (host?.booking_page_header?.trim() || '');
+  const pageBio = isPaidBookingPage
+    ? displayBio(paidSettings?.bio || host?.bio)
+    : displayBio(host?.bio);
+  const pageBusinessPhoto = isPaidBookingPage
+    ? (paidSettings?.business_photo_url || host?.avatar_url || null)
+    : (host?.avatar_url || null);
+  const pageTextColor = pageTheme.text;
+  const pageMutedColor = pageTheme.muted;
+  const pageSurfaceColor = pageTheme.surface;
+  const pageBorderColor = pageTheme.border;
+
+  const serviceShowsDescription = (svc: Service) => {
+    if (!pageShowDesc || !svc.description) return false;
+    if (isPaidBookingPage) return (svc as Service).show_description_on_paid_booking ?? true;
+    return (svc as Service).show_description_on_booking_page ?? true;
+  };
   const isPaidService = selectedService ? selectedService.price_cents > 0 : false;
   const requiredAnswersMissing = questions.some((q) => q.required && !answers[q.id]?.trim())
     || ((selectedService as any)?.require_terms && !termsAgreed)
@@ -881,12 +911,12 @@ export function BookPage() {
   );
 
   return (
-    <div className="min-h-screen transition-colors" style={{ backgroundColor: pbsBgColor, color: pbsTextColor }}>
-      <div className="h-1.5 w-full" style={{ backgroundColor: pbsTheme.accentBar }} />
+    <div className="min-h-screen transition-colors" style={{ backgroundColor: pageBgColor, color: pageTextColor }}>
+      <div className="h-1.5 w-full" style={{ backgroundColor: pageTheme.accentBar }} />
       <header className="border-b sticky top-0 z-40 backdrop-blur-xl transition-colors"
-        style={{ borderColor: pbsBorderColor, backgroundColor: pbsBgColor + 'cc' }}>
+        style={{ borderColor: pageBorderColor, backgroundColor: pageBgColor + 'cc' }}>
         <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-1.5 transition-colors text-sm" style={{ color: pbsMutedColor }}>
+          <Link to="/" className="flex items-center gap-1.5 transition-colors text-sm" style={{ color: pageMutedColor }}>
             <ArrowLeft className="h-4 w-4" /> Back
           </Link>
           <div className="flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500">
@@ -915,42 +945,42 @@ export function BookPage() {
         <div className="grid lg:grid-cols-[280px_1fr] gap-6 md:gap-8">
           <aside className="space-y-4">
             <div className="flex items-center gap-3">
-              {pbsBusinessPhoto ? (
-                <img src={pbsBusinessPhoto} alt={pbsDisplayName} className="h-14 w-14 rounded-full object-cover" />
+              {pageBusinessPhoto ? (
+                <img src={pageBusinessPhoto} alt={pageDisplayName} className="h-14 w-14 rounded-full object-cover" />
               ) : (
                 <div className="h-14 w-14 rounded-full flex items-center justify-center text-white font-bold text-lg"
-                  style={{ backgroundColor: pbsBtnColor + '33', border: `2px solid ${pbsBtnColor}` }}>
-                  {(pbsDisplayName || 'H').charAt(0).toUpperCase()}
+                  style={{ backgroundColor: pageBtnColor + '33', border: `2px solid ${pageBtnColor}` }}>
+                  {(pageDisplayName || 'H').charAt(0).toUpperCase()}
                 </div>
               )}
               <div>
-                <h1 className="font-semibold text-base" style={{ color: pbsTextColor }}>{pbsDisplayName || 'Host'}</h1>
-                {pbsTagline && <p className="text-xs" style={{ color: pbsMutedColor }}>{pbsTagline}</p>}
+                <h1 className="font-semibold text-base" style={{ color: pageTextColor }}>{pageDisplayName || 'Host'}</h1>
+                {pageTagline && <p className="text-xs" style={{ color: pageMutedColor }}>{pageTagline}</p>}
               </div>
             </div>
-            {pbsBio && <p className="text-sm leading-relaxed" style={{ color: pbsMutedColor }}>{pbsBio}</p>}
+            {pageBio && <p className="text-sm leading-relaxed" style={{ color: pageMutedColor }}>{pageBio}</p>}
             {selectedService && (
               <div className="p-4 rounded-xl space-y-2.5 text-sm border"
-                style={{ backgroundColor: pbsSurfaceColor, borderColor: pbsBorderColor }}>
+                style={{ backgroundColor: pageSurfaceColor, borderColor: pageBorderColor }}>
                 <div className="flex items-center gap-2">
                   <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: selectedService.color }} />
-                  <span className="font-medium" style={{ color: pbsTextColor }}>{selectedService.name}</span>
+                  <span className="font-medium" style={{ color: pageTextColor }}>{selectedService.name}</span>
                 </div>
-                <div className="flex items-center gap-1.5" style={{ color: pbsMutedColor }}><Clock className="h-3.5 w-3.5" />{selectedService.duration_minutes} min</div>
+                <div className="flex items-center gap-1.5" style={{ color: pageMutedColor }}><Clock className="h-3.5 w-3.5" />{selectedService.duration_minutes} min</div>
                 {selectedService.location && (
-                  <div className="flex items-center gap-1.5" style={{ color: pbsMutedColor }}>
+                  <div className="flex items-center gap-1.5" style={{ color: pageMutedColor }}>
                     {(() => { const Icon = getLocationIcon(selectedService.location_type); return <Icon className="h-3.5 w-3.5" />; })()}
                     {LOCATION_TYPES[selectedService.location_type]}
                   </div>
                 )}
-                {selectedService.price_cents > 0 && <div className="font-medium" style={{ color: pbsBtnColor }}>${(selectedService.price_cents / 100).toFixed(2)}</div>}
+                {selectedService.price_cents > 0 && <div className="font-medium" style={{ color: pageBtnColor }}>${(selectedService.price_cents / 100).toFixed(2)}</div>}
                 {selectedDate && (
-                  <div className="flex items-center gap-1.5 border-t pt-2" style={{ color: pbsTextColor, borderColor: pbsBorderColor }}>
+                  <div className="flex items-center gap-1.5 border-t pt-2" style={{ color: pageTextColor, borderColor: pageBorderColor }}>
                     <Calendar className="h-3.5 w-3.5" />
                     {new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                   </div>
                 )}
-                {selectedSlot && <div className="flex items-center gap-1.5" style={{ color: pbsTextColor }}><Clock className="h-3.5 w-3.5" />{formatTime12(selectedSlot)}</div>}
+                {selectedSlot && <div className="flex items-center gap-1.5" style={{ color: pageTextColor }}><Clock className="h-3.5 w-3.5" />{formatTime12(selectedSlot)}</div>}
               </div>
             )}
           </aside>
@@ -958,26 +988,26 @@ export function BookPage() {
           <div>
             {step === 'service' && (
               <div>
-                <h2 className="text-xl font-bold mb-1" style={{ color: pbsTextColor }}>Book an appointment</h2>
-                <p className="text-sm mb-6" style={{ color: pbsMutedColor }}>Select a service to get started.</p>
+                <h2 className="text-xl font-bold mb-1" style={{ color: pageTextColor }}>Book an appointment</h2>
+                <p className="text-sm mb-6" style={{ color: pageMutedColor }}>Select a service to get started.</p>
                 {(() => {
                   const renderSvc = (svc: Service) => {
                     const ext = svc as Service & { banner_image_url?: string | null; category?: string | null };
-                    if (pbsLayout === 'grid') {
+                    if (pageLayout === 'grid') {
                       return (
                         <button key={svc.id} onClick={() => handleSelectService(svc)}
                           className="flex flex-col rounded-xl overflow-hidden transition-all text-left shadow-sm border"
-                          style={{ backgroundColor: pbsSurfaceColor, borderColor: pbsBorderColor }}>
-                          {pbsShowImages && ext.banner_image_url
+                          style={{ backgroundColor: pageSurfaceColor, borderColor: pageBorderColor }}>
+                          {pageShowImages && ext.banner_image_url
                             ? <img src={ext.banner_image_url} alt={svc.name} className="w-full h-28 object-cover" />
-                            : pbsShowImages && <div className="w-full h-20 flex items-center justify-center" style={{ backgroundColor: pbsBorderColor }}><span className="h-3 w-3 rounded-full" style={{ backgroundColor: svc.color }} /></div>
+                            : pageShowImages && <div className="w-full h-20 flex items-center justify-center" style={{ backgroundColor: pageBorderColor }}><span className="h-3 w-3 rounded-full" style={{ backgroundColor: svc.color }} /></div>
                           }
                           <div className="p-3.5 flex-1 flex flex-col gap-2">
-                            <p className="font-semibold text-sm" style={{ color: pbsTextColor }}>{svc.name}</p>
-                            {pbsShowDesc && ((svc as any).show_description_on_booking_page ?? true) && svc.description && <p className="text-xs line-clamp-2 flex-1" style={{ color: pbsMutedColor }}>{svc.description}</p>}
+                            <p className="font-semibold text-sm" style={{ color: pageTextColor }}>{svc.name}</p>
+                            {serviceShowsDescription(svc) && <p className="text-xs line-clamp-2 flex-1" style={{ color: pageMutedColor }}>{svc.description}</p>}
                             <div className="flex items-center justify-between gap-2 mt-auto">
-                              <span className="text-xs" style={{ color: pbsMutedColor }}>{svc.duration_minutes} min{svc.price_cents > 0 ? ` · $${(svc.price_cents / 100).toFixed(2)}` : ' · Free'}</span>
-                              <span style={{ backgroundColor: pbsBtnColor, color: pbsTheme.btnText }} className="px-3 py-1.5 text-xs font-semibold rounded-lg">{pbsBtnLabel}</span>
+                              <span className="text-xs" style={{ color: pageMutedColor }}>{svc.duration_minutes} min{svc.price_cents > 0 ? ` · $${(svc.price_cents / 100).toFixed(2)}` : ' · Free'}</span>
+                              <span style={{ backgroundColor: pageBtnColor, color: pageTheme.btnText }} className="px-3 py-1.5 text-xs font-semibold rounded-lg">{pageBtnLabel}</span>
                             </div>
                           </div>
                         </button>
@@ -986,51 +1016,51 @@ export function BookPage() {
                     return (
                       <button key={svc.id} onClick={() => handleSelectService(svc)}
                         className={`w-full p-4 rounded-xl transition-all text-left border ${isBoldTheme ? 'shadow-none' : 'shadow-sm'}`}
-                        style={{ backgroundColor: pbsSurfaceColor, borderColor: pbsBorderColor }}>
+                        style={{ backgroundColor: pageSurfaceColor, borderColor: pageBorderColor }}>
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-start gap-3 flex-1 min-w-0">
-                            {pbsShowImages && (ext.banner_image_url
+                            {pageShowImages && (ext.banner_image_url
                               ? <img src={ext.banner_image_url} alt={svc.name} className={`rounded-lg object-cover shrink-0 ${isBoldTheme ? 'h-16 w-16' : 'h-14 w-14'}`} />
-                              : <div className={`rounded-lg shrink-0 flex items-center justify-center ${isBoldTheme ? 'h-16 w-16' : 'h-14 w-14'}`} style={{ backgroundColor: pbsBorderColor }}><span className="h-3 w-3 rounded-full" style={{ backgroundColor: svc.color }} /></div>
+                              : <div className={`rounded-lg shrink-0 flex items-center justify-center ${isBoldTheme ? 'h-16 w-16' : 'h-14 w-14'}`} style={{ backgroundColor: pageBorderColor }}><span className="h-3 w-3 rounded-full" style={{ backgroundColor: svc.color }} /></div>
                             )}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                {!pbsShowImages && <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: svc.color }} />}
-                                <span className={`font-semibold ${isBoldTheme ? 'text-base' : ''}`} style={{ color: pbsTextColor }}>{svc.name}</span>
+                                {!pageShowImages && <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: svc.color }} />}
+                                <span className={`font-semibold ${isBoldTheme ? 'text-base' : ''}`} style={{ color: pageTextColor }}>{svc.name}</span>
                               </div>
-                              {pbsShowDesc && ((svc as any).show_description_on_booking_page ?? true) && svc.description && <p className="text-sm mb-1.5" style={{ color: pbsMutedColor }}>{svc.description}</p>}
-                              <p className="text-xs" style={{ color: pbsMutedColor }}>
+                              {serviceShowsDescription(svc) && <p className="text-sm mb-1.5" style={{ color: pageMutedColor }}>{svc.description}</p>}
+                              <p className="text-xs" style={{ color: pageMutedColor }}>
                                 {svc.duration_minutes} min
                                 {svc.price_cents > 0
-                                  ? <span className="ml-2 font-semibold" style={{ color: pbsBtnColor }}>${(svc.price_cents / 100).toFixed(2)}</span>
-                                  : <span className="ml-2" style={{ color: pbsMutedColor }}>Free</span>}
+                                  ? <span className="ml-2 font-semibold" style={{ color: pageBtnColor }}>${(svc.price_cents / 100).toFixed(2)}</span>
+                                  : <span className="ml-2" style={{ color: pageMutedColor }}>Free</span>}
                               </p>
                             </div>
                           </div>
-                          <span style={{ backgroundColor: pbsBtnColor, color: pbsTheme.btnText }} className="shrink-0 px-3 py-1.5 text-xs font-semibold rounded-lg whitespace-nowrap self-center">{pbsBtnLabel}</span>
+                          <span style={{ backgroundColor: pageBtnColor, color: pageTheme.btnText }} className="shrink-0 px-3 py-1.5 text-xs font-semibold rounded-lg whitespace-nowrap self-center">{pageBtnLabel}</span>
                         </div>
                       </button>
                     );
                   };
-                  if (pbsUseCategories && pbsCategories.length > 0) {
-                    const grouped = pbsCategories.map((cat) => ({ cat, svcs: services.filter((s) => (s as any).category === cat) })).filter((g) => g.svcs.length > 0);
-                    const ungrouped = services.filter((s) => !pbsCategories.includes((s as any).category));
+                  if (pageUseCategories && pageCategories.length > 0) {
+                    const grouped = pageCategories.map((cat) => ({ cat, svcs: services.filter((s) => (s as any).category === cat) })).filter((g) => g.svcs.length > 0);
+                    const ungrouped = services.filter((s) => !pageCategories.includes((s as any).category));
                     return (
                       <div className="space-y-6">
                         {grouped.map(({ cat, svcs }) => (
                           <div key={cat}>
-                            <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: pbsMutedColor }}>{cat}</p>
-                            <div className={pbsLayout === 'grid' ? 'grid grid-cols-2 gap-3' : 'space-y-3'}>{svcs.map(renderSvc)}</div>
+                            <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: pageMutedColor }}>{cat}</p>
+                            <div className={pageLayout === 'grid' ? 'grid grid-cols-2 gap-3' : 'space-y-3'}>{svcs.map(renderSvc)}</div>
                           </div>
                         ))}
-                        {ungrouped.length > 0 && <div className={pbsLayout === 'grid' ? 'grid grid-cols-2 gap-3' : 'space-y-3'}>{ungrouped.map(renderSvc)}</div>}
+                        {ungrouped.length > 0 && <div className={pageLayout === 'grid' ? 'grid grid-cols-2 gap-3' : 'space-y-3'}>{ungrouped.map(renderSvc)}</div>}
                       </div>
                     );
                   }
                   return (
-                    <div className={pbsLayout === 'grid' ? 'grid grid-cols-2 gap-3' : 'space-y-3'}>
+                    <div className={pageLayout === 'grid' ? 'grid grid-cols-2 gap-3' : 'space-y-3'}>
                       {services.map(renderSvc)}
-                      {services.length === 0 && <p className="text-sm py-4" style={{ color: pbsMutedColor }}>No services available.</p>}
+                      {services.length === 0 && <p className="text-sm py-4" style={{ color: pageMutedColor }}>No services available.</p>}
                     </div>
                   );
                 })()}
@@ -1040,9 +1070,9 @@ export function BookPage() {
             {step === 'datetime' && selectedService && (
               <div>
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold" style={{ color: pbsTextColor }}>Select date & time</h2>
+                  <h2 className="text-xl font-bold" style={{ color: pageTextColor }}>Select date & time</h2>
                   <button onClick={() => { setStep('service'); setSelectedService(null); setSelectedDate(null); setSelectedSlot(null); }}
-                    className="text-sm transition-colors" style={{ color: pbsMutedColor }}>Change service</button>
+                    className="text-sm transition-colors" style={{ color: pageMutedColor }}>Change service</button>
                 </div>
                 {/* Calendar + time slots — stacks vertically on mobile */}
               <div className="flex flex-col gap-6">
@@ -1137,8 +1167,8 @@ export function BookPage() {
             {step === 'details' && selectedService && selectedDate && selectedSlot && (
               <div>
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold" style={{ color: pbsTextColor }}>Your details</h2>
-                  <button onClick={() => setStep('datetime')} className="text-sm transition-colors" style={{ color: pbsMutedColor }}>Change time</button>
+                  <h2 className="text-xl font-bold" style={{ color: pageTextColor }}>Your details</h2>
+                  <button onClick={() => setStep('datetime')} className="text-sm transition-colors" style={{ color: pageMutedColor }}>Change time</button>
                 </div>
                 {/* Required fields legend */}
                 <p className="text-xs text-slate-400 dark:text-slate-500 mb-4 flex items-center gap-1">
@@ -1499,7 +1529,7 @@ export function BookPage() {
           </div>
         </div>
       </main>
-      <footer className="border-t py-4 px-6" style={{ borderColor: pbsBorderColor, backgroundColor: pbsSurfaceColor }}>
+      <footer className="border-t py-4 px-6" style={{ borderColor: pageBorderColor, backgroundColor: pageSurfaceColor }}>
         {host?.plan === 'free' && (
           <div className="flex items-center justify-center gap-2 mb-3 pb-3 border-b border-slate-100 dark:border-slate-800">
             <Link
@@ -1519,7 +1549,7 @@ export function BookPage() {
           <span className="hidden sm:inline">|</span>
           <Link to="/privacy" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Privacy Policy</Link>
           <span className="hidden sm:inline">|</span>
-          <span>&copy; 2025 Pin on It. All rights reserved.</span>
+          <span>&copy; 2026 PinOnIt. All rights reserved.</span>
         </div>
       </footer>
     </div>

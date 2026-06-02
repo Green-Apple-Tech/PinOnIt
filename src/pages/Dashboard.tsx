@@ -512,39 +512,17 @@ function SharePanel({
   slug,
   userId,
   onSlugChange,
-  selectedServiceIds,
-  singleUseLinksEnabled,
-  defaultExpiryDays,
 }: {
   slug: string;
   userId: string;
   onSlugChange: (newSlug: string) => void;
-  selectedServiceIds: Set<string>;
-  singleUseLinksEnabled: boolean;
-  defaultExpiryDays: number | null;
 }) {
   const [currentSlug, setCurrentSlug] = useState(slug);
   const [showEditor, setShowEditor] = useState(false);
-  const baseUrl = `${window.location.origin}/${currentSlug}`;
+  const displayUrl = `${window.location.origin}/${currentSlug}`;
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedSig, setCopiedSig] = useState(false);
   const [showSig, setShowSig] = useState(false);
-  const [useExpiry, setUseExpiry] = useState(false);
-
-  const buildShareUrl = useCallback((base: string) => {
-    const params = new URLSearchParams();
-    if (selectedServiceIds.size > 0) {
-      params.set('types', Array.from(selectedServiceIds).join(','));
-    }
-    if (useExpiry && defaultExpiryDays !== null && defaultExpiryDays > 0) {
-      const expireAt = Date.now() + defaultExpiryDays * 24 * 60 * 60 * 1000;
-      params.set('expires', expireAt.toString());
-    }
-    const qs = params.toString();
-    return qs ? `${base}?${qs}` : base;
-  }, [selectedServiceIds, useExpiry, defaultExpiryDays]);
-
-  const displayUrl = buildShareUrl(baseUrl);
 
   const sigText = `Book a time with me: ${displayUrl}`;
 
@@ -576,24 +554,6 @@ function SharePanel({
           <span className="text-sm text-gray-700 truncate font-mono">{displayUrl}</span>
         </div>
       </div>
-
-      {/* Expiring link checkbox */}
-      {singleUseLinksEnabled && defaultExpiryDays !== null && defaultExpiryDays > 0 && (
-        <label className="flex items-center gap-2 mb-3 cursor-pointer select-none">
-          <span
-            className={`h-4 w-4 rounded flex items-center justify-center shrink-0 border-2 transition-colors ${
-              useExpiry ? 'border-transparent' : 'border-gray-300 dark:border-slate-500 bg-white'
-            }`}
-            style={useExpiry ? { backgroundColor: '#5864C6', borderColor: '#5864C6' } : {}}
-            onClick={() => setUseExpiry(v => !v)}
-          >
-            {useExpiry && <Check className="h-2.5 w-2.5 text-white" />}
-          </span>
-          <span className="text-xs text-brand-700 font-medium" onClick={() => setUseExpiry(v => !v)}>
-            Link expires in {defaultExpiryDays} day{defaultExpiryDays !== 1 ? 's' : ''}
-          </span>
-        </label>
-      )}
 
       {/* Stacked full-width action buttons */}
       <div className="flex flex-col gap-2 mb-3">
@@ -712,8 +672,6 @@ export function Dashboard() {
   });
   const [trialToast, setTrialToast] = useState<{ message: string } | null>(null);
   const [serviceSearch, setServiceSearch] = useState('');
-  const [selectedServiceIds, setSelectedServiceIds] = useState<Set<string>>(new Set());
-
   // Handle ?checkout=success return from Stripe — show toast, resume wizard at the right step
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -1167,9 +1125,6 @@ export function Dashboard() {
                 slug={liveSlug ?? profile.slug!}
                 userId={profile.id}
                 onSlugChange={(s) => setLiveSlug(s)}
-                selectedServiceIds={selectedServiceIds}
-                singleUseLinksEnabled={profile.single_use_links_enabled ?? false}
-                defaultExpiryDays={profile.default_link_expiry_days ?? null}
               />
             )}
 
@@ -1240,35 +1195,11 @@ export function Dashboard() {
                     .filter((s) => !serviceSearch || s.name.toLowerCase().includes(serviceSearch.toLowerCase()))
                     .map((svc) => {
                       const meta = `${svc.duration_minutes} min · ${svc.price_cents ? `$${(svc.price_cents / 100).toFixed(2)}` : 'Free'} · ${(svc.location_type ?? 'video').replace('_', ' ')}`;
-                      const isSelected = selectedServiceIds.has(svc.id);
                       return (
                         <div
                           key={svc.id}
-                          className={`flex items-center gap-3 px-4 py-3.5 bg-white dark:bg-slate-900/50 border rounded-xl transition-colors group ${
-                            isSelected
-                              ? 'border-[#5864C6] ring-1 ring-[#5864C6]/20'
-                              : 'border-gray-200 dark:border-slate-800 hover:border-gray-300 dark:hover:border-slate-700'
-                          }`}
+                          className="flex items-center gap-3 px-4 py-3.5 bg-white dark:bg-slate-900/50 border border-gray-200 dark:border-slate-800 rounded-xl transition-colors group hover:border-gray-300 dark:hover:border-slate-700"
                         >
-                          {/* Selection checkbox */}
-                          <button
-                            onClick={() => setSelectedServiceIds((prev) => {
-                              const next = new Set(prev);
-                              next.has(svc.id) ? next.delete(svc.id) : next.add(svc.id);
-                              return next;
-                            })}
-                            className={`h-5 w-5 rounded flex items-center justify-center shrink-0 border-2 transition-colors ${
-                              isSelected
-                                ? 'border-transparent'
-                                : 'border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900'
-                            }`}
-                            style={isSelected ? { backgroundColor: '#5864C6', borderColor: '#5864C6' } : {}}
-                            title={isSelected ? 'Deselect' : 'Select for sharing'}
-                          >
-                            {isSelected && <Check className="h-3 w-3 text-white" />}
-                          </button>
-
-                          {/* Name + meta */}
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{svc.name}</p>
                             <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{meta}</p>

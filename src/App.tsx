@@ -104,6 +104,7 @@ function App() {
             {/* Poll voting */}
             <Route path="/poll/:pollId" element={<PollVotePage />} />
             {/* Public booking pages — must be after all fixed routes */}
+            <Route path="/:slug/services" element={<BookPage />} />
             <Route path="/:slug" element={<BookPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>

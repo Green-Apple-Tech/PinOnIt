@@ -490,7 +490,7 @@ export function PaidBookingPage() {
     setTimeout(() => setSaved(false), 3000);
   };
 
-  const bookingUrl = profile?.slug ? `${window.location.origin}/${profile.slug}` : null;
+  const bookingUrl = profile?.slug ? `${window.location.origin}/${profile.slug}/services` : null;
 
   const copyLink = () => {
     if (!bookingUrl) return;
