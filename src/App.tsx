@@ -25,6 +25,7 @@ import { ContactsPage } from './pages/Contacts';
 import { MeetingPollsPage } from './pages/MeetingPolls';
 import { PollVotePage } from './pages/PollVote';
 import { QRCreatorPage } from './pages/QRCreator';
+import { MoreToolsPage } from './pages/MoreTools';
 import { PaidBookingPage } from './pages/PaidBooking';
 import { StatusPage } from './pages/Status';
 import { NotFoundPage } from './pages/NotFound';
@@ -87,6 +88,7 @@ function App() {
               <Route path="settings" element={<SettingsPage />} />
               <Route path="billing" element={<Navigate to="/dashboard/settings?tab=billing" replace />} />
               <Route path="analytics" element={<Navigate to="/dashboard/settings?tab=analytics" replace />} />
+              <Route path="more-tools" element={<MoreToolsPage />} />
               <Route path="signature" element={<EmailSignaturePage />} />
               <Route path="paid-booking" element={<PaidBookingPage />} />
               <Route path="group-scheduling" element={<Suspense fallback={<RouteFallback />}><GroupSchedulingPage /></Suspense>} />
@@ -94,7 +96,8 @@ function App() {
               <Route path="group-scheduling/coordinate" element={<Suspense fallback={<RouteFallback />}><CoordinateMeetingsPage /></Suspense>} />
               <Route path="polls" element={<Navigate to="/dashboard/group-scheduling" replace />} />
               <Route path="coordinate" element={<Suspense fallback={<RouteFallback />}><CoordinateMeetingsPage /></Suspense>} />
-              <Route path="qr" element={<QRCreatorPage />} />
+              <Route path="qr-code" element={<QRCreatorPage />} />
+              <Route path="qr" element={<Navigate to="/dashboard/qr-code" replace />} />
             </Route>
             {/* Single-use booking links */}
             <Route path="/s/:token" element={<BookPage />} />

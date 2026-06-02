@@ -5,7 +5,7 @@ import { OnboardingWizard, wizardIsActive, wizardSavedStep, onboardingIsComplete
 import { useTheme } from '../hooks/useTheme';
 import { supabase } from '../lib/supabase';
 import type { Booking, Service } from '../lib/types';
-import { CalendarDays, Settings, LogOut, Users, X, Check, Sun, Moon, Copy, Share2, Mail, Link2, ExternalLink, PenLine, Video, Phone, MapPin, ChevronRight, Loader2, CalendarCheck, Plus, ChevronLeft, ChevronDown, LayoutGrid, Menu, AlertCircle, Sparkles, QrCode, Search, ShoppingBag, Wrench as Tool } from 'lucide-react';
+import { CalendarDays, Settings, LogOut, Users, X, Check, Sun, Moon, Copy, Share2, Mail, Link2, ExternalLink, PenLine, Video, Phone, MapPin, ChevronRight, Loader2, CalendarCheck, Plus, ChevronLeft, LayoutGrid, Menu, AlertCircle, Sparkles, Search, ShoppingBag, Wrench as Tool } from 'lucide-react';
 
 type NavItem = { to: string; icon: typeof LayoutGrid; label: string };
 
@@ -694,7 +694,6 @@ export function Dashboard() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createdUrl, setCreatedUrl] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [moreToolsOpen, setMoreToolsOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const planName = subscription?.plan ?? profile?.plan ?? 'free';
@@ -911,13 +910,9 @@ export function Dashboard() {
     { to: '/dashboard/appointments', icon: CalendarCheck, label: 'Calendar' },
     { to: '/dashboard/contacts', icon: Users, label: 'Contacts' },
     { to: '/dashboard/group-scheduling', icon: Users, label: 'Group Scheduling' },
+    { to: '/dashboard/more-tools', icon: Tool, label: 'More Tools' },
     { to: '/dashboard/paid-booking', icon: ShoppingBag, label: 'Paid Booking' },
     { to: '/dashboard/settings', icon: Settings, label: 'Settings' },
-  ];
-
-  const moreToolsNavItems: NavItem[] = [
-    { to: '/dashboard/qr', icon: QrCode, label: 'QR Code Creator' },
-    { to: '/dashboard/signature', icon: PenLine, label: 'Email Signature' },
   ];
 
   const isActive = (path: string) => {
@@ -925,21 +920,19 @@ export function Dashboard() {
       return location.pathname.startsWith('/dashboard/group-scheduling')
         || location.pathname === '/dashboard/coordinate';
     }
+    if (path === '/dashboard/more-tools') {
+      return location.pathname === '/dashboard/more-tools'
+        || location.pathname === '/dashboard/qr-code'
+        || location.pathname === '/dashboard/qr'
+        || location.pathname === '/dashboard/signature';
+    }
     return location.pathname === path;
   };
   const initials = (displayName?.[0] ?? displayEmail?.[0] ?? '?').toUpperCase();
 
-  const moreToolsChildActive = moreToolsNavItems.some((item) => isActive(item.to));
-
-  const navLinkClass = (path: string, nested?: boolean) => {
+  const navLinkClass = (path: string) => {
     const active = isActive(path);
-    const padding = nested
-      ? active
-        ? 'pl-[calc(2.25rem-3px)] pr-3'
-        : 'pl-9 pr-3'
-      : active
-        ? 'pl-[calc(0.75rem-3px)] pr-3'
-        : 'px-3';
+    const padding = active ? 'pl-[calc(0.75rem-3px)] pr-3' : 'px-3';
     return `flex items-center gap-3 py-2.5 rounded-lg text-sm transition-colors ${padding} ${
       active
         ? 'bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400 font-semibold border-l-[3px] border-brand-600 dark:border-brand-500 rounded-l-none'
@@ -947,61 +940,18 @@ export function Dashboard() {
     }`;
   };
 
-  const renderNavLink = (item: NavItem, opts?: { collapsed?: boolean; nested?: boolean; onNavigate?: () => void }) => (
+  const renderNavLink = (item: NavItem, opts?: { collapsed?: boolean; onNavigate?: () => void }) => (
     <Link
       key={item.to}
       to={item.to}
       title={opts?.collapsed ? item.label : undefined}
       onClick={opts?.onNavigate}
-      className={`${navLinkClass(item.to, opts?.nested)} ${opts?.collapsed ? 'justify-center px-3' : ''}`}
+      className={`${navLinkClass(item.to)} ${opts?.collapsed ? 'justify-center px-3' : ''}`}
     >
       <item.icon className="h-[18px] w-[18px] shrink-0" />
       {!opts?.collapsed && item.label}
     </Link>
   );
-
-  const renderMoreToolsSection = (opts?: { collapsed?: boolean; onNavigate?: () => void }) => {
-    const collapsed = opts?.collapsed ?? false;
-
-    if (collapsed) {
-      return (
-        <div className="space-y-0.5">
-          <button
-            type="button"
-            onClick={() => setMoreToolsOpen((v) => !v)}
-            title="More Tools"
-            className={`flex items-center justify-center w-full px-3 py-2.5 rounded-lg text-sm transition-colors ${
-              moreToolsChildActive
-                ? 'bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400'
-                : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-900'
-            }`}
-          >
-            <Tool className="h-[18px] w-[18px] shrink-0" />
-          </button>
-          {moreToolsOpen && moreToolsNavItems.map((item) => renderNavLink(item, { collapsed: true, onNavigate: opts?.onNavigate }))}
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-0.5">
-        <button
-          type="button"
-          onClick={() => setMoreToolsOpen((v) => !v)}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-            moreToolsChildActive && !moreToolsOpen
-              ? 'bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400 font-semibold'
-              : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-900'
-          }`}
-        >
-          <Tool className="h-[18px] w-[18px] shrink-0" />
-          <span className="flex-1 text-left">More Tools</span>
-          <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${moreToolsOpen ? 'rotate-180' : ''}`} />
-        </button>
-        {moreToolsOpen && moreToolsNavItems.map((item) => renderNavLink(item, { nested: true, onNavigate: opts?.onNavigate }))}
-      </div>
-    );
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-950 text-gray-900 dark:text-white flex transition-colors">
@@ -1037,9 +987,7 @@ export function Dashboard() {
 
         {/* Nav */}
         <nav className="flex-1 px-2 space-y-0.5 overflow-y-auto">
-          {mainNavItems.slice(0, 4).map((item) => renderNavLink(item, { collapsed: sidebarCollapsed }))}
-          {renderMoreToolsSection({ collapsed: sidebarCollapsed })}
-          {mainNavItems.slice(4).map((item) => renderNavLink(item, { collapsed: sidebarCollapsed }))}
+          {mainNavItems.map((item) => renderNavLink(item, { collapsed: sidebarCollapsed }))}
         </nav>
 
         {/* Bottom section */}
@@ -1092,9 +1040,7 @@ export function Dashboard() {
               </button>
             </div>
             <nav className="flex-1 px-2 space-y-0.5 overflow-y-auto">
-              {mainNavItems.slice(0, 4).map((item) => renderNavLink(item, { onNavigate: () => setMobileMenuOpen(false) }))}
-              {renderMoreToolsSection({ onNavigate: () => setMobileMenuOpen(false) })}
-              {mainNavItems.slice(4).map((item) => renderNavLink(item, { onNavigate: () => setMobileMenuOpen(false) }))}
+              {mainNavItems.map((item) => renderNavLink(item, { onNavigate: () => setMobileMenuOpen(false) }))}
             </nav>
             <div className="border-t border-gray-200 dark:border-slate-800 p-4">
               <div className="flex items-center gap-2.5 mb-3">
