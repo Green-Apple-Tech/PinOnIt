@@ -117,9 +117,9 @@ async function sendTwilioVoice(to: string, message: string): Promise<{ ok: boole
 async function sendTwilioSms(to: string, body: string): Promise<{ ok: boolean; error?: string }> {
   const twilioSid = Deno.env.get('TWILIO_ACCOUNT_SID');
   const twilioToken = Deno.env.get('TWILIO_AUTH_TOKEN');
-  const twilioFrom = Deno.env.get('TWILIO_PHONE_NUMBER');
+  const messagingServiceSid = Deno.env.get('TWILIO_MESSAGING_SERVICE_SID');
 
-  if (!twilioSid || !twilioToken || !twilioFrom) {
+  if (!twilioSid || !twilioToken || !messagingServiceSid) {
     console.warn('Twilio credentials not configured — skipping SMS send');
     return { ok: false, error: 'Twilio credentials not configured' };
   }
@@ -133,7 +133,7 @@ async function sendTwilioSms(to: string, body: string): Promise<{ ok: boolean; e
           'Authorization': 'Basic ' + btoa(`${twilioSid}:${twilioToken}`),
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: new URLSearchParams({ From: twilioFrom, To: to, Body: body }),
+        body: new URLSearchParams({ MessagingServiceSid: messagingServiceSid, To: to, Body: body }),
       }
     );
     if (!res.ok) {
