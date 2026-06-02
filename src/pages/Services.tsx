@@ -10,7 +10,7 @@ import { LOCATION_TYPES, MEETING_TYPE_META } from '../lib/types';
 import {
   Plus, Trash2, X, Check, Loader2, MapPin, Clock, Settings2, MessageSquare,
   DollarSign, Copy, Smartphone, Mail, Pencil, ExternalLink, Link2, AlertCircle,
-  Search, CreditCard, QrCode, Zap, Bell, ChevronDown, FileText, Shield, HelpCircle, PhoneCall,
+  Search, CreditCard, QrCode, Zap, Bell, ChevronDown, Shield, HelpCircle, PhoneCall,
 } from 'lucide-react';
 import { QRModal } from '../components/QRModal';
 import { ColorSwatchRow } from '../components/ColorSwatchRow';
@@ -634,11 +634,7 @@ export function ServicesPage() {
     if (data) setReminders((prev) => prev.map((x) => x.id === r.id ? data as ServiceReminder : x));
   };
 
-  const setField = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((prev) => {
-    const next = { ...prev, [k]: v };
-    if (k === 'price_cents' && (v as number) > 0 && !next.require_terms) next.require_terms = true;
-    return next;
-  });
+  const setField = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((prev) => ({ ...prev, [k]: v }));
 
   const tabs: { key: ServiceTab; label: string; icon: typeof Clock | null }[] = [
     { key: 'basic', label: 'Basic', icon: Settings2 },
@@ -1436,7 +1432,6 @@ export function ServicesPage() {
                 <div className="space-y-2 mb-2">
                   <p className="text-sm font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">Default Forms</p>
                   {([
-                    { key: 'require_terms' as const, icon: FileText, label: 'Require Terms & Conditions agreement', desc: form.price_cents > 0 ? 'Auto-enabled for paid events' : 'Show cancellation & payment terms to guests', accent: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-950/20' },
                     { key: 'require_nda' as const, icon: Shield, label: 'Require NDA agreement', desc: 'Guests must agree to a non-disclosure agreement', accent: 'text-slate-600 dark:text-slate-400', bg: 'bg-slate-50 dark:bg-slate-800/40' },
                   ] as const).map((item) => (
                     <div key={item.key} className={`flex items-center gap-3 px-4 py-3.5 ${item.bg} border border-gray-200 dark:border-slate-700 rounded-xl min-h-[60px]`}>
@@ -1543,6 +1538,16 @@ export function ServicesPage() {
                     </button>
                   </div>
                 ))}
+                <div className="flex items-center justify-between py-4 border-b border-gray-100 dark:border-slate-800 min-h-[64px]">
+                  <div>
+                    <p className="text-base font-semibold text-gray-900 dark:text-white">Override global T&amp;C setting for this event</p>
+                    <p className="text-sm text-gray-400 dark:text-slate-500">Global T&amp;C setting is in Settings → Booking page</p>
+                  </div>
+                  <button onClick={() => setField('require_terms', !form.require_terms)}
+                    className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0 ${form.require_terms ? 'bg-brand-600' : 'bg-gray-300 dark:bg-slate-600'}`}>
+                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${form.require_terms ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 dark:text-slate-400 mb-1.5">Cancellation policy (shown to guests)</label>
                   <textarea value={form.cancellation_policy} onChange={(e) => setField('cancellation_policy', e.target.value)} rows={3} placeholder="e.g. Cancellations must be made at least 24 hours in advance." className={`${inputCls} resize-none`} />

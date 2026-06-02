@@ -6,6 +6,7 @@ import { TIMEZONES } from '../lib/types';
 import type { EmergencyContact } from '../lib/types';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import { resolveDefaultReminderChannel, type ReminderChannelPreference } from '../lib/reminderChannels';
+import { DEFAULT_TERMS_TEXT } from '../lib/terms';
 import {
   Save, Loader2, Copy, Check, Code, Palette, ExternalLink, Upload, X,
   ImagePlus, CheckCircle2, AlertCircle, Link2, QrCode, Users, Gift,
@@ -387,6 +388,8 @@ export function SettingsPage() {
   const [slug, setSlug] = useState(profile?.slug ?? '');
   const [bookingHeader, setBookingHeader] = useState(profile?.booking_page_header ?? '');
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url ?? '');
+  const [globalRequireTerms, setGlobalRequireTerms] = useState(profile?.global_require_terms ?? false);
+  const [globalTermsText, setGlobalTermsText] = useState(profile?.global_terms_text ?? DEFAULT_TERMS_TEXT);
 
   const [brandColor, setBrandColor] = useState(profile?.brand_color ?? '#5864C6');
   const [logoUrl, setLogoUrl] = useState(profile?.avatar_url ?? '');
@@ -547,6 +550,8 @@ export function SettingsPage() {
         brand_color: brandColor,
         booking_page_header: bookingHeader,
         avatar_url: avatarUrl || null,
+        global_require_terms: globalRequireTerms,
+        global_terms_text: globalTermsText.trim() || DEFAULT_TERMS_TEXT,
         show_wizard_button: showWizardButton,
         session_timeout_minutes: sessionTimeoutMinutes,
         phone: normalizePhoneE164(notificationPhone) || null,
@@ -997,6 +1002,35 @@ export function SettingsPage() {
               )}
             </div>
           )}
+
+          <div className="border-t border-slate-200 dark:border-slate-800 pt-4 space-y-4">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Terms & Conditions</h3>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-slate-900 dark:text-white">Require T&amp;C agreement on all bookings</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Show a terms checkbox on every booking page for this account.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setGlobalRequireTerms((v) => !v)}
+                className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors ${globalRequireTerms ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-600'}`}
+              >
+                <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${globalRequireTerms ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+            {globalRequireTerms && (
+              <div>
+                <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">Terms &amp; Conditions text</label>
+                <textarea
+                  value={globalTermsText}
+                  onChange={(e) => setGlobalTermsText(e.target.value)}
+                  rows={4}
+                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition resize-none text-sm leading-relaxed"
+                />
+              </div>
+            )}
+          </div>
+
           <SaveBtn saving={saving} saved={saved} onClick={handleSave} />
         </div>
       )}

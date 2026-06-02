@@ -13,6 +13,7 @@ import {
   shouldStopRecurrence,
 } from '../lib/recurring';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
+import { resolveTermsText } from '../lib/terms';
 import {
   Calendar,
   Clock,
@@ -886,8 +887,10 @@ export function BookPage() {
     return (svc as Service).show_description_on_booking_page ?? true;
   };
   const isPaidService = selectedService ? selectedService.price_cents > 0 : false;
+  const showTermsAgreement = !!(host?.global_require_terms || (selectedService as Service)?.require_terms);
+  const termsDisplayText = resolveTermsText(host?.global_terms_text);
   const requiredAnswersMissing = questions.some((q) => q.required && !answers[q.id]?.trim())
-    || ((selectedService as any)?.require_terms && !termsAgreed)
+    || (showTermsAgreement && !termsAgreed)
     || ((selectedService as any)?.require_nda && !ndaAgreed)
     || (isPaidService && !paymentConfirmed && !(isRecurringService && selectedService?.price_cents > 0))
     || (isRecurringService && !recurringAcknowledged);
@@ -1356,9 +1359,9 @@ export function BookPage() {
                       <span><strong className="text-slate-700 dark:text-slate-300">Cancellation policy:</strong> {selectedService.cancellation_policy}</span>
                     </div>
                   )}
-                  {(selectedService as any)?.require_terms && (
+                  {showTermsAgreement && (
                     <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl space-y-3">
-                      <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">By booking this appointment you agree to our cancellation policy. Cancellations must be made at least 24 hours in advance. No-shows may be charged the full session fee. Payment is due at time of booking.</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{termsDisplayText}</p>
                       <label className="flex items-start gap-2.5 cursor-pointer">
                         <input type="checkbox" checked={termsAgreed} onChange={(e) => setTermsAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-emerald-500 focus:ring-emerald-500 shrink-0" />
                         <span className="text-sm text-slate-700 dark:text-slate-300">I have read and agree to the terms above <span className="text-red-500">*</span></span>

@@ -58,6 +58,8 @@ export interface Profile {
   link_expiry?: string;
   session_timeout_minutes: number | null;
   calendar_conflict_settings: CalendarConflictSettings | null;
+  global_require_terms: boolean;
+  global_terms_text: string;
   created_at: string;
   updated_at: string;
 }
