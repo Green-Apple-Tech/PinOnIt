@@ -13,7 +13,6 @@ import {
   Mail, Smartphone, MessageSquare,
 } from 'lucide-react';
 import { QRModal } from '../components/QRModal';
-import { LINK_EXPIRY_OPTIONS, isSingleUseLinksEnabled, linkExpiryToDays, resolveLinkExpiry } from '../lib/singleUseLinks';
 import { ColorSwatchRow } from '../components/ColorSwatchRow';
 import { AnalyticsPage } from './Analytics';
 import { BillingPage } from './Billing';
@@ -393,12 +392,6 @@ export function SettingsPage() {
   const [logoUrl, setLogoUrl] = useState(profile?.avatar_url ?? '');
 
   const [showWizardButton, setShowWizardButton] = useState(profile?.show_wizard_button !== false);
-  const [singleUseLinksEnabled, setSingleUseLinksEnabled] = useState(
-    profile ? isSingleUseLinksEnabled(profile) : false,
-  );
-  const [linkExpiry, setLinkExpiry] = useState(
-    profile ? resolveLinkExpiry(profile) : '1_booking',
-  );
   const [sessionTimeoutMinutes, setSessionTimeoutMinutes] = useState<number | null>(profile?.session_timeout_minutes ?? null);
 
   // Notifications (profile phone + default reminder channel)
@@ -478,16 +471,6 @@ export function SettingsPage() {
     }
   }, [profile?.session_timeout_minutes, profile?.phone, profile?.whatsapp_number, profile?.default_reminder_channel]);
 
-  // Sync single-use link settings only when the profile first loads (profile.id change),
-  // not on background token refreshes — otherwise mid-edit state gets clobbered.
-  useEffect(() => {
-    if (profile) {
-      setSingleUseLinksEnabled(isSingleUseLinksEnabled(profile));
-      setLinkExpiry(resolveLinkExpiry(profile));
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile?.id]);
-
   const handleAddEmergencyContact = async () => {
     if (!user || !newContactLabel.trim() || !newContactPhone.trim()) return;
     if (emergencyContacts.length >= 3) return;
@@ -565,10 +548,6 @@ export function SettingsPage() {
         booking_page_header: bookingHeader,
         avatar_url: avatarUrl || null,
         show_wizard_button: showWizardButton,
-        single_use_links: singleUseLinksEnabled,
-        link_expiry: singleUseLinksEnabled ? linkExpiry : '1_booking',
-        single_use_links_enabled: singleUseLinksEnabled,
-        default_link_expiry_days: singleUseLinksEnabled ? linkExpiryToDays(linkExpiry) : null,
         session_timeout_minutes: sessionTimeoutMinutes,
         phone: normalizePhoneE164(notificationPhone) || null,
         whatsapp_number: normalizePhoneE164(notificationWhatsapp) || null,
@@ -999,47 +978,6 @@ export function SettingsPage() {
             <input type="url" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)}
               placeholder="https://example.com/photo.jpg"
               className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition" />
-          </div>
-          <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/40 p-4 space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Single Use Links</h3>
-            <label className="flex items-center justify-between gap-4 cursor-pointer">
-              <div>
-                <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Enable single-use booking links</p>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 leading-relaxed">
-                  Each link can only be used once. After one booking is made the link expires automatically.
-                </p>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={singleUseLinksEnabled}
-                onClick={() => setSingleUseLinksEnabled((v) => !v)}
-                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 ${singleUseLinksEnabled ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}
-              >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${singleUseLinksEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
-              </button>
-            </label>
-            {singleUseLinksEnabled && (
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wide">Link expires after</label>
-                <div className="flex flex-wrap gap-2">
-                  {LINK_EXPIRY_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => setLinkExpiry(opt.value)}
-                      className={`px-4 py-2 rounded-full text-sm font-semibold border transition-all min-h-[40px] ${
-                        linkExpiry === opt.value
-                          ? 'bg-emerald-500 border-emerald-500 text-white'
-                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
           {bookingUrl && (
             <div className="flex items-center gap-2 pt-2">

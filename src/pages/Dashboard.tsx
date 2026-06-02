@@ -7,6 +7,13 @@ import { supabase } from '../lib/supabase';
 import type { Booking, Service } from '../lib/types';
 import { CalendarDays, Settings, LogOut, Users, X, Check, Sun, Moon, Copy, Share2, Mail, Link2, ExternalLink, PenLine, Video, Phone, MapPin, ChevronRight, Loader2, CalendarCheck, Plus, ChevronLeft, LayoutGrid, Menu, AlertCircle, Sparkles, Search, ShoppingBag, Wrench as Tool, QrCode } from 'lucide-react';
 import { QRModal } from '../components/QRModal';
+import {
+  LINK_EXPIRY_OPTIONS,
+  isSingleUseLinksEnabled,
+  linkExpiryToDays,
+  resolveLinkExpiry,
+  type LinkExpiryValue,
+} from '../lib/singleUseLinks';
 
 type NavItem = { to: string; icon: typeof LayoutGrid; label: string };
 
@@ -503,6 +510,95 @@ function SlugEditor({ currentSlug, userId, onSaved }: { currentSlug: string; use
           <AlertCircle className="h-3.5 w-3.5 shrink-0" /> {saveError}
         </p>
       )}
+    </div>
+  );
+}
+
+// ── Single-use links (scheduling page) ────────────────────────────────────────
+
+function SingleUseLinksRow() {
+  const { profile, refreshProfile } = useAuth();
+  const [enabled, setEnabled] = useState(false);
+  const [linkExpiry, setLinkExpiry] = useState<LinkExpiryValue>('1_booking');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    setEnabled(isSingleUseLinksEnabled(profile));
+    setLinkExpiry(resolveLinkExpiry(profile));
+  }, [profile?.id]);
+
+  const persist = useCallback(async (nextEnabled: boolean, nextExpiry: LinkExpiryValue) => {
+    if (!profile?.id) return;
+    setSaving(true);
+    await supabase
+      .from('profiles')
+      .update({
+        single_use_links: nextEnabled,
+        link_expiry: nextEnabled ? nextExpiry : '1_booking',
+        single_use_links_enabled: nextEnabled,
+        default_link_expiry_days: nextEnabled ? linkExpiryToDays(nextExpiry) : null,
+      })
+      .eq('id', profile.id);
+    await refreshProfile();
+    setSaving(false);
+  }, [profile?.id, refreshProfile]);
+
+  const handleToggle = () => {
+    const next = !enabled;
+    setEnabled(next);
+    void persist(next, linkExpiry);
+  };
+
+  const handleExpiryChange = (expiry: LinkExpiryValue) => {
+    setLinkExpiry(expiry);
+    if (enabled) void persist(true, expiry);
+  };
+
+  if (!profile) return null;
+
+  return (
+    <div className="mb-6 bg-white dark:bg-slate-900/50 border border-gray-200 dark:border-slate-800 rounded-2xl px-5 py-4">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <Link2 className="h-4 w-4 text-brand-600 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">Single use links</p>
+            <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
+              Each link can only be used once — expires after one booking.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={enabled}
+          disabled={saving}
+          onClick={handleToggle}
+          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none disabled:opacity-60 ${enabled ? 'bg-[#5864C6]' : 'bg-gray-300 dark:bg-slate-600'}`}
+        >
+          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+        </button>
+        {enabled && (
+          <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto sm:ml-auto">
+            {LINK_EXPIRY_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                disabled={saving}
+                onClick={() => handleExpiryChange(opt.value)}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all disabled:opacity-60 ${
+                  linkExpiry === opt.value
+                    ? 'bg-[#5864C6] border-[#5864C6] text-white'
+                    : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:border-gray-300'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1216,6 +1312,8 @@ export function Dashboard() {
                 totalEventCount={services.length}
               />
             )}
+
+            <SingleUseLinksRow />
 
             {/* No slug nudge */}
             {!profile?.slug && !createdUrl && (
