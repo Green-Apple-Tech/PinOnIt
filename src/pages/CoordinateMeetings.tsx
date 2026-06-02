@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Navigate, useNavigate, useSearchParams, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
@@ -81,11 +81,52 @@ const DEFAULT_WEEKDAY_WINDOWS: { start: number; end: number }[] = [
 
 type SelectedSlotsMap = Record<string, string[]>;
 
+type SchedulingIntent = 'specific_times' | 'general_timeframe' | 'open_ended';
+type TimeframePreset = 'today' | 'next_2_days' | 'this_week' | 'next_week' | 'custom';
+
 interface PreferredTimesPayload {
+  schedulingIntent?: SchedulingIntent;
+  timeframePreset?: TimeframePreset;
+  customRangeStart?: string;
+  customRangeEnd?: string;
   selectedSlots?: SelectedSlotsMap;
   offHoursByDate?: Record<string, boolean>;
   allowOffHoursGlobal?: boolean;
 }
+
+const TIMEFRAME_PRESET_LABELS: Record<TimeframePreset, string> = {
+  today: 'Today',
+  next_2_days: 'Next 2 days',
+  this_week: 'This week',
+  next_week: 'Next week',
+  custom: 'Custom range',
+};
+
+const SCHEDULING_INTENT_OPTIONS: {
+  id: SchedulingIntent;
+  icon: string;
+  title: string;
+  description: string;
+}[] = [
+  {
+    id: 'specific_times',
+    icon: '📅',
+    title: 'I know some available times',
+    description: "I'll pick specific dates and times — participants will be asked to confirm one.",
+  },
+  {
+    id: 'general_timeframe',
+    icon: '📆',
+    title: 'I have a general timeframe',
+    description: 'I know it needs to happen within the next few days or this week — the app will find a time that works.',
+  },
+  {
+    id: 'open_ended',
+    icon: '🤷',
+    title: "I'm not sure yet",
+    description: 'Send to everyone and let them all suggest times that work.',
+  },
+];
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -169,6 +210,89 @@ function getWindowFromDates(dates: string[]) {
     start: new Date(sorted[0] + 'T00:00:00').toISOString(),
     end: new Date(sorted[sorted.length - 1] + 'T23:59:59').toISOString(),
   };
+}
+
+function getOpenEndedWindow() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const end = new Date(today);
+  end.setDate(end.getDate() + 30);
+  end.setHours(23, 59, 59, 999);
+  return { start: today.toISOString(), end: end.toISOString() };
+}
+
+function getDatesForTimeframePreset(
+  preset: TimeframePreset,
+  customStart?: string,
+  customEnd?: string,
+): string[] {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (preset === 'today') {
+    return [toLocalDateInput(today)];
+  }
+
+  if (preset === 'next_2_days') {
+    const dates: string[] = [];
+    for (let i = 0; i < 2; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      dates.push(toLocalDateInput(d));
+    }
+    return dates;
+  }
+
+  if (preset === 'this_week') {
+    const dates: string[] = [];
+    const end = new Date(today);
+    end.setDate(today.getDate() + (6 - today.getDay()));
+    for (let d = new Date(today); d <= end; d.setDate(d.getDate() + 1)) {
+      dates.push(toLocalDateInput(new Date(d)));
+    }
+    return dates;
+  }
+
+  if (preset === 'next_week') {
+    const dates: string[] = [];
+    const day = today.getDay();
+    const daysUntilNextMonday = day === 0 ? 1 : 8 - day;
+    const start = new Date(today);
+    start.setDate(today.getDate() + daysUntilNextMonday);
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      dates.push(toLocalDateInput(d));
+    }
+    return dates;
+  }
+
+  if (preset === 'custom' && customStart && customEnd && customStart <= customEnd) {
+    const dates: string[] = [];
+    const start = new Date(`${customStart}T12:00:00`);
+    const end = new Date(`${customEnd}T12:00:00`);
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      dates.push(toLocalDateInput(new Date(d)));
+    }
+    return dates;
+  }
+
+  return [];
+}
+
+function describeSchedulingApproach(
+  intent: SchedulingIntent,
+  preset?: TimeframePreset,
+  customStart?: string,
+  customEnd?: string,
+): string {
+  if (intent === 'specific_times') return 'Specific dates and times';
+  if (intent === 'open_ended') return 'Open-ended — participants suggest times';
+  if (preset === 'custom' && customStart && customEnd) {
+    return `Custom range (${fmtDate(new Date(`${customStart}T12:00:00`).toISOString())} – ${fmtDate(new Date(`${customEnd}T12:00:00`).toISOString())})`;
+  }
+  if (preset) return TIMEFRAME_PRESET_LABELS[preset];
+  return 'General timeframe';
 }
 
 function formatSelectedDatesLabel(dates: string[]): string {
@@ -373,16 +497,41 @@ function buildBusyPeriods(events: CalendarEventRow[], settings: CalendarConflict
   for (const e of events) {
     if (!shouldBlockCalendarEvent(e, settings)) continue;
     if (e.all_day) {
-      const startDay = new Date(e.start_at);
-      startDay.setHours(0, 0, 0, 0);
-      const endDay = new Date(e.end_at);
-      endDay.setHours(23, 59, 59, 999);
-      periods.push({ start: startDay, end: endDay });
+      // All-day end dates are exclusive (next day) — emit one busy period per calendar day.
+      const rangeStart = new Date(e.start_at);
+      rangeStart.setHours(0, 0, 0, 0);
+      const rangeEndExclusive = new Date(e.end_at);
+      rangeEndExclusive.setHours(0, 0, 0, 0);
+      if (rangeEndExclusive <= rangeStart) {
+        rangeEndExclusive.setDate(rangeEndExclusive.getDate() + 1);
+      }
+      const cur = new Date(rangeStart);
+      while (cur < rangeEndExclusive) {
+        const dayStart = new Date(cur);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(cur);
+        dayEnd.setHours(23, 59, 59, 999);
+        periods.push({ start: dayStart, end: dayEnd });
+        cur.setDate(cur.getDate() + 1);
+      }
     } else {
       periods.push({ start: new Date(e.start_at), end: new Date(e.end_at) });
     }
   }
   return periods;
+}
+
+function toLocalDateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function busyPeriodOverlapsDay(period: BusyPeriod, dateStr: string): boolean {
+  const dayStart = new Date(`${dateStr}T00:00:00`);
+  const dayEnd = new Date(`${dateStr}T23:59:59.999`);
+  return period.start < dayEnd && period.end > dayStart;
 }
 
 function getHostWindowsForDate(dateStr: string, availability: AvailabilitySlot[]): { start: number; end: number }[] {
@@ -412,11 +561,11 @@ function filterSelectableSlots(
   availability: AvailabilitySlot[],
   busyPeriods: BusyPeriod[],
   bookings: HostBooking[],
-  hasConnectedCalendar: boolean,
+  applyCalendarBusy: boolean,
 ): string[] {
   return candidates.filter(t => {
     if (!includeOffHours && !isSlotInAvailability(dateStr, t, availability)) return false;
-    if (hasConnectedCalendar && isSlotBusy(dateStr, t, durationMinutes, busyPeriods, bookings)) return false;
+    if (applyCalendarBusy && isSlotBusy(dateStr, t, durationMinutes, busyPeriods, bookings)) return false;
     return true;
   });
 }
@@ -443,10 +592,14 @@ function isSlotBusy(
   const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);
   const bookingConflict = bookings.some(b => {
     const bStart = new Date(b.start_time);
+    if (toLocalDateKey(bStart) !== dateStr) return false;
     const bEnd = new Date(b.end_time);
     return slotStart < bEnd && slotEnd > bStart;
   });
-  const calendarConflict = busyPeriods.some(b => slotStart < b.end && slotEnd > b.start);
+  const calendarConflict = busyPeriods.some(b => {
+    if (!busyPeriodOverlapsDay(b, dateStr)) return false;
+    return slotStart < b.end && slotEnd > b.start;
+  });
   return bookingConflict || calendarConflict;
 }
 
@@ -457,10 +610,10 @@ function computeFreeSlotsForDate(
   availability: AvailabilitySlot[],
   busyPeriods: BusyPeriod[],
   bookings: HostBooking[],
-  calendarActive: boolean,
+  applyCalendarBusy: boolean,
 ): string[] {
   const visible = getVisibleHours(dateStr, availability, includeOffHours);
-  if (!calendarActive) return [];
+  if (!applyCalendarBusy) return [];
   return visible.filter(h => !isSlotBusy(dateStr, h, durationMinutes, busyPeriods, bookings));
 }
 
@@ -704,16 +857,21 @@ function SelectionSummary({
   selectedSlots,
   durationMinutes,
   hostSettingsLines,
+  approachLine,
 }: {
   selectedSlots: SelectedSlotsMap;
   durationMinutes: number;
   hostSettingsLines?: string[];
+  approachLine?: string;
 }) {
   const lines = formatSelectedSlotsLines(selectedSlots);
   const durationLabel = fmtDurationShort(durationMinutes);
 
   return (
     <div className="space-y-1.5 text-sm px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+      {approachLine && (
+        <p className="text-slate-700 dark:text-slate-200 font-medium">{approachLine}</p>
+      )}
       {hostSettingsLines && hostSettingsLines.length > 0 && (
         <div className="space-y-0.5 pb-1.5 border-b border-slate-200/80 dark:border-slate-700/80">
           {hostSettingsLines.map(line => (
@@ -725,12 +883,120 @@ function SelectionSummary({
         lines.map(line => (
           <p key={line} className="text-slate-700 dark:text-slate-200">{line}</p>
         ))
-      ) : (
+      ) : approachLine ? null : (
         <p className="text-slate-400 dark:text-slate-500">📅 No times selected yet</p>
       )}
       <p className="text-slate-700 dark:text-slate-200 pt-1 border-t border-slate-200/80 dark:border-slate-700/80">
         ⏱ {durationLabel}
       </p>
+    </div>
+  );
+}
+
+function SchedulingIntentCards({
+  value,
+  onChange,
+}: {
+  value: SchedulingIntent;
+  onChange: (intent: SchedulingIntent) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      {SCHEDULING_INTENT_OPTIONS.map(opt => {
+        const active = value === opt.id;
+        return (
+          <button
+            key={opt.id}
+            type="button"
+            onClick={() => onChange(opt.id)}
+            className={[
+              'w-full text-left p-4 rounded-2xl border-2 transition-all',
+              active
+                ? 'border-[#5864C6] bg-[#5864C6]/5 dark:bg-[#5864C6]/10 shadow-sm'
+                : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-600',
+            ].join(' ')}
+          >
+            <div className="flex items-start gap-3">
+              <span className="text-2xl leading-none shrink-0 mt-0.5" aria-hidden>{opt.icon}</span>
+              <div className="flex-1 min-w-0">
+                <p className={`text-[16px] font-bold ${active ? 'text-[#5864C6] dark:text-[#8891e8]' : 'text-slate-900 dark:text-white'}`}>
+                  {opt.title}
+                </p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{opt.description}</p>
+              </div>
+              <div
+                className={[
+                  'h-5 w-5 rounded-full border-2 shrink-0 mt-1 flex items-center justify-center',
+                  active ? 'border-[#5864C6] bg-[#5864C6]' : 'border-slate-300 dark:border-slate-600',
+                ].join(' ')}
+              >
+                {active && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+              </div>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function TimeframePresetPicker({
+  value,
+  onChange,
+  customStart,
+  customEnd,
+  onCustomStartChange,
+  onCustomEndChange,
+  pillBase,
+}: {
+  value: TimeframePreset;
+  onChange: (preset: TimeframePreset) => void;
+  customStart: string;
+  customEnd: string;
+  onCustomStartChange: (v: string) => void;
+  onCustomEndChange: (v: string) => void;
+  pillBase: (active: boolean) => string;
+}) {
+  const presets: TimeframePreset[] = ['today', 'next_2_days', 'this_week', 'next_week', 'custom'];
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2.5">
+        {presets.map(preset => (
+          <button
+            key={preset}
+            type="button"
+            onClick={() => onChange(preset)}
+            className={pillBase(value === preset)}
+            style={value === preset ? { background: BRAND, borderColor: BRAND } : {}}
+          >
+            {TIMEFRAME_PRESET_LABELS[preset]}
+          </button>
+        ))}
+      </div>
+      {value === 'custom' && (
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1">
+            <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">From</label>
+            <input
+              type="date"
+              value={customStart}
+              onChange={e => onCustomStartChange(e.target.value)}
+              className={INP}
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">To</label>
+            <input
+              type="date"
+              value={customEnd}
+              onChange={e => onCustomEndChange(e.target.value)}
+              min={customStart || undefined}
+              className={INP}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -748,6 +1014,7 @@ function PerDayTimeSlotPicker({
   onClearDay,
   hasConnectedCalendar,
   checkHostCalendar,
+  calendarBusyReady,
   hostAvailability,
   calendarBusyPeriods,
   hostBookings,
@@ -765,6 +1032,7 @@ function PerDayTimeSlotPicker({
   onClearDay: (dateStr: string) => void;
   hasConnectedCalendar: boolean;
   checkHostCalendar: boolean;
+  calendarBusyReady: boolean;
   hostAvailability: AvailabilitySlot[];
   calendarBusyPeriods: BusyPeriod[];
   hostBookings: HostBooking[];
@@ -772,6 +1040,7 @@ function PerDayTimeSlotPicker({
 }) {
   const [customDraft, setCustomDraft] = useState<Record<string, string>>({});
   const calendarActive = hasConnectedCalendar && checkHostCalendar;
+  const applyCalendarBusy = calendarActive && calendarBusyReady;
 
   if (selectedDates.length === 0) return null;
 
@@ -803,10 +1072,10 @@ function PerDayTimeSlotPicker({
         const selected = selectedSlots[dateStr] ?? [];
         const gridSet = new Set(visibleHours);
         const extraTimes = selected.filter(t => !gridSet.has(t)).sort();
-        const freeHourCount = calendarActive
+        const freeHourCount = applyCalendarBusy
           ? visibleHours.filter(h => !isSlotBusy(dateStr, h, durationMinutes, calendarBusyPeriods, hostBookings)).length
           : visibleHours.length;
-        const fullyBookedDay = calendarActive && freeHourCount === 0 && visibleHours.length > 0;
+        const allSlotsTaken = applyCalendarBusy && visibleHours.length > 0 && freeHourCount === 0;
 
         return (
           <div
@@ -861,26 +1130,25 @@ function PerDayTimeSlotPicker({
                 </span>
               </label>
 
-              {fullyBookedDay && (
+              {allSlotsTaken && (
                 <p className="text-xs text-amber-600 dark:text-amber-400">
-                  Calendar fully booked this day — tap times below to add them manually, or enable off-hours.
+                  All slots taken — enable off-hours to add more
                 </p>
               )}
 
               <div className="flex flex-wrap gap-2">
                 {visibleHours.map(time => {
-                  const slotBusy = calendarActive && isSlotBusy(dateStr, time, durationMinutes, calendarBusyPeriods, hostBookings);
-                  const busy = slotBusy && !fullyBookedDay;
+                  const slotBusy = applyCalendarBusy && isSlotBusy(dateStr, time, durationMinutes, calendarBusyPeriods, hostBookings);
                   const isSelected = selected.includes(time);
                   return (
                     <button
                       key={time}
                       type="button"
-                      disabled={busy}
-                      onClick={() => !busy && onToggleSlot(dateStr, time)}
+                      disabled={slotBusy}
+                      onClick={() => !slotBusy && onToggleSlot(dateStr, time)}
                       className={[
                         'min-h-[44px] min-w-[54px] px-2 rounded-full text-[14px] font-semibold border transition-all flex flex-col items-center justify-center',
-                        busy
+                        slotBusy
                           ? 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed opacity-70'
                           : isSelected
                             ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm'
@@ -888,7 +1156,7 @@ function PerDayTimeSlotPicker({
                       ].join(' ')}
                     >
                       <span>{formatTimeLabel(time)}</span>
-                      {busy && <span className="text-[9px] font-medium leading-none mt-0.5">Busy</span>}
+                      {slotBusy && <span className="text-[9px] font-medium leading-none mt-0.5">Busy</span>}
                     </button>
                   );
                 })}
@@ -898,8 +1166,7 @@ function PerDayTimeSlotPicker({
                 <div className="flex flex-wrap gap-2 pt-1">
                   <span className="w-full text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Custom times</span>
                   {extraTimes.map(time => {
-                    const slotBusy = calendarActive && isSlotBusy(dateStr, time, durationMinutes, calendarBusyPeriods, hostBookings);
-                    const busy = slotBusy && !fullyBookedDay;
+                    const slotBusy = applyCalendarBusy && isSlotBusy(dateStr, time, durationMinutes, calendarBusyPeriods, hostBookings);
                     return (
                       <button
                         key={time}
@@ -907,7 +1174,7 @@ function PerDayTimeSlotPicker({
                         onClick={() => onToggleSlot(dateStr, time)}
                         className={[
                           'min-h-[44px] min-w-[54px] px-3 rounded-full text-[14px] font-semibold border transition-all',
-                          busy
+                          slotBusy
                             ? 'bg-slate-100 dark:bg-slate-800 border-slate-200 text-slate-400'
                             : 'bg-emerald-500 border-emerald-500 text-white shadow-sm',
                         ].join(' ')}
@@ -1018,6 +1285,11 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
   const [offHoursByDate, setOffHoursByDate] = useState<Record<string, boolean>>({});
   const [notes, setNotes] = useState('');
 
+  const [schedulingIntent, setSchedulingIntent] = useState<SchedulingIntent>('general_timeframe');
+  const [timeframePreset, setTimeframePreset] = useState<TimeframePreset>('this_week');
+  const [customRangeStart, setCustomRangeStart] = useState('');
+  const [customRangeEnd, setCustomRangeEnd] = useState('');
+
   const [checkHostCalendar, setCheckHostCalendar] = useState(false);
   const [allowOffHoursGlobal, setAllowOffHoursGlobal] = useState(false);
   const [hasConnectedCalendar, setHasConnectedCalendar] = useState(false);
@@ -1025,6 +1297,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
   const [hostAvailability, setHostAvailability] = useState<AvailabilitySlot[]>([]);
   const [calendarBusyPeriods, setCalendarBusyPeriods] = useState<BusyPeriod[]>([]);
   const [hostBookings, setHostBookings] = useState<HostBooking[]>([]);
+  const [calendarBusyState, setCalendarBusyState] = useState<'loading' | 'ready' | 'unavailable'>('loading');
   const calendarDefaultSet = useRef(false);
   const manualDatesRef = useRef<Set<string>>(new Set());
 
@@ -1048,6 +1321,8 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
     : durationPreset;
 
   const calendarActive = hasConnectedCalendar && checkHostCalendar;
+  const calendarBusyReady = calendarBusyState === 'ready';
+  const calendarCheckActive = calendarActive && calendarBusyReady;
 
   const effectiveOffHours = useCallback((dateStr: string) =>
     allowOffHoursGlobal || (offHoursByDate[dateStr] ?? false),
@@ -1061,17 +1336,44 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
 
   useEffect(() => {
     if (!profile?.id) return;
+    let cancelled = false;
+
     (async () => {
+      setCalendarBusyState('loading');
       const conflictSettings: CalendarConflictSettings = {
         ...DEFAULT_CALENDAR_CONFLICT_SETTINGS,
         ...(profile.calendar_conflict_settings ?? {}),
       };
-      const [calRes, availRes, bookRes, evtRes] = await Promise.all([
-        supabase
-          .from('connected_calendars')
-          .select('id, provider')
-          .eq('host_id', profile.id)
-          .in('provider', ['google', 'outlook']),
+
+      const { data: calRows, error: calErr } = await supabase
+        .from('connected_calendars')
+        .select('id, provider')
+        .eq('host_id', profile.id)
+        .in('provider', ['google', 'outlook']);
+
+      if (cancelled) return;
+
+      const connected = !calErr && (calRows ?? []).length > 0;
+      setHasConnectedCalendar(connected);
+
+      if (connected) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/calendar-sync`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${session?.access_token ?? ''}`,
+              Apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({}),
+          });
+        } catch {
+          // Best-effort sync — fall back to cached events in DB
+        }
+      }
+
+      const [availRes, bookRes, evtRes] = await Promise.all([
         supabase.from('availability').select('day_of_week, start_time, end_time, is_active').eq('host_id', profile.id),
         supabase.from('bookings').select('start_time, end_time').eq('host_id', profile.id).eq('status', 'confirmed'),
         supabase
@@ -1079,23 +1381,33 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
           .select('start_at, end_at, all_day, show_status, transparency, attendee_self_status, is_birthday_cal, is_holiday_cal, title')
           .eq('host_id', profile.id),
       ]);
-      const connected = (calRes.data ?? []).length > 0;
-      setHasConnectedCalendar(connected);
+
+      if (cancelled) return;
+
       setHostAvailability((availRes.data ?? []) as AvailabilitySlot[]);
       setHostBookings((bookRes.data ?? []) as HostBooking[]);
-      setCalendarBusyPeriods(buildBusyPeriods((evtRes.data ?? []) as CalendarEventRow[], conflictSettings));
+
+      if (!connected || evtRes.error) {
+        setCalendarBusyPeriods([]);
+        setCalendarBusyState('unavailable');
+      } else {
+        setCalendarBusyPeriods(buildBusyPeriods((evtRes.data ?? []) as CalendarEventRow[], conflictSettings));
+        setCalendarBusyState('ready');
+      }
       setHostDataLoaded(true);
     })();
+
+    return () => { cancelled = true; };
   }, [profile?.id, profile?.calendar_conflict_settings]);
 
   const computeFreeSlotsForDateCb = useCallback((dateStr: string, includeOffHours: boolean) =>
     computeFreeSlotsForDate(
       dateStr, includeOffHours, durationMinutes, hostAvailability,
-      calendarBusyPeriods, hostBookings, calendarActive,
-    ), [durationMinutes, hostAvailability, calendarBusyPeriods, hostBookings, calendarActive]);
+      calendarBusyPeriods, hostBookings, calendarCheckActive,
+    ), [durationMinutes, hostAvailability, calendarBusyPeriods, hostBookings, calendarCheckActive]);
 
   useEffect(() => {
-    if (!hostDataLoaded || !calendarActive) return;
+    if (!hostDataLoaded || !calendarCheckActive) return;
     setSelectedSlots(prev => {
       const next = { ...prev };
       let changed = false;
@@ -1112,7 +1424,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
       }
       return changed ? next : prev;
     });
-  }, [hostDataLoaded, calendarActive, calendarBusyPeriods, hostBookings, hostAvailability, selectedDates, effectiveOffHours, computeFreeSlotsForDateCb]);
+  }, [hostDataLoaded, calendarCheckActive, calendarBusyPeriods, hostBookings, hostAvailability, selectedDates, effectiveOffHours, computeFreeSlotsForDateCb]);
 
   const refreshSlotsForDate = useCallback((dateStr: string, includeOffHours: boolean) => {
     setSelectedSlots(prev => {
@@ -1122,16 +1434,16 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
         if (includeOffHours) return true;
         return isSlotInAvailability(dateStr, t, hostAvailability);
       });
-      if (calendarActive) {
+      if (calendarCheckActive) {
         const free = filterSelectableSlots(
           dateStr, visible, includeOffHours, durationMinutes,
-          hostAvailability, calendarBusyPeriods, hostBookings, calendarActive,
+          hostAvailability, calendarBusyPeriods, hostBookings, calendarCheckActive,
         );
         return { ...prev, [dateStr]: [...new Set([...kept, ...free])].sort() };
       }
       return { ...prev, [dateStr]: kept };
     });
-  }, [hostAvailability, calendarActive, durationMinutes, calendarBusyPeriods, hostBookings]);
+  }, [hostAvailability, calendarCheckActive, durationMinutes, calendarBusyPeriods, hostBookings]);
 
   const handleAllowOffHoursGlobalChange = (next: boolean) => {
     setAllowOffHoursGlobal(next);
@@ -1145,10 +1457,10 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
           if (includeOffHours) return true;
           return isSlotInAvailability(dateStr, t, hostAvailability);
         });
-        if (calendarActive) {
+        if (calendarCheckActive) {
           const free = filterSelectableSlots(
             dateStr, visible, includeOffHours, durationMinutes,
-            hostAvailability, calendarBusyPeriods, hostBookings, calendarActive,
+            hostAvailability, calendarBusyPeriods, hostBookings, calendarCheckActive,
           );
           updated[dateStr] = [...new Set([...kept, ...free])].sort();
         } else {
@@ -1161,7 +1473,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
 
   const handleCheckHostCalendarChange = (next: boolean) => {
     setCheckHostCalendar(next);
-    if (next && hasConnectedCalendar) {
+    if (next && calendarCheckActive) {
       setSelectedSlots(prev => {
         const updated = { ...prev };
         for (const dateStr of selectedDates) {
@@ -1170,7 +1482,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
           const includeOffHours = allowOffHoursGlobal || (offHoursByDate[dateStr] ?? false);
           updated[dateStr] = computeFreeSlotsForDate(
             dateStr, includeOffHours, durationMinutes,
-            hostAvailability, calendarBusyPeriods, hostBookings, true,
+            hostAvailability, calendarBusyPeriods, hostBookings, calendarCheckActive,
           );
         }
         return updated;
@@ -1189,8 +1501,8 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
       setSelectedDates(prev => [...prev, date].sort());
       setOffHoursByDate(prev => ({ ...prev, [date]: false }));
       const includeOH = allowOffHoursGlobal;
-      const free = calendarActive
-        ? computeFreeSlotsForDate(date, includeOH, durationMinutes, hostAvailability, calendarBusyPeriods, hostBookings, true)
+      const free = calendarCheckActive
+        ? computeFreeSlotsForDate(date, includeOH, durationMinutes, hostAvailability, calendarBusyPeriods, hostBookings, calendarCheckActive)
         : [];
       setSelectedSlots(prev => ({ ...prev, [date]: free }));
     }
@@ -1221,7 +1533,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
     const pool = preset === 'morning' ? MORNING_SLOT_TIMES : AFTERNOON_SLOT_TIMES;
     const times = filterSelectableSlots(
       dateStr, pool, includeOffHours, durationMinutes,
-      hostAvailability, calendarBusyPeriods, hostBookings, calendarActive,
+      hostAvailability, calendarBusyPeriods, hostBookings, calendarCheckActive,
     );
     setSelectedSlots(prev => ({ ...prev, [dateStr]: times.sort() }));
   };
@@ -1239,7 +1551,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
     if (mins < SLOT_DAY_START || mins > SLOT_DAY_END) return;
     const includeOffHours = effectiveOffHours(dateStr);
     if (!includeOffHours && !isSlotInAvailability(dateStr, normalized, hostAvailability)) return;
-    if (calendarActive && isSlotBusy(dateStr, normalized, durationMinutes, calendarBusyPeriods, hostBookings)) return;
+    if (calendarCheckActive && isSlotBusy(dateStr, normalized, durationMinutes, calendarBusyPeriods, hostBookings)) return;
     setSelectedSlots(prev => {
       const cur = prev[dateStr] ?? [];
       if (cur.includes(normalized)) return prev;
@@ -1248,10 +1560,31 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
   };
 
   const hasAnySlots = Object.values(selectedSlots).some(times => times.length > 0);
-  const step1Valid = title.trim().length > 0 && selectedDates.length > 0 && hasAnySlots && durationMinutes > 0;
-  const hostSettingsLines = formatHostSettingsLines(
-    hasConnectedCalendar, checkHostCalendar, allowOffHoursGlobal, offHoursByDate,
+
+  const approachLine = describeSchedulingApproach(
+    schedulingIntent,
+    schedulingIntent === 'general_timeframe' ? timeframePreset : undefined,
+    customRangeStart,
+    customRangeEnd,
   );
+
+  const step1Valid = useMemo(() => {
+    if (!title.trim() || durationMinutes <= 0) return false;
+    if (schedulingIntent === 'specific_times') {
+      return selectedDates.length > 0 && hasAnySlots;
+    }
+    if (schedulingIntent === 'general_timeframe') {
+      if (timeframePreset === 'custom') {
+        return !!customRangeStart && !!customRangeEnd && customRangeStart <= customRangeEnd;
+      }
+      return true;
+    }
+    return true;
+  }, [title, durationMinutes, schedulingIntent, selectedDates, hasAnySlots, timeframePreset, customRangeStart, customRangeEnd]);
+
+  const hostSettingsLines = schedulingIntent === 'specific_times'
+    ? formatHostSettingsLines(hasConnectedCalendar, checkHostCalendar, allowOffHoursGlobal, offHoursByDate)
+    : [];
 
   const validParticipants = participants.filter(p => p.name.trim() && p.phone.trim());
 
@@ -1303,11 +1636,22 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
 
   const smsPreview = () => {
     const p = smsParticipants[0] || validParticipants[0] || { name: '[Name]' };
-    const slotsStr = formatSlotsForSms(selectedSlots, selectedDates);
     const dur = durationMinutes < 60 ? `${durationMinutes}-minute` : `${Math.floor(durationMinutes / 60)}-hour`;
     let msg = `Hi ${p.name}, ${hostName} is coordinating a ${dur} "${title || '[Meeting Title]'}"`;
-    if (slotsStr) msg += ` during these times: ${slotsStr}`;
-    msg += '. Please reply with your available times.\n\nReply STOP to opt out.';
+
+    if (schedulingIntent === 'specific_times') {
+      const slotsStr = formatSlotsForSms(selectedSlots, selectedDates);
+      if (slotsStr) msg += ` during these times: ${slotsStr}`;
+      msg += '. Please reply with your available times.';
+    } else if (schedulingIntent === 'general_timeframe') {
+      const dates = getDatesForTimeframePreset(timeframePreset, customRangeStart, customRangeEnd);
+      const { start, end } = getWindowFromDates(dates);
+      msg += ` between ${new Date(start).toLocaleDateString()} and ${new Date(end).toLocaleDateString()}. Please reply with your available times.`;
+    } else {
+      msg += '. Please reply with times that work for you.';
+    }
+
+    msg += '\n\nReply STOP to opt out.';
     return msg;
   };
 
@@ -1316,11 +1660,31 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
     setSending(true);
     setSendError('');
 
-    const { start, end } = getWindowFromDates(selectedDates);
-    const preferredTimesPayload = {
-      selectedSlots,
-      offHoursByDate,
-      allowOffHoursGlobal,
+    let datesForMeeting: string[];
+    let slotsForMeeting: SelectedSlotsMap = {};
+    let windowStart: string;
+    let windowEnd: string;
+
+    if (schedulingIntent === 'specific_times') {
+      datesForMeeting = selectedDates;
+      slotsForMeeting = selectedSlots;
+      ({ start: windowStart, end: windowEnd } = getWindowFromDates(selectedDates));
+    } else if (schedulingIntent === 'general_timeframe') {
+      datesForMeeting = getDatesForTimeframePreset(timeframePreset, customRangeStart, customRangeEnd);
+      ({ start: windowStart, end: windowEnd } = getWindowFromDates(datesForMeeting));
+    } else {
+      datesForMeeting = [];
+      ({ start: windowStart, end: windowEnd } = getOpenEndedWindow());
+    }
+
+    const preferredTimesPayload: PreferredTimesPayload = {
+      schedulingIntent,
+      timeframePreset: schedulingIntent === 'general_timeframe' ? timeframePreset : undefined,
+      customRangeStart: timeframePreset === 'custom' ? customRangeStart : undefined,
+      customRangeEnd: timeframePreset === 'custom' ? customRangeEnd : undefined,
+      selectedSlots: slotsForMeeting,
+      offHoursByDate: schedulingIntent === 'specific_times' ? offHoursByDate : {},
+      allowOffHoursGlobal: schedulingIntent === 'specific_times' ? allowOffHoursGlobal : false,
     };
 
     const { data: meeting, error: meetingErr } = await supabase
@@ -1332,12 +1696,12 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
         location: location.trim() || null,
         duration_minutes: durationMinutes,
         status: 'collecting_availability',
-        proposed_window_start: start,
-        proposed_window_end: end,
-        selected_dates: selectedDates,
+        proposed_window_start: windowStart,
+        proposed_window_end: windowEnd,
+        selected_dates: datesForMeeting,
         preferred_times: preferredTimesPayload,
-        check_host_calendar: checkHostCalendar,
-        allow_off_hours: allowOffHoursGlobal || Object.values(offHoursByDate).some(Boolean),
+        check_host_calendar: schedulingIntent === 'specific_times' && checkHostCalendar,
+        allow_off_hours: schedulingIntent === 'specific_times' && (allowOffHoursGlobal || Object.values(offHoursByDate).some(Boolean)),
       })
       .select()
       .maybeSingle();
@@ -1371,7 +1735,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
       return;
     }
 
-    const timeframe = { start, end };
+    const timeframe = { start: windowStart, end: windowEnd };
     for (let i = 0; i < insertedParticipants.length; i++) {
       const part = insertedParticipants[i];
       const draft = validParticipants[i];
@@ -1419,6 +1783,9 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
               placeholder="e.g. Property Showing — 123 Main St"
               className={INP}
             />
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 leading-relaxed">
+              e.g. Coordinate a property showing, doctor referral, interview, or any meeting where you need to find a time that works for everyone.
+            </p>
           </div>
 
           <div>
@@ -1490,52 +1857,86 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
           </div>
 
           <div>
-            <SectionLabel>Select dates</SectionLabel>
-            <MultiSelectCalendar
-              viewMonth={calendarMonth}
-              onViewMonthChange={setCalendarMonth}
-              selectedDates={selectedDates}
-              onToggleDate={toggleDate}
-            />
-            {selectedDates.length === 0 && (
-              <p className="text-sm text-amber-600 dark:text-amber-400 font-medium mt-3">
-                Select at least one date to continue.
-              </p>
-            )}
-            {selectedDates.length > 0 && (
-              <HostAvailabilitySection
+            <SectionLabel>When are you trying to meet?</SectionLabel>
+            <SchedulingIntentCards value={schedulingIntent} onChange={setSchedulingIntent} />
+          </div>
+
+          {schedulingIntent === 'general_timeframe' && (
+            <div>
+              <SectionLabel>Timeframe</SectionLabel>
+              <TimeframePresetPicker
+                value={timeframePreset}
+                onChange={setTimeframePreset}
+                customStart={customRangeStart}
+                customEnd={customRangeEnd}
+                onCustomStartChange={setCustomRangeStart}
+                onCustomEndChange={setCustomRangeEnd}
+                pillBase={pillBase}
+              />
+              {timeframePreset === 'custom' && customRangeStart && customRangeEnd && customRangeStart > customRangeEnd && (
+                <p className="text-sm text-amber-600 dark:text-amber-400 font-medium mt-3">
+                  End date must be on or after the start date.
+                </p>
+              )}
+            </div>
+          )}
+
+          {schedulingIntent === 'specific_times' && (
+            <div>
+              <SectionLabel>Select dates and times</SectionLabel>
+              <MultiSelectCalendar
+                viewMonth={calendarMonth}
+                onViewMonthChange={setCalendarMonth}
+                selectedDates={selectedDates}
+                onToggleDate={toggleDate}
+              />
+              {selectedDates.length === 0 && (
+                <p className="text-sm text-amber-600 dark:text-amber-400 font-medium mt-3">
+                  Select at least one date to continue.
+                </p>
+              )}
+              {selectedDates.length > 0 && (
+                <HostAvailabilitySection
+                  hasConnectedCalendar={hasConnectedCalendar}
+                  checkHostCalendar={checkHostCalendar}
+                  onCheckHostCalendarChange={handleCheckHostCalendarChange}
+                  allowOffHoursGlobal={allowOffHoursGlobal}
+                  onAllowOffHoursGlobalChange={handleAllowOffHoursGlobalChange}
+                  offHoursByDate={offHoursByDate}
+                />
+              )}
+              <PerDayTimeSlotPicker
+                selectedDates={selectedDates}
+                selectedSlots={selectedSlots}
+                offHoursByDate={offHoursByDate}
+                allowOffHoursGlobal={allowOffHoursGlobal}
+                onToggleSlot={toggleSlot}
+                onRemoveDate={removeDate}
+                onToggleOffHours={toggleOffHoursForDate}
+                onApplyPreset={applyDayPreset}
+                onAddCustomTime={addCustomTime}
+                onClearDay={clearDaySlots}
                 hasConnectedCalendar={hasConnectedCalendar}
                 checkHostCalendar={checkHostCalendar}
-                onCheckHostCalendarChange={handleCheckHostCalendarChange}
-                allowOffHoursGlobal={allowOffHoursGlobal}
-                onAllowOffHoursGlobalChange={handleAllowOffHoursGlobalChange}
-                offHoursByDate={offHoursByDate}
+                calendarBusyReady={calendarBusyReady}
+                hostAvailability={hostAvailability}
+                calendarBusyPeriods={calendarBusyPeriods}
+                hostBookings={hostBookings}
+                durationMinutes={durationMinutes}
               />
-            )}
-            <PerDayTimeSlotPicker
-              selectedDates={selectedDates}
-              selectedSlots={selectedSlots}
-              offHoursByDate={offHoursByDate}
-              allowOffHoursGlobal={allowOffHoursGlobal}
-              onToggleSlot={toggleSlot}
-              onRemoveDate={removeDate}
-              onToggleOffHours={toggleOffHoursForDate}
-              onApplyPreset={applyDayPreset}
-              onAddCustomTime={addCustomTime}
-              onClearDay={clearDaySlots}
-              hasConnectedCalendar={hasConnectedCalendar}
-              checkHostCalendar={checkHostCalendar}
-              hostAvailability={hostAvailability}
-              calendarBusyPeriods={calendarBusyPeriods}
-              hostBookings={hostBookings}
-              durationMinutes={durationMinutes}
-            />
-            {selectedDates.length > 0 && !hasAnySlots && (
-              <p className="text-sm text-amber-600 dark:text-amber-400 font-medium mt-3">
-                Select at least one time slot to continue.
-              </p>
-            )}
-          </div>
+              {selectedDates.length > 0 && !hasAnySlots && (
+                <p className="text-sm text-amber-600 dark:text-amber-400 font-medium mt-3">
+                  Select at least one time slot to continue.
+                </p>
+              )}
+            </div>
+          )}
+
+          {schedulingIntent === 'open_ended' && (
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              No dates needed now — each participant will receive a message asking them to suggest times that work. You&apos;ll match availability once everyone responds.
+            </div>
+          )}
 
           <div>
             <SectionLabel>Private notes <span className="font-normal normal-case text-slate-400">(not shared)</span></SectionLabel>
@@ -1550,9 +1951,10 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
 
           {/* Live summary + navigation */}
           <SelectionSummary
-            selectedSlots={selectedSlots}
+            selectedSlots={schedulingIntent === 'specific_times' ? selectedSlots : {}}
             durationMinutes={durationMinutes}
             hostSettingsLines={hostSettingsLines}
+            approachLine={approachLine}
           />
 
           <div className="hidden md:flex gap-3 pt-2">
@@ -1719,10 +2121,10 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
               </span>
               {location && <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4" /> {location}</span>}
               <span className="flex items-center gap-1.5"><Calendar className="h-4 w-4" />
-                {formatSelectedDatesLabel(selectedDates) || 'No dates'}
+                {approachLine}
               </span>
             </div>
-            {formatSelectedSlotsLines(selectedSlots).length > 0 && (
+            {schedulingIntent === 'specific_times' && formatSelectedSlotsLines(selectedSlots).length > 0 && (
               <div className="space-y-1 pt-2 border-t border-slate-100 dark:border-slate-800">
                 {formatSelectedSlotsLines(selectedSlots).map(line => (
                   <p key={line} className="text-sm text-slate-600 dark:text-slate-300">{line}</p>
@@ -1731,12 +2133,14 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
             )}
           </div>
 
-          <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl space-y-2">
-            <SectionLabel>Host availability</SectionLabel>
-            {hostSettingsLines.map(line => (
-              <p key={line} className="text-sm text-slate-600 dark:text-slate-300">{line}</p>
-            ))}
-          </div>
+          {schedulingIntent === 'specific_times' && hostSettingsLines.length > 0 && (
+            <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl space-y-2">
+              <SectionLabel>Host availability</SectionLabel>
+              {hostSettingsLines.map(line => (
+                <p key={line} className="text-sm text-slate-600 dark:text-slate-300">{line}</p>
+              ))}
+            </div>
+          )}
 
           <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl space-y-3">
             <SectionLabel>Participants ({validParticipants.length})</SectionLabel>
@@ -1812,9 +2216,10 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
         {step === 1 && (
           <div className="space-y-3">
             <SelectionSummary
-              selectedSlots={selectedSlots}
+              selectedSlots={schedulingIntent === 'specific_times' ? selectedSlots : {}}
               durationMinutes={durationMinutes}
               hostSettingsLines={hostSettingsLines}
+              approachLine={approachLine}
             />
             <div className="flex gap-3">
               <button onClick={onCancel}

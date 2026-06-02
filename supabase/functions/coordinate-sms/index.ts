@@ -320,23 +320,34 @@ async function handleInitialSend(meetingId: string): Promise<Response> {
     });
   }
 
+  const slotsStr = formatSlotsForSms(meeting.preferred_times, meeting.selected_dates);
+  const pt = meeting.preferred_times as Record<string, unknown> | null;
+  const intent = pt?.schedulingIntent as string | undefined;
+
   const windowStr = meeting.proposed_window_start
     ? `between ${new Date(meeting.proposed_window_start).toLocaleDateString()} and ${new Date(meeting.proposed_window_end).toLocaleDateString()}`
     : "in the coming days";
 
-  const slotsStr = formatSlotsForSms(meeting.preferred_times, meeting.selected_dates);
-  const timesClause = slotsStr
-    ? ` during these times: ${slotsStr}`
-    : ` ${windowStr}`;
-
   const toSms = participants.filter((p) => !p.availability_pre_entered);
 
   const smsPromises = toSms.map(async (p) => {
-    const msg =
-      `Hi ${p.name}! You're invited to "${meeting.title}" (${meeting.duration_minutes} min).` +
-      ` Please reply with your availability${timesClause}.` +
-      (meeting.location ? ` Location: ${meeting.location}.` : "") +
-      ` Reply STOP to opt out.`;
+    let msg: string;
+    if (intent === "open_ended") {
+      msg =
+        `Hi ${p.name}! You're invited to "${meeting.title}" (${meeting.duration_minutes} min).` +
+        ` Please reply with times that work for you.` +
+        (meeting.location ? ` Location: ${meeting.location}.` : "") +
+        ` Reply STOP to opt out.`;
+    } else {
+      const timesClause = slotsStr
+        ? ` during these times: ${slotsStr}`
+        : ` ${windowStr}`;
+      msg =
+        `Hi ${p.name}! You're invited to "${meeting.title}" (${meeting.duration_minutes} min).` +
+        ` Please reply with your availability${timesClause}.` +
+        (meeting.location ? ` Location: ${meeting.location}.` : "") +
+        ` Reply STOP to opt out.`;
+    }
     await sendSms(p.phone, msg);
   });
 
