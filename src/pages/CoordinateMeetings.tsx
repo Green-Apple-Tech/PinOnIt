@@ -1273,7 +1273,10 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
     ? 'Specific dates and times (advanced)'
     : buildSimpleCoordSummary(coordSimpleTimeframe, Array.from(timeOfDayPrefs), customRangeStart, customRangeEnd);
 
-  const step1Valid = useMemo(() => {
+  /** Step 1 → 2: only require a meeting title. */
+  const step1Valid = !!title.trim();
+
+  const sendFormValid = useMemo(() => {
     if (!title.trim() || durationMinutes <= 0 || timeOfDayPrefs.size === 0) return false;
     if (useAdvancedSlots) {
       return selectedDates.length > 0 && hasAnySlots;
@@ -1352,6 +1355,10 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
 
   const handleSend = async () => {
     if (!profile) return;
+    if (!sendFormValid) {
+      setSendError('Please complete all required fields before sending.');
+      return;
+    }
     setSending(true);
     setSendError('');
 
@@ -1672,12 +1679,14 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
             )}
           </div>
 
-          <SelectionSummary
-            selectedSlots={useAdvancedSlots ? selectedSlots : {}}
-            durationMinutes={durationMinutes}
-            hostSettingsLines={hostSettingsLines}
-            approachLine={approachLine}
-          />
+          <div className="hidden md:block">
+            <SelectionSummary
+              selectedSlots={useAdvancedSlots ? selectedSlots : {}}
+              durationMinutes={durationMinutes}
+              hostSettingsLines={hostSettingsLines}
+              approachLine={approachLine}
+            />
+          </div>
 
           <div className="hidden md:flex gap-3 pt-2">
             <button onClick={onCancel}
@@ -1940,7 +1949,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
               className="min-h-[48px] flex items-center gap-1 px-5 text-sm font-semibold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
               <ChevronLeft className="h-4 w-4" /> Back
             </button>
-            <button onClick={handleSend} disabled={sending}
+            <button onClick={handleSend} disabled={sending || !sendFormValid}
               className="min-h-[48px] flex items-center gap-2 px-6 text-sm font-semibold text-white rounded-xl transition-all disabled:opacity-50"
               style={{ background: BRAND }}>
               {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
@@ -1992,7 +2001,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
               className="h-[56px] px-5 flex items-center gap-1 font-semibold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors text-[15px]">
               <ChevronLeft className="h-5 w-5" /> Back
             </button>
-            <button onClick={handleSend} disabled={sending}
+            <button onClick={handleSend} disabled={sending || !sendFormValid}
               className="flex-1 h-[56px] flex items-center justify-center gap-2 font-bold text-white rounded-xl transition-all disabled:opacity-50 text-[15px] shadow-lg"
               style={{ background: BRAND }}>
               {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <ArrowRight className="h-5 w-5" />}
