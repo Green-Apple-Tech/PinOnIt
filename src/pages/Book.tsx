@@ -543,10 +543,13 @@ export function BookPage() {
       ]);
 
       const allServices = (svcRes.data as Service[]) ?? [];
+      const publicServices = token
+        ? allServices
+        : allServices.filter((s) => s.meeting_type !== 'one_off');
       const typesParam = searchParams.get('types');
       const filteredServices = typesParam
-        ? allServices.filter((s) => typesParam.split(',').includes(s.id))
-        : allServices;
+        ? publicServices.filter((s) => typesParam.split(',').includes(s.id))
+        : publicServices;
       setServices(filteredServices);
 
       setAvailability(availRes.data ?? []);

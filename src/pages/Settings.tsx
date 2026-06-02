@@ -993,35 +993,44 @@ export function SettingsPage() {
               placeholder="https://example.com/photo.jpg"
               className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition" />
           </div>
-          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-3">
-            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Single-use links</h3>
+          <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/40 p-4 space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Single-use links</h3>
             <label className="flex items-center justify-between gap-4 cursor-pointer">
               <div>
                 <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Enable single-use booking links</p>
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 leading-relaxed">
-                  Each link can only be used once. After one booking is made the link expires automatically.
+                  Each booking link can only be used once. After one booking is made the link expires automatically.
                 </p>
               </div>
               <button
                 type="button"
-                onClick={() => setSingleUseLinksEnabled(v => !v)}
-                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none ${singleUseLinksEnabled ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                role="switch"
+                aria-checked={singleUseLinksEnabled}
+                onClick={() => setSingleUseLinksEnabled((v) => !v)}
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#5864C6] focus:ring-offset-2 dark:focus:ring-offset-slate-900 ${singleUseLinksEnabled ? 'bg-[#5864C6]' : 'bg-slate-300 dark:bg-slate-600'}`}
               >
                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${singleUseLinksEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
               </button>
             </label>
             {singleUseLinksEnabled && (
               <div>
-                <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">Link expires after</label>
-                <select
-                  value={defaultLinkExpiryDays}
-                  onChange={(e) => setDefaultLinkExpiryDays(parseInt(e.target.value, 10))}
-                  className="w-full sm:w-56 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#5864C6] transition"
-                >
-                  {SINGLE_USE_LINK_EXPIRY_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wide">Link expires after</label>
+                <div className="flex flex-wrap gap-2">
+                  {SINGLE_USE_LINK_EXPIRY_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setDefaultLinkExpiryDays(opt.value)}
+                      className={`px-4 py-2 rounded-full text-sm font-semibold border transition-all min-h-[40px] ${
+                        defaultLinkExpiryDays === opt.value
+                          ? 'bg-[#5864C6] border-[#5864C6] text-white'
+                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
                   ))}
-                </select>
+                </div>
               </div>
             )}
           </div>

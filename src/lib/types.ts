@@ -371,5 +371,5 @@ export const LOCATION_TYPES: Record<string, string> = {
 export const MEETING_TYPE_META: Record<MeetingType, { label: string; desc: string; badge: string }> = {
   one_on_one: { label: 'One-on-one', desc: '1 host → 1 invitee',           badge: 'bg-blue-50 text-blue-700 border-blue-200' },
   group:      { label: 'Group',      desc: '1 host → multiple invitees',   badge: 'bg-teal-50 text-teal-700 border-teal-200' },
-  one_off:    { label: 'One-off',    desc: 'Outside your normal schedule', badge: 'bg-slate-100 text-slate-600 border-slate-200' },
+  one_off:    { label: 'Single use', desc: 'Only bookable via a one-time link', badge: 'bg-amber-50 text-amber-700 border-amber-200' },
 };

@@ -1158,6 +1158,37 @@ export function ServicesPage() {
                       <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${form.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
                     </button>
                   </div>
+
+                  <div className={`flex items-center justify-between py-4 border rounded-xl px-4 min-h-[64px] ${
+                    profile?.single_use_links_enabled
+                      ? 'border-amber-200 dark:border-amber-800/60 bg-amber-50/40 dark:bg-amber-950/20'
+                      : 'border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/30 opacity-80'
+                  }`}>
+                    <div>
+                      <p className="text-base font-semibold text-gray-900 dark:text-white">Single use</p>
+                      <p className="text-sm text-gray-400 dark:text-slate-500 leading-relaxed">
+                        {profile?.single_use_links_enabled
+                          ? 'Hidden from your public booking page. Guests book only via a one-time link you generate.'
+                          : 'Enable single-use links in Settings → General → Booking page first.'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={!profile?.single_use_links_enabled}
+                      onClick={() => {
+                        if (form.meeting_type === 'one_off') {
+                          setField('meeting_type', 'one_on_one');
+                        } else {
+                          setField('meeting_type', 'one_off');
+                        }
+                      }}
+                      className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0 disabled:cursor-not-allowed ${
+                        form.meeting_type === 'one_off' ? 'bg-amber-500' : 'bg-gray-300 dark:bg-slate-600'
+                      }`}
+                    >
+                      <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${form.meeting_type === 'one_off' ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
