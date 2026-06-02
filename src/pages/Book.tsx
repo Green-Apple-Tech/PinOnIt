@@ -14,6 +14,9 @@ import {
 } from '../lib/recurring';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import { resolveTermsText } from '../lib/terms';
+import { stripePromise } from '../lib/stripe';
+import { Elements } from '@stripe/react-stripe-js';
+import { BookingPaymentForm } from '../components/BookingPaymentForm';
 import {
   Calendar,
   Clock,
@@ -61,6 +64,57 @@ function reminderChannelLabel(id: string): string {
 
 function reminderTimeLabel(id: string): string {
   return REMINDER_TIMES.find((t) => t.id === id)?.label ?? id;
+}
+
+type ManualPaymentMethod = { label: string; handle: string; url: string };
+
+function buildManualPaymentMethods(svc: Service): ManualPaymentMethod[] {
+  const extended = svc as Service & {
+    payment_provider?: string;
+    paypal_me_link?: string | null;
+    paypal_currency?: string;
+    venmo_handle?: string | null;
+    cashapp_tag?: string | null;
+    zelle_contact?: string | null;
+  };
+  const provider = extended.payment_provider ?? 'none';
+  const currency = extended.paypal_currency ?? 'USD';
+  const methods: ManualPaymentMethod[] = [];
+
+  if (provider === 'paypal' && extended.paypal_me_link) {
+    const base = extended.paypal_me_link.replace(/^https?:\/\//, '').replace(/^www\./, '');
+    const href = `https://${base}/${(svc.price_cents / 100).toFixed(2)}${currency !== 'USD' ? `?country.x=${currency}&locale.x=en_${currency.slice(0, 2).toUpperCase()}` : ''}`;
+    methods.push({ label: 'Pay with PayPal', handle: extended.paypal_me_link, url: href });
+  }
+  if (provider === 'p2p') {
+    if (extended.venmo_handle) {
+      methods.push({
+        label: 'Pay with Venmo',
+        handle: extended.venmo_handle,
+        url: `https://venmo.com/${extended.venmo_handle.replace(/^@/, '')}?txn=pay&amount=${(svc.price_cents / 100).toFixed(2)}&note=${encodeURIComponent(svc.name)}`,
+      });
+    }
+    if (extended.cashapp_tag) {
+      methods.push({
+        label: 'Pay with Cash App',
+        handle: extended.cashapp_tag,
+        url: `https://cash.app/${extended.cashapp_tag.replace(/^\$/, '')}/${(svc.price_cents / 100).toFixed(2)}`,
+      });
+    }
+    if (extended.zelle_contact) {
+      methods.push({ label: 'Pay with Zelle', handle: extended.zelle_contact, url: 'https://www.zellepay.com/' });
+    }
+  }
+  return methods;
+}
+
+function serviceUsesStripePayment(svc: Service | null): boolean {
+  if (!svc || svc.price_cents <= 0) return false;
+  const provider = svc.payment_provider ?? 'none';
+  if (provider === 'paypal' || provider === 'p2p') {
+    return buildManualPaymentMethods(svc).length === 0;
+  }
+  return true;
 }
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -429,6 +483,10 @@ export function BookPage() {
   const [submitting, setSubmitting] = useState(false);
   const [confirmedBooking, setConfirmedBooking] = useState<Booking | null>(null);
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+  const [paymentError, setPaymentError] = useState('');
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [stripePaymentId, setStripePaymentId] = useState<string | null>(null);
   const [recurringAcknowledged, setRecurringAcknowledged] = useState(false);
 
   useEffect(() => {
@@ -579,6 +637,10 @@ export function BookPage() {
     setSelectedService(svc);
     setSelectedDate(null); setSelectedSlot(null); setAnswers({});
     setRecurringAcknowledged(false);
+    setPaymentConfirmed(false);
+    setPaymentError('');
+    setClientSecret(null);
+    setStripePaymentId(null);
     const { data } = await supabase.from('booking_questions').select('*').eq('service_id', svc.id).order('sort_order');
     setQuestions((data as BookingQuestion[]) ?? []);
     setStep('datetime');
@@ -644,6 +706,7 @@ export function BookPage() {
       recurrence_frequency: isRecurring ? selectedService.recurrence_frequency : null,
       reminder_channels: selectedChannels,
       reminder_times: selectedTimes,
+      stripe_payment_id: stripePaymentId,
     }).select().maybeSingle();
     if (data) {
       // Mark single-use link as used
@@ -775,7 +838,43 @@ export function BookPage() {
       } catch { /* non-blocking */ }
     }
     return data as Booking | null;
-  }, [selectedService, selectedDate, selectedSlot, host, guestName, guestEmail, phone, notifyVia, guestTimezone, guestNotes, questions, answers, singleUseLink, selectedChannels, selectedTimes]);
+  }, [selectedService, selectedDate, selectedSlot, host, guestName, guestEmail, phone, notifyVia, guestTimezone, guestNotes, questions, answers, singleUseLink, selectedChannels, selectedTimes, stripePaymentId]);
+
+  useEffect(() => {
+    if (step !== 'details' || !selectedService || !serviceUsesStripePayment(selectedService)) {
+      setClientSecret(null);
+      return;
+    }
+
+    let cancelled = false;
+    setPaymentLoading(true);
+    setPaymentError('');
+
+    (async () => {
+      const { data, error } = await supabase.functions.invoke('create-payment-intent', {
+        body: {
+          amount: selectedService.price_cents,
+          currency: 'usd',
+          service_id: selectedService.id,
+          host_id: selectedService.host_id,
+          guest_email: guestEmail.trim() || undefined,
+          guest_name: guestName.trim() || undefined,
+        },
+      });
+
+      if (cancelled) return;
+
+      if (data?.clientSecret) {
+        setClientSecret(data.clientSecret);
+      } else {
+        setPaymentError(data?.error || error?.message || 'Failed to load payment');
+        setClientSecret(null);
+      }
+      setPaymentLoading(false);
+    })();
+
+    return () => { cancelled = true; };
+  }, [step, selectedService?.id, selectedService?.price_cents, selectedService?.payment_provider, guestEmail, guestName]);
 
   const handleSaveReminders = async () => {
     if (!confirmedBooking) return;
@@ -875,6 +974,9 @@ export function BookPage() {
     return (svc as Service).show_description_on_booking_page ?? true;
   };
   const isPaidService = selectedService ? selectedService.price_cents > 0 : false;
+  const manualPaymentMethods = selectedService ? buildManualPaymentMethods(selectedService) : [];
+  const usesStripePayment = selectedService ? serviceUsesStripePayment(selectedService) : false;
+  const usesManualPayment = isPaidService && manualPaymentMethods.length > 0;
   const termsDisplayText = resolveTermsText(host?.global_terms_text);
   const requiresTerms = !!(host?.global_require_terms && selectedService?.require_terms);
   const showTermsAgreement = requiresTerms;
@@ -884,7 +986,7 @@ export function BookPage() {
   const hasRequiredQuestions = questions.some((q) => q.required && !answers[q.id]?.trim());
   const requiresNda = !!selectedService?.require_nda;
   const requiresRecurringAck = isRecurringService && !recurringAcknowledged;
-  const requiresPayment = isPaidService && !paymentConfirmed && !(isRecurringService && (selectedService?.price_cents ?? 0) > 0);
+  const requiresPayment = (usesStripePayment || usesManualPayment) && !paymentConfirmed && !(isRecurringService && (selectedService?.price_cents ?? 0) > 0);
   const isValid =
     guestName.trim() !== '' &&
     (guestEmail.trim() !== '' || phone.trim() !== '') &&
@@ -1403,6 +1505,87 @@ export function BookPage() {
                       placeholder="Anything else you'd like your host to know..."
                       className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition resize-none" />
                   </div>
+
+                  {usesStripePayment && selectedService && (
+                    <div className="border border-gray-200 dark:border-slate-700 rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-medium text-gray-900 dark:text-white">Payment</h3>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                          ${(selectedService.price_cents / 100).toFixed(2)}
+                        </span>
+                      </div>
+                      {paymentConfirmed ? (
+                        <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                          <Check className="h-4 w-4" />
+                          Payment complete
+                        </div>
+                      ) : stripePromise && clientSecret ? (
+                        <Elements stripe={stripePromise} options={{ clientSecret }}>
+                          <BookingPaymentForm
+                            accentColor={accentColor}
+                            onSuccess={(paymentIntentId) => {
+                              setStripePaymentId(paymentIntentId);
+                              setPaymentConfirmed(true);
+                              setPaymentError('');
+                            }}
+                            onError={(err) => setPaymentError(err)}
+                          />
+                        </Elements>
+                      ) : paymentLoading || (stripePromise && !clientSecret && !paymentError) ? (
+                        <div className="flex items-center justify-center py-4">
+                          <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                          <span className="ml-2 text-sm text-gray-500 dark:text-slate-400">Loading payment...</span>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-amber-600 dark:text-amber-400">
+                          {paymentError || 'Payment is unavailable. Please contact the host.'}
+                        </p>
+                      )}
+                      {paymentError && !paymentConfirmed && clientSecret && (
+                        <p className="text-red-500 text-sm mt-2">{paymentError}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {usesManualPayment && selectedService && (
+                    <div className="mt-2 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                      <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700" style={{ backgroundColor: accentColor + '18' }}>
+                        <p className="text-sm font-bold" style={{ color: accentColor }}>Complete Your Payment</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                          Send ${(selectedService.price_cents / 100).toFixed(2)} using one of the options below, then confirm below to finalize your booking.
+                        </p>
+                      </div>
+                      <div className="p-4 space-y-2.5">
+                        {manualPaymentMethods.map((pm) => (
+                          <a
+                            key={pm.url}
+                            href={pm.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-between gap-3 w-full px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-600 transition-colors group"
+                          >
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-slate-900 dark:text-white">{pm.label}</p>
+                              <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{pm.handle}</p>
+                            </div>
+                            <ExternalLink className="h-4 w-4 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 shrink-0 transition-colors" />
+                          </a>
+                        ))}
+                        <label className="flex items-start gap-3 cursor-pointer pt-1">
+                          <input
+                            type="checkbox"
+                            checked={paymentConfirmed}
+                            onChange={(e) => setPaymentConfirmed(e.target.checked)}
+                            className="mt-0.5 h-4 w-4 rounded border-slate-300 dark:border-slate-600 focus:ring-2 shrink-0"
+                            style={{ accentColor: accentColor }}
+                          />
+                          <span className="text-sm text-slate-700 dark:text-slate-300">
+                            I confirm I have sent payment of ${(selectedService.price_cents / 100).toFixed(2)} <span className="text-red-500">*</span>
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
                   {showTermsAgreement && (
                     <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl space-y-3">
                       <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{termsBodyText}</p>
@@ -1432,76 +1615,11 @@ export function BookPage() {
                           : hasRequiredQuestions ? 'Please answer all required questions.'
                           : requiresNda && !ndaAgreed ? 'Please agree to the NDA above.'
                           : requiresRecurringAck ? 'Please confirm you understand this is a recurring booking.'
-                          : requiresPayment ? 'Please confirm your payment above.'
+                          : requiresPayment ? (usesStripePayment ? 'Please complete payment above.' : 'Please confirm your payment above.')
                           : 'Please complete all required fields above.')}
                     </p>
                   )}
 
-                  {selectedService.price_cents > 0 && (() => {
-                    const svc = selectedService as Service & {
-                      payment_provider?: string;
-                      paypal_me_link?: string | null;
-                      paypal_currency?: string;
-                      venmo_handle?: string | null;
-                      cashapp_tag?: string | null;
-                      zelle_contact?: string | null;
-                    };
-                    const provider = svc.payment_provider ?? 'none';
-                    const amount = `$${(svc.price_cents / 100).toFixed(2)}`;
-                    const currency = svc.paypal_currency ?? 'USD';
-
-                    const paymentMethods: { label: string; handle: string; url: string }[] = [];
-                    if (provider === 'paypal' && svc.paypal_me_link) {
-                      const base = svc.paypal_me_link.replace(/^https?:\/\//, '').replace(/^www\./, '');
-                      const href = `https://${base}/${(svc.price_cents / 100).toFixed(2)}${currency !== 'USD' ? `?country.x=${currency}&locale.x=en_${currency.slice(0,2).toUpperCase()}` : ''}`;
-                      paymentMethods.push({ label: 'Pay with PayPal', handle: svc.paypal_me_link, url: href });
-                    }
-                    if (provider === 'p2p') {
-                      if (svc.venmo_handle) paymentMethods.push({ label: 'Pay with Venmo', handle: svc.venmo_handle, url: `https://venmo.com/${svc.venmo_handle.replace(/^@/, '')}?txn=pay&amount=${(svc.price_cents / 100).toFixed(2)}&note=${encodeURIComponent(svc.name)}` });
-                      if (svc.cashapp_tag) paymentMethods.push({ label: 'Pay with Cash App', handle: svc.cashapp_tag, url: `https://cash.app/${svc.cashapp_tag.replace(/^\$/, '')}/${(svc.price_cents / 100).toFixed(2)}` });
-                      if (svc.zelle_contact) paymentMethods.push({ label: 'Pay with Zelle', handle: svc.zelle_contact, url: 'https://www.zellepay.com/' });
-                    }
-
-                    if (paymentMethods.length === 0) return null;
-
-                    return (
-                      <div className="mt-2 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                        <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700" style={{ backgroundColor: accentColor + '18' }}>
-                          <p className="text-sm font-bold" style={{ color: accentColor }}>Complete Your Payment</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Send {amount} using one of the options below, then confirm below to finalize your booking.</p>
-                        </div>
-                        <div className="p-4 space-y-2.5">
-                          {paymentMethods.map((pm) => (
-                            <a
-                              key={pm.url}
-                              href={pm.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center justify-between gap-3 w-full px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-600 transition-colors group"
-                            >
-                              <div className="min-w-0">
-                                <p className="text-sm font-semibold text-slate-900 dark:text-white">{pm.label}</p>
-                                <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{pm.handle}</p>
-                              </div>
-                              <ExternalLink className="h-4 w-4 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 shrink-0 transition-colors" />
-                            </a>
-                          ))}
-                          <label className="flex items-start gap-3 cursor-pointer pt-1">
-                            <input
-                              type="checkbox"
-                              checked={paymentConfirmed}
-                              onChange={(e) => setPaymentConfirmed(e.target.checked)}
-                              className="mt-0.5 h-4 w-4 rounded border-slate-300 dark:border-slate-600 focus:ring-2 shrink-0"
-                              style={{ accentColor: accentColor }}
-                            />
-                            <span className="text-sm text-slate-700 dark:text-slate-300">
-                              I confirm I have sent payment of {amount} <span className="text-red-500">*</span>
-                            </span>
-                          </label>
-                        </div>
-                      </div>
-                    );
-                  })()}
 
                   <button onClick={handleBook} disabled={submitting || !canSubmitDetails}
                     className="w-full py-3 text-white font-semibold rounded-lg transition-all disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
