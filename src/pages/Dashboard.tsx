@@ -618,30 +618,21 @@ function SharePanel({
   userId,
   onSlugChange,
   shareUrl,
-  selectedEventCount,
-  totalEventCount,
 }: {
   slug: string;
   userId: string;
   onSlugChange: (newSlug: string) => void;
   shareUrl: string;
-  selectedEventCount: number;
-  totalEventCount: number;
 }) {
   const [currentSlug, setCurrentSlug] = useState(slug);
   const [showEditor, setShowEditor] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
-  const [copiedSig, setCopiedSig] = useState(false);
-  const [showSig, setShowSig] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [linkCopiedToast, setLinkCopiedToast] = useState(false);
 
-  const sigText = `Book a time with me: ${shareUrl}`;
-
-  const copy = useCallback((text: string, which: 'url' | 'sig') => {
+  const copy = useCallback((text: string) => {
     navigator.clipboard.writeText(text).then(() => {
-      if (which === 'url') { setCopiedUrl(true); setTimeout(() => setCopiedUrl(false), 2000); }
-      else { setCopiedSig(true); setTimeout(() => setCopiedSig(false), 2000); }
+      setCopiedUrl(true); setTimeout(() => setCopiedUrl(false), 2000);
     });
   }, []);
 
@@ -663,11 +654,6 @@ function SharePanel({
       <div className="flex items-center gap-2 mb-1">
         <Share2 className="h-4 w-4 text-brand-600" />
         <h2 className="font-semibold text-brand-900 text-sm">Your meeting link</h2>
-        {totalEventCount > 0 && (
-          <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-white border border-brand-200 text-brand-700">
-            {selectedEventCount} of {totalEventCount} events
-          </span>
-        )}
       </div>
       <p className="text-xs text-brand-700 mb-3">Share this link anywhere so people can schedule a meeting with you.</p>
 
@@ -709,7 +695,7 @@ function SharePanel({
       {/* Primary share actions */}
       <div className="flex flex-col gap-2 mb-3">
         <button
-          onClick={() => copy(shareUrl, 'url')}
+          onClick={() => copy(shareUrl)}
           className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
             copiedUrl
               ? 'bg-[#5864C6] text-white'
@@ -747,53 +733,6 @@ function SharePanel({
         />
       )}
 
-      <button
-        onClick={() => setShowSig((v) => !v)}
-        className="flex items-center gap-1.5 text-xs text-brand-700 hover:text-brand-900 transition-colors font-medium"
-      >
-        <Mail className="h-3.5 w-3.5" />
-        {showSig ? 'Hide' : 'Add to your email signature'} — step-by-step
-      </button>
-
-      {showSig && (
-        <div className="mt-3 space-y-3">
-          <div className="bg-white border border-brand-200 rounded-xl p-4">
-            <p className="text-xs font-semibold text-gray-600 mb-2">Step 1 — Copy this text</p>
-            <div className="flex items-start gap-2">
-              <code className="flex-1 text-sm bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-700 break-all leading-relaxed">
-                {sigText}
-              </code>
-              <button
-                onClick={() => copy(sigText, 'sig')}
-                className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                  copiedSig ? 'bg-[#5864C6] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                {copiedSig ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                {copiedSig ? 'Done!' : 'Copy'}
-              </button>
-            </div>
-          </div>
-          <div className="bg-white border border-brand-200 rounded-xl p-4 space-y-2.5">
-            <p className="text-xs font-semibold text-gray-600">Step 2 — Paste into Gmail or Outlook</p>
-            <div className="space-y-1.5 text-xs text-gray-500">
-              <p className="font-medium text-gray-600">Gmail:</p>
-              <ol className="list-decimal list-inside space-y-1 pl-1">
-                <li>Open Gmail → click the gear icon → <em>See all settings</em></li>
-                <li>Click the <em>General</em> tab → scroll to <em>Signature</em></li>
-                <li>Paste the text → click <em>Save Changes</em></li>
-              </ol>
-            </div>
-            <div className="space-y-1.5 text-xs text-gray-500 pt-1 border-t border-gray-100">
-              <p className="font-medium text-gray-600">Outlook:</p>
-              <ol className="list-decimal list-inside space-y-1 pl-1">
-                <li>Open Outlook → <em>File</em> → <em>Options</em> → <em>Mail</em> → <em>Signatures</em></li>
-                <li>Select or create a signature and paste → click <em>OK</em></li>
-              </ol>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -1308,8 +1247,6 @@ export function Dashboard() {
                 userId={profile.id}
                 onSlugChange={(s) => setLiveSlug(s)}
                 shareUrl={shareUrl}
-                selectedEventCount={selectedServiceIds.size}
-                totalEventCount={services.length}
               />
             )}
 
