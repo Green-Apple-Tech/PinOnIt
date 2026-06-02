@@ -16,13 +16,13 @@ function GuaranteeBadge() {
   return (
     <div className="relative inline-flex items-center gap-1.5">
       <div
-        className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-full cursor-default"
+        className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-200 rounded-full cursor-default"
         onMouseEnter={() => setShow(true)}
         onMouseLeave={() => setShow(false)}
       >
-        <Shield className="h-3.5 w-3.5 text-emerald-600" />
-        <span className="text-xs font-semibold text-emerald-700">60-Day Money Back Guarantee</span>
-        <Info className="h-3 w-3 text-emerald-500" />
+        <Shield className="h-3.5 w-3.5 text-indigo-600" />
+        <span className="text-xs font-semibold text-indigo-700">60-Day Money Back Guarantee</span>
+        <Info className="h-3 w-3 text-indigo-500" />
       </div>
       {show && (
         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-64 px-3 py-2.5 bg-slate-900 text-white text-xs rounded-xl shadow-xl leading-relaxed">
@@ -202,7 +202,7 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
             <div className="flex items-center gap-2 flex-wrap">
               <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold ${
                 isPro
-                  ? 'bg-emerald-100 text-emerald-700'
+                  ? 'bg-indigo-100 text-indigo-700'
                   : 'bg-gray-100 text-gray-600'
               }`}>
                 {isPro && <Zap className="h-3.5 w-3.5" />}
@@ -345,7 +345,7 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[
                   { label: 'Referrals', value: myConverted, icon: Users, color: 'text-blue-600' },
-                  { label: 'This month', value: `$${(thisMonthCents / 100).toFixed(0)}`, icon: DollarSign, color: 'text-emerald-600' },
+                  { label: 'This month', value: `$${(thisMonthCents / 100).toFixed(0)}`, icon: DollarSign, color: 'text-indigo-600' },
                   { label: 'All time', value: `$${(myTotalCents / 100).toFixed(0)}`, icon: TrendingUp, color: 'text-teal-600' },
                 ].map((s) => (
                   <div key={s.label} className="bg-gray-50 rounded-xl p-3 text-center">
@@ -362,7 +362,7 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Your referral link</p>
                 <div className="flex items-center gap-2">
                   <div className="flex-1 min-w-0 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl">
-                    <span className="text-sm text-emerald-600 font-mono truncate block">{referralLink}</span>
+                    <span className="text-sm text-indigo-600 font-mono truncate block">{referralLink}</span>
                   </div>
                   <button
                     onClick={copyLink}
@@ -374,7 +374,7 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
                 </div>
                 <p className="mt-2 text-xs text-gray-400">
                   Refer 6 Pro users and your plan is free forever. Refer more and we pay you.{' '}
-                  <Link to="/leaderboard" className="text-emerald-500 hover:underline">View leaderboard</Link>
+                  <Link to="/leaderboard" className="text-indigo-600 hover:underline">View leaderboard</Link>
                 </p>
               </div>
             ) : (

@@ -42,7 +42,7 @@ function StatCard({
           <Icon className="h-5 w-5" />
         </div>
         {delta !== undefined && (
-          <span className={`flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full ${delta > 0 ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : delta < 0 ? 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400' : 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400'}`}>
+          <span className={`flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full ${delta > 0 ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' : delta < 0 ? 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400' : 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400'}`}>
             {delta > 0 ? <ArrowUp className="h-3 w-3" /> : delta < 0 ? <ArrowDown className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
             {Math.abs(delta)}%
           </span>
@@ -201,7 +201,7 @@ export function AnalyticsPage({ embedded }: { embedded?: boolean }) {
               value={`${completionRate}%`}
               sub={`${cancelRate}% canceled`}
               icon={Check}
-              color="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400"
+              color="bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400"
             />
           </div>
 
@@ -216,7 +216,7 @@ export function AnalyticsPage({ embedded }: { embedded?: boolean }) {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             {[
               { label: 'Confirmed', value: confirmed.length, color: 'text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/10' },
-              { label: 'Completed', value: completed.length, color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10' },
+              { label: 'Completed', value: completed.length, color: 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10' },
               { label: 'Canceled', value: canceled.length, color: 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10' },
               { label: 'No-show', value: noShow.length, color: 'text-gray-500 dark:text-slate-400 bg-gray-100 dark:bg-slate-800' },
             ].map((s) => (
@@ -282,7 +282,7 @@ export function AnalyticsPage({ embedded }: { embedded?: boolean }) {
                     </div>
                     <div className="shrink-0 text-right">
                       <p className="text-xs text-gray-500 dark:text-slate-400">{new Date(b.start_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
-                      <span className={`text-xs font-medium ${b.status === 'completed' ? 'text-emerald-600 dark:text-emerald-400' : 'text-brand-600 dark:text-brand-400'}`}>
+                      <span className={`text-xs font-medium ${b.status === 'completed' ? 'text-indigo-600 dark:text-indigo-400' : 'text-brand-600 dark:text-brand-400'}`}>
                         {b.status}
                       </span>
                     </div>

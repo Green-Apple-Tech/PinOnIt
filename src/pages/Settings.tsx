@@ -156,7 +156,7 @@ function IntegrationCard({
   connecting?: boolean;
 }) {
   return (
-    <div className={`flex items-start gap-4 p-4 bg-white dark:bg-slate-900/60 border rounded-xl transition-colors ${connected ? 'border-emerald-200 dark:border-emerald-800/50' : 'border-slate-200 dark:border-slate-800'}`}>
+    <div className={`flex items-start gap-4 p-4 bg-white dark:bg-slate-900/60 border rounded-xl transition-colors ${connected ? 'border-indigo-200 dark:border-indigo-800/50' : 'border-slate-200 dark:border-slate-800'}`}>
       <div className="h-11 w-11 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center justify-center shrink-0">
         <ProviderLogo provider={provider} />
       </div>
@@ -164,7 +164,7 @@ function IntegrationCard({
         <div className="flex items-center gap-2 mb-0.5 flex-wrap">
           <p className="text-sm font-semibold text-slate-900 dark:text-white">{name}</p>
           {connected ? (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-medium rounded-full">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 text-xs font-medium rounded-full">
               <Check className="h-3 w-3" /> Connected
             </span>
           ) : (
@@ -174,7 +174,7 @@ function IntegrationCard({
           )}
         </div>
         <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
-          {connectedEmail ? <span className="text-emerald-600 dark:text-emerald-400 font-medium">{connectedEmail}</span> : description}
+          {connectedEmail ? <span className="text-indigo-600 dark:text-indigo-400 font-medium">{connectedEmail}</span> : description}
         </p>
         {autoNote && (
           <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 italic">{autoNote}</p>
@@ -642,7 +642,7 @@ export function SettingsPage() {
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-              tab === t.key ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              tab === t.key ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             {t.label}
@@ -662,18 +662,18 @@ export function SettingsPage() {
           <div>
             <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">Full name</label>
             <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)}
-              className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition" />
+              className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition" />
           </div>
           <div>
             <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">Bio</label>
             <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3}
               placeholder="Tell guests about yourself..."
-              className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition resize-none" />
+              className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition resize-none" />
           </div>
           <div>
             <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">Timezone</label>
             <select value={timezone} onChange={(e) => setTimezone(e.target.value)}
-              className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition">
+              className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition">
               {TIMEZONES.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
             </select>
           </div>
@@ -690,7 +690,7 @@ export function SettingsPage() {
                 onChange={e => setNotificationPhone(e.target.value)}
                 onBlur={e => { if (e.target.value.trim()) setNotificationPhone(blurFormatPhone(e.target.value)); }}
                 placeholder={PHONE_PLACEHOLDER}
-                className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
               />
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{PHONE_HINT}</p>
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Used for SMS reminders and voice call alerts.</p>
@@ -703,7 +703,7 @@ export function SettingsPage() {
                 onChange={e => setNotificationWhatsapp(e.target.value)}
                 onBlur={e => { if (e.target.value.trim()) setNotificationWhatsapp(blurFormatPhone(e.target.value)); }}
                 placeholder={PHONE_PLACEHOLDER}
-                className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
               />
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 leading-relaxed">
                 Leave blank to use your phone number above for WhatsApp. Enter a different number if your WhatsApp is on a separate device.
@@ -722,7 +722,7 @@ export function SettingsPage() {
                       className={[
                         'inline-flex items-center gap-1.5 min-h-[40px] px-4 py-2 rounded-full text-sm font-semibold border transition-all',
                         active
-                          ? 'bg-emerald-500 text-white border-emerald-500'
+                          ? 'bg-indigo-600 text-white border-indigo-600'
                           : 'bg-transparent text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600',
                       ].join(' ')}
                     >
@@ -746,7 +746,7 @@ export function SettingsPage() {
               <button
                 type="button"
                 onClick={() => setShowWizardButton(v => !v)}
-                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none ${showWizardButton ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none ${showWizardButton ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-600'}`}
               >
                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${showWizardButton ? 'translate-x-6' : 'translate-x-1'}`} />
               </button>
@@ -772,7 +772,7 @@ export function SettingsPage() {
                       className={[
                         'min-h-[40px] px-4 py-2 rounded-full text-sm font-semibold border transition-all',
                         active
-                          ? 'bg-emerald-500 text-white border-emerald-500'
+                          ? 'bg-indigo-600 text-white border-indigo-600'
                           : 'bg-transparent text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600',
                       ].join(' ')}
                     >
@@ -948,7 +948,7 @@ export function SettingsPage() {
             <div className={`flex items-center bg-white dark:bg-slate-900 border rounded-lg overflow-hidden focus-within:ring-2 transition ${
               slugStatus === 'taken' ? 'border-red-400 focus-within:ring-red-400' :
               slugStatus === 'available' && slug !== profile?.slug ? 'border-emerald-400 focus-within:ring-emerald-400' :
-              'border-slate-200 dark:border-slate-800 focus-within:ring-emerald-500'
+              'border-slate-200 dark:border-slate-800 focus-within:ring-indigo-600'
             }`}>
               <span className="px-3 py-2.5 text-sm text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/50 border-r border-slate-200 dark:border-slate-700 shrink-0 whitespace-nowrap">pinonit.com/</span>
               <input type="text" value={slug}
@@ -967,7 +967,7 @@ export function SettingsPage() {
               {slugStatus === 'taken' && <p className="text-xs text-red-500">That username is already taken. Try another.</p>}
               {slugStatus === 'invalid' && <p className="text-xs text-amber-500">Must be at least 3 characters (letters, numbers, hyphens).</p>}
               {slugStatus === 'available' && slug && slug === profile?.slug && (
-                <p className="text-xs text-slate-400 flex items-center gap-1"><Link2 className="h-3 w-3" /> Your current URL: <span className="font-mono text-emerald-600 dark:text-emerald-400">pinonit.com/{slug}</span></p>
+                <p className="text-xs text-slate-400 flex items-center gap-1"><Link2 className="h-3 w-3" /> Your current URL: <span className="font-mono text-indigo-600 dark:text-indigo-400">pinonit.com/{slug}</span></p>
               )}
             </div>
           </div>
@@ -975,14 +975,14 @@ export function SettingsPage() {
             <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">Page header tagline</label>
             <input type="text" value={bookingHeader} onChange={(e) => setBookingHeader(e.target.value)}
               placeholder="e.g. Licensed therapist · 5 years experience"
-              className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition" />
+              className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition" />
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Shown below your name on the booking page.</p>
           </div>
           <div>
             <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">Profile photo URL</label>
             <input type="url" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)}
               placeholder="https://example.com/photo.jpg"
-              className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition" />
+              className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition" />
           </div>
           {bookingUrl && (
             <div className="flex items-center gap-2 pt-2">
@@ -1013,7 +1013,7 @@ export function SettingsPage() {
               <button
                 type="button"
                 onClick={() => setGlobalRequireTerms((v) => !v)}
-                className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors ${globalRequireTerms ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-600'}`}
+                className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors ${globalRequireTerms ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-600'}`}
               >
                 <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${globalRequireTerms ? 'translate-x-6' : 'translate-x-1'}`} />
               </button>
@@ -1025,7 +1025,7 @@ export function SettingsPage() {
                   value={globalTermsText}
                   onChange={(e) => setGlobalTermsText(e.target.value)}
                   rows={4}
-                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition resize-none text-sm leading-relaxed"
+                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition resize-none text-sm leading-relaxed"
                 />
               </div>
             )}
@@ -1088,21 +1088,21 @@ export function SettingsPage() {
                 onClick={() => logoInputRef.current?.click()}
                 className={`relative cursor-pointer rounded-xl border-2 border-dashed transition-all p-8 flex flex-col items-center gap-3 ${
                   logoDragOver
-                    ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-950/30'
+                    ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-950/30'
                     : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800/50'
                 }`}
               >
                 {logoUploading ? (
-                  <Loader2 className="h-8 w-8 text-emerald-500 animate-spin" />
+                  <Loader2 className="h-8 w-8 text-indigo-600 animate-spin" />
                 ) : (
-                  <ImagePlus className={`h-8 w-8 ${logoDragOver ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600'}`} />
+                  <ImagePlus className={`h-8 w-8 ${logoDragOver ? 'text-indigo-600' : 'text-slate-300 dark:text-slate-600'}`} />
                 )}
                 <div className="text-center">
                   <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
                     {logoUploading ? 'Uploading...' : 'Drop your logo here'}
                   </p>
                   <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                    or <span className="text-emerald-600 dark:text-emerald-400 font-medium">click to browse</span> — PNG, SVG, JPG
+                    or <span className="text-indigo-600 dark:text-indigo-400 font-medium">click to browse</span> — PNG, SVG, JPG
                   </p>
                 </div>
               </div>
@@ -1178,7 +1178,7 @@ export function SettingsPage() {
             <>
               <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-3">
                 <div className="flex items-center gap-2">
-                  <Code className="h-4 w-4 text-emerald-400" />
+                  <Code className="h-4 w-4 text-indigo-600" />
                   <h3 className="font-semibold">Inline embed</h3>
                 </div>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Embed your booking page directly in your website with an iframe.</p>
@@ -1192,7 +1192,7 @@ export function SettingsPage() {
 
               <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-3">
                 <div className="flex items-center gap-2">
-                  <Code className="h-4 w-4 text-emerald-400" />
+                  <Code className="h-4 w-4 text-indigo-600" />
                   <h3 className="font-semibold">Popup button</h3>
                 </div>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Add a "Book a meeting" button that opens your booking page in a popup overlay.</p>
@@ -1208,7 +1208,7 @@ export function SettingsPage() {
                 <h3 className="font-semibold">Direct booking link</h3>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Share this link in emails, social media, or anywhere you want guests to book.</p>
                 <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800">
-                  <span className="text-sm text-emerald-400 font-mono flex-1 truncate">{bookingUrl}</span>
+                  <span className="text-sm text-indigo-600 dark:text-indigo-400 font-mono flex-1 truncate">{bookingUrl}</span>
                 </div>
                 <button onClick={() => copyText(bookingUrl, 'direct')}
                   className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-white text-sm rounded-lg transition-colors inline-flex items-center gap-1.5">
@@ -1219,7 +1219,7 @@ export function SettingsPage() {
 
               <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-3">
                 <div className="flex items-center gap-2">
-                  <QrCode className="h-4 w-4 text-emerald-400" />
+                  <QrCode className="h-4 w-4 text-indigo-600" />
                   <h3 className="font-semibold">Booking page QR code</h3>
                 </div>
                 <p className="text-sm text-slate-500 dark:text-slate-400">
@@ -1312,23 +1312,23 @@ function ReferralsTab({ userId, profile }: { userId: string | null; profile: imp
 
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-px rounded-2xl shadow-lg shadow-emerald-500/10">
+      <div className="bg-gradient-to-r from-indigo-600 to-indigo-500 p-px rounded-2xl shadow-lg shadow-indigo-500/10">
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-6">
           <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Your referral program</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Share your link. Earn $1 off for each person who upgrades to Pro.</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 text-center">
-              <div className="flex items-center justify-center gap-1 mb-1"><Gift className="h-4 w-4 text-emerald-500" /></div>
+              <div className="flex items-center justify-center gap-1 mb-1"><Gift className="h-4 w-4 text-indigo-600" /></div>
               <p className="text-xl font-bold text-slate-900 dark:text-white">{totalConverted}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">Converted</p>
             </div>
             <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 text-center">
-              <div className="flex items-center justify-center gap-1 mb-1"><Users className="h-4 w-4 text-emerald-500" /></div>
+              <div className="flex items-center justify-center gap-1 mb-1"><Users className="h-4 w-4 text-indigo-600" /></div>
               <p className="text-xl font-bold text-slate-900 dark:text-white">{totalSignups}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">Signed up</p>
             </div>
             <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 text-center">
-              <div className="flex items-center justify-center gap-1 mb-1"><DollarSign className="h-4 w-4 text-emerald-500" /></div>
+              <div className="flex items-center justify-center gap-1 mb-1"><DollarSign className="h-4 w-4 text-indigo-600" /></div>
               <p className="text-xl font-bold text-slate-900 dark:text-white">
                 {monthlyEarning > 0 ? `+$${monthlyEarning}` : `-$${monthlyDiscount}`}
               </p>
@@ -1363,14 +1363,14 @@ function ReferralsTab({ userId, profile }: { userId: string | null; profile: imp
 
       <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-3">
         <div className="flex items-center gap-2 mb-1">
-          <Link2 className="h-4 w-4 text-emerald-500" />
+          <Link2 className="h-4 w-4 text-indigo-600" />
           <h3 className="font-semibold text-slate-900 dark:text-white">Your referral link</h3>
         </div>
         <p className="text-sm text-slate-500 dark:text-slate-400">Share this link. When someone signs up and upgrades to Pro, you automatically earn $1 off your monthly bill.</p>
         {referralLink ? (
           <div className="flex items-center gap-2">
             <div className="flex-1 flex items-center gap-2 px-3 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden">
-              <span className="text-sm text-emerald-600 dark:text-emerald-400 font-mono truncate">{referralLink}</span>
+              <span className="text-sm text-indigo-600 dark:text-indigo-400 font-mono truncate">{referralLink}</span>
             </div>
             <button
               onClick={copy}

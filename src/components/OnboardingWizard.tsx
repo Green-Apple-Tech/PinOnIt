@@ -90,7 +90,7 @@ function ProgressBar({ stepIndex, total }: { stepIndex: number; total: number })
           <div
             key={i}
             className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${
-              i < stepIndex ? 'bg-emerald-500' : i === stepIndex ? 'bg-emerald-300' : 'bg-slate-200 dark:bg-slate-700'
+              i < stepIndex ? 'bg-indigo-600' : i === stepIndex ? 'bg-indigo-300' : 'bg-slate-200 dark:bg-slate-700'
             }`}
           />
         ))}
@@ -737,8 +737,8 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
           return (
             <div>
               <div className="text-center mb-6">
-                <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 mb-4">
-                  <Gift className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+                <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-indigo-100 dark:bg-indigo-900/30 mb-4">
+                  <Gift className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
                 </div>
                 <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Start your free 60-day trial</h2>
                 <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm max-w-sm mx-auto">
@@ -746,7 +746,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                 </p>
               </div>
 
-              <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4 mb-5">
+              <div className="bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-xl p-4 mb-5">
                 <div className="space-y-2">
                   {[
                     'Unlimited event types',
@@ -755,7 +755,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                     'Email signature creator & QR booking',
                     'PayPal payments at booking',
                   ].map(f => (
-                    <div key={f} className="flex items-center gap-2 text-sm text-emerald-800 dark:text-emerald-300">
+                    <div key={f} className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
                       <Check className="h-4 w-4 text-emerald-600 shrink-0" />
                       {f}
                     </div>
@@ -772,7 +772,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                   type="checkbox"
                   checked={trialAgreed}
                   onChange={e => setTrialAgreed(e.target.checked)}
-                  className="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  className="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600"
                 />
                 <span className="text-xs text-slate-600 dark:text-slate-400">
                   I agree to be charged $6/mo after my 60-day trial ends on {firstChargeDate60}, unless I cancel before then.
@@ -846,8 +846,8 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
         return (
           <div>
             <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 mb-4">
-                <Sparkles className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+              <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-indigo-100 dark:bg-indigo-900/30 mb-4">
+                <Sparkles className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
               </div>
               <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Welcome to PinOnIt!</h2>
               <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm max-w-sm mx-auto">
@@ -868,8 +868,8 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                   onClick={() => setFromCalendly(opt.val)}
                   className={`p-4 rounded-2xl border-2 text-left transition-all ${
                     fromCalendly === opt.val
-                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20'
-                      : 'border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-700'
+                      ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/20'
+                      : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700'
                   }`}
                 >
                   <span className="text-2xl">{opt.icon}</span>
@@ -909,7 +909,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                           type="checkbox"
                           checked={e.selected}
                           onChange={() => setScrapedEvents(prev => prev.map((ev, idx) => idx === i ? { ...ev, selected: !ev.selected } : ev))}
-                          className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                          className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-600"
                         />
                         <span className="text-sm text-slate-700 dark:text-slate-300">{e.name} ({e.duration_minutes}m)</span>
                       </label>
@@ -972,7 +972,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
 
               <div className="space-y-2 mb-6">
                 {calendars.map(cal => (
-                  <div key={cal.id} className="flex items-center gap-3 px-4 py-3 bg-white dark:bg-slate-900/50 border border-emerald-200 dark:border-emerald-800/50 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/10">
+                  <div key={cal.id} className="flex items-center gap-3 px-4 py-3 bg-white dark:bg-slate-900/50 border border-indigo-200 dark:border-indigo-800/50 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/10">
                     <ProviderIcon provider={cal.provider} size={18} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
@@ -980,7 +980,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                       </p>
                       <p className="text-xs text-slate-400 capitalize">{cal.provider}</p>
                     </div>
-                    <span className="shrink-0 flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+                    <span className="shrink-0 flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 font-semibold">
                       <Check className="h-3.5 w-3.5" /> Connected
                     </span>
                   </div>
@@ -1024,7 +1024,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                     disabled={!!connected || calConnecting === provider}
                     className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 transition-all text-left ${
                       connected
-                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20'
+                        ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/20'
                         : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
                     }`}
                   >
@@ -1034,7 +1034,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                       <p className="text-xs text-slate-400 dark:text-slate-500">{connected ? connected.provider_account_email || 'Connected' : desc}</p>
                     </div>
                     {connected ? (
-                      <span className="shrink-0 flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+                      <span className="shrink-0 flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 font-semibold">
                         <Check className="h-4 w-4" /> Connected
                       </span>
                     ) : calConnecting === provider ? (
@@ -1099,12 +1099,12 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                               const current = prev[cal.id] ?? { scheduling: true, reminders: true };
                               return { ...prev, [cal.id]: { ...current, [opt.key]: !current[opt.key] } };
                             })}
-                            className="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                            className="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600"
                           />
                           <div>
                             <p className="text-sm font-medium text-slate-800 dark:text-slate-200 group-hover:text-slate-900 flex flex-wrap items-center gap-1.5">
                               {opt.label}
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-400">
                                 Recommended
                               </span>
                             </p>
@@ -1142,7 +1142,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
 
             <div className="space-y-3 mb-6">
               {[
-                { icon: Calendar, color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20', title: 'Auto-populated from bookings', desc: 'Every person who books with you is saved as a contact automatically.' },
+                { icon: Calendar, color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20', title: 'Auto-populated from bookings', desc: 'Every person who books with you is saved as a contact automatically.' },
                 { icon: Mail, color: 'text-blue-600 bg-blue-50 dark:bg-blue-900/20', title: 'Email contacts directly', desc: 'Send your booking link to any contact from the Contacts page.' },
                 { icon: Users, color: 'text-amber-600 bg-amber-50 dark:bg-amber-900/20', title: 'Manual import', desc: 'You can also add contacts manually or in bulk from the Contacts page.' },
               ].map(({ icon: Icon, color, title, desc }) => (
@@ -1232,7 +1232,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                   onChange={e => setProfilePhone(e.target.value)}
                   onBlur={e => { if (e.target.value.trim()) setProfilePhone(blurFormatPhone(e.target.value)); }}
                   placeholder={PHONE_PLACEHOLDER}
-                  className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                  className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
                 />
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{PHONE_HINT}</p>
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Used for SMS reminders and voice call alerts.</p>
@@ -1246,7 +1246,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                   onChange={e => setProfileWhatsapp(e.target.value)}
                   onBlur={e => { if (e.target.value.trim()) setProfileWhatsapp(blurFormatPhone(e.target.value)); }}
                   placeholder={PHONE_PLACEHOLDER}
-                  className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                  className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
                 />
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 leading-relaxed">
                   Leave blank to use your phone number above for WhatsApp. Enter a different number if your WhatsApp is on a separate device.
@@ -1302,7 +1302,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                         if (onClose) onClose();
                         navigate(`/services?edit=${svc.id}`);
                       }}
-                      className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-300 hover:border-emerald-400 dark:hover:border-emerald-600 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 transition-all"
+                      className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-300 hover:border-indigo-400 dark:hover:border-indigo-600 hover:text-indigo-700 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 transition-all"
                     >
                       <Pencil className="h-3.5 w-3.5" /> View &amp; Edit
                     </button>
@@ -1336,7 +1336,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                   value={eventName}
                   onChange={e => setEventName(e.target.value)}
                   placeholder="30-Minute Meeting"
-                  className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                  className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
                 />
               </div>
 
@@ -1350,7 +1350,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                       onClick={() => setEventDuration(d)}
                       className={`py-2.5 rounded-xl text-sm font-semibold transition-all border-2 ${
                         eventDuration === d
-                          ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300'
+                          ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-300'
                           : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
                       }`}
                     >
@@ -1369,7 +1369,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
               {/* Booking URL slug */}
               <div>
                 <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">Your booking URL</label>
-                <div className="flex items-center gap-0 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-900 focus-within:ring-2 focus-within:ring-emerald-500">
+                <div className="flex items-center gap-0 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-900 focus-within:ring-2 focus-within:ring-indigo-600">
                   <span className="px-3 py-2.5 text-sm text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 shrink-0 whitespace-nowrap">
                     pinonit.com/
                   </span>
@@ -1393,7 +1393,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                 <select
                   value={timezone}
                   onChange={e => setTimezone(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                  className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
                 >
                   {TIMEZONES.map(tz => (
                     <option key={tz} value={tz}>{tz.replace('_', ' ')}</option>
@@ -1416,7 +1416,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                             const base = prev.length === 0 ? full : prev;
                             return base.includes(cal.id) ? base.filter(id => id !== cal.id) : [...base, cal.id];
                           })}
-                          className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                          className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-600"
                         />
                         <ProviderIcon provider={cal.provider} size={16} />
                         <span className="text-sm text-slate-700 dark:text-slate-300">
@@ -1472,7 +1472,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                     disabled={!!connected || calConnecting === provider}
                     className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 transition-all text-left ${
                       connected
-                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20'
+                        ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/20'
                         : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
                     }`}
                   >
@@ -1482,7 +1482,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                       <p className="text-xs text-slate-400 dark:text-slate-500">{connected ? (connected.provider_account_email || 'Connected') : desc}</p>
                     </div>
                     {connected ? (
-                      <span className="shrink-0 flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+                      <span className="shrink-0 flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 font-semibold">
                         <Check className="h-4 w-4" /> Done
                       </span>
                     ) : calConnecting === provider ? (
@@ -1550,7 +1550,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
             <div className="mt-5 grid grid-cols-2 gap-2 text-xs">
               {['Business cards', 'Email signatures', 'Presentation slides', 'Social media bio'].map(use => (
                 <div key={use} className="flex items-center gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg text-slate-600 dark:text-slate-400">
-                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                  <div className="h-1.5 w-1.5 rounded-full bg-indigo-600 shrink-0" />
                   {use}
                 </div>
               ))}
