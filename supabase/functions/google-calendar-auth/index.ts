@@ -16,6 +16,7 @@ const CALENDAR_SCOPES = [
 const CONTACTS_SCOPES = [
   "https://www.googleapis.com/auth/contacts.readonly",
   "https://www.googleapis.com/auth/userinfo.email",
+  "https://www.googleapis.com/auth/userinfo.profile",
 ];
 
 Deno.serve(async (req: Request) => {
@@ -52,8 +53,8 @@ Deno.serve(async (req: Request) => {
     const source = new URL(req.url).searchParams.get("source") ?? "calendar";
     const scopes = source === "contacts" ? CONTACTS_SCOPES : CALENDAR_SCOPES;
 
-    // Encode the user id and source in state so the callback knows who authorized and where to redirect
-    const state = btoa(JSON.stringify({ uid: user.id, source }));
+    // Encode user id + source in state — callback reads userId from here (no JWT on redirect)
+    const state = btoa(JSON.stringify({ userId: user.id, source }));
     // Must be the exact public URL registered in Google Cloud Console as an authorized redirect URI
     const redirectUri = `${Deno.env.get("SUPABASE_URL")}/functions/v1/google-calendar-callback`;
 

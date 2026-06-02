@@ -32,36 +32,35 @@ import {
   AlertCircle,
   Bell,
   MessageSquare,
-  Plus,
-  X,
-  Smartphone,
+  MessageCircle,
   Shield,
   Zap,
   ExternalLink,
   ChevronDown,
 } from 'lucide-react';
 
-type ReminderChannel = 'email' | 'sms' | 'whatsapp' | 'voice';
-type ReminderTiming = { value: number; label: string };
+const REMINDER_CHANNELS = [
+  { id: 'email', label: 'Email', icon: Mail },
+  { id: 'sms', label: 'SMS', icon: MessageSquare },
+  { id: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
+  { id: 'voice', label: 'Voice Call', icon: Phone },
+] as const;
 
-const REMINDER_TIMINGS: ReminderTiming[] = [
-  { value: 15, label: '15 minutes before' },
-  { value: 30, label: '30 minutes before' },
-  { value: 60, label: '1 hour before' },
-  { value: 120, label: '2 hours before' },
-  { value: 1440, label: '1 day before' },
-  { value: 2880, label: '2 days before' },
-];
+const REMINDER_TIMES = [
+  { id: '15min', label: '15 min before' },
+  { id: '30min', label: '30 min before' },
+  { id: '1hour', label: '1 hour before' },
+  { id: '2hour', label: '2 hours before' },
+  { id: '6hour', label: '6 hours before' },
+  { id: '24hour', label: '24 hours before' },
+] as const;
 
-interface ReminderEntry {
-  id: string;
-  channel: ReminderChannel;
-  minutesBefore: number;
-  contactValue: string;
+function reminderChannelLabel(id: string): string {
+  return REMINDER_CHANNELS.find((c) => c.id === id)?.label ?? id;
 }
 
-function generateId() {
-  return crypto.randomUUID();
+function reminderTimeLabel(id: string): string {
+  return REMINDER_TIMES.find((t) => t.id === id)?.label ?? id;
 }
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -259,71 +258,41 @@ function buildSlots(availability: AvailabilitySlot[], existingBookings: Booking[
 
 function ReminderWizard({
   accentColor,
-  guestEmail,
-  reminders,
-  setReminders,
-  onDone,
+  selectedChannels,
+  setSelectedChannels,
+  selectedTimes,
+  setSelectedTimes,
+  saving,
+  onBack,
+  onSave,
 }: {
   accentColor: string;
-  guestEmail: string;
-  reminders: ReminderEntry[];
-  setReminders: React.Dispatch<React.SetStateAction<ReminderEntry[]>>;
-  onDone: () => void;
+  selectedChannels: string[];
+  setSelectedChannels: React.Dispatch<React.SetStateAction<string[]>>;
+  selectedTimes: string[];
+  setSelectedTimes: React.Dispatch<React.SetStateAction<string[]>>;
+  saving: boolean;
+  onBack: () => void;
+  onSave: () => void;
 }) {
-  const [addingChannel, setAddingChannel] = useState<ReminderChannel | null>(null);
-  const [draftContact, setDraftContact] = useState('');
-  const [draftMinutes, setDraftMinutes] = useState(60);
-
-  const CHANNELS: { key: ReminderChannel; label: string; icon: typeof Mail; placeholder: string; note?: string }[] = [
-    { key: 'email', label: 'Email', icon: Mail, placeholder: guestEmail },
-    { key: 'sms', label: 'SMS', icon: Smartphone, placeholder: PHONE_PLACEHOLDER },
-    { key: 'whatsapp', label: 'WhatsApp', icon: MessageSquare, placeholder: PHONE_PLACEHOLDER },
-    { key: 'voice', label: 'Voice Call', icon: Phone, placeholder: PHONE_PLACEHOLDER, note: 'Required for voice call reminders' },
-  ];
-
-  const startAdding = (channel: ReminderChannel) => {
-    setAddingChannel(channel);
-    setDraftContact(channel === 'email' ? guestEmail : '');
-    setDraftMinutes(60);
+  const toggleChannel = (id: string) => {
+    setSelectedChannels((prev) =>
+      prev.includes(id) ? (prev.length > 1 ? prev.filter((c) => c !== id) : prev) : [...prev, id]
+    );
   };
 
-  const cancelAdding = () => { setAddingChannel(null); setDraftContact(''); };
-
-  const addReminder = () => {
-    if (!addingChannel || !draftContact.trim()) return;
-    const contactValue = addingChannel === 'email'
-      ? draftContact.trim()
-      : normalizePhoneE164(draftContact);
-    setReminders((prev) => [
-      ...prev,
-      { id: generateId(), channel: addingChannel, minutesBefore: draftMinutes, contactValue },
-    ]);
-    setAddingChannel(null);
-    setDraftContact('');
+  const toggleTime = (id: string) => {
+    setSelectedTimes((prev) =>
+      prev.includes(id) ? (prev.length > 1 ? prev.filter((t) => t !== id) : prev) : [...prev, id]
+    );
   };
 
-  const removeReminder = (id: string) => setReminders((prev) => prev.filter((r) => r.id !== id));
-
-  const channelIcon = (ch: ReminderChannel) => {
-    if (ch === 'sms') return Smartphone;
-    if (ch === 'whatsapp') return MessageSquare;
-    if (ch === 'voice') return Phone;
-    return Mail;
-  };
-
-  const channelLabel = (ch: ReminderChannel) => {
-    if (ch === 'sms') return 'SMS';
-    if (ch === 'whatsapp') return 'WhatsApp';
-    if (ch === 'voice') return 'Voice Call';
-    return 'Email';
-  };
-
-  const timingLabel = (min: number) => REMINDER_TIMINGS.find((t) => t.value === min)?.label ?? `${min} min before`;
+  const canSave = selectedChannels.length > 0 && selectedTimes.length > 0;
 
   return (
     <div className="py-8 max-w-md mx-auto">
       <div className="mb-6">
-        <button onClick={onDone} className="flex items-center gap-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 text-sm transition-colors mb-4">
+        <button onClick={onBack} className="flex items-center gap-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 text-sm transition-colors mb-4">
           <ArrowLeft className="h-4 w-4" /> Back to confirmation
         </button>
         <div className="flex items-center gap-2 mb-1">
@@ -333,109 +302,66 @@ function ReminderWizard({
         <p className="text-sm text-slate-500 dark:text-slate-400">Choose how and when you'd like to be reminded about your appointment.</p>
       </div>
 
-      {/* Default reminder (always on) */}
-      <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-800 mb-4">
-        <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: accentColor + '22' }}>
-          <Mail className="h-4 w-4" style={{ color: accentColor }} />
+      <div className="mb-6">
+        <p className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-3">Remind me via</p>
+        <div className="grid grid-cols-2 gap-2">
+          {REMINDER_CHANNELS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => toggleChannel(id)}
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
+                selectedChannels.includes(id)
+                  ? 'border-indigo-600 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300'
+                  : 'border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-400 hover:border-gray-300 dark:hover:border-slate-600'
+              }`}
+            >
+              <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                selectedChannels.includes(id) ? 'bg-indigo-600 border-indigo-600' : 'border-gray-400 dark:border-slate-500'
+              }`}>
+                {selectedChannels.includes(id) && <Check className="h-3 w-3 text-white" />}
+              </div>
+              <Icon className="h-4 w-4 shrink-0" />
+              {label}
+            </button>
+          ))}
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium">Email · 1 hour before</p>
-          <p className="text-xs text-slate-400 dark:text-slate-500">{guestEmail}</p>
-        </div>
-        <span className="text-xs text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">Default</span>
       </div>
 
-      {/* Added reminders */}
-      {reminders.map((r) => {
-        const Icon = channelIcon(r.channel);
-        return (
-          <div key={r.id} className="flex items-center gap-3 p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 mb-2">
-            <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: accentColor + '22' }}>
-              <Icon className="h-4 w-4" style={{ color: accentColor }} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium">{channelLabel(r.channel)} · {timingLabel(r.minutesBefore)}</p>
-              <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{r.contactValue}</p>
-            </div>
-            <button onClick={() => removeReminder(r.id)} className="p-1 text-slate-300 dark:text-slate-600 hover:text-red-400 transition-colors rounded">
-              <X className="h-4 w-4" />
+      <div className="mb-6">
+        <p className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-3">How far in advance</p>
+        <div className="grid grid-cols-2 gap-2">
+          {REMINDER_TIMES.map(({ id, label }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => toggleTime(id)}
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
+                selectedTimes.includes(id)
+                  ? 'border-indigo-600 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300'
+                  : 'border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-400 hover:border-gray-300 dark:hover:border-slate-600'
+              }`}
+            >
+              <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                selectedTimes.includes(id) ? 'bg-indigo-600 border-indigo-600' : 'border-gray-400 dark:border-slate-500'
+              }`}>
+                {selectedTimes.includes(id) && <Check className="h-3 w-3 text-white" />}
+              </div>
+              {label}
             </button>
-          </div>
-        );
-      })}
-
-      {/* Add form */}
-      {addingChannel ? (
-        <div className="mt-4 p-4 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900/50 space-y-3">
-          <div className="flex items-center gap-2 mb-1">
-            {(() => { const cfg = CHANNELS.find((c) => c.key === addingChannel)!; const Icon = cfg.icon; return <Icon className="h-4 w-4" style={{ color: accentColor }} />; })()}
-            <span className="text-sm font-semibold">{channelLabel(addingChannel)} reminder</span>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">
-              {addingChannel === 'email' ? 'Email address' : 'Phone number'}
-            </label>
-            <input
-              type={addingChannel === 'email' ? 'email' : 'tel'}
-              value={draftContact}
-              onChange={(e) => setDraftContact(e.target.value)}
-              onBlur={(e) => {
-                if (addingChannel !== 'email' && e.target.value.trim()) {
-                  setDraftContact(blurFormatPhone(e.target.value));
-                }
-              }}
-              placeholder={CHANNELS.find((c) => c.key === addingChannel)?.placeholder}
-              className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
-            />
-            {addingChannel !== 'email' && (
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">{PHONE_HINT}</p>
-            )}
-            {addingChannel === 'voice' && (
-              <p className="text-xs text-violet-600 dark:text-violet-400 mt-1.5">Required for voice call reminders. You will receive an automated call at this number.</p>
-            )}
-          </div>
-          <div>
-            <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">When to send</label>
-            <select
-              value={draftMinutes}
-              onChange={(e) => setDraftMinutes(Number(e.target.value))}
-              className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition">
-              {REMINDER_TIMINGS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-            </select>
-          </div>
-          <div className="flex gap-2 pt-1">
-            <button onClick={cancelAdding} className="flex-1 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-              Cancel
-            </button>
-            <button onClick={addReminder} disabled={!draftContact.trim()} className="flex-1 py-2 text-sm font-semibold text-white rounded-lg transition-all disabled:opacity-40"
-              style={{ backgroundColor: accentColor }}>
-              Add reminder
-            </button>
-          </div>
+          ))}
         </div>
-      ) : (
-        <div className="mt-4 grid grid-cols-3 gap-2">
-          {CHANNELS.map((ch) => {
-            const Icon = ch.icon;
-            return (
-              <button key={ch.key} onClick={() => startAdding(ch.key)}
-                className="flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-opacity-100 transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 group"
-                style={{ '--brand': accentColor } as React.CSSProperties}>
-                <div className="h-9 w-9 rounded-full flex items-center justify-center group-hover:opacity-90 transition-all" style={{ backgroundColor: accentColor + '18' }}>
-                  <Icon className="h-4 w-4" style={{ color: accentColor }} />
-                </div>
-                <span className="text-xs font-medium">{ch.label}</span>
-                <Plus className="h-3 w-3 opacity-50" />
-              </button>
-            );
-          })}
-        </div>
-      )}
+      </div>
 
-      <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
-        <button onClick={onDone} className="w-full py-3 text-sm font-semibold text-white rounded-lg transition-all hover:opacity-90"
-          style={{ backgroundColor: accentColor }}>
-          {reminders.length > 0 ? `Save ${reminders.length + 1} reminder${reminders.length + 1 > 1 ? 's' : ''} & finish` : 'Finish without adding more'}
+      <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
+        <button
+          onClick={onSave}
+          disabled={!canSave || saving}
+          className="w-full py-3 text-sm font-semibold text-white rounded-lg transition-all hover:opacity-90 disabled:opacity-40 flex items-center justify-center gap-2"
+          style={{ backgroundColor: accentColor }}
+        >
+          {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+          Save reminders & finish
         </button>
       </div>
     </div>
@@ -481,8 +407,10 @@ export function BookPage() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [step, setStep] = useState<'service' | 'datetime' | 'details' | 'confirmed' | 'reminders'>('service');
-  const [reminders, setReminders] = useState<ReminderEntry[]>([]);
+  const [selectedChannels, setSelectedChannels] = useState<string[]>(['email']);
+  const [selectedTimes, setSelectedTimes] = useState<string[]>(['1hour']);
   const [remindersDone, setRemindersDone] = useState(false);
+  const [savingReminders, setSavingReminders] = useState(false);
 
   const today = new Date();
   const [calYear, setCalYear] = useState(today.getFullYear());
@@ -490,6 +418,9 @@ export function BookPage() {
 
   const [guestName, setGuestName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [notifyVia, setNotifyVia] = useState<string[]>(['email']);
+  const [detailsError, setDetailsError] = useState('');
   const [guestTimezone, setGuestTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York');
   const [guestNotes, setGuestNotes] = useState('');
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -655,10 +586,19 @@ export function BookPage() {
 
   const handleBook = async () => {
     if (!selectedService) return;
+    const email = guestEmail.trim();
+    const phoneVal = phone.trim();
+    if (!email && !phoneVal) {
+      setDetailsError('Please provide an email or phone number');
+      return;
+    }
+    setDetailsError('');
     setSubmitting(true);
     const booking = await createBookingRecord();
     if (booking) {
       setConfirmedBooking(booking);
+      if (booking.reminder_channels?.length) setSelectedChannels(booking.reminder_channels);
+      if (booking.reminder_times?.length) setSelectedTimes(booking.reminder_times);
       setStep('confirmed');
       if (selectedService.confirmation_redirect_url) {
         try {
@@ -677,11 +617,24 @@ export function BookPage() {
     const startTime = new Date(y, m - 1, d, sh, sm);
     const endTime = new Date(startTime.getTime() + selectedService.duration_minutes * 60000);
     const isRecurring = !!(selectedService.is_recurring && selectedService.recurrence_frequency);
+    const email = guestEmail.trim();
+    const phoneVal = phone.trim() ? normalizePhoneE164(phone.trim()) : null;
+    const notifyViaPayload: string[] = [];
+    if (email) notifyViaPayload.push('email');
+    if (phoneVal) {
+      for (const ch of notifyVia) {
+        if ((ch === 'sms' || ch === 'whatsapp') && !notifyViaPayload.includes(ch)) {
+          notifyViaPayload.push(ch);
+        }
+      }
+    }
     const { data } = await supabase.from('bookings').insert({
       service_id: selectedService.id,
       host_id: host.id,
       guest_name: guestName,
-      guest_email: guestEmail,
+      guest_email: email || null,
+      guest_phone: phoneVal,
+      notify_via: notifyViaPayload.length > 0 ? notifyViaPayload : null,
       guest_timezone: guestTimezone,
       start_time: startTime.toISOString(),
       end_time: endTime.toISOString(),
@@ -689,6 +642,8 @@ export function BookPage() {
       status: 'confirmed',
       is_recurring: isRecurring,
       recurrence_frequency: isRecurring ? selectedService.recurrence_frequency : null,
+      reminder_channels: selectedChannels,
+      reminder_times: selectedTimes,
     }).select().maybeSingle();
     if (data) {
       // Mark single-use link as used
@@ -717,8 +672,8 @@ export function BookPage() {
           start_time: startTime.toISOString(),
           end_time: endTime.toISOString(),
           summary: `${selectedService.name} with ${guestName}`,
-          description: `Booked via PinOnIt\nGuest: ${guestName} (${guestEmail})${guestNotes ? `\nNotes: ${guestNotes}` : ''}`,
-          guest_email: guestEmail,
+          description: `Booked via PinOnIt\nGuest: ${guestName}${email ? ` (${email})` : ''}${phoneVal ? ` (${phoneVal})` : ''}${guestNotes ? `\nNotes: ${guestNotes}` : ''}`,
+          guest_email: email || undefined,
           guest_name: guestName,
         };
         const meetRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-google-meet`, {
@@ -740,7 +695,7 @@ export function BookPage() {
           start_time: startTime.toISOString(),
           end_time: endTime.toISOString(),
           summary: `${selectedService.name} with ${guestName}`,
-          guest_email: guestEmail,
+          guest_email: email || undefined,
           guest_name: guestName,
         };
         const teamsRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-teams-meeting`, {
@@ -768,7 +723,7 @@ export function BookPage() {
               start_time: startTime.toISOString(),
               end_time: endTime.toISOString(),
               summary: `${selectedService.name} with ${guestName}`,
-              guest_email: guestEmail,
+              guest_email: email || undefined,
               guest_name: guestName,
             }),
           });
@@ -789,7 +744,9 @@ export function BookPage() {
             service_id: selectedService.id,
             host_id: host.id,
             guest_name: guestName,
-            guest_email: guestEmail,
+            guest_email: email || null,
+            guest_phone: phoneVal,
+            notify_via: notifyViaPayload.length > 0 ? notifyViaPayload : null,
             guest_timezone: guestTimezone,
             start_time: nextStart.toISOString(),
             end_time: nextEnd.toISOString(),
@@ -798,6 +755,8 @@ export function BookPage() {
             is_recurring: true,
             recurrence_frequency: freq,
             parent_booking_id: data.id,
+            reminder_channels: selectedChannels,
+            reminder_times: selectedTimes,
           });
         }
       }
@@ -816,7 +775,36 @@ export function BookPage() {
       } catch { /* non-blocking */ }
     }
     return data as Booking | null;
-  }, [selectedService, selectedDate, selectedSlot, host, guestName, guestEmail, guestTimezone, guestNotes, questions, answers, singleUseLink]);
+  }, [selectedService, selectedDate, selectedSlot, host, guestName, guestEmail, phone, notifyVia, guestTimezone, guestNotes, questions, answers, singleUseLink, selectedChannels, selectedTimes]);
+
+  const handleSaveReminders = async () => {
+    if (!confirmedBooking) return;
+    setSavingReminders(true);
+    if (confirmedBooking.action_token) {
+      await supabase.rpc('save_guest_reminder_prefs', {
+        p_booking_id: confirmedBooking.id,
+        p_action_token: confirmedBooking.action_token,
+        p_reminder_channels: selectedChannels,
+        p_reminder_times: selectedTimes,
+      });
+      setConfirmedBooking({
+        ...confirmedBooking,
+        reminder_channels: selectedChannels,
+        reminder_times: selectedTimes,
+      });
+    }
+    setRemindersDone(true);
+    setStep('confirmed');
+    setSavingReminders(false);
+  };
+
+  const reminderSummary = useMemo(
+    () =>
+      selectedChannels.flatMap((ch) =>
+        selectedTimes.map((time) => ({ channel: ch, time }))
+      ),
+    [selectedChannels, selectedTimes]
+  );
 
   const calendarDays = useMemo(() => {
     const firstDay = new Date(calYear, calMonth, 1).getDay();
@@ -887,13 +875,17 @@ export function BookPage() {
     return (svc as Service).show_description_on_booking_page ?? true;
   };
   const isPaidService = selectedService ? selectedService.price_cents > 0 : false;
-  const showTermsAgreement = !!(host?.global_require_terms || (selectedService as Service)?.require_terms);
   const termsDisplayText = resolveTermsText(host?.global_terms_text);
+  const showTermsAgreement = !!(host?.global_require_terms || selectedService?.require_terms);
+  const termsBodyText = selectedService?.cancellation_policy?.trim()
+    || (showTermsAgreement ? termsDisplayText : '');
   const requiredAnswersMissing = questions.some((q) => q.required && !answers[q.id]?.trim())
     || (showTermsAgreement && !termsAgreed)
     || ((selectedService as any)?.require_nda && !ndaAgreed)
     || (isPaidService && !paymentConfirmed && !(isRecurringService && selectedService?.price_cents > 0))
     || (isRecurringService && !recurringAcknowledged);
+  const hasContactInfo = !!(guestEmail.trim() || phone.trim());
+  const canSubmitDetails = !!guestName && hasContactInfo && !requiredAnswersMissing;
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950 transition-colors">
@@ -1226,7 +1218,7 @@ export function BookPage() {
                 </div>
                 {/* Required fields legend */}
                 <p className="text-xs text-slate-400 dark:text-slate-500 mb-4 flex items-center gap-1">
-                  <span className="text-red-400 font-bold">*</span> Required fields
+                  <span className="text-red-400 font-bold">*</span> Required fields · provide email or phone
                 </p>
                 <div className="space-y-4">
                   {isRecurringService && selectedService.recurrence_frequency && (
@@ -1279,15 +1271,64 @@ export function BookPage() {
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                        Email address <span className="text-red-400">*</span>
+                        Email address <span className="text-slate-400 dark:text-slate-500 font-normal">(optional)</span>
                       </label>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500" />
-                        <input type="email" placeholder="jane@example.com" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} required
-                          className={`w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition ${!guestEmail ? 'border-slate-300 dark:border-slate-700' : 'border-indigo-500 dark:border-indigo-600'}`} />
+                        <input type="email" placeholder="jane@example.com" value={guestEmail} onChange={(e) => { setGuestEmail(e.target.value); setDetailsError(''); }}
+                          className={`w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition ${guestEmail ? 'border-indigo-500 dark:border-indigo-600' : 'border-slate-300 dark:border-slate-700'}`} />
                       </div>
                     </div>
                   </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                      Phone number <span className="text-slate-400 dark:text-slate-500 font-normal">(optional)</span>
+                    </label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500" />
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => { setPhone(e.target.value); setDetailsError(''); }}
+                        onBlur={(e) => { if (e.target.value.trim()) setPhone(blurFormatPhone(e.target.value)); }}
+                        placeholder={PHONE_PLACEHOLDER}
+                        className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
+                      />
+                    </div>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{PHONE_HINT}</p>
+                  </div>
+                  {phone.trim() && (
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        Also notify me via
+                      </label>
+                      <div className="flex gap-2 flex-wrap">
+                        {(['SMS', 'WhatsApp'] as const).map((opt) => (
+                          <button
+                            key={opt}
+                            type="button"
+                            onClick={() => setNotifyVia((prev) =>
+                              prev.includes(opt.toLowerCase())
+                                ? prev.filter((v) => v !== opt.toLowerCase())
+                                : [...prev, opt.toLowerCase()]
+                            )}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                              notifyVia.includes(opt.toLowerCase())
+                                ? 'border-indigo-600 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300'
+                                : 'border-gray-300 dark:border-slate-700 text-gray-600 dark:text-slate-400 hover:border-gray-400 dark:hover:border-slate-600'
+                            }`}
+                          >
+                            <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                              notifyVia.includes(opt.toLowerCase()) ? 'bg-indigo-600 border-indigo-600' : 'border-gray-400 dark:border-slate-500'
+                            }`}>
+                              {notifyVia.includes(opt.toLowerCase()) && <Check className="h-3 w-3 text-white" />}
+                            </div>
+                            {opt}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Your timezone</label>
                     <div className="relative">
@@ -1353,15 +1394,9 @@ export function BookPage() {
                       placeholder="Anything else you'd like your host to know..."
                       className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition resize-none" />
                   </div>
-                  {selectedService.cancellation_policy && (
-                    <div className="p-3 bg-amber-50 dark:bg-slate-800/50 border border-amber-200 dark:border-slate-700/50 rounded-lg flex gap-2 text-xs text-slate-600 dark:text-slate-400">
-                      <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-amber-500" />
-                      <span><strong className="text-slate-700 dark:text-slate-300">Cancellation policy:</strong> {selectedService.cancellation_policy}</span>
-                    </div>
-                  )}
-                  {showTermsAgreement && (
+                  {showTermsAgreement && termsBodyText && (
                     <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl space-y-3">
-                      <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{termsDisplayText}</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{termsBodyText}</p>
                       <label className="flex items-start gap-2.5 cursor-pointer">
                         <input type="checkbox" checked={termsAgreed} onChange={(e) => setTermsAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600 shrink-0" />
                         <span className="text-sm text-slate-700 dark:text-slate-300">I have read and agree to the terms above <span className="text-red-500">*</span></span>
@@ -1378,10 +1413,13 @@ export function BookPage() {
                     </div>
                   )}
 
-                  {(!guestName || !guestEmail || requiredAnswersMissing) && !submitting && (
+                  {(detailsError || !canSubmitDetails) && !submitting && (
                     <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5 mt-1">
                       <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                      {!guestName ? 'Full name is required.' : !guestEmail ? 'Email address is required.' : 'Please answer all required questions above.'}
+                      {detailsError
+                        || (!guestName ? 'Full name is required.'
+                          : !hasContactInfo ? 'Please provide an email or phone number.'
+                          : 'Please complete all required fields above.')}
                     </p>
                   )}
 
@@ -1451,9 +1489,9 @@ export function BookPage() {
                     );
                   })()}
 
-                  <button onClick={handleBook} disabled={submitting || !guestName || !guestEmail || requiredAnswersMissing}
+                  <button onClick={handleBook} disabled={submitting || !canSubmitDetails}
                     className="w-full py-3 text-white font-semibold rounded-lg transition-all disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
-                    style={{ backgroundColor: (!guestName || !guestEmail || requiredAnswersMissing) ? '#9ca3af' : accentColor }}>
+                    style={{ backgroundColor: !canSubmitDetails ? '#9ca3af' : accentColor }}>
                     {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                     Confirm meeting
                   </button>
@@ -1470,7 +1508,10 @@ export function BookPage() {
                   </div>
                   <h2 className="text-2xl font-bold mb-1">You're booked!</h2>
                   <p className="text-slate-500 dark:text-slate-400 text-sm">
-                    Confirmation sent to <span className="font-medium text-slate-700 dark:text-slate-300">{guestEmail}</span>
+                    Confirmation sent to{' '}
+                    <span className="font-medium text-slate-700 dark:text-slate-300">
+                      {guestEmail.trim() || phone.trim()}
+                    </span>
                   </p>
                 </div>
 
@@ -1516,28 +1557,37 @@ export function BookPage() {
                     <span className="font-semibold text-sm">Reminder set</span>
                   </div>
                   <div className="px-5 py-4 space-y-4">
-                    <div className="flex items-center gap-3 p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
-                      <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: accentColor + '22' }}>
-                        <Mail className="h-4 w-4" style={{ color: accentColor }} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium">Email reminder</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">1 hour before · {guestEmail}</p>
-                      </div>
-                      <Check className="h-4 w-4 shrink-0" style={{ color: accentColor }} />
-                    </div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Want to add more reminders — SMS, WhatsApp, or another email?</p>
-                    <button
-                      onClick={() => setStep('reminders')}
-                      className="w-full py-2.5 text-sm font-semibold rounded-lg border-2 transition-all hover:opacity-90"
-                      style={{ borderColor: accentColor, color: accentColor }}>
-                      Set up additional reminders
-                    </button>
-                    <button
-                      onClick={() => setRemindersDone(true)}
-                      className="w-full py-2 text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
-                      No thanks, I'm done
-                    </button>
+                    {reminderSummary.map(({ channel, time }) => {
+                      const Icon = REMINDER_CHANNELS.find((c) => c.id === channel)?.icon ?? Mail;
+                      return (
+                        <div key={`${channel}-${time}`} className="flex items-center gap-3 p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                          <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: accentColor + '22' }}>
+                            <Icon className="h-4 w-4" style={{ color: accentColor }} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium">{reminderChannelLabel(channel)} reminder</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">{reminderTimeLabel(time)}</p>
+                          </div>
+                          <Check className="h-4 w-4 shrink-0" style={{ color: accentColor }} />
+                        </div>
+                      );
+                    })}
+                    {!remindersDone && (
+                      <>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">Want to change your reminders — add SMS, WhatsApp, voice, or different times?</p>
+                        <button
+                          onClick={() => setStep('reminders')}
+                          className="w-full py-2.5 text-sm font-semibold rounded-lg border-2 transition-all hover:opacity-90"
+                          style={{ borderColor: accentColor, color: accentColor }}>
+                          Customize reminders
+                        </button>
+                        <button
+                          onClick={() => setRemindersDone(true)}
+                          className="w-full py-2 text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+                          No thanks, I'm done
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -1574,10 +1624,13 @@ export function BookPage() {
             {step === 'reminders' && confirmedBooking && selectedService && (
               <ReminderWizard
                 accentColor={accentColor}
-                guestEmail={guestEmail}
-                reminders={reminders}
-                setReminders={setReminders}
-                onDone={() => { setRemindersDone(true); setStep('confirmed'); }}
+                selectedChannels={selectedChannels}
+                setSelectedChannels={setSelectedChannels}
+                selectedTimes={selectedTimes}
+                setSelectedTimes={setSelectedTimes}
+                saving={savingReminders}
+                onBack={() => setStep('confirmed')}
+                onSave={handleSaveReminders}
               />
             )}
           </div>

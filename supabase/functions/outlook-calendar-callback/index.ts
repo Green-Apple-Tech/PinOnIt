@@ -72,40 +72,36 @@ async function storeEvents(supabase: any, hostId: string, calRowId: string, even
 }
 
 // deno-lint-ignore no-explicit-any
-async function importOutlookContacts(supabase: any, hostId: string, accessToken: string): Promise<{ imported: number; error?: string }> {
+async function importOutlookContacts(supabase: any, hostId: string, accessToken: string): Promise<{ imported: number; fetched: number; error?: string }> {
   console.log("[outlook-contacts] Fetching Microsoft Graph contacts...");
 
-  const params = new URLSearchParams({
-    "$select": "displayName,emailAddresses,mobilePhone,companyName,businessPhones",
-    "$top": "999",
-  });
-
-  const res = await fetch(
-    `https://graph.microsoft.com/v1.0/me/contacts?${params}`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
-  );
-
-  const body = await res.text();
-  console.log("[outlook-contacts] Graph contacts status:", res.status);
-
-  if (res.status === 403 || res.status === 401) {
-    console.error("[outlook-contacts] Contacts permission not granted:", body.slice(0, 300));
-    return { imported: 0, error: "contacts_permission_not_granted" };
-  }
-
-  if (!res.ok) {
-    console.error("[outlook-contacts] Graph contacts error:", body.slice(0, 300));
-    return { imported: 0, error: `Graph contacts returned ${res.status}` };
-  }
-
   let contacts: GraphContact[] = [];
-  try {
-    const data = JSON.parse(body) as { value?: GraphContact[] };
-    contacts = data.value ?? [];
-    console.log("[outlook-contacts] Total contacts:", contacts.length);
-  } catch (e) {
-    console.error("[outlook-contacts] Failed to parse contacts response:", e);
-    return { imported: 0, error: "Failed to parse contacts response" };
+  let nextUrl: string | null = "https://graph.microsoft.com/v1.0/me/contacts?$select=displayName,emailAddresses,mobilePhone,companyName,businessPhones&$top=999";
+
+  while (nextUrl) {
+    const res = await fetch(nextUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
+    const body = await res.text();
+    console.log("[outlook-contacts] Graph contacts status:", res.status);
+
+    if (res.status === 403 || res.status === 401) {
+      console.error("[outlook-contacts] Contacts permission not granted:", body.slice(0, 300));
+      return { imported: 0, fetched: 0, error: "contacts_permission_not_granted" };
+    }
+
+    if (!res.ok) {
+      console.error("[outlook-contacts] Graph contacts error:", body.slice(0, 300));
+      return { imported: 0, fetched: 0, error: `Graph contacts returned ${res.status}` };
+    }
+
+    try {
+      const data = JSON.parse(body) as { value?: GraphContact[]; "@odata.nextLink"?: string };
+      contacts.push(...(data.value ?? []));
+      nextUrl = data["@odata.nextLink"] ?? null;
+      console.log("[outlook-contacts] Total contacts so far:", contacts.length);
+    } catch (e) {
+      console.error("[outlook-contacts] Failed to parse contacts response:", e);
+      return { imported: 0, fetched: 0, error: "Failed to parse contacts response" };
+    }
   }
 
   const rows = contacts
@@ -119,19 +115,19 @@ async function importOutlookContacts(supabase: any, hostId: string, accessToken:
     });
 
   console.log("[outlook-contacts] Contacts with email:", rows.length);
-  if (!rows.length) return { imported: 0 };
+  if (!rows.length) return { imported: 0, fetched: 0 };
 
   let totalImported = 0;
   let useFallback = false;
 
   for (let i = 0; i < rows.length; i += 100) {
     const batch = useFallback
-      ? rows.slice(i, i + 100).map(({ host_id, email, full_name }) => ({ host_id, email, full_name }))
+      ? rows.slice(i, i + 100).map(({ host_id, email, full_name }) => ({ host_id, email, full_name, source: "outlook" }))
       : rows.slice(i, i + 100);
 
     const { error, count } = await supabase
       .from("contacts")
-      .upsert(batch, { onConflict: "host_id,email", ignoreDuplicates: true, count: "exact" });
+      .upsert(batch, { onConflict: "host_id,email", count: "exact" });
 
     if (error) {
       const isSchemaError = error.message?.includes("column") || error.code === "42703" || error.message?.includes("schema cache");
@@ -142,14 +138,61 @@ async function importOutlookContacts(supabase: any, hostId: string, accessToken:
         continue;
       }
       console.error("[outlook-contacts] Upsert error:", JSON.stringify(error));
-      return { imported: totalImported, error: error.message };
+      return { imported: totalImported, fetched: rows.length, error: error.message };
     }
 
-    totalImported += count ?? 0;
+    totalImported += count ?? batch.length;
   }
 
   console.log("[outlook-contacts] Contacts imported:", totalImported);
-  return { imported: totalImported };
+  return { imported: totalImported, fetched: rows.length };
+}
+
+// deno-lint-ignore no-explicit-any
+async function persistOutlookTokens(
+  supabase: any,
+  uid: string,
+  tokens: MicrosoftTokenResponse,
+): Promise<void> {
+  const profileRes = await fetch("https://graph.microsoft.com/v1.0/me?$select=mail,userPrincipalName", {
+    headers: { Authorization: `Bearer ${tokens.access_token}` },
+  });
+  let email = "";
+  if (profileRes.ok) {
+    try {
+      const profileData = await profileRes.json() as { mail?: string; userPrincipalName?: string };
+      email = profileData.mail ?? profileData.userPrincipalName ?? "";
+    } catch { /* ignore */ }
+  }
+
+  const tokenExpiresAt = new Date(Date.now() + (tokens.expires_in ?? 3600) * 1000).toISOString();
+  const refreshToken = tokens.refresh_token ?? "";
+  const { data: existing } = await supabase
+    .from("connected_calendars")
+    .select("id")
+    .eq("host_id", uid)
+    .eq("provider", "outlook")
+    .maybeSingle();
+
+  const payload: Record<string, string | boolean> = {
+    provider_account_email: email,
+    access_token: tokens.access_token!,
+    token_expires_at: tokenExpiresAt,
+    sync_enabled: true,
+    calendar_id: "primary",
+    calendar_name: "Outlook Calendar",
+  };
+  if (refreshToken) payload.refresh_token = refreshToken;
+
+  if (existing) {
+    await supabase.from("connected_calendars").update(payload).eq("id", existing.id);
+  } else {
+    await supabase.from("connected_calendars").insert({
+      host_id: uid,
+      provider: "outlook",
+      ...payload,
+    });
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -202,8 +245,10 @@ Deno.serve(async (req: Request) => {
     let uid: string;
     let source = "calendar";
     try {
-      const decoded = JSON.parse(atob(state)) as { uid: string; source?: string };
-      uid = decoded.uid;
+      const statePayload = state.includes(".") ? state.split(".")[0] : state;
+      const decoded = JSON.parse(atob(statePayload)) as { userId?: string; uid?: string; source?: string };
+      uid = decoded.userId ?? decoded.uid ?? "";
+      if (!uid) throw new Error("missing uid");
       source = decoded.source ?? "calendar";
       if (source === "contacts") redirectBase = `${APP_URL}/dashboard/contacts`;
       console.log("[outlook-callback] Decoded uid from state:", uid);
@@ -212,6 +257,10 @@ Deno.serve(async (req: Request) => {
       console.error("[outlook-callback] Failed to decode state:", e);
       return Response.redirect(`${redirectBase}?calendar_error=invalid_state`, 302);
     }
+
+    const tokenScope = source === "contacts"
+      ? "offline_access Contacts.Read User.Read"
+      : "offline_access Calendars.Read Contacts.Read User.Read OnlineMeetings.ReadWrite";
 
     // Must exactly match the redirect_uri sent in outlook-calendar-auth and registered in Azure
     const redirectUri = `${supabaseUrl}/functions/v1/outlook-calendar-callback`;
@@ -227,7 +276,7 @@ Deno.serve(async (req: Request) => {
         client_secret: clientSecret,
         redirect_uri: redirectUri,
         grant_type: "authorization_code",
-        scope: "offline_access Calendars.Read User.Read OnlineMeetings.ReadWrite",
+        scope: tokenScope,
       }),
     });
 
@@ -255,7 +304,8 @@ Deno.serve(async (req: Request) => {
 
     // ── CONTACTS FLOW ────────────────────────────────────────────────────────
     if (source === "contacts") {
-      const { imported, error: importErr } = await importOutlookContacts(supabase, uid, tokens.access_token);
+      const { imported, fetched, error: importErr } = await importOutlookContacts(supabase, uid, tokens.access_token);
+      const syncedCount = fetched || imported;
 
       if (importErr === "contacts_permission_not_granted") {
         console.error("[outlook-callback] Contacts.Read scope not granted");
@@ -273,14 +323,16 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      await persistOutlookTokens(supabase, uid, tokens);
+
       await supabase
         .from("profiles")
-        .update({ outlook_contacts_connected: true, outlook_contacts_count: imported })
+        .update({ outlook_contacts_connected: true, outlook_contacts_count: syncedCount })
         .eq("id", uid);
 
-      console.log("[outlook-callback] Contacts flow complete — imported:", imported);
+      console.log("[outlook-callback] Contacts flow complete — synced:", syncedCount);
       return Response.redirect(
-        `${redirectBase}?outlook_connected=1&contacts_imported=${imported}`,
+        `${redirectBase}?outlook_connected=1&contacts_imported=${syncedCount}`,
         302
       );
     }

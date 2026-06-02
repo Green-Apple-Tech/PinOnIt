@@ -2,6 +2,60 @@
 
 Last updated: June 2, 2026
 
+---
+
+## PinOnIt Session Summary — June 2, 2026
+
+### Workflow established
+
+1. **Cursor edits** → `git push` → **Bolt GitHub icon** (confirm Synced, branch `main`, wait ~30s) → **Publish → Update**
+2. **`deploypinonit`** — shell alias for Supabase edge function deploys
+3. **`supabase db push --linked`** — apply migrations to linked project
+4. **No CI workflow** — GitHub Actions workflow deleted (was causing all deploy failures today)
+
+### Completed today
+
+- **Group Scheduling page** — Meeting Poll + Align & Book Multi-Party cards
+- **Coordinate Unknown Availability form** — simplified intent-first flow
+- **Host manual confirmation** for coordinated meetings
+- **More Tools** sidebar section (QR Code + Email Signature)
+- **Single-use links** — moved to Scheduling page (fix deployed)
+- **Checkboxes on event types** with "3 of 3 events" badge
+- **Copy Link + QR buttons** on Scheduling page
+- **Separated Paid Booking** from standard booking page (`/:slug` vs `/:slug/services`)
+- **Green → indigo** color replacement throughout app (interactive UI; green kept for success toasts, Done checkmarks, connected badges)
+- **T&C checkbox off by default** — moved to Settings → Booking page; per-event override in Policy tab
+- **Twilio upgraded to paid**, A2P 10DLC registered — pending campaign approval (1–3 days)
+- **Twilio `MessagingServiceSid`** — send-reminder uses Messaging Service (correct code deployed)
+- **WhatsApp number field** + default reminder channel in Settings
+- **Session timeout** setting in Settings → Profile → Session Security
+- **Voice reminders** clarified as host-only
+- **Calendly-style public booking page** redesign pushed
+- **Calendar desktop view** improvements pushed (Appointments month/week/day)
+
+### Still pending
+
+- **Twilio SMS** — waiting for A2P campaign approval (check tomorrow)
+- **Zoom app submission** incomplete (screenshots, App Listing)
+- **Google OAuth verification** in progress (4–6 weeks)
+- **DBA registration** at sunbiz.org
+- **Recurring bookings** — schema exists; full guest-facing flow not yet built
+- **Public booking page** Calendly-style redesign — pushed, needs verification on pinonit.com after Bolt Publish
+- **Calendar desktop view** — pushed, needs verification after Bolt Publish
+- **T&C migration** — run `supabase db push --linked` if `global_require_terms` / `global_terms_text` columns not yet on production DB
+
+### Key credentials (June 2, 2026)
+
+| Service | Value |
+|---------|-------|
+| Supabase project | `adlusgtlwgcfyxgeoias` |
+| Bolt | https://bolt.new/~/sb1-nzt1kjlj |
+| GitHub | Green-Apple-Tech/PinOnIt (private) |
+| Twilio number | +1 786 952 7242 |
+| Messaging Service SID | `MGed3f12c87b8332f254d9a147c5ab87bd` |
+
+---
+
 ## Live URL
 https://pinonit.com
 
@@ -17,8 +71,8 @@ Miami Expeditions LLC dba PinOnIt
 - Payments: Stripe (live mode) + PayPal
 - Email: Resend
 - Domain: pinonit.com (registered via Bolt)
-- SMS/Voice: Twilio (trial account, verified number: +1 305 321 2060)
-- WhatsApp: via `TWILIO_WHATSAPP_NUMBER` secret (sandbox until Meta verification)
+- SMS/Voice: Twilio (paid account, A2P 10DLC pending approval)
+- WhatsApp: via `TWILIO_WHATSAPP_NUMBER` / profile `whatsapp_number` field
 
 ## Supabase Project
 
@@ -37,14 +91,15 @@ Miami Expeditions LLC dba PinOnIt
 
 **Standard workflow (frontend → pinonit.com):**
 
-1. Cursor: `git push` to `main`
-2. Bolt: GitHub menu → **Pull/Sync `main`** — https://bolt.new/~/sb1-nzt1kjlj
-3. Bolt: **Publish**
+1. Cursor: `git add . && git commit -m "..." && git push` to `main`
+2. Bolt: **GitHub icon** (left of Publish) → confirm **Synced**, branch **`main`** → wait ~30s for auto-fetch
+3. Bolt: **Publish → Update** → hard-refresh pinonit.com
 
-Do **not** use Bolt chat pull for routine deploys. Private repo is OK. See [DEPLOY.md](./DEPLOY.md).
+Do **not** rely on Bolt chat pull for routine deploys. Private repo is OK. See [DEPLOY.md](./DEPLOY.md).
 
-- **Edge functions**: `supabase functions deploy coordinate-sms --project-ref adlusgtlwgcfyxgeoias` (or alias `deploypinonit`)
+- **Edge functions**: `deploypinonit` (alias) or `supabase functions deploy <name> --project-ref adlusgtlwgcfyxgeoias`
 - **Database migrations**: `supabase link --project-ref adlusgtlwgcfyxgeoias` then `supabase db push --linked`
+- **CI**: No GitHub Actions deploy workflow (removed June 2, 2026 — was blocking deploys)
 
 ## Key routes
 
@@ -64,7 +119,7 @@ Do **not** use Bolt chat pull for routine deploys. Private repo is OK. See [DEPL
 
 ## Migrations
 
-- **59** SQL files in `supabase/migrations/` (as of June 2026)
+- **65** SQL files in `supabase/migrations/` (as of June 2, 2026)
 
 ## Features Built
 
@@ -101,7 +156,11 @@ Do **not** use Bolt chat pull for routine deploys. Private repo is OK. See [DEPL
   - Pre-enter participant availability (skips SMS)
   - Outbound SMS includes host's per-day proposed times
 - Recurring booking support on **services** + **bookings** tables (not a separate `event_types` table)
-- Session timeout setting in Profile → Session Security
+- Session timeout setting in Settings → Profile → Session Security
+- Default reminder channel (Email/SMS/WhatsApp/Voice) in Settings → Profile
+- WhatsApp number field in Settings (falls back to profile phone when blank)
+- Global Terms & Conditions in Settings → Booking page (`global_require_terms`, `global_terms_text`); off by default; per-event override in event editor Policy tab
+- UI theme: interactive elements use indigo (`indigo-600` / `#4F46E5`); green reserved for success toasts, Done checkmarks, connected badges
 - Email Signature creator (live preview, Editor/Instructions tabs, all fields expanded)
 - Stripe subscription billing ($6/mo Pro plan)
 - 60-day free trial for Calendly switchers (CC required)
@@ -125,7 +184,7 @@ Do **not** use Bolt chat pull for routine deploys. Private repo is OK. See [DEPL
 - Comparison table vs Calendly
 - Powered by PinOnIt branding on free booking pages
 - Logo click links back to pinonit.com marketing site
-- Default Terms & Conditions auto-enabled on paid events
+- Default Terms & Conditions **off by default**; configurable in Settings → Booking page
 - NDA toggle on event types
 - Settings page with tabs: Profile, Booking page, Branding, Embed, Referrals, Integrations
 - Integrations tab with connect buttons for Zoom, Google, Outlook, Apple
@@ -185,12 +244,15 @@ Do **not** use Bolt chat pull for routine deploys. Private repo is OK. See [DEPL
 ## Twilio
 
 - Account SID: AC22cefc8bdaece88f3d02eb43dbc4efbe
-- Trial account with $15.50 credit
-- Verified number: +1 305 321 2060
-- SMS working (test button on Reminders page)
-- Voice calls working (critical meeting alerts)
-- WhatsApp: sandbox only (needs Meta Business verification for production)
-- Secrets in Supabase: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER
+- **Paid account** (upgraded June 2, 2026)
+- **Production number**: +1 786 952 7242
+- **Messaging Service SID**: MGed3f12c87b8332f254d9a147c5ab87bd
+- A2P 10DLC registered — **campaign approval pending** (1–3 days; SMS to unverified numbers blocked until approved)
+- SMS: `send-reminder` uses `MessagingServiceSid` / `TWILIO_MESSAGING_SERVICE_SID`
+- Voice calls working (critical meeting alerts, host voice reminders)
+- WhatsApp: profile `whatsapp_number` + default channel in Settings
+- Legacy verified trial number: +1 305 321 2060
+- Secrets in Supabase: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_MESSAGING_SERVICE_SID (and/or TWILIO_PHONE_NUMBER)
 
 ## Secrets Required
 
@@ -205,7 +267,7 @@ Do **not** use Bolt chat pull for routine deploys. Private repo is OK. See [DEPL
 - PAYPAL_SANDBOX=false
 - TWILIO_ACCOUNT_SID
 - TWILIO_AUTH_TOKEN
-- TWILIO_PHONE_NUMBER
+- TWILIO_MESSAGING_SERVICE_SID
 
 ### Supabase Edge Function Secrets
 
@@ -224,7 +286,7 @@ Do **not** use Bolt chat pull for routine deploys. Private repo is OK. See [DEPL
 - ANTHROPIC_API_KEY
 - TWILIO_ACCOUNT_SID
 - TWILIO_AUTH_TOKEN
-- TWILIO_PHONE_NUMBER
+- TWILIO_MESSAGING_SERVICE_SID
 
 ## Google OAuth Status
 
@@ -271,7 +333,7 @@ Do **not** use Bolt chat pull for routine deploys. Private repo is OK. See [DEPL
 
 ## Database Tables (key ones)
 
-- profiles - user profiles with onboarding_completed, trial_ends_at, paid_booking_settings, booking_page_settings
+- profiles - user profiles with onboarding_completed, trial_ends_at, paid_booking_settings, global_require_terms, global_terms_text, whatsapp_number, default_reminder_channel, session_timeout_minutes
 - services - appointment types (recurring columns: is_recurring, recurrence_frequency, etc.)
 - service_reminders - one row per channel per timing
 - contacts - with company, phone, source, avatar_url columns
@@ -283,20 +345,14 @@ Do **not** use Bolt chat pull for routine deploys. Private repo is OK. See [DEPL
 
 ## Known Issues / To Do
 
-- Zoom connect button behavior needs verification after recent fixes
-- Google OAuth sign-in error (Unable to exchange external code) - fixed in recent session, needs verification
-- Wizard loop mostly fixed - onboarding_completed flag implemented
-- Month view calendar events showing correctly
-- SMS/WhatsApp multi-select channel fix applied in Services.tsx
-- Multi-select timing intervals fix applied in Services.tsx
-- Twilio needs upgrade from trial for production SMS to all users
-- WhatsApp needs Meta Business verification + `TWILIO_WHATSAPP_NUMBER` in Supabase secrets
-- **Bolt publish required** after GitHub pushes — live site won't update otherwise
+- **Twilio SMS** — A2P campaign approval pending; check status daily until live
+- **Bolt publish required** after every GitHub push — live site won't update otherwise
+- **Verify on production** after Publish: Calendly-style booking page, calendar desktop views, indigo UI theme, T&C off-by-default
+- Run **`supabase db push --linked`** if T&C / single-use link / WhatsApp columns missing on production
 - Zoom app submission incomplete (needs screenshots, App Listing)
+- Google OAuth verification in progress (4–6 weeks)
 - PinOnIt DBA registration at sunbiz.org pending
+- Recurring bookings — DB columns exist; full booking UX not built
+- WhatsApp production may still need Meta Business verification beyond Twilio A2P
 - Consider forming separate LLC for PinOnIt vs Miami Expeditions
-- Apple Sign In - planned for future (needs Apple Developer account $99/yr)
-- Critical Meeting Alert voice calls - built and deployed
-- Paid Booking page - built with 3 themes, needs real user testing
-- Mobile responsive fixes applied to event type editor
-- Supabase CLI setup complete - use deploypinonit alias for edge function deploys
+- Apple Sign In — planned for future (needs Apple Developer account $99/yr)

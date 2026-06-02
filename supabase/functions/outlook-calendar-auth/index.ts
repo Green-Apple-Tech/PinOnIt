@@ -8,13 +8,18 @@ const corsHeaders = {
 };
 
 // Microsoft Identity Platform OAuth 2.0 scopes
-// Contacts.Read is included so the same OAuth flow covers both calendar and contacts sync.
-const SCOPES = [
+const CALENDAR_SCOPES = [
   "offline_access",
   "Calendars.Read",
   "Contacts.Read",
   "User.Read",
   "OnlineMeetings.ReadWrite",
+].join(" ");
+
+const CONTACTS_SCOPES = [
+  "offline_access",
+  "Contacts.Read",
+  "User.Read",
 ].join(" ");
 
 Deno.serve(async (req: Request) => {
@@ -48,9 +53,9 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Encode the user id and source in state so the callback knows who authorized and where to redirect
     const source = new URL(req.url).searchParams.get("source") ?? "calendar";
-    const state = btoa(JSON.stringify({ uid: user.id, source }));
+    const scopes = source === "contacts" ? CONTACTS_SCOPES : CALENDAR_SCOPES;
+    const state = btoa(JSON.stringify({ userId: user.id, uid: user.id, source }));
     // Must exactly match the redirect URI registered in the Azure app registration
     const redirectUri = `${Deno.env.get("SUPABASE_URL")}/functions/v1/outlook-calendar-callback`;
 
@@ -58,7 +63,7 @@ Deno.serve(async (req: Request) => {
       client_id: clientId,
       redirect_uri: redirectUri,
       response_type: "code",
-      scope: SCOPES,
+      scope: scopes,
       response_mode: "query",
       state,
     });

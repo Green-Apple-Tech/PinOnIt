@@ -134,6 +134,15 @@ export function ContactsPage() {
 
   const [copied, setCopied] = useState(false);
 
+  const [checklistDismissed, setChecklistDismissed] = useState(
+    () => localStorage.getItem('contacts_checklist_dismissed') === 'true',
+  );
+
+  const handleDismissChecklist = () => {
+    localStorage.setItem('contacts_checklist_dismissed', 'true');
+    setChecklistDismissed(true);
+  };
+
   const showToast = (msg: string, type: 'success' | 'error') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 4000);
@@ -330,6 +339,25 @@ export function ContactsPage() {
   const outlookImportComplete = outlookConnected || outlookContactsImported > 0 || outlookContactsCount > 0;
   const gmailSyncedCount = Math.max(gmailContactsCount, gmailContactsImported);
   const outlookSyncedCount = Math.max(outlookContactsCount, outlookContactsImported);
+
+  const contactsChecklistItems = useMemo(() => [
+    { id: 'booking_link', label: 'Share your booking link', why: 'Contacts are auto-added when someone books with you', done: !!profile?.slug, to: '/dashboard/settings' },
+    { id: 'add_contact', label: 'Add your first contact manually', why: 'Great for existing clients before you get bookings', done: contacts.length > 0 },
+    { id: 'connect_gmail', label: 'Connect Gmail for in-app emailing', why: 'Send your booking link without leaving PinOnIt', done: gmailImportComplete || gmailBannerDismissed },
+  ], [profile?.slug, contacts.length, gmailImportComplete, gmailBannerDismissed]);
+
+  const hasSharedLink = !!profile?.slug;
+  const hasAddedContact = contacts.length > 0;
+  const allDone = hasSharedLink && hasAddedContact && (gmailImportComplete || gmailBannerDismissed);
+
+  useEffect(() => {
+    if (checklistDismissed || !allDone) return;
+    const timer = setTimeout(() => {
+      localStorage.setItem('contacts_checklist_dismissed', 'true');
+      setChecklistDismissed(true);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [allDone, checklistDismissed]);
 
   const handleAddContact = async () => {
     if (!profile) return;
@@ -693,14 +721,25 @@ export function ContactsPage() {
       </div>
 
       {/* Contextual checklist */}
-      <PageChecklist
-        storageKey="contacts_checklist"
-        items={[
-          { id: 'booking_link', label: 'Share your booking link', why: 'Contacts are auto-added when someone books with you', done: !!profile?.slug, to: '/dashboard/settings' },
-          { id: 'add_contact', label: 'Add your first contact manually', why: 'Great for existing clients before you get bookings', done: contacts.length > 0 },
-          { id: 'connect_gmail', label: 'Connect Gmail for in-app emailing', why: 'Send your booking link without leaving PinOnIt', done: gmailImportComplete || gmailBannerDismissed },
-        ]}
-      />
+      {!checklistDismissed && (
+        <div className="relative">
+          <PageChecklist
+            storageKey="contacts_checklist"
+            items={contactsChecklistItems}
+          />
+          {allDone && (
+            <button
+              type="button"
+              onClick={handleDismissChecklist}
+              className="absolute top-3 right-10 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded transition-colors"
+              title="Dismiss checklist"
+              aria-label="Dismiss checklist"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Toast */}
       {toast && (

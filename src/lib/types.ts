@@ -228,7 +228,9 @@ export interface Booking {
   service_id: string;
   host_id: string;
   guest_name: string;
-  guest_email: string;
+  guest_email: string | null;
+  guest_phone?: string | null;
+  notify_via?: string[] | null;
   guest_timezone: string;
   start_time: string;
   end_time: string;
@@ -237,6 +239,9 @@ export interface Booking {
   paypal_order_id: string | null;
   payment_provider: string | null;
   notes: string;
+  action_token?: string;
+  reminder_channels?: string[];
+  reminder_times?: string[];
   meet_link: string | null;
   calendar_event_id: string | null;
   is_critical: boolean;

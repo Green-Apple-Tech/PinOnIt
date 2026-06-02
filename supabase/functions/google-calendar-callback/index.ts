@@ -71,36 +71,42 @@ async function storeEvents(supabase: any, hostId: string, calRowId: string, even
 }
 
 // deno-lint-ignore no-explicit-any
-async function importGoogleContacts(supabase: any, hostId: string, accessToken: string): Promise<{ imported: number; error?: string }> {
+async function importGoogleContacts(supabase: any, hostId: string, accessToken: string): Promise<{ imported: number; fetched: number; error?: string }> {
   console.log("[contacts] Fetching Google People API contacts...");
 
-  const params = new URLSearchParams({
-    personFields: "names,emailAddresses,phoneNumbers,organizations",
-    pageSize: "1000",
-  });
-
-  const res = await fetch(
-    `https://people.googleapis.com/v1/people/me/connections?${params}`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
-  );
-
-  const body = await res.text();
-  console.log("[contacts] People API status:", res.status);
-
-  if (!res.ok) {
-    console.error("[contacts] People API error:", body.slice(0, 500));
-    return { imported: 0, error: `People API returned ${res.status}: ${body.slice(0, 200)}` };
-  }
-
   let connections: GooglePerson[] = [];
-  try {
-    const data = JSON.parse(body) as { connections?: GooglePerson[]; totalPeople?: number };
-    connections = data.connections ?? [];
-    console.log("[contacts] Total connections:", data.totalPeople ?? connections.length);
-  } catch (e) {
-    console.error("[contacts] Failed to parse People API response:", e);
-    return { imported: 0, error: "Failed to parse contacts response" };
-  }
+  let pageToken: string | undefined;
+
+  do {
+    const params = new URLSearchParams({
+      personFields: "names,emailAddresses,phoneNumbers,organizations",
+      pageSize: "1000",
+    });
+    if (pageToken) params.set("pageToken", pageToken);
+
+    const res = await fetch(
+      `https://people.googleapis.com/v1/people/me/connections?${params}`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+
+    const body = await res.text();
+    console.log("[contacts] People API status:", res.status);
+
+    if (!res.ok) {
+      console.error("[contacts] People API error:", body.slice(0, 500));
+      return { imported: 0, fetched: 0, error: `People API returned ${res.status}: ${body.slice(0, 200)}` };
+    }
+
+    try {
+      const data = JSON.parse(body) as { connections?: GooglePerson[]; nextPageToken?: string; totalPeople?: number };
+      connections.push(...(data.connections ?? []));
+      pageToken = data.nextPageToken;
+      console.log("[contacts] Total connections so far:", connections.length);
+    } catch (e) {
+      console.error("[contacts] Failed to parse People API response:", e);
+      return { imported: 0, fetched: 0, error: "Failed to parse contacts response" };
+    }
+  } while (pageToken);
 
   // Filter to contacts that have at least one email address
   const fullRows = connections
@@ -116,7 +122,7 @@ async function importGoogleContacts(supabase: any, hostId: string, accessToken: 
 
   console.log("[contacts] Contacts with email:", fullRows.length);
 
-  if (!fullRows.length) return { imported: 0 };
+  if (!fullRows.length) return { imported: 0, fetched: 0 };
 
   // Attempt upsert with all columns. If any batch fails due to missing columns,
   // fall back to a minimal row (only columns guaranteed to exist in the schema).
@@ -130,7 +136,7 @@ async function importGoogleContacts(supabase: any, hostId: string, accessToken: 
 
     const { error, count } = await supabase
       .from("contacts")
-      .upsert(batch, { onConflict: "host_id,email", ignoreDuplicates: true, count: "exact" });
+      .upsert(batch, { onConflict: "host_id,email", count: "exact" });
 
     if (error) {
       // If the error is a schema/column error and we haven't fallen back yet, retry this batch with minimal columns
@@ -147,14 +153,14 @@ async function importGoogleContacts(supabase: any, hostId: string, accessToken: 
       }
 
       console.error("[contacts] Upsert error:", JSON.stringify(error));
-      return { imported: totalImported, error: error.message };
+      return { imported: totalImported, fetched: fullRows.length, error: error.message };
     }
 
-    totalImported += count ?? 0;
+    totalImported += count ?? batch.length;
   }
 
   console.log("[contacts] Contacts imported/updated:", totalImported, useFallback ? "(fallback mode)" : "");
-  return { imported: totalImported };
+  return { imported: totalImported, fetched: fullRows.length };
 }
 
 Deno.serve(async (req: Request) => {
@@ -168,7 +174,7 @@ Deno.serve(async (req: Request) => {
   const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET");
 
   // Use service role — Google redirects here, there is no user session
-  const supabase = createClient(supabaseUrl, serviceKey);
+  const supabaseAdmin = createClient(supabaseUrl, serviceKey);
 
   const APP_URL = "https://pinonit.com";
 
@@ -189,9 +195,45 @@ Deno.serve(async (req: Request) => {
     // Default redirect base before state is decoded
     let redirectBase = `${APP_URL}/dashboard/appointments`;
 
+    // Browser OAuth redirects carry no JWT — identify user from state, then Authorization fallback
+    let userId: string | null = null;
+    let source = "calendar";
+
+    if (state) {
+      try {
+        const decoded = JSON.parse(atob(state.split(".")[0])) as { userId?: string; uid?: string; source?: string };
+        userId = decoded.userId ?? decoded.uid ?? null;
+        source = decoded.source ?? "calendar";
+        if (source === "contacts") {
+          redirectBase = `${APP_URL}/dashboard/contacts`;
+        }
+        console.log("[callback] Decoded userId from state:", userId);
+        console.log("[callback] Decoded source from state:", source);
+      } catch (e) {
+        console.error("[callback] Failed to decode state:", e);
+      }
+    }
+
+    if (!userId) {
+      const authHeader = req.headers.get("Authorization");
+      if (authHeader) {
+        const token = authHeader.replace("Bearer ", "");
+        const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+        userId = user?.id ?? null;
+        console.log("[callback] Resolved userId from Authorization header:", userId);
+      }
+    }
+
     if (errorParam) {
       console.error("[callback] Google returned error:", errorParam);
       return Response.redirect(`${redirectBase}?calendar_error=${encodeURIComponent(errorParam)}`, 302);
+    }
+
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ code: "UNAUTHORIZED", message: "Could not identify user" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     if (!code || !state) {
@@ -199,29 +241,17 @@ Deno.serve(async (req: Request) => {
       return Response.redirect(`${redirectBase}?calendar_error=missing_params`, 302);
     }
 
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
+      console.error("[callback] Invalid userId in state");
+      return Response.redirect(`${redirectBase}?calendar_error=invalid_state`, 302);
+    }
+
+    const uid = userId;
+    const supabase = supabaseAdmin;
+
     if (!clientId || !clientSecret) {
       console.error("[callback] Missing Google OAuth credentials");
       return Response.redirect(`${redirectBase}?calendar_error=oauth_not_configured`, 302);
-    }
-
-    // Decode user id and source from state
-    let uid: string;
-    let source = "calendar";
-    try {
-      const decoded = JSON.parse(atob(state)) as { uid?: string; source?: string };
-      if (!decoded.uid || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(decoded.uid)) {
-        throw new Error("invalid uid");
-      }
-      uid = decoded.uid;
-      source = decoded.source ?? "calendar";
-      if (source === "contacts") {
-        redirectBase = `${APP_URL}/dashboard/contacts`;
-      }
-      console.log("[callback] Decoded uid from state:", uid);
-      console.log("[callback] Decoded source from state:", source);
-    } catch (e) {
-      console.error("[callback] Failed to decode state:", e);
-      return Response.redirect(`${redirectBase}?calendar_error=invalid_state`, 302);
     }
 
     // Must exactly match the redirect_uri sent in google-calendar-auth and registered in Google Cloud Console
@@ -282,7 +312,8 @@ Deno.serve(async (req: Request) => {
       }
 
       // Import Google contacts
-      const { imported, error: importErr } = await importGoogleContacts(supabase, uid, tokens.access_token);
+      const { imported, fetched, error: importErr } = await importGoogleContacts(supabase, uid, tokens.access_token);
+      const syncedCount = fetched || imported;
 
       if (importErr) {
         console.error("[callback] Contacts import failed:", importErr);
@@ -297,12 +328,12 @@ Deno.serve(async (req: Request) => {
       // Persist the imported count on the profile
       await supabase
         .from("profiles")
-        .update({ gmail_contacts_count: imported })
+        .update({ gmail_contacts_count: syncedCount })
         .eq("id", uid);
 
-      console.log("[callback] Contacts flow complete — imported:", imported);
+      console.log("[callback] Contacts flow complete — synced:", syncedCount);
       return Response.redirect(
-        `${redirectBase}?gmail_connected=1&contacts_imported=${imported}`,
+        `${redirectBase}?gmail_connected=1&contacts_imported=${syncedCount}`,
         302
       );
     }
