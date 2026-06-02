@@ -4,6 +4,22 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { DEFAULT_CALENDAR_CONFLICT_SETTINGS, type CalendarConflictSettings } from '../lib/types';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
+import {
+  type CoordPreferredTimesPayload,
+  type CoordParsedSlot,
+  type CoordSelectedSlotsMap,
+  type CoordSimpleTimeframe,
+  type CoordTimeOfDayKey,
+  COORD_SIMPLE_TIMEFRAME_LABELS,
+  COORD_TIME_OF_DAY_LABELS,
+  buildCoordInviteSmsBody,
+  buildSimpleCoordSummary,
+  fmtCoordDate,
+  fmtCoordDuration,
+  getDatesForSimpleTimeframe,
+  getWindowFromCoordDates,
+  parseCoordAvailability,
+} from '../lib/coordinateScheduling';
 import { Plus, X, ChevronRight, ChevronLeft, ChevronDown, Users, Clock, MapPin, MessageSquare, Check, Loader2, Trash2, AlertCircle, ArrowRight, Phone, Calendar, RefreshCw, CheckCircle2, Sparkles } from 'lucide-react';
 
 const BRAND = '#5864C6';
@@ -20,16 +36,10 @@ interface CoordParticipant {
   masked_twilio_number: string | null;
   availability_response: string | null;
   availability_pre_entered: boolean;
-  parsed_slots: ParsedSlot[] | null;
+  parsed_slots: CoordParsedSlot[] | null;
   opted_out: boolean;
   confirmed: boolean;
   created_at: string;
-}
-
-interface ParsedSlot {
-  date: string;
-  start_time: string;
-  end_time: string;
 }
 
 interface CoordMeeting {
@@ -44,7 +54,7 @@ interface CoordMeeting {
   proposed_window_end: string | null;
   confirmed_time: string | null;
   selected_dates?: string[] | null;
-  preferred_times?: PreferredTimesPayload | null;
+  preferred_times?: CoordPreferredTimesPayload | null;
   check_host_calendar?: boolean;
   allow_off_hours?: boolean;
   created_at: string;
@@ -79,52 +89,7 @@ const DEFAULT_WEEKDAY_WINDOWS: { start: number; end: number }[] = [
   { start: 10 * 60, end: 15 * 60 },
 ];
 
-type SelectedSlotsMap = Record<string, string[]>;
-
-type SchedulingIntent = 'specific_times' | 'general_timeframe' | 'open_ended';
-type CoordSimpleTimeframe = 'next_3_days' | 'this_week' | 'next_2_weeks' | 'next_month' | 'custom';
-type TimeOfDayKey = 'morning' | 'midday' | 'afternoon' | 'any';
-
-interface PreferredTimesPayload {
-  schedulingIntent?: SchedulingIntent;
-  simpleTimeframe?: CoordSimpleTimeframe;
-  timeOfDayPreferences?: TimeOfDayKey[];
-  customRangeStart?: string;
-  customRangeEnd?: string;
-  selectedSlots?: SelectedSlotsMap;
-  offHoursByDate?: Record<string, boolean>;
-  allowOffHoursGlobal?: boolean;
-}
-
-const SIMPLE_TIMEFRAME_PILL_LABELS: Record<CoordSimpleTimeframe, string> = {
-  next_3_days: 'Next 3 days',
-  this_week: 'This week',
-  next_2_weeks: 'Next 2 weeks',
-  next_month: 'Next month',
-  custom: 'Custom range',
-};
-
-const SIMPLE_TIMEFRAME_SMS: Record<CoordSimpleTimeframe, string> = {
-  next_3_days: 'the next 3 days',
-  this_week: 'this week',
-  next_2_weeks: 'the next 2 weeks',
-  next_month: 'the next month',
-  custom: 'the selected dates',
-};
-
-const TIME_OF_DAY_PILL_LABELS: Record<TimeOfDayKey, string> = {
-  morning: 'Morning',
-  midday: 'Mid-day',
-  afternoon: 'Afternoon',
-  any: 'Any time',
-};
-
-const TIME_OF_DAY_SMS: Record<TimeOfDayKey, string> = {
-  morning: 'mornings',
-  midday: 'mid-day',
-  afternoon: 'afternoons',
-  any: 'any time of day',
-};
+type SelectedSlotsMap = CoordSelectedSlotsMap;
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -147,38 +112,11 @@ function maskPhone(phone: string): string {
   return `***-***-${digits.slice(-4)}`;
 }
 
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
 function fmtDateTime(iso: string) {
   return new Date(iso).toLocaleString('en-US', {
     weekday: 'short', month: 'short', day: 'numeric',
     hour: 'numeric', minute: '2-digit',
   });
-}
-
-function toLocalDateInput(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function fmtDurationLabel(minutes: number): string {
-  if (minutes < 60) return `${minutes} min`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (m === 0) return h === 1 ? '1 hour' : `${h} hours`;
-  return `${h}h ${m}m`;
-}
-
-function fmtDurationShort(minutes: number): string {
-  if (minutes < 60) return `${minutes} min`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (m === 0) return h === 1 ? '1 hour' : `${h} hours`;
-  return `${h}h ${m}m`;
 }
 
 function getDaysInMonth(year: number, month: number): number {
@@ -193,125 +131,6 @@ function buildMonthGrid(year: number, month: number): (string | null)[] {
     cells.push(`${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
   }
   return cells;
-}
-
-function getWindowFromDates(dates: string[]) {
-  const sorted = [...dates].sort();
-  if (sorted.length === 0) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const end = new Date(today);
-    end.setHours(23, 59, 59, 999);
-    return { start: today.toISOString(), end: end.toISOString() };
-  }
-  return {
-    start: new Date(sorted[0] + 'T00:00:00').toISOString(),
-    end: new Date(sorted[sorted.length - 1] + 'T23:59:59').toISOString(),
-  };
-}
-
-function getDatesForSimpleTimeframe(
-  preset: CoordSimpleTimeframe,
-  customStart?: string,
-  customEnd?: string,
-): string[] {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  if (preset === 'next_3_days') {
-    const dates: string[] = [];
-    for (let i = 0; i < 3; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      dates.push(toLocalDateInput(d));
-    }
-    return dates;
-  }
-
-  if (preset === 'this_week') {
-    const dates: string[] = [];
-    const end = new Date(today);
-    end.setDate(today.getDate() + (6 - today.getDay()));
-    for (let d = new Date(today); d <= end; d.setDate(d.getDate() + 1)) {
-      dates.push(toLocalDateInput(new Date(d)));
-    }
-    return dates;
-  }
-
-  if (preset === 'next_2_weeks') {
-    const dates: string[] = [];
-    for (let i = 0; i < 14; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      dates.push(toLocalDateInput(d));
-    }
-    return dates;
-  }
-
-  if (preset === 'next_month') {
-    const dates: string[] = [];
-    const end = new Date(today);
-    end.setDate(today.getDate() + 30);
-    for (let d = new Date(today); d <= end; d.setDate(d.getDate() + 1)) {
-      dates.push(toLocalDateInput(new Date(d)));
-    }
-    return dates;
-  }
-
-  if (preset === 'custom' && customStart && customEnd && customStart <= customEnd) {
-    const dates: string[] = [];
-    const start = new Date(`${customStart}T12:00:00`);
-    const end = new Date(`${customEnd}T12:00:00`);
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      dates.push(toLocalDateInput(new Date(d)));
-    }
-    return dates;
-  }
-
-  return [];
-}
-
-function formatTimeOfDayPhrase(keys: TimeOfDayKey[]): string {
-  if (!keys.length || keys.includes('any')) return TIME_OF_DAY_SMS.any;
-  const parts = keys.map(k => TIME_OF_DAY_SMS[k]);
-  if (parts.length === 1) return parts[0];
-  if (parts.length === 2) return `${parts[0]} and ${parts[1]}`;
-  return `${parts.slice(0, -1).join(', ')}, and ${parts[parts.length - 1]}`;
-}
-
-function formatDurationForSms(minutes: number): string {
-  if (minutes < 60) return `${minutes}-minute`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (m === 0) return h === 1 ? '1-hour' : `${h}-hour`;
-  return `${h}h ${m}m`;
-}
-
-function buildSimpleCoordSummary(
-  timeframe: CoordSimpleTimeframe,
-  timeOfDay: TimeOfDayKey[],
-  customStart?: string,
-  customEnd?: string,
-): string {
-  let tf = SIMPLE_TIMEFRAME_SMS[timeframe];
-  if (timeframe === 'custom' && customStart && customEnd) {
-    tf = `${fmtDate(new Date(`${customStart}T12:00:00`).toISOString())} – ${fmtDate(new Date(`${customEnd}T12:00:00`).toISOString())}`;
-  }
-  return `Within ${tf} · ${formatTimeOfDayPhrase(timeOfDay)}`;
-}
-
-function formatSelectedDatesLabel(dates: string[]): string {
-  if (dates.length === 0) return '';
-  const sorted = [...dates].sort();
-  if (sorted.length === 1) {
-    return fmtDate(new Date(sorted[0] + 'T12:00:00').toISOString());
-  }
-  if (sorted.length <= 3) {
-    return sorted
-      .map(d => fmtDate(new Date(d + 'T12:00:00').toISOString()))
-      .join(', ');
-  }
-  return `${sorted.length} days selected`;
 }
 
 function timeToMinutes(t: string): number {
@@ -351,15 +170,6 @@ function formatSelectedSlotsLines(selectedSlots: SelectedSlotsMap): string[] {
     .map(d => `📅 ${fmtDayHeader(d)}: ${selectedSlots[d].map(formatTimeLabel).join(', ')}`);
 }
 
-function formatSlotsForSms(selectedSlots: SelectedSlotsMap, selectedDates: string[]): string {
-  const parts = [...selectedDates].sort().map(d => {
-    const times = selectedSlots[d] ?? [];
-    if (!times.length) return null;
-    return `${fmtDayHeader(d)}: ${times.map(formatTimeLabel).join(', ')}`;
-  }).filter(Boolean);
-  return parts.join('; ');
-}
-
 function hostSelectedSlotsToBuckets(selectedSlots: SelectedSlotsMap, durationMinutes: number): Set<string> | null {
   const dates = Object.keys(selectedSlots).filter(d => (selectedSlots[d]?.length ?? 0) > 0);
   if (!dates.length) return null;
@@ -379,7 +189,7 @@ function hostSelectedSlotsToBuckets(selectedSlots: SelectedSlotsMap, durationMin
 }
 
 function findParticipantOverlaps(
-  participantSlotSets: ParsedSlot[][],
+  participantSlotSets: CoordParsedSlot[][],
   durationMinutes: number,
   hostBuckets: Set<string> | null,
 ): string[] {
@@ -434,7 +244,7 @@ function formatHostSettingsLines(
 }
 
 function getSelectedSlotsFromMeeting(meeting: CoordMeeting): SelectedSlotsMap {
-  const pt = meeting.preferred_times as PreferredTimesPayload | null | undefined;
+  const pt = meeting.preferred_times as CoordPreferredTimesPayload | null | undefined;
   return pt?.selectedSlots ?? {};
 }
 
@@ -870,7 +680,7 @@ function SelectionSummary({
   approachLine?: string;
 }) {
   const lines = formatSelectedSlotsLines(selectedSlots);
-  const durationLabel = fmtDurationShort(durationMinutes);
+  const durationLabel = fmtCoordDuration(durationMinutes);
 
   return (
     <div className="space-y-1.5 text-sm px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
@@ -1183,7 +993,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
   const [coordSimpleTimeframe, setCoordSimpleTimeframe] = useState<CoordSimpleTimeframe>('this_week');
   const [customRangeStart, setCustomRangeStart] = useState('');
   const [customRangeEnd, setCustomRangeEnd] = useState('');
-  const [timeOfDayPrefs, setTimeOfDayPrefs] = useState<Set<TimeOfDayKey>>(() => new Set(['any']));
+  const [timeOfDayPrefs, setTimeOfDayPrefs] = useState<Set<CoordTimeOfDayKey>>(() => new Set(['any']));
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
 
   const [checkHostCalendar, setCheckHostCalendar] = useState(false);
@@ -1225,13 +1035,13 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
   [allowOffHoursGlobal, offHoursByDate]);
 
   useEffect(() => {
-    if (!hostDataLoaded || calendarDefaultSet.current) return;
+    if (!showAdvancedOptions || !hostDataLoaded || calendarDefaultSet.current) return;
     if (hasConnectedCalendar) setCheckHostCalendar(true);
     calendarDefaultSet.current = true;
-  }, [hostDataLoaded, hasConnectedCalendar]);
+  }, [showAdvancedOptions, hostDataLoaded, hasConnectedCalendar]);
 
   useEffect(() => {
-    if (!profile?.id) return;
+    if (!profile?.id || !showAdvancedOptions || hostDataLoaded) return;
     let cancelled = false;
 
     (async () => {
@@ -1294,7 +1104,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
     })();
 
     return () => { cancelled = true; };
-  }, [profile?.id, profile?.calendar_conflict_settings]);
+  }, [profile?.id, profile?.calendar_conflict_settings, showAdvancedOptions, hostDataLoaded]);
 
   const computeFreeSlotsForDateCb = useCallback((dateStr: string, includeOffHours: boolean) =>
     computeFreeSlotsForDate(
@@ -1478,7 +1288,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
     ? formatHostSettingsLines(hasConnectedCalendar, checkHostCalendar, allowOffHoursGlobal, offHoursByDate)
     : [];
 
-  const toggleTimeOfDay = (key: TimeOfDayKey) => {
+  const toggleTimeOfDay = (key: CoordTimeOfDayKey) => {
     setTimeOfDayPrefs(prev => {
       if (key === 'any') return new Set(['any']);
       const next = new Set(prev);
@@ -1510,22 +1320,6 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
   const smsParticipants = validParticipants.filter(p => !p.knownAvailability.trim());
   const preEnteredParticipants = validParticipants.filter(p => p.knownAvailability.trim());
 
-  const parseKnownAvailability = async (response: string, timeframe: { start: string; end: string }) => {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
-    try {
-      const res = await fetch(`${supabaseUrl}/functions/v1/parse-availability`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${anonKey}` },
-        body: JSON.stringify({ response, timeframe }),
-      });
-      const data = await res.json();
-      return (data.slots ?? []) as ParsedSlot[];
-    } catch {
-      return [];
-    }
-  };
-
   const handlePhoneBlur = (i: number) => {
     const phone = participants[i].phone.trim();
     if (phone) {
@@ -1538,29 +1332,22 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
     setPhoneMasked(m => m.map((v, idx) => idx === i ? false : v));
   };
 
-  const buildCoordSmsBody = (participantName: string) => {
-    const dur = formatDurationForSms(durationMinutes);
-    if (useAdvancedSlots) {
-      const slotsStr = formatSlotsForSms(selectedSlots, selectedDates);
-      let msg = `Hi ${participantName}! ${hostName} is looking for a ${dur} meeting`;
-      if (title.trim()) msg += ` ("${title.trim()}")`;
-      if (slotsStr) msg += ` during these times: ${slotsStr}`;
-      msg += '. Reply with times that work for you.';
-      return msg;
-    }
-    const tf = coordSimpleTimeframe === 'custom' && customRangeStart && customRangeEnd
-      ? `between ${new Date(`${customRangeStart}T12:00:00`).toLocaleDateString()} and ${new Date(`${customRangeEnd}T12:00:00`).toLocaleDateString()}`
-      : SIMPLE_TIMEFRAME_SMS[coordSimpleTimeframe];
-    const tod = formatTimeOfDayPhrase(Array.from(timeOfDayPrefs));
-    let msg = `Hi ${participantName}! ${hostName} is looking for a ${dur} meeting within ${tf}`;
-    if (title.trim()) msg += ` ("${title.trim()}")`;
-    msg += ` — ${tod}. Reply with times that work for you.`;
-    return msg;
-  };
-
   const smsPreview = () => {
     const p = smsParticipants[0] || validParticipants[0] || { name: '[Name]' };
-    return `${buildCoordSmsBody(p.name)}\n\nReply STOP to opt out.`;
+    const body = buildCoordInviteSmsBody({
+      participantName: p.name,
+      hostName,
+      title: title.trim(),
+      durationMinutes,
+      useAdvancedSlots,
+      selectedSlots,
+      selectedDates,
+      simpleTimeframe: coordSimpleTimeframe,
+      timeOfDayPrefs: Array.from(timeOfDayPrefs),
+      customRangeStart,
+      customRangeEnd,
+    });
+    return `${body}\n\nReply STOP to opt out.`;
   };
 
   const handleSend = async () => {
@@ -1576,13 +1363,13 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
     if (useAdvancedSlots) {
       datesForMeeting = selectedDates;
       slotsForMeeting = selectedSlots;
-      ({ start: windowStart, end: windowEnd } = getWindowFromDates(selectedDates));
+      ({ start: windowStart, end: windowEnd } = getWindowFromCoordDates(selectedDates));
     } else {
       datesForMeeting = getDatesForSimpleTimeframe(coordSimpleTimeframe, customRangeStart, customRangeEnd);
-      ({ start: windowStart, end: windowEnd } = getWindowFromDates(datesForMeeting));
+      ({ start: windowStart, end: windowEnd } = getWindowFromCoordDates(datesForMeeting));
     }
 
-    const preferredTimesPayload: PreferredTimesPayload = {
+    const preferredTimesPayload: CoordPreferredTimesPayload = {
       schedulingIntent: useAdvancedSlots ? 'specific_times' : 'general_timeframe',
       simpleTimeframe: useAdvancedSlots ? undefined : coordSimpleTimeframe,
       timeOfDayPreferences: useAdvancedSlots ? undefined : Array.from(timeOfDayPrefs),
@@ -1646,7 +1433,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
       const part = insertedParticipants[i];
       const draft = validParticipants[i];
       if (!part.availability_pre_entered || !draft.knownAvailability.trim()) continue;
-      const slots = await parseKnownAvailability(draft.knownAvailability.trim(), timeframe);
+      const slots = await parseCoordAvailability(draft.knownAvailability.trim(), timeframe);
       await supabase
         .from('coordinated_meeting_participants')
         .update({ parsed_slots: slots })
@@ -1762,7 +1549,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
           <div>
             <SectionLabel>When should this meeting happen?</SectionLabel>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-2">
-              {(Object.keys(SIMPLE_TIMEFRAME_PILL_LABELS) as CoordSimpleTimeframe[]).map(preset => (
+              {(Object.keys(COORD_SIMPLE_TIMEFRAME_LABELS) as CoordSimpleTimeframe[]).map(preset => (
                 <button
                   key={preset}
                   type="button"
@@ -1775,7 +1562,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
                   ].join(' ')}
                   style={coordSimpleTimeframe === preset ? { background: BRAND, borderColor: BRAND } : {}}
                 >
-                  {SIMPLE_TIMEFRAME_PILL_LABELS[preset]}
+                  {COORD_SIMPLE_TIMEFRAME_LABELS[preset]}
                 </button>
               ))}
             </div>
@@ -1802,7 +1589,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
             <SectionLabel>What time of day works?</SectionLabel>
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 mb-2">Select all that apply</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {(Object.keys(TIME_OF_DAY_PILL_LABELS) as TimeOfDayKey[]).map(key => (
+              {(Object.keys(COORD_TIME_OF_DAY_LABELS) as CoordTimeOfDayKey[]).map(key => (
                 <button
                   key={key}
                   type="button"
@@ -1815,7 +1602,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
                   ].join(' ')}
                   style={timeOfDayPrefs.has(key) ? { background: BRAND, borderColor: BRAND } : {}}
                 >
-                  {TIME_OF_DAY_PILL_LABELS[key]}
+                  {COORD_TIME_OF_DAY_LABELS[key]}
                 </button>
               ))}
             </div>
@@ -1836,6 +1623,11 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                   Power users only: propose exact dates and time slots instead of a general timeframe. Participants will be asked to confirm within these windows.
                 </p>
+                {!hostDataLoaded && (
+                  <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin shrink-0" /> Loading calendar data…
+                  </p>
+                )}
                 <MultiSelectCalendar
                   viewMonth={calendarMonth}
                   onViewMonthChange={setCalendarMonth}
@@ -2057,7 +1849,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
             <p className="font-bold text-slate-900 dark:text-white text-lg">{title}</p>
             <div className="flex flex-wrap gap-3 text-sm text-slate-500 dark:text-slate-400">
               <span className="flex items-center gap-1.5"><Clock className="h-4 w-4" />
-                {fmtDurationLabel(durationMinutes)}
+                {fmtCoordDuration(durationMinutes)}
               </span>
               {location && <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4" /> {location}</span>}
               <span className="flex items-center gap-1.5"><Calendar className="h-4 w-4" />
@@ -2291,7 +2083,7 @@ function MeetingDetail({ meeting: initialMeeting, onBack, onStatusChange }: {
         </button>
         <div className="flex-1 min-w-0">
           <h2 className="text-xl font-bold text-slate-900 dark:text-white truncate">{meeting.title}</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Created {fmtDate(meeting.created_at)}</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Created {fmtCoordDate(meeting.created_at)}</p>
         </div>
         <span className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full"
           style={{ color: meta.color, background: meta.bg }}>
@@ -2313,7 +2105,7 @@ function MeetingDetail({ meeting: initialMeeting, onBack, onStatusChange }: {
         </div>
         {meeting.proposed_window_start && (
           <p className="text-xs text-slate-400 mt-2">
-            Window: {fmtDate(meeting.proposed_window_start)} – {meeting.proposed_window_end ? fmtDate(meeting.proposed_window_end) : ''}
+            Window: {fmtCoordDate(meeting.proposed_window_start)} – {meeting.proposed_window_end ? fmtCoordDate(meeting.proposed_window_end) : ''}
           </p>
         )}
       </div>
@@ -2397,7 +2189,7 @@ function MeetingDetail({ meeting: initialMeeting, onBack, onStatusChange }: {
                       {p.parsed_slots.map((slot, si) => (
                         <span key={si} className="text-xs px-2.5 py-1 rounded-full font-medium"
                           style={{ background: '#eef0fb', color: BRAND }}>
-                          {fmtDate(new Date(slot.date + 'T12:00:00').toISOString())} {slot.start_time}–{slot.end_time}
+                          {fmtCoordDate(new Date(slot.date + 'T12:00:00').toISOString())} {slot.start_time}–{slot.end_time}
                         </span>
                       ))}
                     </div>

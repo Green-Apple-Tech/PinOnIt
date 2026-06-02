@@ -1,4 +1,6 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
 import { AuthProvider } from './hooks/useAuth';
 import { ThemeProvider } from './hooks/useTheme';
 import { AuthForm } from './components/Auth';
@@ -26,9 +28,22 @@ import { QRCreatorPage } from './pages/QRCreator';
 import { PaidBookingPage } from './pages/PaidBooking';
 import { StatusPage } from './pages/Status';
 import { NotFoundPage } from './pages/NotFound';
-import { CoordinateMeetingsPage } from './pages/CoordinateMeetings';
-import { GroupSchedulingPage } from './pages/GroupScheduling';
 import { SessionManager } from './components/SessionManager';
+
+const GroupSchedulingPage = lazy(() =>
+  import('./pages/GroupScheduling').then(m => ({ default: m.GroupSchedulingPage })),
+);
+const CoordinateMeetingsPage = lazy(() =>
+  import('./pages/CoordinateMeetings').then(m => ({ default: m.CoordinateMeetingsPage })),
+);
+
+function RouteFallback() {
+  return (
+    <div className="flex min-h-[40vh] items-center justify-center p-8">
+      <Loader2 className="h-6 w-6 animate-spin text-slate-400" aria-label="Loading" />
+    </div>
+  );
+}
 
 function RefRedirect() {
   const { code } = useParams<{ code: string }>();
@@ -74,11 +89,11 @@ function App() {
               <Route path="analytics" element={<Navigate to="/dashboard/settings?tab=analytics" replace />} />
               <Route path="signature" element={<EmailSignaturePage />} />
               <Route path="paid-booking" element={<PaidBookingPage />} />
-              <Route path="group-scheduling" element={<GroupSchedulingPage />} />
+              <Route path="group-scheduling" element={<Suspense fallback={<RouteFallback />}><GroupSchedulingPage /></Suspense>} />
               <Route path="group-scheduling/polls" element={<MeetingPollsPage />} />
-              <Route path="group-scheduling/coordinate" element={<CoordinateMeetingsPage />} />
+              <Route path="group-scheduling/coordinate" element={<Suspense fallback={<RouteFallback />}><CoordinateMeetingsPage /></Suspense>} />
               <Route path="polls" element={<Navigate to="/dashboard/group-scheduling" replace />} />
-              <Route path="coordinate" element={<CoordinateMeetingsPage />} />
+              <Route path="coordinate" element={<Suspense fallback={<RouteFallback />}><CoordinateMeetingsPage /></Suspense>} />
               <Route path="qr" element={<QRCreatorPage />} />
             </Route>
             {/* Single-use booking links */}
