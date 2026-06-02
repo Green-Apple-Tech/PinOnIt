@@ -62,7 +62,15 @@ interface ParticipantDraft {
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const DURATION_PRESETS = [15, 30, 45, 60, 120] as const;
-const ROLE_SUGGESTIONS = ['Renter', 'Listing Agent', 'Patient', 'Specialist', 'Client', 'Candidate', 'Hiring Manager', 'Inspector', 'Attorney'];
+const ROLE_SUGGESTIONS = ['Patient', 'Doctor', 'Physician', 'Specialist', 'Provider', 'Renter', 'Listing Agent', 'Client', 'Candidate', 'Hiring Manager', 'Inspector', 'Attorney'];
+
+const PROVIDER_ROLE_KEYWORDS = ['doctor', 'physician', 'provider', 'specialist', 'dentist', 'therapist', 'surgeon'];
+
+function isProviderRole(role: string): boolean {
+  const r = role.trim().toLowerCase();
+  if (!r) return false;
+  return PROVIDER_ROLE_KEYWORDS.some(keyword => r === keyword || r.includes(keyword));
+}
 
 /** Hourly slots 7am–8pm as 24h HH:MM */
 const HOURLY_SLOT_TIMES = [
@@ -86,6 +94,7 @@ type TimeframePreset = 'today' | 'next_2_days' | 'this_week' | 'next_week' | 'cu
 
 interface PreferredTimesPayload {
   schedulingIntent?: SchedulingIntent;
+  schedulingForProvider?: boolean;
   timeframePreset?: TimeframePreset;
   customRangeStart?: string;
   customRangeEnd?: string;
@@ -112,19 +121,19 @@ const SCHEDULING_INTENT_OPTIONS: {
     id: 'specific_times',
     icon: '📅',
     title: 'I know some available times',
-    description: "I'll pick specific dates and times — participants will be asked to confirm one.",
+    description: "Pick exact dates and times to propose — e.g. the listing agent gave you windows, or you've blocked slots on your calendar.",
   },
   {
     id: 'general_timeframe',
     icon: '📆',
     title: 'I have a general timeframe',
-    description: 'I know it needs to happen within the next few days or this week — the app will find a time that works.',
+    description: 'It needs to happen soon but exact times aren\'t set yet — common when you know roughly when, or only one side\'s hours (add those on the next step).',
   },
   {
     id: 'open_ended',
     icon: '🤷',
     title: "I'm not sure yet",
-    description: 'Send to everyone and let them all suggest times that work.',
+    description: 'Neither side\'s schedule is clear — everyone gets a text asking when they\'re free.',
   },
 ];
 
@@ -1290,6 +1299,8 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
   const [customRangeStart, setCustomRangeStart] = useState('');
   const [customRangeEnd, setCustomRangeEnd] = useState('');
 
+  const [schedulingForProvider, setSchedulingForProvider] = useState(false);
+
   const [checkHostCalendar, setCheckHostCalendar] = useState(false);
   const [allowOffHoursGlobal, setAllowOffHoursGlobal] = useState(false);
   const [hasConnectedCalendar, setHasConnectedCalendar] = useState(false);
@@ -1561,6 +1572,13 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
 
   const hasAnySlots = Object.values(selectedSlots).some(times => times.length > 0);
 
+  const providerSlotsInStep1 = schedulingForProvider
+    && schedulingIntent === 'specific_times'
+    && selectedDates.length > 0
+    && hasAnySlots;
+
+  const minParticipantsRequired = providerSlotsInStep1 ? 1 : 2;
+
   const approachLine = describeSchedulingApproach(
     schedulingIntent,
     schedulingIntent === 'general_timeframe' ? timeframePreset : undefined,
@@ -1600,8 +1618,56 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
   };
 
   const updateParticipant = (i: number, field: keyof ParticipantDraft, value: string | boolean) => {
-    setParticipants(p => p.map((pt, idx) => idx === i ? { ...pt, [field]: value } : pt));
+    setParticipants(p => p.map((pt, idx) => {
+      if (idx !== i) return pt;
+      const next = { ...pt, [field]: value };
+      if (field === 'role' && typeof value === 'string' && isProviderRole(value)) {
+        next.showKnownAvailability = true;
+      }
+      return next;
+    }));
   };
+
+  const handleProviderModeChange = (enabled: boolean) => {
+    setSchedulingForProvider(enabled);
+    if (!enabled) return;
+
+    const nextIntent: SchedulingIntent = schedulingIntent === 'open_ended'
+      ? 'general_timeframe'
+      : schedulingIntent === 'general_timeframe'
+        ? 'general_timeframe'
+        : 'specific_times';
+    if (nextIntent !== schedulingIntent) {
+      setSchedulingIntent(nextIntent);
+    }
+
+    setParticipants(prev => {
+      const next = [...prev];
+      if (nextIntent === 'specific_times') {
+        if (next[0]) {
+          next[0] = { ...next[0], role: next[0].role || 'Patient', showKnownAvailability: false };
+        }
+      } else if (next[0]) {
+        next[0] = {
+          ...next[0],
+          role: next[0].role || 'Provider',
+          showKnownAvailability: true,
+        };
+      }
+      if (next[1]) {
+        next[1] = { ...next[1], role: next[1].role || 'Patient' };
+      }
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    if (!schedulingForProvider || schedulingIntent !== 'specific_times') return;
+    setParticipants(prev => prev.map((p, i) => {
+      if (i !== 0 || !isProviderRole(p.role)) return p;
+      return { ...p, role: 'Patient', showKnownAvailability: false, knownAvailability: '' };
+    }));
+  }, [schedulingForProvider, schedulingIntent]);
 
   const smsParticipants = validParticipants.filter(p => !p.knownAvailability.trim());
   const preEnteredParticipants = validParticipants.filter(p => p.knownAvailability.trim());
@@ -1679,6 +1745,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
 
     const preferredTimesPayload: PreferredTimesPayload = {
       schedulingIntent,
+      schedulingForProvider,
       timeframePreset: schedulingIntent === 'general_timeframe' ? timeframePreset : undefined,
       customRangeStart: timeframePreset === 'custom' ? customRangeStart : undefined,
       customRangeEnd: timeframePreset === 'custom' ? customRangeEnd : undefined,
@@ -1784,7 +1851,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
               className={INP}
             />
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 leading-relaxed">
-              e.g. Coordinate a property showing, doctor referral, interview, or any meeting where you need to find a time that works for everyone.
+              e.g. A doctor&apos;s assistant scheduling a referral, or an agent coordinating a showing — you often know one person&apos;s hours but not everyone&apos;s.
             </p>
           </div>
 
@@ -1856,9 +1923,44 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
             )}
           </div>
 
+          <label className="flex items-start gap-3 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={schedulingForProvider}
+              onChange={e => handleProviderModeChange(e.target.checked)}
+              className="mt-1 h-5 w-5 rounded border-slate-300 dark:border-slate-600 text-brand-600 focus:ring-brand-500 shrink-0"
+            />
+            <div>
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                I&apos;m scheduling for a provider (doctor, specialist, dentist…)
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                Medical office assistants usually already know the provider&apos;s schedule. Enter their open times below or on the next step — only the patient or referral gets a text.
+              </p>
+            </div>
+          </label>
+
           <div>
             <SectionLabel>When are you trying to meet?</SectionLabel>
             <SchedulingIntentCards value={schedulingIntent} onChange={setSchedulingIntent} />
+            {schedulingForProvider && schedulingIntent === 'specific_times' && (
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-3 leading-relaxed px-1">
+                <span className="font-semibold text-slate-600 dark:text-slate-300">Provider workflow:</span>{' '}
+                Pick the provider&apos;s open slots below. On the next step, add only the patient or referral — they&apos;re the only one who gets messaged.
+              </p>
+            )}
+            {schedulingForProvider && schedulingIntent === 'general_timeframe' && (
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-3 leading-relaxed px-1">
+                <span className="font-semibold text-slate-600 dark:text-slate-300">Provider workflow:</span>{' '}
+                On the next step, Person 1 will be the provider — enter their schedule there. Person 2 is the patient who gets the text.
+              </p>
+            )}
+            {!schedulingForProvider && schedulingIntent !== 'specific_times' && (
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-3 leading-relaxed px-1">
+                <span className="font-semibold text-slate-600 dark:text-slate-300">Common workflow:</span>{' '}
+                On the next step, enter one person&apos;s available times if you already have them — we&apos;ll only text the others.
+              </p>
+            )}
           </div>
 
           {schedulingIntent === 'general_timeframe' && (
@@ -1883,7 +1985,14 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
 
           {schedulingIntent === 'specific_times' && (
             <div>
-              <SectionLabel>Select dates and times</SectionLabel>
+              <SectionLabel>
+                {schedulingForProvider ? "Provider's available times" : 'Select dates and times'}
+              </SectionLabel>
+              {schedulingForProvider && (
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 leading-relaxed">
+                  These are the doctor&apos;s or specialist&apos;s open slots from their schedule — not times you&apos;re proposing to the patient yet.
+                </p>
+              )}
               <MultiSelectCalendar
                 viewMonth={calendarMonth}
                 onViewMonthChange={setCalendarMonth}
@@ -1977,7 +2086,24 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
           <div className="flex items-start gap-3 p-4 rounded-xl text-sm"
             style={{ background: '#eef0fb', color: BRAND, border: `1px solid ${BRAND}30` }}>
             <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-            <span>Phone numbers are never shared between participants. Each person communicates through a private masked number via SMS or WhatsApp.</span>
+            <div className="space-y-2">
+              <p>Phone numbers are never shared between participants. Each person communicates through a private masked number via SMS or WhatsApp.</p>
+              {schedulingForProvider && providerSlotsInStep1 ? (
+                <p className="text-[13px] opacity-90">
+                  <span className="font-semibold">Provider times are set.</span>{' '}
+                  Add the patient or referral below — only they will receive a text. You don&apos;t need to add the provider as a participant.
+                </p>
+              ) : schedulingForProvider ? (
+                <p className="text-[13px] opacity-90">
+                  <span className="font-semibold">Enter the provider&apos;s schedule</span> on Person 1 (already expanded below). Add the patient on Person 2 — only they get a text.
+                </p>
+              ) : (
+                <p className="text-[13px] opacity-90">
+                  <span className="font-semibold">Usually you know one side&apos;s hours, not both.</span>{' '}
+                  Enter that person&apos;s availability below — they won&apos;t get a text. Everyone else will be asked to reply with times that work.
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="space-y-4">
@@ -2048,12 +2174,17 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
                     <button
                       type="button"
                       onClick={() => updateParticipant(i, 'showKnownAvailability', true)}
-                      className="text-sm text-slate-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors font-medium"
+                      className="w-full text-left p-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 hover:border-[#5864C6]/50 hover:bg-[#5864C6]/5 dark:hover:bg-[#5864C6]/10 transition-colors"
                     >
-                      + I already know when they&apos;re available
+                      <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                        + I already have this person&apos;s available times
+                      </p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                        e.g. listing agent said Sat 2–4pm, or specialist is free Tue mornings
+                      </p>
                     </button>
                   ) : (
-                    <div className="space-y-2 pt-1">
+                    <div className="space-y-2 pt-1 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
                       <button
                         type="button"
                         onClick={() => {
@@ -2062,18 +2193,24 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
                         }}
                         className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors font-medium"
                       >
-                        − Hide known availability
+                        − Remove pre-entered times
                       </button>
-                      <SectionLabel>Their available times</SectionLabel>
+                      <SectionLabel>
+                        {isProviderRole(p.role) ? "Provider's available times" : 'Their available times'}
+                      </SectionLabel>
                       <textarea
                         value={p.knownAvailability}
                         onChange={e => updateParticipant(i, 'knownAvailability', e.target.value)}
-                        placeholder="e.g. Saturday after 2pm, Sunday morning anytime"
+                        placeholder={
+                          isProviderRole(p.role)
+                            ? 'e.g. Mon/Wed/Fri 9am–12pm, Tue/Thu 2–5pm — from the provider\'s schedule'
+                            : 'e.g. Saturday 2–4pm, Sunday morning anytime, Tue or Wed after 3pm'
+                        }
                         rows={2}
                         className={INP.replace('h-[52px]', '') + ' py-3 resize-none min-h-[80px]'}
                       />
                       <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
-                        We&apos;ll use this instead of sending them an SMS. They won&apos;t receive a text if you fill this in.
+                        This person won&apos;t receive a text — we&apos;ll use what you enter and only message the others for their availability.
                       </p>
                     </div>
                   )}
@@ -2089,9 +2226,11 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
             </button>
           )}
 
-          {validParticipants.length < 2 && (
+          {validParticipants.length < minParticipantsRequired && (
             <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">
-              Add at least 2 participants to continue.
+              {providerSlotsInStep1
+                ? 'Add at least 1 participant (patient or referral) to continue.'
+                : 'Add at least 2 participants to continue.'}
             </p>
           )}
 
@@ -2100,7 +2239,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
               className="min-h-[48px] flex items-center gap-1 px-5 text-sm font-semibold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
               <ChevronLeft className="h-4 w-4" /> Back
             </button>
-            <button onClick={() => setStep(3)} disabled={validParticipants.length < 2}
+            <button onClick={() => setStep(3)} disabled={validParticipants.length < minParticipantsRequired}
               className="min-h-[48px] flex items-center gap-2 px-5 text-sm font-semibold text-white rounded-xl transition-all disabled:opacity-40"
               style={{ background: BRAND }}>
               Review & Send <ChevronRight className="h-4 w-4" />
@@ -2240,7 +2379,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
               className="h-[56px] px-5 flex items-center gap-1 font-semibold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors text-[15px]">
               <ChevronLeft className="h-5 w-5" /> Back
             </button>
-            <button onClick={() => setStep(3)} disabled={validParticipants.length < 2}
+            <button onClick={() => setStep(3)} disabled={validParticipants.length < minParticipantsRequired}
               className="flex-1 h-[56px] flex items-center justify-center gap-2 font-bold text-white rounded-xl transition-all disabled:opacity-40 text-[15px] shadow-lg"
               style={{ background: BRAND }}>
               Review & Send <ChevronRight className="h-5 w-5" />

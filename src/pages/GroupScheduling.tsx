@@ -47,6 +47,7 @@ function PathCard({
   title,
   subtitle,
   steps,
+  hint,
   buttonLabel,
   onClick,
   accent = BRAND,
@@ -55,6 +56,7 @@ function PathCard({
   title: string;
   subtitle: string;
   steps: string[];
+  hint?: string;
   buttonLabel: string;
   onClick: () => void;
   accent?: string;
@@ -80,6 +82,12 @@ function PathCard({
           </div>
         ))}
       </div>
+
+      {hint && (
+        <p className="text-sm text-slate-400 dark:text-slate-500 italic text-center mt-3 mb-1 leading-relaxed">
+          {hint}
+        </p>
+      )}
 
       <button
         type="button"
@@ -195,14 +203,16 @@ export function GroupSchedulingPage() {
           title="Meeting Poll"
           subtitle="Share a link — people vote on times that work. Best for teammates and colleagues."
           steps={['Propose times', 'Everyone votes', 'You confirm']}
+          hint="💡 Best when everyone has email or can click a link"
           buttonLabel="Create a Poll →"
           onClick={() => navigate(POLLS_CREATE_PATH)}
         />
         <PathCard
           icon="💬"
-          title="Coordinate Everyone via SMS & WhatsApp"
-          subtitle="Coordinate via SMS or WhatsApp — no app or link needed. Best for external contacts with the ease of messaging."
+          title="Align & Book Multi-Party"
+          subtitle="Coordinate via SMS — no app or link needed. Best for clients, agents, or anyone you only have a phone number for."
           steps={['Pick dates', 'SMS or WhatsApp sent', 'Auto-confirmed']}
+          hint="💡 Best when parties don't know each other's availability, or you only have phone numbers"
           buttonLabel="Align & Book Multi-Party →"
           onClick={() => navigate(COORDINATE_NEW_PATH)}
           accent="#059669"
