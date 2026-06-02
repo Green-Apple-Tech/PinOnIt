@@ -5,7 +5,9 @@ import { OnboardingWizard, wizardIsActive, wizardSavedStep, onboardingIsComplete
 import { useTheme } from '../hooks/useTheme';
 import { supabase } from '../lib/supabase';
 import type { Booking, Service } from '../lib/types';
-import { CalendarDays, Settings, LogOut, Users, X, Check, Sun, Moon, Copy, Share2, Mail, Link2, ExternalLink, PenLine, Video, Phone, MapPin, ChevronRight, Loader2, CalendarCheck, Plus, ChevronLeft, BarChart2, LayoutGrid, Menu, AlertCircle, Sparkles, QrCode, Search, ShoppingBag } from 'lucide-react';
+import { CalendarDays, Settings, LogOut, Users, X, Check, Sun, Moon, Copy, Share2, Mail, Link2, ExternalLink, PenLine, Video, Phone, MapPin, ChevronRight, Loader2, CalendarCheck, Plus, ChevronLeft, ChevronDown, BarChart2, LayoutGrid, Menu, AlertCircle, Sparkles, QrCode, Search, ShoppingBag, Wrench } from 'lucide-react';
+
+type NavItem = { to: string; icon: typeof LayoutGrid; label: string };
 
 
 function formatBookingTime(iso: string, tz?: string): string {
@@ -704,6 +706,7 @@ export function Dashboard() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createdUrl, setCreatedUrl] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [moreToolsOpen, setMoreToolsOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const planName = subscription?.plan ?? profile?.plan ?? 'free';
@@ -916,15 +919,18 @@ export function Dashboard() {
     if (!error) setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status: 'completed' as const } : b)));
   };
 
-  const navItems = [
+  const mainNavItems: NavItem[] = [
     { to: '/dashboard', icon: LayoutGrid, label: 'Send your Availability' },
     { to: '/dashboard/appointments', icon: CalendarCheck, label: 'Calendar' },
     { to: '/dashboard/contacts', icon: Users, label: 'Contacts' },
     { to: '/dashboard/group-scheduling', icon: Users, label: 'Group Scheduling' },
-    { to: '/dashboard/qr', icon: QrCode, label: 'QR Code Creator' },
-    { to: '/dashboard/signature', icon: PenLine, label: 'Email signature' },
     { to: '/dashboard/paid-booking', icon: ShoppingBag, label: 'Paid Booking' },
     { to: '/dashboard/settings', icon: Settings, label: 'Settings' },
+  ];
+
+  const moreToolsNavItems: NavItem[] = [
+    { to: '/dashboard/qr', icon: QrCode, label: 'QR Code Creator' },
+    { to: '/dashboard/signature', icon: PenLine, label: 'Email Signature' },
   ];
 
   const isActive = (path: string) => {
@@ -935,6 +941,80 @@ export function Dashboard() {
     return location.pathname === path;
   };
   const initials = (displayName?.[0] ?? displayEmail?.[0] ?? '?').toUpperCase();
+
+  const moreToolsChildActive = moreToolsNavItems.some((item) => isActive(item.to));
+
+  const navLinkClass = (path: string, nested?: boolean) => {
+    const active = isActive(path);
+    const padding = nested
+      ? active
+        ? 'pl-[calc(2.25rem-3px)] pr-3'
+        : 'pl-9 pr-3'
+      : active
+        ? 'pl-[calc(0.75rem-3px)] pr-3'
+        : 'px-3';
+    return `flex items-center gap-3 py-2.5 rounded-lg text-sm transition-colors ${padding} ${
+      active
+        ? 'bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400 font-semibold border-l-[3px] border-brand-600 dark:border-brand-500 rounded-l-none'
+        : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-900'
+    }`;
+  };
+
+  const renderNavLink = (item: NavItem, opts?: { collapsed?: boolean; nested?: boolean; onNavigate?: () => void }) => (
+    <Link
+      key={item.to}
+      to={item.to}
+      title={opts?.collapsed ? item.label : undefined}
+      onClick={opts?.onNavigate}
+      className={`${navLinkClass(item.to, opts?.nested)} ${opts?.collapsed ? 'justify-center px-3' : ''}`}
+    >
+      <item.icon className="h-[18px] w-[18px] shrink-0" />
+      {!opts?.collapsed && item.label}
+    </Link>
+  );
+
+  const renderMoreToolsSection = (opts?: { collapsed?: boolean; onNavigate?: () => void }) => {
+    const collapsed = opts?.collapsed ?? false;
+
+    if (collapsed) {
+      return (
+        <div className="space-y-0.5">
+          <button
+            type="button"
+            onClick={() => setMoreToolsOpen((v) => !v)}
+            title="More Tools"
+            className={`flex items-center justify-center w-full px-3 py-2.5 rounded-lg text-sm transition-colors ${
+              moreToolsChildActive
+                ? 'bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400'
+                : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-900'
+            }`}
+          >
+            <Wrench className="h-[18px] w-[18px] shrink-0" />
+          </button>
+          {moreToolsOpen && moreToolsNavItems.map((item) => renderNavLink(item, { collapsed: true, onNavigate: opts?.onNavigate }))}
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-0.5">
+        <button
+          type="button"
+          onClick={() => setMoreToolsOpen((v) => !v)}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+            moreToolsChildActive && !moreToolsOpen
+              ? 'bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400 font-semibold'
+              : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-900'
+          }`}
+        >
+          <Wrench className="h-[18px] w-[18px] shrink-0" />
+          <span className="flex-1 text-left">More Tools</span>
+          <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${moreToolsOpen ? 'rotate-180' : ''}`} />
+        </button>
+        {moreToolsOpen && moreToolsNavItems.map((item) => renderNavLink(item, { nested: true, onNavigate: opts?.onNavigate }))}
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-950 text-gray-900 dark:text-white flex transition-colors">
@@ -970,21 +1050,9 @@ export function Dashboard() {
 
         {/* Nav */}
         <nav className="flex-1 px-2 space-y-0.5 overflow-y-auto">
-          {navItems.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              title={sidebarCollapsed ? item.label : undefined}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                isActive(item.to)
-                  ? 'bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400 font-semibold border-l-[3px] border-brand-600 dark:border-brand-500 rounded-l-none pl-[calc(0.75rem-3px)]'
-                  : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-900'
-              } ${sidebarCollapsed ? 'justify-center' : ''}`}
-            >
-              <item.icon className="h-[18px] w-[18px] shrink-0" />
-              {!sidebarCollapsed && item.label}
-            </Link>
-          ))}
+          {mainNavItems.slice(0, 4).map((item) => renderNavLink(item, { collapsed: sidebarCollapsed }))}
+          {renderMoreToolsSection({ collapsed: sidebarCollapsed })}
+          {mainNavItems.slice(4).map((item) => renderNavLink(item, { collapsed: sidebarCollapsed }))}
         </nav>
 
         {/* Bottom section */}
@@ -1037,21 +1105,9 @@ export function Dashboard() {
               </button>
             </div>
             <nav className="flex-1 px-2 space-y-0.5 overflow-y-auto">
-              {navItems.map((item) => (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                    isActive(item.to)
-                      ? 'bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400 font-semibold border-l-[3px] border-brand-600 rounded-l-none pl-[calc(0.75rem-3px)]'
-                      : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-900'
-                  }`}
-                >
-                  <item.icon className="h-[18px] w-[18px] shrink-0" />
-                  {item.label}
-                </Link>
-              ))}
+              {mainNavItems.slice(0, 4).map((item) => renderNavLink(item, { onNavigate: () => setMobileMenuOpen(false) }))}
+              {renderMoreToolsSection({ onNavigate: () => setMobileMenuOpen(false) })}
+              {mainNavItems.slice(4).map((item) => renderNavLink(item, { onNavigate: () => setMobileMenuOpen(false) }))}
             </nav>
             <div className="border-t border-gray-200 dark:border-slate-800 p-4">
               <div className="flex items-center gap-2.5 mb-3">
