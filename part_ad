@@ -1,0 +1,564 @@
+                          ```typescript
+                          updateParticipant(i, 'showKnownAvailability', false);
+                          updateParticipant(i, 'knownAvailability', '');
+                        }}
+                        className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors font-medium"
+                      >
+                        − Remove pre-entered times
+                      </button>
+                      <SectionLabel>Their available times</SectionLabel>
+                      <textarea
+                        value={p.knownAvailability}
+                        onChange={e => updateParticipant(i, 'knownAvailability', e.target.value)}
+                        placeholder="e.g. Saturday 2–4pm, Sunday morning anytime, Tue or Wed after 3pm"
+                        rows={2}
+                        className={INP.replace('h-[52px]', '') + ' py-3 resize-none min-h-[80px]'}
+                      />
+                      <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
+                        This person won&apos;t receive a text — we&apos;ll use what you enter and only message the others for their availability.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {participants.length < 6 && (
+            <button onClick={addParticipant}
+              className="w-full min-h-[52px] flex items-center justify-center gap-2 px-4 text-[15px] font-semibold rounded-xl border border-dashed border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-brand-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
+              <Plus className="h-5 w-5" /> Add another person
+            </button>
+          )}
+
+          {validParticipants.length < 2 && (
+            <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">
+              Add at least 2 participants to continue.
+            </p>
+          )}
+
+          <div className="hidden md:flex gap-3 pt-2">
+            <button onClick={() => setStep(1)}
+              className="min-h-[48px] flex items-center gap-1 px-5 text-sm font-semibold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+              <ChevronLeft className="h-4 w-4" /> Back
+            </button>
+            <button onClick={() => setStep(3)} disabled={validParticipants.length < 2}
+              className="min-h-[48px] flex items-center gap-2 px-5 text-sm font-semibold text-white rounded-xl transition-all disabled:opacity-40"
+              style={{ background: BRAND }}>
+              Review & Send <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Step 3 ── */}
+      {step === 3 && (
+        <div className="space-y-6">
+          <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl space-y-3">
+            <SectionLabel>Meeting</SectionLabel>
+            <p className="font-bold text-slate-900 dark:text-white text-lg">{title}</p>
+            <div className="flex flex-wrap gap-3 text-sm text-slate-500 dark:text-slate-400">
+              <span className="flex items-center gap-1.5"><Clock className="h-4 w-4" />
+                {fmtCoordDuration(durationMinutes)}
+              </span>
+              {location && <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4" /> {location}</span>}
+              <span className="flex items-center gap-1.5"><Calendar className="h-4 w-4" />
+                {approachLine}
+              </span>
+            </div>
+            {useAdvancedSlots && formatSelectedSlotsLines(selectedSlots).length > 0 && (
+              <div className="space-y-1 pt-2 border-t border-slate-100 dark:border-slate-800">
+                {formatSelectedSlotsLines(selectedSlots).map(line => (
+                  <p key={line} className="text-sm text-slate-600 dark:text-slate-300">{line}</p>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {useAdvancedSlots && hostSettingsLines.length > 0 && (
+            <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl space-y-2">
+              <SectionLabel>Host availability</SectionLabel>
+              {hostSettingsLines.map(line => (
+                <p key={line} className="text-sm text-slate-600 dark:text-slate-300">{line}</p>
+              ))}
+            </div>
+          )}
+
+          <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl space-y-3">
+            <SectionLabel>Participants ({validParticipants.length})</SectionLabel>
+            {validParticipants.map((p, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
+                  style={{ background: BRAND }}>
+                  {(p.name[0] || '?').toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{p.name}</p>
+                  <p className="text-xs text-slate-400">
+                    {p.role || 'No role'} · {maskPhone(p.phone)}
+                    {p.knownAvailability.trim() ? ' · Availability pre-entered ✓' : ' · SMS request will be sent'}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {smsParticipants.length > 0 ? (
+            <div>
+              <SectionLabel>SMS / WhatsApp preview{smsParticipants.length > 1 ? ` (${smsParticipants.length} messages)` : ''}</SectionLabel>
+              <div className="p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+                <div className="flex items-start gap-2.5">
+                  <MessageSquare className="h-4 w-4 text-slate-400 mt-1 shrink-0" />
+                  <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed">
+                    {smsPreview()}
+                  </p>
+                </div>
+                {smsParticipants.length > 1 && (
+                  <p className="text-xs text-slate-400 mt-2 pl-7">
+                    + {smsParticipants.length - 1} more personalized message{smsParticipants.length > 2 ? 's' : ''}
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-600 dark:text-slate-300">
+              All participants have pre-entered availability — no SMS messages will be sent.
+            </div>
+          )}
+
+          {preEnteredParticipants.length > 0 && smsParticipants.length > 0 && (
+            <p className="text-xs text-slate-400">
+              {preEnteredParticipants.map(p => p.name).join(', ')} will not receive a text — availability already provided.
+            </p>
+          )}
+
+          <div className="p-4 bg-[#eef0fb] dark:bg-[#5864C6]/10 border border-[#5864C6]/20 rounded-xl">
+            <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+              After participants reply, you&apos;ll receive an SMS with the best available time.
+              You confirm before anything is booked.
+            </p>
+          </div>
+
+          {sendError && (
+            <div className="flex items-center gap-2 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400">
+              <AlertCircle className="h-4 w-4 shrink-0" /> {sendError}
+            </div>
+          )}
+
+          <div className="hidden md:flex gap-3 pt-2">
+            <button onClick={() => setStep(2)}
+              className="min-h-[48px] flex items-center gap-1 px-5 text-sm font-semibold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+              <ChevronLeft className="h-4 w-4" /> Back
+            </button>
+            <button onClick={handleSend} disabled={sending || !sendFormValid}
+              className="min-h-[48px] flex items-center gap-2 px-6 text-sm font-semibold text-white rounded-xl transition-all disabled:opacity-50"
+              style={{ background: BRAND }}>
+              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+              {sending ? 'Sending...' : 'Send Availability Requests'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Mobile sticky bottom bar ── */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 px-4 py-3 safe-area-bottom">
+        {step === 1 && (
+          <div className="space-y-3">
+            <SelectionSummary
+              selectedSlots={useAdvancedSlots ? selectedSlots : {}}
+              durationMinutes={durationMinutes}
+              hostSettingsLines={hostSettingsLines}
+              approachLine={approachLine}
+            />
+            <div className="flex gap-3">
+              <button onClick={onCancel}
+                className="h-[56px] px-5 font-semibold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-[15px]">
+                Cancel
+              </button>
+              <button onClick={() => setStep(2)} disabled={!step1Valid}
+                className="flex-1 h-[56px] flex items-center justify-center gap-2 font-bold text-white rounded-xl transition-all disabled:opacity-40 text-[15px] shadow-lg"
+                style={{ background: BRAND }}>
+                Next: Add Participants <ChevronRight className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        )}
+        {step === 2 && (
+          <div className="flex gap-3">
+            <button onClick={() => setStep(1)}
+              className="h-[56px] px-5 flex items-center gap-1 font-semibold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors text-[15px]">
+              <ChevronLeft className="h-5 w-5" /> Back
+            </button>
+            <button onClick={() => setStep(3)} disabled={validParticipants.length < 2}
+              className="flex-1 h-[56px] flex items-center justify-center gap-2 font-bold text-white rounded-xl transition-all disabled:opacity-40 text-[15px] shadow-lg"
+              style={{ background: BRAND }}>
+              Review & Send <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+        )}
+        {step === 3 && (
+          <div className="flex gap-3">
+            <button onClick={() => setStep(2)}
+              className="h-[56px] px-5 flex items-center gap-1 font-semibold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors text-[15px]">
+              <ChevronLeft className="h-5 w-5" /> Back
+            </button>
+            <button onClick={handleSend} disabled={sending || !sendFormValid}
+              className="flex-1 h-[56px] flex items-center justify-center gap-2 font-bold text-white rounded-xl transition-all disabled:opacity-50 text-[15px] shadow-lg"
+              style={{ background: BRAND }}>
+              {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <ArrowRight className="h-5 w-5" />}
+              {sending ? 'Sending...' : 'Send Availability Requests'}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Meeting detail ────────────────────────────────────────────────────────────
+
+function MeetingDetail({ meeting: initialMeeting, onBack, onStatusChange }: {
+  meeting: CoordMeeting;
+  onBack: () => void;
+  onStatusChange: (id: string, status: CoordStatus) => void;
+}) {
+  const [meeting, setMeeting] = useState(initialMeeting);
+  const [participants, setParticipants] = useState<CoordParticipant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const refreshTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const load = async () => {
+    const { data } = await supabase
+      .from('coordinated_meeting_participants')
+      .select('id, meeting_id, name, role, masked_twilio_number, availability_response, availability_pre_entered, parsed_slots, opted_out, confirmed, created_at')
+      .eq('meeting_id', meeting.id)
+      .order('created_at', { ascending: true });
+    setParticipants((data ?? []) as CoordParticipant[]);
+    const { data: m } = await supabase
+      .from('coordinated_meetings')
+      .select('*')
+      .eq('id', meeting.id)
+      .maybeSingle();
+    if (m) {
+      setMeeting(m as CoordMeeting);
+      onStatusChange(m.id, m.status as CoordStatus);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    load();
+    refreshTimer.current = setInterval(load, 15000);
+    return () => { if (refreshTimer.current) clearInterval(refreshTimer.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [meeting.id]);
+
+  const responded = participants.filter(p => p.availability_response && !p.availability_pre_entered);
+  const preEntered = participants.filter(p => p.availability_pre_entered);
+  const respondedOrPreEntered = participants.filter(p => p.availability_response);
+  const optedOut = participants.filter(p => p.opted_out);
+  const active = participants.filter(p => !p.opted_out);
+  const meta = STATUS_META[meeting.status];
+
+  const handleCancel = async () => {
+    await supabase.from('coordinated_meetings').update({ status: 'cancelled' }).eq('id', meeting.id);
+    onStatusChange(meeting.id, 'cancelled');
+    setMeeting(m => ({ ...m, status: 'cancelled' }));
+  };
+
+  const handleConfirm = async (slotIso: string) => {
+    await supabase.from('coordinated_meetings').update({ status: 'confirmed', confirmed_time: slotIso }).eq('id', meeting.id);
+    await supabase.from('coordinated_meeting_participants').update({ confirmed: true }).eq('meeting_id', meeting.id).eq('opted_out', false);
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+    fetch(`${supabaseUrl}/functions/v1/coordinate-sms`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anonKey}` },
+      body: JSON.stringify({ type: 'confirm', meeting_id: meeting.id, confirmed_time: slotIso }),
+    }).catch(() => {});
+    load();
+  };
+
+  const getCandidateSlots = (): string[] => {
+    const stored = meeting.preferred_times?.candidateSlots;
+    if (stored?.length) return stored;
+    if (active.length < 2) return [];
+    const slotSets = active
+      .map(p => p.parsed_slots ?? [])
+      .filter(s => s.length > 0);
+    if (slotSets.length < 2) return [];
+    const hostBuckets = hostSelectedSlotsToBuckets(getSelectedSlotsFromMeeting(meeting), meeting.duration_minutes);
+    return findParticipantOverlaps(slotSets, meeting.duration_minutes, hostBuckets);
+  };
+
+  const overlapSlots = meeting.status === 'match_found' ? getCandidateSlots() : [];
+
+  return (
+    <div className="max-w-2xl space-y-5 pb-8">
+      <div className="flex items-center gap-3">
+        <button onClick={onBack}
+          className="min-h-[48px] min-w-[48px] flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800">
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white truncate">{meeting.title}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Created {fmtCoordDate(meeting.created_at)}</p>
+        </div>
+        <span className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full"
+          style={{ color: meta.color, background: meta.bg }}>
+          {meta.label}
+        </span>
+      </div>
+
+      <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl">
+        <div className="flex flex-wrap gap-4 text-sm text-slate-600 dark:text-slate-400">
+          <span className="flex items-center gap-1.5"><Clock className="h-4 w-4" />
+            {meeting.duration_minutes < 60 ? `${meeting.duration_minutes} min` : `${meeting.duration_minutes / 60}h`}
+          </span>
+          {meeting.location && <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4" /> {meeting.location}</span>}
+          {meeting.confirmed_time && (
+            <span className="flex items-center gap-1.5 font-semibold text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 className="h-4 w-4" /> {fmtDateTime(meeting.confirmed_time)}
+            </span>
+          )}
+        </div>
+        {meeting.proposed_window_start && (
+          <p className="text-xs text-slate-400 mt-2">
+            Window: {fmtCoordDate(meeting.proposed_window_start)} – {meeting.proposed_window_end ? fmtCoordDate(meeting.proposed_window_end) : ''}
+          </p>
+        )}
+      </div>
+
+      {meeting.status === 'match_found' && overlapSlots.length > 0 && (
+        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl space-y-3">
+          <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+            <Sparkles className="h-4 w-4" style={{ color: BRAND }} /> Best match found — confirm via SMS (reply YES) or tap a time below:
+          </p>
+          {overlapSlots.map((iso, i) => (
+            <button key={iso} onClick={() => handleConfirm(iso)}
+              className="w-full min-h-[52px] flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:border-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/30 transition-all text-sm font-medium text-slate-700 dark:text-slate-300">
+              <span>Option {i + 1}: {fmtDateTime(iso)}</span>
+              <Check className="h-4 w-4 text-slate-400" />
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+            {respondedOrPreEntered.length} of {active.length} participant{active.length !== 1 ? 's' : ''} ready
+            {preEntered.length > 0 && responded.length > 0 && (
+              <span className="font-normal text-slate-500"> · {preEntered.length} pre-entered, {responded.length} replied</span>
+            )}
+          </p>
+          <button onClick={load}
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg transition-colors">
+            <RefreshCw className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
+          <div className="h-full rounded-full transition-all duration-500"
+            style={{ width: active.length ? `${(respondedOrPreEntered.length / active.length) * 100}%` : '0%', background: BRAND }} />
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <SectionLabel>Participants</SectionLabel>
+        {loading ? (
+          <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-slate-400" /></div>
+        ) : participants.map(p => {
+          const hasResponse = !!p.availability_response;
+          const isPreEntered = p.availability_pre_entered;
+          return (
+            <div key={p.id} className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl">
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 mt-0.5"
+                  style={{ background: BRAND }}>
+                  {(p.name[0] || '?').toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 justify-between flex-wrap">
+                    <p className="font-semibold text-slate-800 dark:text-slate-200 truncate">{p.name}</p>
+                    <span className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full ${
+                      p.opted_out ? 'bg-slate-100 dark:bg-slate-800 text-slate-500' :
+                      p.confirmed ? 'text-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 dark:text-emerald-400' :
+                      isPreEntered ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300' :
+                      hasResponse ? 'text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400' :
+                      'text-amber-700 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400'
+                    }`}>
+                      {p.opted_out ? 'Opted out' : p.confirmed ? 'Confirmed ✓' : isPreEntered ? 'Pre-entered ✓' : hasResponse ? 'Responded ✓' : 'Waiting'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">{p.role || 'No role'}</p>
+                  {isPreEntered && hasResponse && (
+                    <div className="mt-2.5 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-0.5 uppercase tracking-wide">Availability pre-entered:</p>
+                      <p className="text-sm text-slate-700 dark:text-slate-300 italic">&quot;{p.availability_response}&quot;</p>
+                    </div>
+                  )}
+                  {!isPreEntered && hasResponse && (
+                    <div className="mt-2.5 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-0.5 uppercase tracking-wide">Their response:</p>
+                      <p className="text-sm text-slate-700 dark:text-slate-300 italic">&quot;{p.availability_response}&quot;</p>
+                    </div>
+                  )}
+                  {p.parsed_slots && p.parsed_slots.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {p.parsed_slots.map((slot, si) => (
+                        <span key={si} className="text-xs px-2.5 py-1 rounded-full font-medium"
+                          style={{ background: '#eef0fb', color: BRAND }}>
+                          {fmtCoordDate(new Date(slot.date + 'T12:00:00').toISOString())} {slot.start_time}–{slot.end_time}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {optedOut.length > 0 && (
+        <p className="text-sm text-slate-500 dark:text-slate-400 p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+          {optedOut.map(p => p.name).join(', ')} opted out of SMS.
+        </p>
+      )}
+
+      {meeting.status !== 'cancelled' && meeting.status !== 'confirmed' && (
+        <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+          <button onClick={handleCancel}
+            className="min-h-[48px] px-2 text-sm text-red-500 hover:text-red-700 dark:hover:text-red-400 transition-colors font-semibold">
+            Cancel this coordination
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main page ────────────────────────────────────────────────────────────────
+
+const HUB_PATH = '/dashboard/group-scheduling';
+const COORDINATE_PATH = '/dashboard/coordinate';
+
+export function CoordinateMeetingsPage() {
+  const { profile } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const [meetings, setMeetings] = useState<CoordMeeting[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [view, setView] = useState<'list' | 'new' | 'detail'>('list');
+  const [selected, setSelected] = useState<CoordMeeting | null>(null);
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    supabase
+      .from('coordinated_meetings')
+      .select('*')
+      .eq('host_id', profile.id)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => { setMeetings((data ?? []) as CoordMeeting[]); setLoading(false); });
+  }, [profile?.id]);
+
+  useEffect(() => {
+    if (loading) return;
+
+    if (searchParams.get('new') === '1') {
+      setView('new');
+      return;
+    }
+
+    if (location.pathname === COORDINATE_PATH && !searchParams.get('meeting')) {
+      setView('new');
+      return;
+    }
+
+    const meetingId = searchParams.get('meeting');
+    if (meetingId) {
+      const meeting = meetings.find(m => m.id === meetingId);
+      if (meeting) {
+        setSelected(meeting);
+        setView('detail');
+        return;
+      }
+    }
+
+    if (
+      location.pathname !== COORDINATE_PATH &&
+      !location.pathname.endsWith('/group-scheduling/coordinate')
+    ) {
+      setView('list');
+    }
+  }, [loading, searchParams, meetings, location.pathname]);
+
+  const hostName = profile?.full_name || 'Your host';
+
+  const isCoordinateRoute =
+    location.pathname === COORDINATE_PATH ||
+    location.pathname.endsWith('/group-scheduling/coordinate');
+
+  const wantsNewForm =
+    view === 'new' ||
+    searchParams.get('new') === '1' ||
+    (isCoordinateRoute && !searchParams.get('meeting'));
+
+  const meetingId = searchParams.get('meeting');
+
+  const handleCreated = (m: CoordMeeting) => {
+    setMeetings(prev => [m, ...prev]);
+    setSelected(m);
+    setView('detail');
+    navigate(`${COORDINATE_PATH}?meeting=${m.id}`, { replace: true });
+  };
+
+  const handleStatusChange = (id: string, status: CoordStatus) => {
+    setMeetings(prev => prev.map(m => m.id === id ? { ...m, status } : m));
+    if (selected?.id === id) setSelected(prev => prev ? { ...prev, status } : null);
+  };
+
+  const goHub = () => navigate(HUB_PATH);
+
+  if (loading) {
+    return (
+      <main className="p-4 md:p-8 max-w-4xl flex justify-center py-16">
+        <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+      </main>
+    );
+  }
+
+  if (view === 'detail' && selected) return (
+    <main className="p-4 md:p-8 max-w-3xl">
+      <MeetingDetail meeting={selected} onBack={goHub} onStatusChange={handleStatusChange} />
+    </main>
+  );
+
+  if (meetingId && !selected) {
+    return (
+      <main className="p-4 md:p-8 max-w-4xl flex justify-center py-16">
+        <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+      </main>
+    );
+  }
+
+  if (wantsNewForm) return (
+    <main className="p-4 md:p-8 max-w-3xl">
+      <button onClick={goHub}
+        className="min-h-[44px] flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors mb-6 -ml-1 px-1">
+        <ChevronLeft className="h-4 w-4" /> Back to Group Scheduling
+      </button>
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-1">
+        <Users className="h-6 w-6" style={{ color: BRAND }} /> Coordinate Unknown Availability
+      </h1>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 max-w-xl leading-relaxed">
+        Find a meeting time between multiple people via SMS — no app or link needed, phone numbers stay private.
+      </p>
+      <NewCoordForm onCreated={handleCreated} onCancel={goHub} hostName={hostName} />
+    </main>
+  );
+
+  return <Navigate to={HUB_PATH} replace />;
+}
+```
