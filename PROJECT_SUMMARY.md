@@ -1,6 +1,6 @@
 # PinOnIt - Project Summary
 
-Last updated: June 1, 2026
+Last updated: June 2, 2026
 
 ## Live URL
 https://pinonit.com
@@ -35,7 +35,14 @@ Miami Expeditions LLC dba PinOnIt
 
 ## Deploy
 
-- **Frontend (pinonit.com)**: Publish from [Bolt Cloud](https://bolt.new). GitHub pushes update the repo only — they do **not** update the live site until you publish/sync in Bolt.
+**Standard workflow (frontend → pinonit.com):**
+
+1. Cursor: `git push` to `main`
+2. Bolt: GitHub menu → **Pull/Sync `main`** — https://bolt.new/~/sb1-nzt1kjlj
+3. Bolt: **Publish**
+
+Do **not** use Bolt chat pull for routine deploys. Private repo is OK. See [DEPLOY.md](./DEPLOY.md).
+
 - **Edge functions**: `supabase functions deploy coordinate-sms --project-ref adlusgtlwgcfyxgeoias` (or alias `deploypinonit`)
 - **Database migrations**: `supabase link --project-ref adlusgtlwgcfyxgeoias` then `supabase db push --linked`
 

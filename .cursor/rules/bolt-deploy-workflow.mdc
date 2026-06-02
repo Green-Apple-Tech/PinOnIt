@@ -1,0 +1,35 @@
+---
+description: After git push, remind to sync Bolt and Publish pinonit.com (required deploy path)
+alwaysApply: true
+---
+
+# PinOnIt deploy workflow (pinonit.com)
+
+**GitHub push does NOT update production.** Bolt Cloud hosts pinonit.com. Repo is private — that is fine.
+
+## After every code change session
+
+1. **Cursor (terminal):**
+   ```bash
+   git add . && git commit -m "your change" && git push
+   ```
+2. **Bolt** ([project](https://bolt.new/~/sb1-nzt1kjlj)) → **GitHub icon (top right)** → **Pull/Sync `main`** (~30s).  
+   Use the **GitHub menu**, not chat “pull from GitHub”.
+3. **Bolt → Publish** (then hard-refresh pinonit.com).
+
+## Do not rely on
+
+- Chat “pull from Green-Apple-Tech/PinOnIt” for deploy sync (private repo / push conflicts).
+- Push from Bolt to GitHub when Mac already pushed — pull first if you see “GitHub conflict”.
+
+## Supabase (only when edge functions / DB change)
+
+```bash
+supabase functions deploy coordinate-sms --project-ref adlusgtlwgcfyxgeoias
+```
+
+## Quick verify before Publish
+
+In Bolt `CoordinateMeetings.tsx`: no `schedulingForProvider` if that UI was removed; bundle hash on pinonit.com should change after Publish.
+
+When the user finishes frontend work or asks to deploy, **remind them of steps 2–3** unless they confirm Bolt Publish is already done.

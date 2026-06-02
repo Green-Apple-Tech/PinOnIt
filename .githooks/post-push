@@ -1,0 +1,15 @@
+#!/bin/sh
+# Reminds you to sync Bolt + Publish after git push (pinonit.com is not auto-deployed).
+cat <<'EOF'
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Pushed to GitHub — pinonit.com is NOT live yet.
+
+  1. Bolt → GitHub icon (top right) → Pull/Sync main  (~30s)
+  2. Bolt → Publish
+
+  https://bolt.new/~/sb1-nzt1kjlj
+  See DEPLOY.md
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+EOF

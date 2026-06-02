@@ -51,7 +51,14 @@ See [PROJECT_SUMMARY.md](./PROJECT_SUMMARY.md) for routes, database schema, edge
 
 ## Deploy
 
-- **Frontend (pinonit.com)**: Publish from [Bolt Cloud](https://bolt.new) — pushing to GitHub does not update production
+**`git push` does not update pinonit.com.** Use this every time:
+
+1. **Cursor:** `git add . && git commit -m "…" && git push`
+2. **Bolt:** [GitHub icon](https://bolt.new/~/sb1-nzt1kjlj) → **Pull/Sync `main`** (not chat)
+3. **Bolt:** **Publish**
+
+Full checklist: [DEPLOY.md](./DEPLOY.md). Optional terminal reminder after push: `./scripts/enable-deploy-hook.sh`
+
 - **Edge functions**: `supabase functions deploy coordinate-sms --project-ref adlusgtlwgcfyxgeoias`
 - **Database**: `supabase db push --linked` (after `supabase link --project-ref adlusgtlwgcfyxgeoias`)
 
