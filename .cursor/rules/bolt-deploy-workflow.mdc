@@ -13,9 +13,8 @@ alwaysApply: true
    ```bash
    git add . && git commit -m "your change" && git push
    ```
-2. **Bolt** ([project](https://bolt.new/~/sb1-nzt1kjlj)) → **GitHub icon (top right)** → **Pull/Sync `main`** (~30s).  
-   Use the **GitHub menu**, not chat “pull from GitHub”.
-3. **Bolt → Publish** (then hard-refresh pinonit.com).
+2. **Bolt** ([project](https://bolt.new/~/sb1-nzt1kjlj)) → open project → **GitHub icon** (left of Publish) → confirm **Synced**, branch **`main`** → wait **~30s** for auto-fetch from GitHub (no Pull button in UI). Spot-check Code tab, then **Publish**.
+3. **Bolt → Publish → Update** (then hard-refresh pinonit.com).
 
 ## Do not rely on
 

@@ -54,8 +54,8 @@ See [PROJECT_SUMMARY.md](./PROJECT_SUMMARY.md) for routes, database schema, edge
 **`git push` does not update pinonit.com.** Use this every time:
 
 1. **Cursor:** `git add . && git commit -m "…" && git push`
-2. **Bolt:** [GitHub icon](https://bolt.new/~/sb1-nzt1kjlj) → **Pull/Sync `main`** (not chat)
-3. **Bolt:** **Publish**
+2. **Bolt:** [Open project](https://bolt.new/~/sb1-nzt1kjlj) → wait ~30s (auto-sync from GitHub) → verify in Code tab
+3. **Bolt:** **Publish** → **Update**
 
 Full checklist: [DEPLOY.md](./DEPLOY.md). Optional terminal reminder after push: `./scripts/enable-deploy-hook.sh`
 

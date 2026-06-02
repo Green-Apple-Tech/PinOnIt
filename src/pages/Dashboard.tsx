@@ -5,7 +5,7 @@ import { OnboardingWizard, wizardIsActive, wizardSavedStep, onboardingIsComplete
 import { useTheme } from '../hooks/useTheme';
 import { supabase } from '../lib/supabase';
 import type { Booking, Service } from '../lib/types';
-import { CalendarDays, Settings, LogOut, Users, X, Check, Sun, Moon, Copy, Share2, Mail, Link2, ExternalLink, PenLine, Video, Phone, MapPin, ChevronRight, Loader2, CalendarCheck, Plus, ChevronLeft, ChevronDown, BarChart2, LayoutGrid, Menu, AlertCircle, Sparkles, QrCode, Search, ShoppingBag, Wrench } from 'lucide-react';
+import { CalendarDays, Settings, LogOut, Users, X, Check, Sun, Moon, Copy, Share2, Mail, Link2, ExternalLink, PenLine, Video, Phone, MapPin, ChevronRight, Loader2, CalendarCheck, Plus, ChevronLeft, ChevronDown, BarChart2, LayoutGrid, Menu, AlertCircle, Sparkles, QrCode, Search, ShoppingBag, Wrench as Tool } from 'lucide-react';
 
 type NavItem = { to: string; icon: typeof LayoutGrid; label: string };
 
@@ -812,6 +812,18 @@ export function Dashboard() {
     setShowWizard(true);
   }, [profile, subscription, subscriptionLoaded, loading, wizardChecked, showWizard, calendarCount, services]);
 
+  // Hide setup checklist and mark onboarding complete when all steps are done
+  useEffect(() => {
+    if (!profile || loading) return;
+    const allDone = calendarCount > 0 && services.length > 0 && !!profile.slug;
+    if (!allDone) return;
+    setChecklistDismissed(true);
+    localStorage.setItem('onboarding_checklist_dismissed', '1');
+    if (!profile.onboarding_completed) {
+      void supabase.from('profiles').update({ onboarding_completed: true }).eq('id', profile.id);
+    }
+  }, [profile, loading, calendarCount, services.length]);
+
   // Seed default event types for brand-new users (once, when they have no services)
   useEffect(() => {
     if (!profile || loading) return;
@@ -989,7 +1001,7 @@ export function Dashboard() {
                 : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-900'
             }`}
           >
-            <Wrench className="h-[18px] w-[18px] shrink-0" />
+            <Tool className="h-[18px] w-[18px] shrink-0" />
           </button>
           {moreToolsOpen && moreToolsNavItems.map((item) => renderNavLink(item, { collapsed: true, onNavigate: opts?.onNavigate }))}
         </div>
@@ -1176,7 +1188,7 @@ export function Dashboard() {
               </div>
             </div>
 
-            {/* Onboarding checklist */}
+            {/* Onboarding checklist — hidden automatically when all steps complete */}
             {!loading && !checklistDismissed && (() => {
               const hasCalendar = calendarCount > 0;
               const hasService = services.length > 0;
@@ -1184,10 +1196,11 @@ export function Dashboard() {
               const steps = [
                 { label: 'Connect your calendar', sub: 'Sync Google or Outlook to prevent double-bookings', done: hasCalendar, to: '/dashboard/settings?tab=availability' },
                 { label: 'Create your first event type', sub: 'Define a meeting type guests can book', done: hasService, to: '/dashboard/services' },
-                { label: 'Share your booking link', sub: hasSlug ? `pinonit.com/${profile?.slug}` : 'Set a custom username in Settings', done: hasSlug, to: hasSlug ? undefined : '/dashboard/settings' },
+                { label: 'Share your booking link', sub: hasSlug ? `pinonit.com/${profile?.slug}` : 'Set a custom username in Settings', done: hasSlug, to: hasSlug ? undefined : '/dashboard/settings?tab=booking_page' },
               ];
               const completedCount = steps.filter((s) => s.done).length;
               const allDone = completedCount === steps.length;
+              if (allDone) return null;
               return (
                 <div className="mb-6 bg-white dark:bg-slate-900/50 rounded-2xl overflow-hidden shadow-sm" style={{ border: '1.5px solid #f97316', animation: 'onboarding-pulse 2s ease-in-out infinite' }}>
                   <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800">
@@ -1198,16 +1211,9 @@ export function Dashboard() {
                         ))}
                       </div>
                       <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                        {allDone ? 'Setup complete!' : `Get started — ${completedCount} of ${steps.length} done`}
+                        {`Get started — ${completedCount} of ${steps.length} done`}
                       </span>
                     </div>
-                    <button
-                      onClick={() => { setChecklistDismissed(true); localStorage.setItem('onboarding_checklist_dismissed', '1'); }}
-                      className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-lg transition-colors"
-                      title="Dismiss"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
                   </div>
                   <div className="divide-y divide-slate-50 dark:divide-slate-800/50">
                     {steps.map((step, i) => (

@@ -19,13 +19,16 @@ git commit -m "describe your change"
 git push
 ```
 
-### 2. Bolt — pull from GitHub (use the menu, not chat)
+### 2. Bolt — let GitHub changes load (no separate “Sync” button)
 
-1. Open the Bolt project link above.
-2. Click the **GitHub icon** (top right).
-3. **Pull / Sync `main`** (~30 seconds).
+Bolt has **no Pull/Sync button** in the Publish menu. When the project is linked to GitHub, Bolt **auto-fetches from GitHub about every 30 seconds**.
 
-Do **not** use Bolt chat “pull from repo” for routine deploys.
+1. Open the Bolt project: https://bolt.new/~/sb1-nzt1kjlj
+2. Click the **GitHub icon** (top right, **left of Share/Publish**) — confirm **Synced to GitHub** and branch **`main`** (not Publish).
+3. Wait **~30–60 seconds** (or refresh the Bolt tab once).
+4. In the **Code** tab, spot-check your change (e.g. search `More Tools` in `Dashboard.tsx`).
+
+If code still looks old after a minute: refresh Bolt, or ask chat once: *“Pull latest from Green-Apple-Tech/PinOnIt main”* (only when auto-sync didn’t catch up).
 
 ### 3. Bolt — Publish
 
@@ -67,7 +70,7 @@ GitHub `main` is newer (usually from Mac). Choose **Pull and discard last messag
 
 ## Checklist before Publish
 
-- [ ] Bolt pulled `main` from GitHub menu
+- [ ] Bolt editor shows latest code (auto-sync or refresh)
 - [ ] Expected UI strings present in Bolt editor
 - [ ] Publish → Update
 - [ ] pinonit.com hard refresh; JS bundle filename hash changed
