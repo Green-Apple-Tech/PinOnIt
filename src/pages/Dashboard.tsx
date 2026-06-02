@@ -5,7 +5,8 @@ import { OnboardingWizard, wizardIsActive, wizardSavedStep, onboardingIsComplete
 import { useTheme } from '../hooks/useTheme';
 import { supabase } from '../lib/supabase';
 import type { Booking, Service } from '../lib/types';
-import { CalendarDays, Settings, LogOut, Users, X, Check, Sun, Moon, Copy, Share2, Mail, Link2, ExternalLink, PenLine, Video, Phone, MapPin, ChevronRight, Loader2, CalendarCheck, Plus, ChevronLeft, LayoutGrid, Menu, AlertCircle, Sparkles, Search, ShoppingBag, Wrench as Tool } from 'lucide-react';
+import { CalendarDays, Settings, LogOut, Users, X, Check, Sun, Moon, Copy, Share2, Mail, Link2, ExternalLink, PenLine, Video, Phone, MapPin, ChevronRight, Loader2, CalendarCheck, Plus, ChevronLeft, LayoutGrid, Menu, AlertCircle, Sparkles, Search, ShoppingBag, Wrench as Tool, QrCode } from 'lucide-react';
+import { QRModal } from '../components/QRModal';
 
 type NavItem = { to: string; icon: typeof LayoutGrid; label: string };
 
@@ -523,6 +524,8 @@ function SharePanel({
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedSig, setCopiedSig] = useState(false);
   const [showSig, setShowSig] = useState(false);
+  const [showQR, setShowQR] = useState(false);
+  const [linkCopiedToast, setLinkCopiedToast] = useState(false);
 
   const sigText = `Book a time with me: ${displayUrl}`;
 
@@ -532,6 +535,13 @@ function SharePanel({
       else { setCopiedSig(true); setTimeout(() => setCopiedSig(false), 2000); }
     });
   }, []);
+
+  const copyLink = useCallback(() => {
+    navigator.clipboard.writeText(displayUrl).then(() => {
+      setLinkCopiedToast(true);
+      setTimeout(() => setLinkCopiedToast(false), 2000);
+    });
+  }, [displayUrl]);
 
   const handleSaved = (newSlug: string) => {
     setCurrentSlug(newSlug);
@@ -555,7 +565,33 @@ function SharePanel({
         </div>
       </div>
 
-      {/* Stacked full-width action buttons */}
+      {/* Quick actions — copy link & QR */}
+      <div className="grid grid-cols-2 gap-2 mb-2">
+        <button
+          type="button"
+          onClick={copyLink}
+          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-white border border-brand-200 text-brand-700 hover:bg-brand-50 transition-colors"
+        >
+          <Copy className="h-4 w-4" />
+          Copy Link
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowQR(true)}
+          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-white border border-brand-200 text-brand-700 hover:bg-brand-50 transition-colors"
+        >
+          <QrCode className="h-4 w-4" />
+          QR Code
+        </button>
+      </div>
+
+      {linkCopiedToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 bg-slate-900 text-white text-sm font-medium rounded-full shadow-lg">
+          Link copied!
+        </div>
+      )}
+
+      {/* Primary share actions */}
       <div className="flex flex-col gap-2 mb-3">
         <button
           onClick={() => copy(displayUrl, 'url')}
@@ -578,6 +614,15 @@ function SharePanel({
           View as End User
         </a>
       </div>
+
+      {showQR && (
+        <QRModal
+          variant="booking"
+          url={displayUrl}
+          title={currentSlug}
+          onClose={() => setShowQR(false)}
+        />
+      )}
 
       {showEditor && (
         <SlugEditor
@@ -672,6 +717,7 @@ export function Dashboard() {
   });
   const [trialToast, setTrialToast] = useState<{ message: string } | null>(null);
   const [serviceSearch, setServiceSearch] = useState('');
+  const [serviceQrModal, setServiceQrModal] = useState<{ url: string; title: string } | null>(null);
   // Handle ?checkout=success return from Stripe — show toast, resume wizard at the right step
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -1194,6 +1240,10 @@ export function Dashboard() {
                   {services
                     .filter((s) => !serviceSearch || s.name.toLowerCase().includes(serviceSearch.toLowerCase()))
                     .map((svc) => {
+                      const bookingSlug = liveSlug ?? profile?.slug;
+                      const eventTypeUrl = bookingSlug
+                        ? `${window.location.origin}/${bookingSlug}?types=${svc.id}`
+                        : null;
                       const meta = `${svc.duration_minutes} min · ${svc.price_cents ? `$${(svc.price_cents / 100).toFixed(2)}` : 'Free'} · ${(svc.location_type ?? 'video').replace('_', ' ')}`;
                       return (
                         <div
@@ -1207,6 +1257,16 @@ export function Dashboard() {
 
                           {/* Actions — always visible */}
                           <div className="flex items-center gap-1.5 shrink-0">
+                            {eventTypeUrl && (
+                              <button
+                                type="button"
+                                onClick={() => setServiceQrModal({ url: eventTypeUrl, title: svc.name })}
+                                className="p-2 rounded-lg border border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 hover:border-brand-300 dark:hover:border-brand-600 hover:bg-brand-50 dark:hover:bg-brand-950/30 transition-colors"
+                                title="QR code for this event type"
+                              >
+                                <QrCode className="h-4 w-4" />
+                              </button>
+                            )}
                             <button
                               onClick={() => navigate(`/dashboard/services?edit=${svc.id}`)}
                               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg hover:opacity-80 transition-colors text-white"
@@ -1223,6 +1283,15 @@ export function Dashboard() {
                 </div>
               )}
             </div>
+
+            {serviceQrModal && (
+              <QRModal
+                variant="booking"
+                url={serviceQrModal.url}
+                title={serviceQrModal.title}
+                onClose={() => setServiceQrModal(null)}
+              />
+            )}
           </main>
         )}
 
