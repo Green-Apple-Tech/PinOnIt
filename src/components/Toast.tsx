@@ -10,14 +10,6 @@ interface Toast {
   duration?: number;
 }
 
-interface ToastContextValue {
-  toast: (message: string, type?: ToastType, duration?: number) => void;
-  success: (message: string) => void;
-  error: (message: string) => void;
-  warning: (message: string) => void;
-  info: (message: string) => void;
-}
-
 let _addToast: ((toast: Omit<Toast, 'id'>) => void) | null = null;
 
 export function registerToastHandler(fn: (toast: Omit<Toast, 'id'>) => void) {

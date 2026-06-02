@@ -789,7 +789,7 @@ export function Dashboard() {
 
     // Active Pro/trialing subscription — mark completed and do not show
     const isActivePro = (
-      subscription?.plan === 'pro' && subscription?.status !== 'canceled' && subscription?.status !== 'incomplete_expired'
+      subscription?.plan === 'pro' && subscription?.status !== 'canceled'
     ) || profile.plan === 'pro';
     if (isActivePro) {
       supabase.from('profiles').update({ onboarding_completed: true }).eq('id', profile.id);
@@ -1019,7 +1019,7 @@ export function Dashboard() {
               : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-900'
           }`}
         >
-          <Wrench className="h-[18px] w-[18px] shrink-0" />
+          <Tool className="h-[18px] w-[18px] shrink-0" />
           <span className="flex-1 text-left">More Tools</span>
           <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${moreToolsOpen ? 'rotate-180' : ''}`} />
         </button>

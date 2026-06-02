@@ -6,8 +6,8 @@ import { TIMEZONES } from '../lib/types';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import {
   ArrowRight, ArrowLeft, Check, X, Loader2, Copy, ExternalLink, Pencil,
-  Calendar, Mail, Video, Phone, Globe, Zap, QrCode, Sparkles,
-  Users, Gift, ChevronDown, AlertCircle,
+  Calendar, Mail, Video, Globe, Zap, Sparkles,
+  Users, Gift, AlertCircle,
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { ColorSwatchRow, BRAND_SWATCHES } from './ColorSwatchRow';
@@ -301,7 +301,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
 
   // True if user already has an active Pro/trial subscription
   const isAlreadyPro = (
-    (subscription?.plan === 'pro' && subscription?.status !== 'canceled' && subscription?.status !== 'incomplete_expired')
+    (subscription?.plan === 'pro' && subscription?.status !== 'canceled')
     || profile?.plan === 'pro'
   );
 
@@ -1266,11 +1266,6 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
 
       // ── Step: Booking link ──────────────────────────────────────────────────
       case 'booking_link': {
-        const buildSvcUrl = (svcId: string) =>
-          profile?.slug
-            ? `${window.location.origin}/${profile.slug}/${svcId}`
-            : `${window.location.origin}/book/${svcId}`;
-
         if (existingServices === null) {
           return (
             <div className="flex items-center justify-center py-16">

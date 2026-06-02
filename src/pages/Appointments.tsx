@@ -17,7 +17,6 @@ import {
   Search,
   Bell,
   BellRing,
-  Mail,
   Check,
   X,
   Loader2,

@@ -24,11 +24,6 @@ export function PageChecklist({ items, title = 'Get Started', storageKey }: Page
   const allDone = items.every(i => i.done);
   const doneCount = items.filter(i => i.done).length;
 
-  const handleDismiss = () => {
-    localStorage.setItem(storageKey + '_dismissed', '1');
-    // Force re-render via a tiny state change on the parent — parent decides visibility
-  };
-
   if (localStorage.getItem(storageKey + '_dismissed') === '1') return null;
 
   const handleToggleCollapse = () => {

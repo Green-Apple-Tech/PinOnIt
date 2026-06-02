@@ -4,8 +4,7 @@ import { supabase } from '../lib/supabase';
 import type { Booking, Service } from '../lib/types';
 import {
   TrendingUp, CalendarDays, Users, Clock, Check,
-  XCircle, ArrowUp, ArrowDown, Minus, BarChart2,
-  AlertCircle,
+  ArrowUp, ArrowDown, Minus, BarChart2,
 } from 'lucide-react';
 
 type Period = '7d' | '30d' | '90d' | 'all';
