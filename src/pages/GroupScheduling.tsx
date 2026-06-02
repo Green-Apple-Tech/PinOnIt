@@ -201,19 +201,19 @@ export function GroupSchedulingPage() {
         <PathCard
           icon="📊"
           title="Meeting Poll"
-          subtitle="Share a link — people vote on times that work. Best for teammates and colleagues."
+          subtitle="Share a link — anyone with email or a browser votes on times. Best for teams, colleagues, or clients you email regularly."
           steps={['Propose times', 'Everyone votes', 'You confirm']}
-          hint="💡 Best when everyone has email or can click a link"
+          hint="💡 Best when everyone can click a link"
           buttonLabel="Create a Poll →"
           onClick={() => navigate(POLLS_CREATE_PATH)}
         />
         <PathCard
           icon="💬"
-          title="Align & Book Multi-Party"
-          subtitle="Coordinate via SMS — no app or link needed. Best for clients, agents, or anyone you only have a phone number for."
-          steps={['Pick dates', 'SMS or WhatsApp sent', 'Auto-confirmed']}
-          hint="💡 Best when parties don't know each other's availability, or you only have phone numbers"
-          buttonLabel="Align & Book Multi-Party →"
+          title="Coordinate Unknown Availability"
+          subtitle="When you need to find a time between two or more people and nobody knows each other's schedule — just phone numbers required."
+          steps={['You set timeframe', 'SMS sent to all', 'Best time auto-confirmed']}
+          hint="💡 Best for external parties with unknown schedules — real estate, referrals, interviews"
+          buttonLabel="Coordinate Unknown Availability →"
           onClick={() => navigate(COORDINATE_NEW_PATH)}
           accent="#059669"
         />

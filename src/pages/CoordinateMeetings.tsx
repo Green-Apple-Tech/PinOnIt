@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { DEFAULT_CALENDAR_CONFLICT_SETTINGS, type CalendarConflictSettings } from '../lib/types';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
-import { Plus, X, ChevronRight, ChevronLeft, Users, Clock, MapPin, MessageSquare, Check, Loader2, Trash2, AlertCircle, ArrowRight, Phone, Calendar, RefreshCw, CheckCircle2, Sparkles } from 'lucide-react';
+import { Plus, X, ChevronRight, ChevronLeft, ChevronDown, Users, Clock, MapPin, MessageSquare, Check, Loader2, Trash2, AlertCircle, ArrowRight, Phone, Calendar, RefreshCw, CheckCircle2, Sparkles } from 'lucide-react';
 
 const BRAND = '#5864C6';
 
@@ -64,14 +64,6 @@ interface ParticipantDraft {
 const DURATION_PRESETS = [15, 30, 45, 60, 120] as const;
 const ROLE_SUGGESTIONS = ['Patient', 'Doctor', 'Physician', 'Specialist', 'Provider', 'Renter', 'Listing Agent', 'Client', 'Candidate', 'Hiring Manager', 'Inspector', 'Attorney'];
 
-const PROVIDER_ROLE_KEYWORDS = ['doctor', 'physician', 'provider', 'specialist', 'dentist', 'therapist', 'surgeon'];
-
-function isProviderRole(role: string): boolean {
-  const r = role.trim().toLowerCase();
-  if (!r) return false;
-  return PROVIDER_ROLE_KEYWORDS.some(keyword => r === keyword || r.includes(keyword));
-}
-
 /** Hourly slots 7am–8pm as 24h HH:MM */
 const HOURLY_SLOT_TIMES = [
   '07:00', '08:00', '09:00', '10:00', '11:00', '12:00',
@@ -90,12 +82,13 @@ const DEFAULT_WEEKDAY_WINDOWS: { start: number; end: number }[] = [
 type SelectedSlotsMap = Record<string, string[]>;
 
 type SchedulingIntent = 'specific_times' | 'general_timeframe' | 'open_ended';
-type TimeframePreset = 'today' | 'next_2_days' | 'this_week' | 'next_week' | 'custom';
+type CoordSimpleTimeframe = 'next_3_days' | 'this_week' | 'next_2_weeks' | 'next_month' | 'custom';
+type TimeOfDayKey = 'morning' | 'midday' | 'afternoon' | 'any';
 
 interface PreferredTimesPayload {
   schedulingIntent?: SchedulingIntent;
-  schedulingForProvider?: boolean;
-  timeframePreset?: TimeframePreset;
+  simpleTimeframe?: CoordSimpleTimeframe;
+  timeOfDayPreferences?: TimeOfDayKey[];
   customRangeStart?: string;
   customRangeEnd?: string;
   selectedSlots?: SelectedSlotsMap;
@@ -103,39 +96,35 @@ interface PreferredTimesPayload {
   allowOffHoursGlobal?: boolean;
 }
 
-const TIMEFRAME_PRESET_LABELS: Record<TimeframePreset, string> = {
-  today: 'Today',
-  next_2_days: 'Next 2 days',
+const SIMPLE_TIMEFRAME_PILL_LABELS: Record<CoordSimpleTimeframe, string> = {
+  next_3_days: 'Next 3 days',
   this_week: 'This week',
-  next_week: 'Next week',
+  next_2_weeks: 'Next 2 weeks',
+  next_month: 'Next month',
   custom: 'Custom range',
 };
 
-const SCHEDULING_INTENT_OPTIONS: {
-  id: SchedulingIntent;
-  icon: string;
-  title: string;
-  description: string;
-}[] = [
-  {
-    id: 'specific_times',
-    icon: '📅',
-    title: 'I know some available times',
-    description: "Pick exact dates and times to propose — e.g. the listing agent gave you windows, or you've blocked slots on your calendar.",
-  },
-  {
-    id: 'general_timeframe',
-    icon: '📆',
-    title: 'I have a general timeframe',
-    description: 'It needs to happen soon but exact times aren\'t set yet — common when you know roughly when, or only one side\'s hours (add those on the next step).',
-  },
-  {
-    id: 'open_ended',
-    icon: '🤷',
-    title: "I'm not sure yet",
-    description: 'Neither side\'s schedule is clear — everyone gets a text asking when they\'re free.',
-  },
-];
+const SIMPLE_TIMEFRAME_SMS: Record<CoordSimpleTimeframe, string> = {
+  next_3_days: 'the next 3 days',
+  this_week: 'this week',
+  next_2_weeks: 'the next 2 weeks',
+  next_month: 'the next month',
+  custom: 'the selected dates',
+};
+
+const TIME_OF_DAY_PILL_LABELS: Record<TimeOfDayKey, string> = {
+  morning: 'Morning',
+  midday: 'Mid-day',
+  afternoon: 'Afternoon',
+  any: 'Any time',
+};
+
+const TIME_OF_DAY_SMS: Record<TimeOfDayKey, string> = {
+  morning: 'mornings',
+  midday: 'mid-day',
+  afternoon: 'afternoons',
+  any: 'any time of day',
+};
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -221,30 +210,17 @@ function getWindowFromDates(dates: string[]) {
   };
 }
 
-function getOpenEndedWindow() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const end = new Date(today);
-  end.setDate(end.getDate() + 30);
-  end.setHours(23, 59, 59, 999);
-  return { start: today.toISOString(), end: end.toISOString() };
-}
-
-function getDatesForTimeframePreset(
-  preset: TimeframePreset,
+function getDatesForSimpleTimeframe(
+  preset: CoordSimpleTimeframe,
   customStart?: string,
   customEnd?: string,
 ): string[] {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  if (preset === 'today') {
-    return [toLocalDateInput(today)];
-  }
-
-  if (preset === 'next_2_days') {
+  if (preset === 'next_3_days') {
     const dates: string[] = [];
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < 3; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
       dates.push(toLocalDateInput(d));
@@ -262,16 +238,22 @@ function getDatesForTimeframePreset(
     return dates;
   }
 
-  if (preset === 'next_week') {
+  if (preset === 'next_2_weeks') {
     const dates: string[] = [];
-    const day = today.getDay();
-    const daysUntilNextMonday = day === 0 ? 1 : 8 - day;
-    const start = new Date(today);
-    start.setDate(today.getDate() + daysUntilNextMonday);
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
       dates.push(toLocalDateInput(d));
+    }
+    return dates;
+  }
+
+  if (preset === 'next_month') {
+    const dates: string[] = [];
+    const end = new Date(today);
+    end.setDate(today.getDate() + 30);
+    for (let d = new Date(today); d <= end; d.setDate(d.getDate() + 1)) {
+      dates.push(toLocalDateInput(new Date(d)));
     }
     return dates;
   }
@@ -289,19 +271,33 @@ function getDatesForTimeframePreset(
   return [];
 }
 
-function describeSchedulingApproach(
-  intent: SchedulingIntent,
-  preset?: TimeframePreset,
+function formatTimeOfDayPhrase(keys: TimeOfDayKey[]): string {
+  if (!keys.length || keys.includes('any')) return TIME_OF_DAY_SMS.any;
+  const parts = keys.map(k => TIME_OF_DAY_SMS[k]);
+  if (parts.length === 1) return parts[0];
+  if (parts.length === 2) return `${parts[0]} and ${parts[1]}`;
+  return `${parts.slice(0, -1).join(', ')}, and ${parts[parts.length - 1]}`;
+}
+
+function formatDurationForSms(minutes: number): string {
+  if (minutes < 60) return `${minutes}-minute`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (m === 0) return h === 1 ? '1-hour' : `${h}-hour`;
+  return `${h}h ${m}m`;
+}
+
+function buildSimpleCoordSummary(
+  timeframe: CoordSimpleTimeframe,
+  timeOfDay: TimeOfDayKey[],
   customStart?: string,
   customEnd?: string,
 ): string {
-  if (intent === 'specific_times') return 'Specific dates and times';
-  if (intent === 'open_ended') return 'Open-ended — participants suggest times';
-  if (preset === 'custom' && customStart && customEnd) {
-    return `Custom range (${fmtDate(new Date(`${customStart}T12:00:00`).toISOString())} – ${fmtDate(new Date(`${customEnd}T12:00:00`).toISOString())})`;
+  let tf = SIMPLE_TIMEFRAME_SMS[timeframe];
+  if (timeframe === 'custom' && customStart && customEnd) {
+    tf = `${fmtDate(new Date(`${customStart}T12:00:00`).toISOString())} – ${fmtDate(new Date(`${customEnd}T12:00:00`).toISOString())}`;
   }
-  if (preset) return TIMEFRAME_PRESET_LABELS[preset];
-  return 'General timeframe';
+  return `Within ${tf} · ${formatTimeOfDayPhrase(timeOfDay)}`;
 }
 
 function formatSelectedDatesLabel(dates: string[]): string {
@@ -902,114 +898,6 @@ function SelectionSummary({
   );
 }
 
-function SchedulingIntentCards({
-  value,
-  onChange,
-}: {
-  value: SchedulingIntent;
-  onChange: (intent: SchedulingIntent) => void;
-}) {
-  return (
-    <div className="space-y-3">
-      {SCHEDULING_INTENT_OPTIONS.map(opt => {
-        const active = value === opt.id;
-        return (
-          <button
-            key={opt.id}
-            type="button"
-            onClick={() => onChange(opt.id)}
-            className={[
-              'w-full text-left p-4 rounded-2xl border-2 transition-all',
-              active
-                ? 'border-[#5864C6] bg-[#5864C6]/5 dark:bg-[#5864C6]/10 shadow-sm'
-                : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-600',
-            ].join(' ')}
-          >
-            <div className="flex items-start gap-3">
-              <span className="text-2xl leading-none shrink-0 mt-0.5" aria-hidden>{opt.icon}</span>
-              <div className="flex-1 min-w-0">
-                <p className={`text-[16px] font-bold ${active ? 'text-[#5864C6] dark:text-[#8891e8]' : 'text-slate-900 dark:text-white'}`}>
-                  {opt.title}
-                </p>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{opt.description}</p>
-              </div>
-              <div
-                className={[
-                  'h-5 w-5 rounded-full border-2 shrink-0 mt-1 flex items-center justify-center',
-                  active ? 'border-[#5864C6] bg-[#5864C6]' : 'border-slate-300 dark:border-slate-600',
-                ].join(' ')}
-              >
-                {active && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
-              </div>
-            </div>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function TimeframePresetPicker({
-  value,
-  onChange,
-  customStart,
-  customEnd,
-  onCustomStartChange,
-  onCustomEndChange,
-  pillBase,
-}: {
-  value: TimeframePreset;
-  onChange: (preset: TimeframePreset) => void;
-  customStart: string;
-  customEnd: string;
-  onCustomStartChange: (v: string) => void;
-  onCustomEndChange: (v: string) => void;
-  pillBase: (active: boolean) => string;
-}) {
-  const presets: TimeframePreset[] = ['today', 'next_2_days', 'this_week', 'next_week', 'custom'];
-
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap gap-2.5">
-        {presets.map(preset => (
-          <button
-            key={preset}
-            type="button"
-            onClick={() => onChange(preset)}
-            className={pillBase(value === preset)}
-            style={value === preset ? { background: BRAND, borderColor: BRAND } : {}}
-          >
-            {TIMEFRAME_PRESET_LABELS[preset]}
-          </button>
-        ))}
-      </div>
-      {value === 'custom' && (
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1">
-            <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">From</label>
-            <input
-              type="date"
-              value={customStart}
-              onChange={e => onCustomStartChange(e.target.value)}
-              className={INP}
-            />
-          </div>
-          <div className="flex-1">
-            <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">To</label>
-            <input
-              type="date"
-              value={customEnd}
-              onChange={e => onCustomEndChange(e.target.value)}
-              min={customStart || undefined}
-              className={INP}
-            />
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function PerDayTimeSlotPicker({
   selectedDates,
   selectedSlots,
@@ -1292,14 +1180,11 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
   const [selectedSlots, setSelectedSlots] = useState<SelectedSlotsMap>({});
   const [offHoursByDate, setOffHoursByDate] = useState<Record<string, boolean>>({});
-  const [notes, setNotes] = useState('');
-
-  const [schedulingIntent, setSchedulingIntent] = useState<SchedulingIntent>('general_timeframe');
-  const [timeframePreset, setTimeframePreset] = useState<TimeframePreset>('this_week');
+  const [coordSimpleTimeframe, setCoordSimpleTimeframe] = useState<CoordSimpleTimeframe>('this_week');
   const [customRangeStart, setCustomRangeStart] = useState('');
   const [customRangeEnd, setCustomRangeEnd] = useState('');
-
-  const [schedulingForProvider, setSchedulingForProvider] = useState(false);
+  const [timeOfDayPrefs, setTimeOfDayPrefs] = useState<Set<TimeOfDayKey>>(() => new Set(['any']));
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
 
   const [checkHostCalendar, setCheckHostCalendar] = useState(false);
   const [allowOffHoursGlobal, setAllowOffHoursGlobal] = useState(false);
@@ -1572,37 +1457,38 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
 
   const hasAnySlots = Object.values(selectedSlots).some(times => times.length > 0);
 
-  const providerSlotsInStep1 = schedulingForProvider
-    && schedulingIntent === 'specific_times'
-    && selectedDates.length > 0
-    && hasAnySlots;
+  const useAdvancedSlots = showAdvancedOptions && selectedDates.length > 0 && hasAnySlots;
 
-  const minParticipantsRequired = providerSlotsInStep1 ? 1 : 2;
-
-  const approachLine = describeSchedulingApproach(
-    schedulingIntent,
-    schedulingIntent === 'general_timeframe' ? timeframePreset : undefined,
-    customRangeStart,
-    customRangeEnd,
-  );
+  const approachLine = useAdvancedSlots
+    ? 'Specific dates and times (advanced)'
+    : buildSimpleCoordSummary(coordSimpleTimeframe, Array.from(timeOfDayPrefs), customRangeStart, customRangeEnd);
 
   const step1Valid = useMemo(() => {
-    if (!title.trim() || durationMinutes <= 0) return false;
-    if (schedulingIntent === 'specific_times') {
+    if (!title.trim() || durationMinutes <= 0 || timeOfDayPrefs.size === 0) return false;
+    if (useAdvancedSlots) {
       return selectedDates.length > 0 && hasAnySlots;
     }
-    if (schedulingIntent === 'general_timeframe') {
-      if (timeframePreset === 'custom') {
-        return !!customRangeStart && !!customRangeEnd && customRangeStart <= customRangeEnd;
-      }
-      return true;
+    if (coordSimpleTimeframe === 'custom') {
+      return !!customRangeStart && !!customRangeEnd && customRangeStart <= customRangeEnd;
     }
     return true;
-  }, [title, durationMinutes, schedulingIntent, selectedDates, hasAnySlots, timeframePreset, customRangeStart, customRangeEnd]);
+  }, [title, durationMinutes, timeOfDayPrefs, useAdvancedSlots, selectedDates, hasAnySlots, coordSimpleTimeframe, customRangeStart, customRangeEnd]);
 
-  const hostSettingsLines = schedulingIntent === 'specific_times'
+  const hostSettingsLines = useAdvancedSlots
     ? formatHostSettingsLines(hasConnectedCalendar, checkHostCalendar, allowOffHoursGlobal, offHoursByDate)
     : [];
+
+  const toggleTimeOfDay = (key: TimeOfDayKey) => {
+    setTimeOfDayPrefs(prev => {
+      if (key === 'any') return new Set(['any']);
+      const next = new Set(prev);
+      next.delete('any');
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      if (next.size === 0) next.add('any');
+      return next;
+    });
+  };
 
   const validParticipants = participants.filter(p => p.name.trim() && p.phone.trim());
 
@@ -1618,56 +1504,8 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
   };
 
   const updateParticipant = (i: number, field: keyof ParticipantDraft, value: string | boolean) => {
-    setParticipants(p => p.map((pt, idx) => {
-      if (idx !== i) return pt;
-      const next = { ...pt, [field]: value };
-      if (field === 'role' && typeof value === 'string' && isProviderRole(value)) {
-        next.showKnownAvailability = true;
-      }
-      return next;
-    }));
+    setParticipants(p => p.map((pt, idx) => idx === i ? { ...pt, [field]: value } : pt));
   };
-
-  const handleProviderModeChange = (enabled: boolean) => {
-    setSchedulingForProvider(enabled);
-    if (!enabled) return;
-
-    const nextIntent: SchedulingIntent = schedulingIntent === 'open_ended'
-      ? 'general_timeframe'
-      : schedulingIntent === 'general_timeframe'
-        ? 'general_timeframe'
-        : 'specific_times';
-    if (nextIntent !== schedulingIntent) {
-      setSchedulingIntent(nextIntent);
-    }
-
-    setParticipants(prev => {
-      const next = [...prev];
-      if (nextIntent === 'specific_times') {
-        if (next[0]) {
-          next[0] = { ...next[0], role: next[0].role || 'Patient', showKnownAvailability: false };
-        }
-      } else if (next[0]) {
-        next[0] = {
-          ...next[0],
-          role: next[0].role || 'Provider',
-          showKnownAvailability: true,
-        };
-      }
-      if (next[1]) {
-        next[1] = { ...next[1], role: next[1].role || 'Patient' };
-      }
-      return next;
-    });
-  };
-
-  useEffect(() => {
-    if (!schedulingForProvider || schedulingIntent !== 'specific_times') return;
-    setParticipants(prev => prev.map((p, i) => {
-      if (i !== 0 || !isProviderRole(p.role)) return p;
-      return { ...p, role: 'Patient', showKnownAvailability: false, knownAvailability: '' };
-    }));
-  }, [schedulingForProvider, schedulingIntent]);
 
   const smsParticipants = validParticipants.filter(p => !p.knownAvailability.trim());
   const preEnteredParticipants = validParticipants.filter(p => p.knownAvailability.trim());
@@ -1700,25 +1538,29 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
     setPhoneMasked(m => m.map((v, idx) => idx === i ? false : v));
   };
 
+  const buildCoordSmsBody = (participantName: string) => {
+    const dur = formatDurationForSms(durationMinutes);
+    if (useAdvancedSlots) {
+      const slotsStr = formatSlotsForSms(selectedSlots, selectedDates);
+      let msg = `Hi ${participantName}! ${hostName} is looking for a ${dur} meeting`;
+      if (title.trim()) msg += ` ("${title.trim()}")`;
+      if (slotsStr) msg += ` during these times: ${slotsStr}`;
+      msg += '. Reply with times that work for you.';
+      return msg;
+    }
+    const tf = coordSimpleTimeframe === 'custom' && customRangeStart && customRangeEnd
+      ? `between ${new Date(`${customRangeStart}T12:00:00`).toLocaleDateString()} and ${new Date(`${customRangeEnd}T12:00:00`).toLocaleDateString()}`
+      : SIMPLE_TIMEFRAME_SMS[coordSimpleTimeframe];
+    const tod = formatTimeOfDayPhrase(Array.from(timeOfDayPrefs));
+    let msg = `Hi ${participantName}! ${hostName} is looking for a ${dur} meeting within ${tf}`;
+    if (title.trim()) msg += ` ("${title.trim()}")`;
+    msg += ` — ${tod}. Reply with times that work for you.`;
+    return msg;
+  };
+
   const smsPreview = () => {
     const p = smsParticipants[0] || validParticipants[0] || { name: '[Name]' };
-    const dur = durationMinutes < 60 ? `${durationMinutes}-minute` : `${Math.floor(durationMinutes / 60)}-hour`;
-    let msg = `Hi ${p.name}, ${hostName} is coordinating a ${dur} "${title || '[Meeting Title]'}"`;
-
-    if (schedulingIntent === 'specific_times') {
-      const slotsStr = formatSlotsForSms(selectedSlots, selectedDates);
-      if (slotsStr) msg += ` during these times: ${slotsStr}`;
-      msg += '. Please reply with your available times.';
-    } else if (schedulingIntent === 'general_timeframe') {
-      const dates = getDatesForTimeframePreset(timeframePreset, customRangeStart, customRangeEnd);
-      const { start, end } = getWindowFromDates(dates);
-      msg += ` between ${new Date(start).toLocaleDateString()} and ${new Date(end).toLocaleDateString()}. Please reply with your available times.`;
-    } else {
-      msg += '. Please reply with times that work for you.';
-    }
-
-    msg += '\n\nReply STOP to opt out.';
-    return msg;
+    return `${buildCoordSmsBody(p.name)}\n\nReply STOP to opt out.`;
   };
 
   const handleSend = async () => {
@@ -1731,27 +1573,24 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
     let windowStart: string;
     let windowEnd: string;
 
-    if (schedulingIntent === 'specific_times') {
+    if (useAdvancedSlots) {
       datesForMeeting = selectedDates;
       slotsForMeeting = selectedSlots;
       ({ start: windowStart, end: windowEnd } = getWindowFromDates(selectedDates));
-    } else if (schedulingIntent === 'general_timeframe') {
-      datesForMeeting = getDatesForTimeframePreset(timeframePreset, customRangeStart, customRangeEnd);
-      ({ start: windowStart, end: windowEnd } = getWindowFromDates(datesForMeeting));
     } else {
-      datesForMeeting = [];
-      ({ start: windowStart, end: windowEnd } = getOpenEndedWindow());
+      datesForMeeting = getDatesForSimpleTimeframe(coordSimpleTimeframe, customRangeStart, customRangeEnd);
+      ({ start: windowStart, end: windowEnd } = getWindowFromDates(datesForMeeting));
     }
 
     const preferredTimesPayload: PreferredTimesPayload = {
-      schedulingIntent,
-      schedulingForProvider,
-      timeframePreset: schedulingIntent === 'general_timeframe' ? timeframePreset : undefined,
-      customRangeStart: timeframePreset === 'custom' ? customRangeStart : undefined,
-      customRangeEnd: timeframePreset === 'custom' ? customRangeEnd : undefined,
+      schedulingIntent: useAdvancedSlots ? 'specific_times' : 'general_timeframe',
+      simpleTimeframe: useAdvancedSlots ? undefined : coordSimpleTimeframe,
+      timeOfDayPreferences: useAdvancedSlots ? undefined : Array.from(timeOfDayPrefs),
+      customRangeStart: coordSimpleTimeframe === 'custom' ? customRangeStart : undefined,
+      customRangeEnd: coordSimpleTimeframe === 'custom' ? customRangeEnd : undefined,
       selectedSlots: slotsForMeeting,
-      offHoursByDate: schedulingIntent === 'specific_times' ? offHoursByDate : {},
-      allowOffHoursGlobal: schedulingIntent === 'specific_times' ? allowOffHoursGlobal : false,
+      offHoursByDate: useAdvancedSlots ? offHoursByDate : {},
+      allowOffHoursGlobal: useAdvancedSlots ? allowOffHoursGlobal : false,
     };
 
     const { data: meeting, error: meetingErr } = await supabase
@@ -1759,7 +1598,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
       .insert({
         host_id: profile.id,
         title: title.trim(),
-        description: notes.trim() || null,
+        description: null,
         location: location.trim() || null,
         duration_minutes: durationMinutes,
         status: 'collecting_availability',
@@ -1767,8 +1606,8 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
         proposed_window_end: windowEnd,
         selected_dates: datesForMeeting,
         preferred_times: preferredTimesPayload,
-        check_host_calendar: schedulingIntent === 'specific_times' && checkHostCalendar,
-        allow_off_hours: schedulingIntent === 'specific_times' && (allowOffHoursGlobal || Object.values(offHoursByDate).some(Boolean)),
+        check_host_calendar: useAdvancedSlots && checkHostCalendar,
+        allow_off_hours: useAdvancedSlots && (allowOffHoursGlobal || Object.values(offHoursByDate).some(Boolean)),
       })
       .select()
       .maybeSingle();
@@ -1850,9 +1689,6 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
               placeholder="e.g. Property Showing — 123 Main St"
               className={INP}
             />
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 leading-relaxed">
-              e.g. A doctor&apos;s assistant scheduling a referral, or an agent coordinating a showing — you often know one person&apos;s hours but not everyone&apos;s.
-            </p>
           </div>
 
           <div>
@@ -1923,144 +1759,129 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
             )}
           </div>
 
-          <label className="flex items-start gap-3 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={schedulingForProvider}
-              onChange={e => handleProviderModeChange(e.target.checked)}
-              className="mt-1 h-5 w-5 rounded border-slate-300 dark:border-slate-600 text-brand-600 focus:ring-brand-500 shrink-0"
-            />
-            <div>
-              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                I&apos;m scheduling for a provider (doctor, specialist, dentist…)
-              </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                Medical office assistants usually already know the provider&apos;s schedule. Enter their open times below or on the next step — only the patient or referral gets a text.
-              </p>
-            </div>
-          </label>
-
           <div>
-            <SectionLabel>When are you trying to meet?</SectionLabel>
-            <SchedulingIntentCards value={schedulingIntent} onChange={setSchedulingIntent} />
-            {schedulingForProvider && schedulingIntent === 'specific_times' && (
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-3 leading-relaxed px-1">
-                <span className="font-semibold text-slate-600 dark:text-slate-300">Provider workflow:</span>{' '}
-                Pick the provider&apos;s open slots below. On the next step, add only the patient or referral — they&apos;re the only one who gets messaged.
-              </p>
+            <SectionLabel>When should this meeting happen?</SectionLabel>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-2">
+              {(Object.keys(SIMPLE_TIMEFRAME_PILL_LABELS) as CoordSimpleTimeframe[]).map(preset => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setCoordSimpleTimeframe(preset)}
+                  className={[
+                    'min-h-[52px] px-4 py-3 rounded-xl text-[15px] font-semibold border-2 transition-all text-center',
+                    coordSimpleTimeframe === preset
+                      ? 'text-white border-transparent'
+                      : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-slate-300',
+                  ].join(' ')}
+                  style={coordSimpleTimeframe === preset ? { background: BRAND, borderColor: BRAND } : {}}
+                >
+                  {SIMPLE_TIMEFRAME_PILL_LABELS[preset]}
+                </button>
+              ))}
+            </div>
+            {coordSimpleTimeframe === 'custom' && (
+              <div className="flex flex-col sm:flex-row gap-3 mt-3">
+                <div className="flex-1">
+                  <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">From</label>
+                  <input type="date" value={customRangeStart} onChange={e => setCustomRangeStart(e.target.value)} className={INP} />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">To</label>
+                  <input type="date" value={customRangeEnd} onChange={e => setCustomRangeEnd(e.target.value)} min={customRangeStart || undefined} className={INP} />
+                </div>
+              </div>
             )}
-            {schedulingForProvider && schedulingIntent === 'general_timeframe' && (
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-3 leading-relaxed px-1">
-                <span className="font-semibold text-slate-600 dark:text-slate-300">Provider workflow:</span>{' '}
-                On the next step, Person 1 will be the provider — enter their schedule there. Person 2 is the patient who gets the text.
-              </p>
-            )}
-            {!schedulingForProvider && schedulingIntent !== 'specific_times' && (
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-3 leading-relaxed px-1">
-                <span className="font-semibold text-slate-600 dark:text-slate-300">Common workflow:</span>{' '}
-                On the next step, enter one person&apos;s available times if you already have them — we&apos;ll only text the others.
+            {coordSimpleTimeframe === 'custom' && customRangeStart && customRangeEnd && customRangeStart > customRangeEnd && (
+              <p className="text-sm text-amber-600 dark:text-amber-400 font-medium mt-3">
+                End date must be on or after the start date.
               </p>
             )}
           </div>
 
-          {schedulingIntent === 'general_timeframe' && (
-            <div>
-              <SectionLabel>Timeframe</SectionLabel>
-              <TimeframePresetPicker
-                value={timeframePreset}
-                onChange={setTimeframePreset}
-                customStart={customRangeStart}
-                customEnd={customRangeEnd}
-                onCustomStartChange={setCustomRangeStart}
-                onCustomEndChange={setCustomRangeEnd}
-                pillBase={pillBase}
-              />
-              {timeframePreset === 'custom' && customRangeStart && customRangeEnd && customRangeStart > customRangeEnd && (
-                <p className="text-sm text-amber-600 dark:text-amber-400 font-medium mt-3">
-                  End date must be on or after the start date.
-                </p>
-              )}
+          <div>
+            <SectionLabel>What time of day works?</SectionLabel>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 mb-2">Select all that apply</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {(Object.keys(TIME_OF_DAY_PILL_LABELS) as TimeOfDayKey[]).map(key => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => toggleTimeOfDay(key)}
+                  className={[
+                    'min-h-[52px] px-4 py-3 rounded-xl text-[15px] font-semibold border-2 transition-all text-center',
+                    timeOfDayPrefs.has(key)
+                      ? 'text-white border-transparent'
+                      : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-slate-300',
+                  ].join(' ')}
+                  style={timeOfDayPrefs.has(key) ? { background: BRAND, borderColor: BRAND } : {}}
+                >
+                  {TIME_OF_DAY_PILL_LABELS[key]}
+                </button>
+              ))}
             </div>
-          )}
+          </div>
 
-          {schedulingIntent === 'specific_times' && (
-            <div>
-              <SectionLabel>
-                {schedulingForProvider ? "Provider's available times" : 'Select dates and times'}
-              </SectionLabel>
-              {schedulingForProvider && (
-                <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 leading-relaxed">
-                  These are the doctor&apos;s or specialist&apos;s open slots from their schedule — not times you&apos;re proposing to the patient yet.
+          <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowAdvancedOptions(v => !v)}
+              className="w-full flex items-center justify-between gap-3 px-4 py-3.5 bg-slate-50 dark:bg-slate-800/60 text-left hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Advanced options</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Pick specific dates &amp; times</span>
+              <ChevronDown className={`h-5 w-5 text-slate-400 shrink-0 transition-transform ${showAdvancedOptions ? 'rotate-180' : ''}`} />
+            </button>
+            {showAdvancedOptions && (
+              <div className="p-4 border-t border-slate-200 dark:border-slate-700 space-y-4">
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Power users only: propose exact dates and time slots instead of a general timeframe. Participants will be asked to confirm within these windows.
                 </p>
-              )}
-              <MultiSelectCalendar
-                viewMonth={calendarMonth}
-                onViewMonthChange={setCalendarMonth}
-                selectedDates={selectedDates}
-                onToggleDate={toggleDate}
-              />
-              {selectedDates.length === 0 && (
-                <p className="text-sm text-amber-600 dark:text-amber-400 font-medium mt-3">
-                  Select at least one date to continue.
-                </p>
-              )}
-              {selectedDates.length > 0 && (
-                <HostAvailabilitySection
+                <MultiSelectCalendar
+                  viewMonth={calendarMonth}
+                  onViewMonthChange={setCalendarMonth}
+                  selectedDates={selectedDates}
+                  onToggleDate={toggleDate}
+                />
+                {selectedDates.length > 0 && (
+                  <HostAvailabilitySection
+                    hasConnectedCalendar={hasConnectedCalendar}
+                    checkHostCalendar={checkHostCalendar}
+                    onCheckHostCalendarChange={handleCheckHostCalendarChange}
+                    allowOffHoursGlobal={allowOffHoursGlobal}
+                    onAllowOffHoursGlobalChange={handleAllowOffHoursGlobalChange}
+                    offHoursByDate={offHoursByDate}
+                  />
+                )}
+                <PerDayTimeSlotPicker
+                  selectedDates={selectedDates}
+                  selectedSlots={selectedSlots}
+                  offHoursByDate={offHoursByDate}
+                  allowOffHoursGlobal={allowOffHoursGlobal}
+                  onToggleSlot={toggleSlot}
+                  onRemoveDate={removeDate}
+                  onToggleOffHours={toggleOffHoursForDate}
+                  onApplyPreset={applyDayPreset}
+                  onAddCustomTime={addCustomTime}
+                  onClearDay={clearDaySlots}
                   hasConnectedCalendar={hasConnectedCalendar}
                   checkHostCalendar={checkHostCalendar}
-                  onCheckHostCalendarChange={handleCheckHostCalendarChange}
-                  allowOffHoursGlobal={allowOffHoursGlobal}
-                  onAllowOffHoursGlobalChange={handleAllowOffHoursGlobalChange}
-                  offHoursByDate={offHoursByDate}
+                  calendarBusyReady={calendarBusyReady}
+                  hostAvailability={hostAvailability}
+                  calendarBusyPeriods={calendarBusyPeriods}
+                  hostBookings={hostBookings}
+                  durationMinutes={durationMinutes}
                 />
-              )}
-              <PerDayTimeSlotPicker
-                selectedDates={selectedDates}
-                selectedSlots={selectedSlots}
-                offHoursByDate={offHoursByDate}
-                allowOffHoursGlobal={allowOffHoursGlobal}
-                onToggleSlot={toggleSlot}
-                onRemoveDate={removeDate}
-                onToggleOffHours={toggleOffHoursForDate}
-                onApplyPreset={applyDayPreset}
-                onAddCustomTime={addCustomTime}
-                onClearDay={clearDaySlots}
-                hasConnectedCalendar={hasConnectedCalendar}
-                checkHostCalendar={checkHostCalendar}
-                calendarBusyReady={calendarBusyReady}
-                hostAvailability={hostAvailability}
-                calendarBusyPeriods={calendarBusyPeriods}
-                hostBookings={hostBookings}
-                durationMinutes={durationMinutes}
-              />
-              {selectedDates.length > 0 && !hasAnySlots && (
-                <p className="text-sm text-amber-600 dark:text-amber-400 font-medium mt-3">
-                  Select at least one time slot to continue.
-                </p>
-              )}
-            </div>
-          )}
-
-          {schedulingIntent === 'open_ended' && (
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-              No dates needed now — each participant will receive a message asking them to suggest times that work. You&apos;ll match availability once everyone responds.
-            </div>
-          )}
-
-          <div>
-            <SectionLabel>Private notes <span className="font-normal normal-case text-slate-400">(not shared)</span></SectionLabel>
-            <textarea
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              placeholder="Internal notes for yourself..."
-              rows={3}
-              className={INP.replace('h-[52px]', '') + ' py-3.5 resize-none'}
-            />
+                {useAdvancedSlots && (
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                    Using specific times — SMS will list your selected slots.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Live summary + navigation */}
           <SelectionSummary
-            selectedSlots={schedulingIntent === 'specific_times' ? selectedSlots : {}}
+            selectedSlots={useAdvancedSlots ? selectedSlots : {}}
             durationMinutes={durationMinutes}
             hostSettingsLines={hostSettingsLines}
             approachLine={approachLine}
@@ -2088,21 +1909,9 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
             <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
             <div className="space-y-2">
               <p>Phone numbers are never shared between participants. Each person communicates through a private masked number via SMS or WhatsApp.</p>
-              {schedulingForProvider && providerSlotsInStep1 ? (
-                <p className="text-[13px] opacity-90">
-                  <span className="font-semibold">Provider times are set.</span>{' '}
-                  Add the patient or referral below — only they will receive a text. You don&apos;t need to add the provider as a participant.
-                </p>
-              ) : schedulingForProvider ? (
-                <p className="text-[13px] opacity-90">
-                  <span className="font-semibold">Enter the provider&apos;s schedule</span> on Person 1 (already expanded below). Add the patient on Person 2 — only they get a text.
-                </p>
-              ) : (
-                <p className="text-[13px] opacity-90">
-                  <span className="font-semibold">Usually you know one side&apos;s hours, not both.</span>{' '}
-                  Enter that person&apos;s availability below — they won&apos;t get a text. Everyone else will be asked to reply with times that work.
-                </p>
-              )}
+              <p className="text-[13px] opacity-90">
+                Already know when someone is free? Enter their times below — they won&apos;t get a text. Everyone else will reply with what works for them.
+              </p>
             </div>
           </div>
 
@@ -2195,17 +2004,11 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
                       >
                         − Remove pre-entered times
                       </button>
-                      <SectionLabel>
-                        {isProviderRole(p.role) ? "Provider's available times" : 'Their available times'}
-                      </SectionLabel>
+                      <SectionLabel>Their available times</SectionLabel>
                       <textarea
                         value={p.knownAvailability}
                         onChange={e => updateParticipant(i, 'knownAvailability', e.target.value)}
-                        placeholder={
-                          isProviderRole(p.role)
-                            ? 'e.g. Mon/Wed/Fri 9am–12pm, Tue/Thu 2–5pm — from the provider\'s schedule'
-                            : 'e.g. Saturday 2–4pm, Sunday morning anytime, Tue or Wed after 3pm'
-                        }
+                        placeholder="e.g. Saturday 2–4pm, Sunday morning anytime, Tue or Wed after 3pm"
                         rows={2}
                         className={INP.replace('h-[52px]', '') + ' py-3 resize-none min-h-[80px]'}
                       />
@@ -2226,11 +2029,9 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
             </button>
           )}
 
-          {validParticipants.length < minParticipantsRequired && (
+          {validParticipants.length < 2 && (
             <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">
-              {providerSlotsInStep1
-                ? 'Add at least 1 participant (patient or referral) to continue.'
-                : 'Add at least 2 participants to continue.'}
+              Add at least 2 participants to continue.
             </p>
           )}
 
@@ -2239,7 +2040,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
               className="min-h-[48px] flex items-center gap-1 px-5 text-sm font-semibold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
               <ChevronLeft className="h-4 w-4" /> Back
             </button>
-            <button onClick={() => setStep(3)} disabled={validParticipants.length < minParticipantsRequired}
+            <button onClick={() => setStep(3)} disabled={validParticipants.length < 2}
               className="min-h-[48px] flex items-center gap-2 px-5 text-sm font-semibold text-white rounded-xl transition-all disabled:opacity-40"
               style={{ background: BRAND }}>
               Review & Send <ChevronRight className="h-4 w-4" />
@@ -2263,7 +2064,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
                 {approachLine}
               </span>
             </div>
-            {schedulingIntent === 'specific_times' && formatSelectedSlotsLines(selectedSlots).length > 0 && (
+            {useAdvancedSlots && formatSelectedSlotsLines(selectedSlots).length > 0 && (
               <div className="space-y-1 pt-2 border-t border-slate-100 dark:border-slate-800">
                 {formatSelectedSlotsLines(selectedSlots).map(line => (
                   <p key={line} className="text-sm text-slate-600 dark:text-slate-300">{line}</p>
@@ -2272,7 +2073,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
             )}
           </div>
 
-          {schedulingIntent === 'specific_times' && hostSettingsLines.length > 0 && (
+          {useAdvancedSlots && hostSettingsLines.length > 0 && (
             <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl space-y-2">
               <SectionLabel>Host availability</SectionLabel>
               {hostSettingsLines.map(line => (
@@ -2355,7 +2156,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
         {step === 1 && (
           <div className="space-y-3">
             <SelectionSummary
-              selectedSlots={schedulingIntent === 'specific_times' ? selectedSlots : {}}
+              selectedSlots={useAdvancedSlots ? selectedSlots : {}}
               durationMinutes={durationMinutes}
               hostSettingsLines={hostSettingsLines}
               approachLine={approachLine}
@@ -2379,7 +2180,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
               className="h-[56px] px-5 flex items-center gap-1 font-semibold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors text-[15px]">
               <ChevronLeft className="h-5 w-5" /> Back
             </button>
-            <button onClick={() => setStep(3)} disabled={validParticipants.length < minParticipantsRequired}
+            <button onClick={() => setStep(3)} disabled={validParticipants.length < 2}
               className="flex-1 h-[56px] flex items-center justify-center gap-2 font-bold text-white rounded-xl transition-all disabled:opacity-40 text-[15px] shadow-lg"
               style={{ background: BRAND }}>
               Review & Send <ChevronRight className="h-5 w-5" />
@@ -2738,10 +2539,10 @@ export function CoordinateMeetingsPage() {
         <ChevronLeft className="h-4 w-4" /> Back to Group Scheduling
       </button>
       <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-1">
-        <Users className="h-6 w-6" style={{ color: BRAND }} /> New Coordination
+        <Users className="h-6 w-6" style={{ color: BRAND }} /> Coordinate Unknown Availability
       </h1>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">
-        Coordinate a meeting between multiple parties via SMS or WhatsApp — phone numbers stay private.
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 max-w-xl leading-relaxed">
+        Find a meeting time between multiple people via SMS — no app or link needed, phone numbers stay private.
       </p>
       <NewCoordForm onCreated={handleCreated} onCancel={goHub} hostName={hostName} />
     </main>

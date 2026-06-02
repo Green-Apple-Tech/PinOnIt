@@ -139,6 +139,110 @@ function fmtDayHeader(dateStr: string): string {
   });
 }
 
+type CoordSimpleTimeframe =
+  | "next_3_days"
+  | "this_week"
+  | "next_2_weeks"
+  | "next_month"
+  | "custom";
+type TimeOfDayKey = "morning" | "midday" | "afternoon" | "any";
+
+const SIMPLE_TIMEFRAME_SMS: Record<CoordSimpleTimeframe, string> = {
+  next_3_days: "the next 3 days",
+  this_week: "this week",
+  next_2_weeks: "the next 2 weeks",
+  next_month: "the next month",
+  custom: "the selected dates",
+};
+
+const TIME_OF_DAY_SMS: Record<TimeOfDayKey, string> = {
+  morning: "mornings",
+  midday: "mid-day",
+  afternoon: "afternoons",
+  any: "any time of day",
+};
+
+function formatDurationForSms(minutes: number): string {
+  if (minutes < 60) return `${minutes}-minute`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (m === 0) return h === 1 ? "1-hour" : `${h}-hour`;
+  return `${h}h ${m}m`;
+}
+
+function formatTimeOfDayPhrase(keys: TimeOfDayKey[]): string {
+  if (!keys.length || keys.includes("any")) return TIME_OF_DAY_SMS.any;
+  const parts = keys.map((k) => TIME_OF_DAY_SMS[k]);
+  if (parts.length === 1) return parts[0];
+  if (parts.length === 2) return `${parts[0]} and ${parts[1]}`;
+  return `${parts.slice(0, -1).join(", ")}, and ${parts[parts.length - 1]}`;
+}
+
+function formatCustomRangeSms(start: string, end: string): string {
+  const fmt = (d: string) =>
+    new Date(`${d}T12:00:00`).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+  return `between ${fmt(start)} and ${fmt(end)}`;
+}
+
+function buildCoordInviteSms(
+  participantName: string,
+  hostName: string,
+  meeting: {
+    title: string;
+    duration_minutes: number;
+    location: string | null;
+  },
+  preferredTimes: Record<string, unknown> | null,
+  selectedDates: string[] | null,
+): string {
+  const dur = formatDurationForSms(meeting.duration_minutes);
+  const titleClause = meeting.title.trim()
+    ? ` ("${meeting.title.trim()}")`
+    : "";
+  const locationClause = meeting.location
+    ? ` Location: ${meeting.location}.`
+    : "";
+
+  const selectedSlots = preferredTimes?.selectedSlots as
+    | Record<string, string[]>
+    | undefined;
+  const hasAdvancedSlots =
+    selectedSlots &&
+    Object.values(selectedSlots).some((t) => (t?.length ?? 0) > 0);
+
+  if (hasAdvancedSlots) {
+    const slotsStr = formatSlotsForSms(preferredTimes, selectedDates);
+    let msg =
+      `Hi ${participantName}! ${hostName} is looking for a ${dur} meeting${titleClause}`;
+    if (slotsStr) msg += ` during these times: ${slotsStr}`;
+    msg += ". Reply with times that work for you.";
+    return msg + locationClause;
+  }
+
+  const simpleTf = preferredTimes?.simpleTimeframe as
+    | CoordSimpleTimeframe
+    | undefined;
+  const todKeys = (preferredTimes?.timeOfDayPreferences as TimeOfDayKey[]) ??
+    ["any"];
+  const customStart = preferredTimes?.customRangeStart as string | undefined;
+  const customEnd = preferredTimes?.customRangeEnd as string | undefined;
+
+  let tf = "in the coming days";
+  if (simpleTf === "custom" && customStart && customEnd) {
+    tf = formatCustomRangeSms(customStart, customEnd);
+  } else if (simpleTf && SIMPLE_TIMEFRAME_SMS[simpleTf]) {
+    tf = SIMPLE_TIMEFRAME_SMS[simpleTf];
+  }
+
+  const tod = formatTimeOfDayPhrase(todKeys);
+  let msg =
+    `Hi ${participantName}! ${hostName} is looking for a ${dur} meeting within ${tf}${titleClause} — ${tod}. Reply with times that work for you.`;
+  return msg + locationClause;
+}
+
 function formatSlotsForSms(
   preferredTimes: unknown,
   selectedDates: string[] | null,
@@ -281,7 +385,7 @@ async function checkAndRunOverlap(meetingId: string): Promise<void> {
 
   const { data: hostProfile } = await supabase
     .from("profiles")
-    .select("phone")
+    .select("phone, full_name")
     .eq("id", meeting.host_id)
     .maybeSingle();
 
@@ -320,35 +424,21 @@ async function handleInitialSend(meetingId: string): Promise<Response> {
     });
   }
 
-  const slotsStr = formatSlotsForSms(meeting.preferred_times, meeting.selected_dates);
-  const pt = meeting.preferred_times as Record<string, unknown> | null;
-  const intent = pt?.schedulingIntent as string | undefined;
+  const { data: hostProfile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", meeting.host_id)
+    .maybeSingle();
 
-  const windowStr = meeting.proposed_window_start
-    ? `between ${new Date(meeting.proposed_window_start).toLocaleDateString()} and ${new Date(meeting.proposed_window_end).toLocaleDateString()}`
-    : "in the coming days";
+  const hostName =
+    (hostProfile?.full_name as string | undefined)?.trim() || "Someone";
+  const pt = meeting.preferred_times as Record<string, unknown> | null;
 
   const toSms = participants.filter((p) => !p.availability_pre_entered);
 
   const smsPromises = toSms.map(async (p) => {
-    let msg: string;
-    if (intent === "open_ended") {
-      msg =
-        `Hi ${p.name}! You're invited to "${meeting.title}" (${meeting.duration_minutes} min).` +
-        ` Please reply with times that work for you.` +
-        (meeting.location ? ` Location: ${meeting.location}.` : "") +
-        ` Reply STOP to opt out.`;
-    } else {
-      const timesClause = slotsStr
-        ? ` during these times: ${slotsStr}`
-        : ` ${windowStr}`;
-      msg =
-        `Hi ${p.name}! You're invited to "${meeting.title}" (${meeting.duration_minutes} min).` +
-        ` Please reply with your availability${timesClause}.` +
-        (meeting.location ? ` Location: ${meeting.location}.` : "") +
-        ` Reply STOP to opt out.`;
-    }
-    await sendSms(p.phone, msg);
+    const body = buildCoordInviteSms(p.name, hostName, meeting, pt, meeting.selected_dates);
+    await sendSms(p.phone, `${body} Reply STOP to opt out.`);
   });
 
   await Promise.all(smsPromises);
