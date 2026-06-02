@@ -141,26 +141,44 @@ export function ContactsPage() {
 
   // Handle URL params from OAuth callback
   useEffect(() => {
+    let mounted = true;
+
     const params = new URLSearchParams(window.location.search);
     let cleanUrl = false;
+
+    if (params.get('code') || params.get('state')) {
+      cleanUrl = true;
+    }
+
+    const calendarError = params.get('calendar_error');
+    if (calendarError) {
+      cleanUrl = true;
+      if (mounted) {
+        setGmailError(calendarError);
+        setToast({ msg: `Google connection failed: ${calendarError}`, type: 'error' });
+      }
+    }
 
     const gmailConnectedParam = params.get('gmail_connected');
     if (gmailConnectedParam === '1') {
       cleanUrl = true;
       const importedParam = params.get('contacts_imported');
       const contactsError = params.get('contacts_error');
-      setGmailConnected(true);
-      setGmailBannerDismissed(true);
-      localStorage.setItem('gmail_banner_dismissed', '1');
-      if (contactsError) {
-        showToast(`Gmail connected, but contacts import failed: ${contactsError}`, 'error');
-      } else if (importedParam !== null) {
-        const n = parseInt(importedParam, 10);
-        setGmailContactsCount(n);
-        showToast(
-          n > 0 ? `${n} contact${n !== 1 ? 's' : ''} imported from Gmail` : 'Gmail connected — no contacts found to import',
-          n > 0 ? 'success' : 'error'
-        );
+      if (mounted) {
+        setGmailConnected(true);
+        setGmailBannerDismissed(true);
+        localStorage.setItem('gmail_banner_dismissed', '1');
+        if (contactsError) {
+          setGmailError(contactsError);
+          setToast({ msg: `Gmail connected, but contacts import failed: ${contactsError}`, type: 'error' });
+        } else if (importedParam !== null) {
+          const n = parseInt(importedParam, 10);
+          setGmailContactsCount(n);
+          setToast({
+            msg: n > 0 ? `${n} contact${n !== 1 ? 's' : ''} imported from Gmail` : 'Gmail connected — no contacts found to import',
+            type: n > 0 ? 'success' : 'error',
+          });
+        }
       }
     }
 
@@ -169,27 +187,34 @@ export function ContactsPage() {
       cleanUrl = true;
       const importedParam = params.get('contacts_imported');
       const contactsError = params.get('contacts_error');
-      setOutlookBannerDismissed(true);
-      localStorage.setItem('outlook_contacts_banner_dismissed', '1');
-      if (contactsError === 'contacts_permission_not_granted') {
-        setOutlookConnected(false);
-        setOutlookError('Outlook connected for calendar but contacts permission was not granted. Please reconnect Outlook to enable contact sync.');
-        showToast('Contacts permission not granted. Please reconnect Outlook.', 'error');
-      } else if (contactsError) {
-        setOutlookConnected(true);
-        showToast(`Outlook connected, but contacts import failed: ${contactsError}`, 'error');
-      } else if (importedParam !== null) {
-        const n = parseInt(importedParam, 10);
-        setOutlookConnected(true);
-        setOutlookContactsCount(n);
-        showToast(
-          n > 0 ? `${n} contact${n !== 1 ? 's' : ''} imported from Outlook` : 'Outlook connected — no contacts found to import',
-          n > 0 ? 'success' : 'error'
-        );
+      if (mounted) {
+        setOutlookBannerDismissed(true);
+        localStorage.setItem('outlook_contacts_banner_dismissed', '1');
+        if (contactsError === 'contacts_permission_not_granted') {
+          setOutlookConnected(false);
+          setOutlookError('Outlook connected for calendar but contacts permission was not granted. Please reconnect Outlook to enable contact sync.');
+          setToast({ msg: 'Contacts permission not granted. Please reconnect Outlook.', type: 'error' });
+        } else if (contactsError) {
+          setOutlookConnected(true);
+          setOutlookError(contactsError);
+          setToast({ msg: `Outlook connected, but contacts import failed: ${contactsError}`, type: 'error' });
+        } else if (importedParam !== null) {
+          const n = parseInt(importedParam, 10);
+          setOutlookConnected(true);
+          setOutlookContactsCount(n);
+          setToast({
+            msg: n > 0 ? `${n} contact${n !== 1 ? 's' : ''} imported from Outlook` : 'Outlook connected — no contacts found to import',
+            type: n > 0 ? 'success' : 'error',
+          });
+        }
       }
     }
 
-    if (cleanUrl) window.history.replaceState({}, '', window.location.pathname);
+    if (cleanUrl && mounted) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
+    return () => { mounted = false };
   }, []);
 
   useEffect(() => {
@@ -202,13 +227,17 @@ export function ContactsPage() {
         .maybeSingle();
       if (profileData?.gmail_connected) {
         setGmailConnected(true);
-        setGmailContactsCount(profileData.gmail_contacts_count ?? 0);
         setGmailBannerDismissed(true);
+      }
+      if (profileData?.gmail_contacts_count != null && profileData.gmail_contacts_count > 0) {
+        setGmailContactsCount(profileData.gmail_contacts_count);
       }
       if (profileData?.outlook_contacts_connected) {
         setOutlookConnected(true);
-        setOutlookContactsCount(profileData.outlook_contacts_count ?? 0);
         setOutlookBannerDismissed(true);
+      }
+      if (profileData?.outlook_contacts_count != null && profileData.outlook_contacts_count > 0) {
+        setOutlookContactsCount(profileData.outlook_contacts_count);
       }
     })();
   }, [profile?.id]);
@@ -287,6 +316,21 @@ export function ContactsPage() {
     return list;
   }, [enriched, filter, search]);
 
+  const gmailContactsImported = useMemo(
+    () => contacts.filter((c) => c.source === 'gmail').length,
+    [contacts],
+  );
+  const outlookContactsImported = useMemo(
+    () => contacts.filter((c) => c.source === 'outlook').length,
+    [contacts],
+  );
+
+  /** Import complete if profile says so, or we already have contacts from that provider. */
+  const gmailImportComplete = gmailConnected || gmailContactsImported > 0 || gmailContactsCount > 0;
+  const outlookImportComplete = outlookConnected || outlookContactsImported > 0 || outlookContactsCount > 0;
+  const gmailSyncedCount = Math.max(gmailContactsCount, gmailContactsImported);
+  const outlookSyncedCount = Math.max(outlookContactsCount, outlookContactsImported);
+
   const handleAddContact = async () => {
     if (!profile) return;
     if (!addEmail.trim()) { setAddError('Email is required.'); return; }
@@ -343,7 +387,12 @@ export function ContactsPage() {
     setGmailError('');
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token ?? '';
+      if (!session?.user?.id) {
+        setGmailError('Please sign in again to connect Gmail.');
+        setGmailConnecting(false);
+        return;
+      }
+      const token = session.access_token;
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-calendar-auth?source=contacts`,
         { headers: { Authorization: `Bearer ${token}`, Apikey: import.meta.env.VITE_SUPABASE_ANON_KEY } }
@@ -367,20 +416,34 @@ export function ContactsPage() {
     setGmailError('');
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token ?? '';
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-calendar-auth?source=contacts`,
-        { headers: { Authorization: `Bearer ${token}`, Apikey: import.meta.env.VITE_SUPABASE_ANON_KEY } }
-      );
-      const json = await res.json();
-      if (json.error) {
-        setGmailError(json.error.includes('not configured') ? 'Google OAuth is not configured yet.' : json.error);
-        setGmailSyncing(false);
-        return;
+      if (!session?.access_token) {
+        throw new Error('Please sign in again to sync contacts.');
       }
-      window.location.href = json.url;
-    } catch (e) {
-      setGmailError(String(e));
+      // Use stored Gmail token via edge function — never redirect to OAuth on sync
+      const { data, error } = await supabase.functions.invoke('gmail-contacts-sync', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (error) throw error;
+      if (data?.code === 'reconnect_required' || data?.error) {
+        throw new Error(data?.error ?? 'Please disconnect and reconnect Gmail.');
+      }
+      const n = data?.imported ?? 0;
+      setGmailContactsCount(n);
+      const { data: refreshed } = await supabase
+        .from('contacts')
+        .select('*')
+        .eq('host_id', profile.id)
+        .order('created_at', { ascending: false });
+      if (refreshed) setContacts(refreshed as Contact[]);
+      showToast(
+        n > 0 ? `${n} contact${n !== 1 ? 's' : ''} synced from Google Contacts` : 'Contacts synced successfully',
+        'success',
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Sync failed';
+      setGmailError(msg);
+      showToast(msg, 'error');
+    } finally {
       setGmailSyncing(false);
     }
   };
@@ -409,24 +472,39 @@ export function ContactsPage() {
   };
 
   const handleSyncOutlook = async () => {
+    if (!profile) return;
     setOutlookSyncing(true);
     setOutlookError('');
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token ?? '';
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/outlook-calendar-auth?source=contacts`,
-        { headers: { Authorization: `Bearer ${token}`, Apikey: import.meta.env.VITE_SUPABASE_ANON_KEY } }
-      );
-      const json = await res.json();
-      if (json.error) {
-        setOutlookError(json.error.includes('not configured') ? 'Microsoft OAuth is not configured yet.' : json.error);
-        setOutlookSyncing(false);
-        return;
+      if (!session?.access_token) {
+        throw new Error('Please sign in again to sync contacts.');
       }
-      window.location.href = json.url;
-    } catch (e) {
-      setOutlookError(String(e));
+      const { data, error } = await supabase.functions.invoke('outlook-contacts-sync', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (error) throw error;
+      if (data?.code === 'reconnect_required' || data?.error) {
+        throw new Error(data?.error ?? 'Please disconnect and reconnect Outlook.');
+      }
+      const n = data?.imported ?? 0;
+      setOutlookContactsCount(n);
+      setOutlookConnected(true);
+      const { data: refreshed } = await supabase
+        .from('contacts')
+        .select('*')
+        .eq('host_id', profile.id)
+        .order('created_at', { ascending: false });
+      if (refreshed) setContacts(refreshed as Contact[]);
+      showToast(
+        n > 0 ? `${n} contact${n !== 1 ? 's' : ''} synced from Outlook` : 'Contacts synced successfully',
+        'success',
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Sync failed';
+      setOutlookError(msg);
+      showToast(msg, 'error');
+    } finally {
       setOutlookSyncing(false);
     }
   };
@@ -620,7 +698,7 @@ export function ContactsPage() {
         items={[
           { id: 'booking_link', label: 'Share your booking link', why: 'Contacts are auto-added when someone books with you', done: !!profile?.slug, to: '/dashboard/settings' },
           { id: 'add_contact', label: 'Add your first contact manually', why: 'Great for existing clients before you get bookings', done: contacts.length > 0 },
-          { id: 'connect_gmail', label: 'Connect Gmail for in-app emailing', why: 'Send your booking link without leaving PinOnIt', done: gmailBannerDismissed },
+          { id: 'connect_gmail', label: 'Connect Gmail for in-app emailing', why: 'Send your booking link without leaving PinOnIt', done: gmailImportComplete || gmailBannerDismissed },
         ]}
       />
 
@@ -638,7 +716,7 @@ export function ContactsPage() {
         </div>
       )}
 
-      {/* Outlook banner — connected state */}
+      {/* Outlook banner — connected */}
       {outlookConnected ? (
         <div className="mb-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/50 rounded-xl overflow-hidden">
           <div className="flex items-center gap-3 px-4 py-3">
@@ -648,8 +726,8 @@ export function ContactsPage() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-blue-800 dark:text-blue-300">Outlook connected</p>
               <p className="text-xs text-blue-600 dark:text-blue-500 mt-0.5">
-                {outlookContactsCount > 0
-                  ? `${outlookContactsCount} contact${outlookContactsCount !== 1 ? 's' : ''} synced from Outlook`
+                {outlookSyncedCount > 0
+                  ? `${outlookSyncedCount} contact${outlookSyncedCount !== 1 ? 's' : ''} synced from Outlook`
                   : 'Outlook Contacts synced'}
               </p>
             </div>
@@ -673,8 +751,8 @@ export function ContactsPage() {
             <p className="px-4 pb-3 text-xs text-red-500">{outlookError}</p>
           )}
         </div>
-      ) : !outlookBannerDismissed ? (
-        /* Outlook banner — not connected */
+      ) : !outlookImportComplete && !outlookBannerDismissed ? (
+        /* Outlook banner — prompt import */
         <div className="mb-4 bg-white dark:bg-slate-900/60 border border-gray-200 dark:border-slate-700 rounded-xl overflow-hidden">
           <div className="flex items-center gap-3 px-4 py-3">
             <div className="h-8 w-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center shrink-0">
@@ -705,7 +783,7 @@ export function ContactsPage() {
         </div>
       ) : null}
 
-      {/* Gmail banner — connected state */}
+      {/* Gmail banner — connected */}
       {gmailConnected ? (
         <div className="mb-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/50 rounded-xl overflow-hidden connected">
           <div className="flex items-center gap-3 px-4 py-3">
@@ -715,8 +793,8 @@ export function ContactsPage() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">Gmail connected</p>
               <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">
-                {gmailContactsCount > 0
-                  ? `${gmailContactsCount} contact${gmailContactsCount !== 1 ? 's' : ''} synced from Google Contacts`
+                {gmailSyncedCount > 0
+                  ? `${gmailSyncedCount} contact${gmailSyncedCount !== 1 ? 's' : ''} synced from Google Contacts`
                   : 'Google Contacts synced'}
               </p>
             </div>
@@ -740,8 +818,8 @@ export function ContactsPage() {
             <p className="px-4 pb-3 text-xs text-red-500">{gmailError}</p>
           )}
         </div>
-      ) : !gmailBannerDismissed ? (
-        /* Gmail banner — not connected */
+      ) : !gmailImportComplete && !gmailBannerDismissed ? (
+        /* Gmail banner — prompt import */
         <div className="mb-4 bg-white dark:bg-slate-900/60 border border-gray-200 dark:border-slate-700 rounded-xl overflow-hidden">
           <div className="flex items-center gap-3 px-4 py-3">
             <div className="h-8 w-8 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center shrink-0">
