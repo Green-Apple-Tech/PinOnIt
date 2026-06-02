@@ -429,7 +429,7 @@ export function ServicesPage() {
   const [addingReminder, setAddingReminder] = useState(false);
   const [recurrenceEndType, setRecurrenceEndType] = useState<RecurrenceEndType>('never');
   const [newReminderOffsets, setNewReminderOffsets] = useState<Set<number>>(new Set([-1440]));
-  const [newReminderChannels, setNewReminderChannels] = useState<Set<'email' | 'sms' | 'whatsapp'>>(() => new Set(['whatsapp']));
+  const [newReminderChannels, setNewReminderChannels] = useState<Set<'email' | 'sms' | 'whatsapp' | 'voice'>>(() => new Set(['whatsapp']));
   const [savingReminder, setSavingReminder] = useState(false);
   const [customOffset, setCustomOffset] = useState(false);
   const [customOffsetVal, setCustomOffsetVal] = useState('');
@@ -508,7 +508,7 @@ export function ServicesPage() {
       cancellation_policy: svc.cancellation_policy ?? '',
       confirmation_redirect_url: svc.confirmation_redirect_url ?? null,
       location: svc.location ?? '', location_type: svc.location_type ?? 'video',
-      payment_provider: (svc.payment_provider === 'stripe' ? 'none' : (svc.payment_provider ?? 'none')) as Service['payment_provider'],
+      payment_provider: ((svc.payment_provider as string) === 'stripe' ? 'none' : (svc.payment_provider ?? 'none')) as Service['payment_provider'],
       paypal_me_link: (svc as any).paypal_me_link ?? null,
       paypal_currency: svc.paypal_currency ?? 'USD',
       venmo_handle: (svc as any).venmo_handle ?? null,
@@ -1521,7 +1521,11 @@ export function ServicesPage() {
 
             {/* ── PAYMENT ── */}
             {activeTab === 'payment' && (
-              <PaymentTab form={form} setField={setField} priceStr={priceStr} />
+              <PaymentTab
+                form={form}
+                setField={(k, v) => setField(k, v as FormState[typeof k])}
+                priceStr={priceStr}
+              />
             )}
 
           </div>

@@ -289,11 +289,15 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
       })());
       const loadedTemplates = tplRes.data ?? [];
       setTemplates(loadedTemplates);
-      setRules((ruleRes.data ?? []).map((r: Record<string, unknown>) => ({
-        ...r,
-        template: r.message_templates as MessageTemplate | undefined,
-        service: r.services as Service | undefined,
-      })));
+      setRules((ruleRes.data ?? []).map((r) => {
+        const row = r as ReminderRule & { message_templates?: MessageTemplate | null; services?: Service | null };
+        const { message_templates, services, ...rule } = row;
+        return {
+          ...rule,
+          template: message_templates ?? undefined,
+          service: services ?? undefined,
+        };
+      }));
       setLog(logRes.data ?? []);
       setServices(svcRes.data ?? []);
       setLoading(false);

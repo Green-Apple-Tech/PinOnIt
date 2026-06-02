@@ -261,6 +261,7 @@ export interface Subscription {
   stripe_subscription_id: string | null;
   stripe_price_id: string | null;
   stripe_current_period_end: string | null;
+  trial_ends_at?: string | null;
   status: 'active' | 'canceled' | 'past_due' | 'trialing';
   plan: 'free' | 'pro';
   created_at: string;

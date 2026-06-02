@@ -7,7 +7,7 @@ import {
   Plus, X, Check, Loader2, ExternalLink, Trash2,
   ChevronDown, ChevronUp, Users, Clock, CalendarDays, Link2,
   BarChart2, CheckCircle2, AlertCircle, RefreshCw,
-  ArrowRight, Vote, Sparkles, ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react';
 
 const BRAND = '#5864C6';
@@ -867,57 +867,6 @@ export function PollCard({ poll, onDelete, onClose, onConfirm }: PollCardProps) 
       )}
     </div>
   );
-}
-
-// ─────────────────────────────────────────────────────────────
-// How it works
-// ─────────────────────────────────────────────────────────────
-function HowItWorksSection() {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-      <button
-        onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-      >
-        <span className="text-sm font-semibold text-slate-800 dark:text-white">How it works</span>
-        {open ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
-      </button>
-      {open && (
-        <div className="px-5 pb-5 border-t border-slate-100 dark:border-slate-800 pt-4">
-          <ol className="space-y-4">
-            {[
-              { n:'1', title:'Pick your dates', desc:'Drag across a date range on the calendar — e.g. June 2–9 — to define when the meeting could happen.' },
-              { n:'2', title:'Choose time slots', desc:'Toggle the visual grid to offer specific hours on each day. Your availability settings pre-fill the grid automatically.' },
-              { n:'3', title:'Share the voting link', desc:'Copy your unique poll link and send it via email, Slack, WhatsApp, or any channel. No sign-up needed for guests.' },
-              { n:'4', title:'Confirm the best time', desc:'Watch votes come in on the heatmap. One click on the winning slot confirms the meeting and notifies everyone.' },
-            ].map(({ n, title, desc }) => (
-              <li key={n} className="flex gap-3">
-                <span className="h-6 w-6 rounded-full text-white text-xs font-black flex items-center justify-center shrink-0 mt-0.5" style={{ backgroundColor: BRAND }}>{n}</span>
-                <div>
-                  <p className="text-sm font-semibold text-slate-900 dark:text-white">{title}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">{desc}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Returns next N weekday dates starting from tomorrow
-function nextWeekdays(n: number): string[] {
-  const out: string[] = [];
-  const d = new Date();
-  d.setHours(0,0,0,0);
-  d.setDate(d.getDate() + 1);
-  while (out.length < n) {
-    if (d.getDay() !== 0 && d.getDay() !== 6) out.push(toYMD(d));
-    d.setDate(d.getDate() + 1);
-  }
-  return out;
 }
 
 // ─────────────────────────────────────────────────────────────

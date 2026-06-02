@@ -4,7 +4,6 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { PageChecklist } from '../components/PageChecklist';
 import type { AvailabilitySlot, DateOverride, ScheduleBreak } from '../lib/types';
-import { DAY_NAMES } from '../lib/types';
 import { Plus, Trash2, X, Check, Loader2, CalendarX, CalendarDays, Settings, Zap, BellOff, Coffee, ChevronDown, ChevronUp, Clock, Info } from 'lucide-react';
 import { CalendarConnections } from '../components/CalendarConnections';
 import type { CalendarConflictSettings } from '../lib/types';

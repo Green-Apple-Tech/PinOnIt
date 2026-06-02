@@ -19,6 +19,7 @@ import {
   getDatesForSimpleTimeframe,
   getWindowFromCoordDates,
   parseCoordAvailability,
+  toLocalDateInput,
 } from '../lib/coordinateScheduling';
 import { Plus, X, ChevronRight, ChevronLeft, ChevronDown, Users, Clock, MapPin, MessageSquare, Check, Loader2, Trash2, AlertCircle, ArrowRight, Phone, Calendar, RefreshCw, CheckCircle2, Sparkles } from 'lucide-react';
 

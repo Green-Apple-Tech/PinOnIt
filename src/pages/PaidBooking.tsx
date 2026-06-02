@@ -5,7 +5,7 @@ import type { Service, PaidBookingSettings } from '../lib/types';
 import QRCode from 'qrcode';
 import {
   Copy, Check, Loader2, ExternalLink, Plus, Trash2,
-  Clock, ChevronDown, Image as ImageIcon, Palette,
+  ChevronDown, Image as ImageIcon, Palette,
   LayoutGrid, List, User, Save, AlertCircle,
   QrCode, Code, ChevronRight, X, Download, Link2,
   Settings2, ShoppingBag,
@@ -544,9 +544,6 @@ export function PaidBookingPage() {
   };
 
   const themeDef = getTheme(theme);
-  const displayName = settings.display_name || profile?.full_name || '';
-  const tagline = settings.tagline || '';
-  const bio = settings.bio || '';
   const photoUrl = settings.business_photo_url || null;
 
   if (!profile) return (

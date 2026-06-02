@@ -136,7 +136,7 @@ export function GroupSchedulingPage() {
         ...s,
         yesCount: (votes ?? []).filter(v => v.slot_id === s.id && v.availability === 'yes').length,
         maybeCount: (votes ?? []).filter(v => v.slot_id === s.id && v.availability === 'maybe').length,
-      })).sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()),
+      })).sort((a: MeetingPollSlot, b: MeetingPollSlot) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()),
       totalResponses: (p.meeting_poll_responses ?? []).length,
     }));
 

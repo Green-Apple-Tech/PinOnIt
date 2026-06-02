@@ -958,7 +958,7 @@ export function AppointmentsPage() {
                                 <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
                                   {svc?.name ?? 'Appointment'}
                                 </p>
-                                {b.is_recurring && <Repeat className="h-3.5 w-3.5 text-slate-400 shrink-0" title="Recurring booking" />}
+                                {b.is_recurring && <Repeat className="h-3.5 w-3.5 text-slate-400 shrink-0" aria-label="Recurring booking" />}
                                 {b.is_critical && <span className="text-xs px-1.5 py-0.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-full font-semibold flex items-center gap-0.5"><BellRing className="h-3 w-3" />Critical</span>}
                                 {isCanceled && <span className="text-xs px-1.5 py-0.5 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-full">Canceled</span>}
                                 {isCompleted && <span className="text-xs px-1.5 py-0.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500 rounded-full">Completed</span>}

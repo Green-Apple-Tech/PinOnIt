@@ -3,11 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import {
-  ArrowRight, Check, Bell, CalendarDays, MessageSquare,
+  ArrowRight, Check, CalendarDays,
   Sun, Moon, Menu, Mail, Smartphone, CalendarCheck,
-  CreditCard, Paintbrush, Shield, Zap, X, Link2,
-  CalendarX, QrCode, DollarSign, TrendingUp, Users,
-  Star, ChevronRight,
+  CreditCard, Zap, X, Link2,
+  QrCode, DollarSign, Users,
+  ChevronRight,
 } from 'lucide-react';
 
 // ── Animated counter hook ────────────────────────────────────────────────────

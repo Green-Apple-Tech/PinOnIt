@@ -5,21 +5,9 @@ import { OnboardingWizard, wizardIsActive, wizardSavedStep, onboardingIsComplete
 import { useTheme } from '../hooks/useTheme';
 import { supabase } from '../lib/supabase';
 import type { Booking, Service } from '../lib/types';
-import { CalendarDays, Settings, LogOut, Users, X, Check, Sun, Moon, Copy, Share2, Mail, Link2, ExternalLink, PenLine, Video, Phone, MapPin, ChevronRight, Loader2, CalendarCheck, Plus, ChevronLeft, ChevronDown, BarChart2, LayoutGrid, Menu, AlertCircle, Sparkles, QrCode, Search, ShoppingBag, Wrench as Tool } from 'lucide-react';
+import { CalendarDays, Settings, LogOut, Users, X, Check, Sun, Moon, Copy, Share2, Mail, Link2, ExternalLink, PenLine, Video, Phone, MapPin, ChevronRight, Loader2, CalendarCheck, Plus, ChevronLeft, ChevronDown, LayoutGrid, Menu, AlertCircle, Sparkles, QrCode, Search, ShoppingBag, Wrench as Tool } from 'lucide-react';
 
 type NavItem = { to: string; icon: typeof LayoutGrid; label: string };
-
-
-function formatBookingTime(iso: string, tz?: string): string {
-  return new Date(iso).toLocaleString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    timeZone: tz,
-  });
-}
 
 // ── Quick-create booking link modal ──────────────────────────────────────────
 
@@ -911,24 +899,11 @@ export function Dashboard() {
   const upcomingBookings = bookings.filter(
     (b) => b.status === 'confirmed' && new Date(b.start_time) >= new Date()
   );
-  const pastBookings = bookings.filter(
-    (b) => new Date(b.start_time) < new Date() || b.status !== 'confirmed'
-  );
 
   const handleCreated = (service: Service, bookingUrl: string) => {
     setServices((prev) => [...prev, service]);
     setShowCreateModal(false);
     setCreatedUrl(bookingUrl);
-  };
-
-  const handleCancelBooking = async (id: string) => {
-    const { error } = await supabase.from('bookings').update({ status: 'canceled' }).eq('id', id);
-    if (!error) setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status: 'canceled' as const } : b)));
-  };
-
-  const handleCompleteBooking = async (id: string) => {
-    const { error } = await supabase.from('bookings').update({ status: 'completed' }).eq('id', id);
-    if (!error) setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status: 'completed' as const } : b)));
   };
 
   const mainNavItems: NavItem[] = [

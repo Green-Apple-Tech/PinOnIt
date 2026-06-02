@@ -177,12 +177,6 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
     ? Math.max(0, Math.ceil((new Date(subscription.trial_ends_at).getTime() - Date.now()) / 86400000))
     : 0;
 
-  const firstChargeDate = (() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 14);
-    return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-  })();
-
   return (
     <div className={embedded ? 'space-y-4 max-w-2xl' : 'p-6 md:p-8 max-w-2xl space-y-4'}>
 

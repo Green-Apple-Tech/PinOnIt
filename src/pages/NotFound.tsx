@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { MapPin, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 export function NotFoundPage() {
   return (
