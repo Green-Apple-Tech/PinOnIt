@@ -876,16 +876,25 @@ export function BookPage() {
   };
   const isPaidService = selectedService ? selectedService.price_cents > 0 : false;
   const termsDisplayText = resolveTermsText(host?.global_terms_text);
-  const showTermsAgreement = !!(host?.global_require_terms || selectedService?.require_terms);
-  const termsBodyText = selectedService?.cancellation_policy?.trim()
-    || (showTermsAgreement ? termsDisplayText : '');
-  const requiredAnswersMissing = questions.some((q) => q.required && !answers[q.id]?.trim())
-    || (showTermsAgreement && !termsAgreed)
-    || ((selectedService as any)?.require_nda && !ndaAgreed)
-    || (isPaidService && !paymentConfirmed && !(isRecurringService && selectedService?.price_cents > 0))
-    || (isRecurringService && !recurringAcknowledged);
-  const hasContactInfo = !!(guestEmail.trim() || phone.trim());
-  const canSubmitDetails = !!guestName && hasContactInfo && !requiredAnswersMissing;
+  const requiresTerms = !!(host?.global_require_terms && selectedService?.require_terms);
+  const showTermsAgreement = requiresTerms;
+  const termsBodyText = showTermsAgreement
+    ? (selectedService?.cancellation_policy?.trim() || termsDisplayText)
+    : '';
+  const hasRequiredQuestions = questions.some((q) => q.required && !answers[q.id]?.trim());
+  const requiresNda = !!selectedService?.require_nda;
+  const requiresRecurringAck = isRecurringService && !recurringAcknowledged;
+  const requiresPayment = isPaidService && !paymentConfirmed && !(isRecurringService && (selectedService?.price_cents ?? 0) > 0);
+  const isValid =
+    guestName.trim() !== '' &&
+    (guestEmail.trim() !== '' || phone.trim() !== '') &&
+    (!requiresTerms || termsAgreed);
+  const canSubmitDetails =
+    isValid &&
+    !hasRequiredQuestions &&
+    (!requiresNda || ndaAgreed) &&
+    !requiresRecurringAck &&
+    !requiresPayment;
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950 transition-colors">
@@ -1297,9 +1306,9 @@ export function BookPage() {
                     </div>
                     <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{PHONE_HINT}</p>
                   </div>
-                  {phone.trim() && (
+                  {phone && (
                     <div>
-                      <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                         Also notify me via
                       </label>
                       <div className="flex gap-2 flex-wrap">
@@ -1394,7 +1403,7 @@ export function BookPage() {
                       placeholder="Anything else you'd like your host to know..."
                       className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition resize-none" />
                   </div>
-                  {showTermsAgreement && termsBodyText && (
+                  {showTermsAgreement && (
                     <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl space-y-3">
                       <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{termsBodyText}</p>
                       <label className="flex items-start gap-2.5 cursor-pointer">
@@ -1417,8 +1426,13 @@ export function BookPage() {
                     <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5 mt-1">
                       <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                       {detailsError
-                        || (!guestName ? 'Full name is required.'
-                          : !hasContactInfo ? 'Please provide an email or phone number.'
+                        || (!guestName.trim() ? 'Full name is required.'
+                          : !(guestEmail.trim() || phone.trim()) ? 'Please provide an email or phone number.'
+                          : requiresTerms && !termsAgreed ? 'Please agree to the terms above.'
+                          : hasRequiredQuestions ? 'Please answer all required questions.'
+                          : requiresNda && !ndaAgreed ? 'Please agree to the NDA above.'
+                          : requiresRecurringAck ? 'Please confirm you understand this is a recurring booking.'
+                          : requiresPayment ? 'Please confirm your payment above.'
                           : 'Please complete all required fields above.')}
                     </p>
                   )}
