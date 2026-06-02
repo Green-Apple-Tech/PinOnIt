@@ -997,7 +997,7 @@ export function SettingsPage() {
               <div>
                 <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Enable single-use booking links</p>
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 leading-relaxed">
-                  Each link can only be used once. After one booking is made the link expires.
+                  Each link can only be used once. After one booking is made the link expires automatically.
                 </p>
               </div>
               <button
@@ -1005,7 +1005,7 @@ export function SettingsPage() {
                 role="switch"
                 aria-checked={singleUseLinksEnabled}
                 onClick={() => setSingleUseLinksEnabled((v) => !v)}
-                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#5864C6] focus:ring-offset-2 dark:focus:ring-offset-slate-900 ${singleUseLinksEnabled ? 'bg-[#5864C6]' : 'bg-slate-300 dark:bg-slate-600'}`}
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 ${singleUseLinksEnabled ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}
               >
                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${singleUseLinksEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
               </button>
@@ -1021,7 +1021,7 @@ export function SettingsPage() {
                       onClick={() => setLinkExpiry(opt.value)}
                       className={`px-4 py-2 rounded-full text-sm font-semibold border transition-all min-h-[40px] ${
                         linkExpiry === opt.value
-                          ? 'bg-[#5864C6] border-[#5864C6] text-white'
+                          ? 'bg-emerald-500 border-emerald-500 text-white'
                           : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300'
                       }`}
                     >
