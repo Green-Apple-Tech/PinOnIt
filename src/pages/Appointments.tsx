@@ -196,6 +196,68 @@ function groupByDate(bookings: Booking[]): Map<string, Booking[]> {
   return map;
 }
 
+const CALENDAR_HOUR_START = 7;
+const CALENDAR_HOUR_END = 21;
+
+function formatHourLabel(h: number) {
+  if (h === 12) return '12 PM';
+  return h > 12 ? `${h - 12} PM` : `${h} AM`;
+}
+
+function bookingEventTitle(b: Booking) {
+  const svc = (b as Booking & { services?: { name?: string } }).services;
+  return `${svc?.name ?? 'Appointment'} with ${b.guest_name}`;
+}
+
+function MonthBookingCard({ booking }: { booking: Booking }) {
+  const svc = (booking as Booking & { services?: { name?: string; color?: string } }).services;
+  const title = svc?.name ?? 'Appointment';
+  return (
+    <div
+      title={bookingEventTitle(booking)}
+      className="text-sm px-2 py-1.5 rounded-md shadow-sm bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 hover:shadow-md transition-shadow cursor-default"
+    >
+      <div className="flex items-start gap-1.5">
+        <span className="h-2 w-2 rounded-full shrink-0 mt-1" style={{ backgroundColor: svc?.color ?? '#5864C6' }} />
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold text-slate-800 dark:text-slate-100 leading-snug">{title}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{formatTime(booking.start_time)}</p>
+          {booking.guest_name && <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">{booking.guest_name}</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WeekBookingCard({ booking }: { booking: Booking }) {
+  const svc = (booking as Booking & { services?: { name?: string; color?: string } }).services;
+  return (
+    <div
+      title={bookingEventTitle(booking)}
+      className="text-sm p-2 rounded-md shadow-sm border border-slate-100 dark:border-slate-700 mb-1.5"
+      style={{ backgroundColor: `${svc?.color ?? '#5864C6'}18`, borderLeftColor: svc?.color ?? '#5864C6', borderLeftWidth: 3 }}
+    >
+      <p className="font-semibold text-slate-800 dark:text-slate-100 leading-snug">{svc?.name ?? 'Appointment'}</p>
+      <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">{booking.guest_name}</p>
+      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{formatTime(booking.start_time)} – {formatTime(booking.end_time)}</p>
+    </div>
+  );
+}
+
+function CurrentTimeLine({ hourStart = CALENDAR_HOUR_START, hourEnd = CALENDAR_HOUR_END }: { hourStart?: number; hourEnd?: number }) {
+  const now = new Date();
+  const totalMinutes = (hourEnd - hourStart) * 60;
+  const currentMinutes = (now.getHours() - hourStart) * 60 + now.getMinutes();
+  if (currentMinutes < 0 || currentMinutes > totalMinutes) return null;
+  const topPct = (currentMinutes / totalMinutes) * 100;
+  return (
+    <div className="absolute left-0 right-0 z-20 pointer-events-none flex items-center" style={{ top: `${topPct}%` }}>
+      <div className="w-2 h-2 rounded-full bg-red-500 -ml-1 shrink-0" />
+      <div className="flex-1 border-t-2 border-red-500" />
+    </div>
+  );
+}
+
 type ViewMode = 'agenda' | 'month' | 'week' | 'day';
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -671,21 +733,20 @@ export function AppointmentsPage() {
             </div>
           ) : view === 'month' ? (
             /* ── MONTH VIEW ── */
-            <div className="overflow-x-auto -mx-2 sm:mx-0">
-            <div className="min-w-[320px] bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+            <div className="w-full">
+            <div className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
               <div className="grid grid-cols-7 border-b border-slate-200 dark:border-slate-800">
                 {DAY_SHORT.map(d => (
-                  <div key={d} className="py-2 text-center text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase">{d}</div>
+                  <div key={d} className="py-2.5 text-center text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">{d}</div>
                 ))}
               </div>
               <div className="grid grid-cols-7">
                 {calendarDays.map((d, i) => {
-                  if (!d) return <div key={`e-${i}`} className="min-h-[90px] border-b border-r border-slate-100 dark:border-slate-800/60" />;
+                  if (!d) return <div key={`e-${i}`} className="min-h-[100px] lg:min-h-[120px] border-b border-r border-slate-100 dark:border-slate-800/60" />;
                   const dk = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
                   const isToday = dk === toDateKey(today);
                   const dayBookings = grouped.get(dk) ?? [];
                   const dayExternal = externalEvents.filter(e => toDateKey(new Date(e.start_at)) === dk);
-                  // Combine both sources for display, cap at 3 total visible rows
                   const totalCount = dayBookings.length + dayExternal.length;
                   const slotsLeft = 3;
                   const externalToShow = dayExternal.slice(0, slotsLeft);
@@ -694,22 +755,19 @@ export function AppointmentsPage() {
                   return (
                     <div key={dk}
                       onClick={() => { setSelectedDate(dk); setView('day'); }}
-                      className={`min-h-[90px] border-b border-r border-slate-100 dark:border-slate-800/60 p-1.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors ${isToday ? 'bg-emerald-50/40 dark:bg-emerald-950/20' : ''}`}>
-                      <span className={`text-xs font-semibold inline-flex h-5 w-5 items-center justify-center rounded-full ${isToday ? 'bg-emerald-600 text-white' : 'text-slate-600 dark:text-slate-300'}`}>{d}</span>
-                      <div className="mt-1 space-y-0.5">
+                      className={`min-h-[100px] lg:min-h-[120px] border-b border-r border-slate-100 dark:border-slate-800/60 p-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors ${isToday ? 'bg-blue-50/60 dark:bg-blue-950/20' : ''}`}>
+                      <span className={`text-sm font-semibold inline-flex h-6 w-6 items-center justify-center rounded-full ${isToday ? 'bg-[#5864C6] text-white' : 'text-slate-700 dark:text-slate-300'}`}>{d}</span>
+                      <div className="mt-1.5 space-y-1">
                         {externalToShow.map(e => (
-                          <div key={e.id} className="text-[10px] px-1 py-0.5 rounded truncate flex items-center gap-1 bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400">
-                            <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${e.provider === 'google' ? 'bg-red-400' : e.provider === 'outlook' ? 'bg-blue-400' : 'bg-slate-400'}`} />
+                          <div key={e.id} title={e.title} className="text-sm px-2 py-1 rounded-md truncate flex items-center gap-1.5 bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 shadow-sm">
+                            <span className={`h-2 w-2 rounded-full shrink-0 ${e.provider === 'google' ? 'bg-red-400' : e.provider === 'outlook' ? 'bg-blue-400' : 'bg-slate-400'}`} />
                             <span className="truncate">{e.all_day ? e.title : `${formatTime(e.start_at)} ${e.title}`}</span>
                           </div>
                         ))}
                         {bookingsToShow.map(b => (
-                          <div key={b.id} className="text-[10px] px-1 py-0.5 rounded truncate text-white flex items-center gap-0.5" style={{ backgroundColor: b.is_critical ? '#ef4444' : ((b as any).services?.color ?? '#5864C6') }}>
-                            {b.is_critical && <span className="shrink-0">⚠</span>}
-                            <span className="truncate">{formatTime(b.start_time)} {b.guest_name}</span>
-                          </div>
+                          <MonthBookingCard key={b.id} booking={b} />
                         ))}
-                        {overflow > 0 && <div className="text-[10px] text-slate-400 dark:text-slate-500 pl-1">+{overflow} more</div>}
+                        {overflow > 0 && <div className="text-xs font-medium text-slate-500 dark:text-slate-400 pl-1">+{overflow} more</div>}
                       </div>
                     </div>
                   );
@@ -720,56 +778,63 @@ export function AppointmentsPage() {
           ) : view === 'week' ? (
             /* ── WEEK VIEW ── */
             (() => {
-              const startOfWeek = new Date(today);
-              startOfWeek.setDate(today.getDate() - today.getDay());
+              const startOfWeek = new Date(selectedDate + 'T12:00:00');
+              startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
               const weekDays = Array.from({ length: 7 }, (_, i) => {
                 const d = new Date(startOfWeek);
                 d.setDate(startOfWeek.getDate() + i);
                 return d;
               });
+              const hourCount = CALENDAR_HOUR_END - CALENDAR_HOUR_START;
+              const columnMinHeight = hourCount * 48;
               return (
-                <div className="overflow-x-auto -mx-2 sm:mx-0">
-                <div className="min-w-[420px] bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
-                  <div className="grid grid-cols-7 border-b border-slate-200 dark:border-slate-800">
+                <div className="w-full overflow-x-auto">
+                <div className="w-full min-w-[720px] bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+                  <div className="grid grid-cols-[4rem_repeat(7,1fr)] border-b border-slate-200 dark:border-slate-800">
+                    <div className="border-r border-slate-100 dark:border-slate-800" />
                     {weekDays.map(d => {
                       const dk = toDateKey(d);
                       const isToday = dk === toDateKey(today);
                       return (
-                        <div key={dk} className={`py-3 text-center border-r last:border-r-0 border-slate-100 dark:border-slate-800 ${isToday ? 'bg-emerald-50 dark:bg-emerald-950/30' : ''}`}>
-                          <p className="text-[10px] text-slate-400 uppercase font-semibold">{DAY_SHORT[d.getDay()]}</p>
-                          <p className={`text-lg font-bold mt-0.5 ${isToday ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-700 dark:text-slate-300'}`}>{d.getDate()}</p>
+                        <div key={dk} className={`py-3 text-center border-r last:border-r-0 border-slate-100 dark:border-slate-800 ${isToday ? 'bg-blue-50 dark:bg-blue-950/30' : ''}`}>
+                          <p className="text-xs text-slate-400 uppercase font-semibold tracking-wide">{DAY_SHORT[d.getDay()]}</p>
+                          <p className={`text-lg font-bold mt-0.5 ${isToday ? 'text-[#5864C6]' : 'text-slate-700 dark:text-slate-300'}`}>{d.getDate()}</p>
                         </div>
                       );
                     })}
                   </div>
-                  <div className="grid grid-cols-7 min-h-[300px]">
+                  <div className="grid grid-cols-[4rem_repeat(7,1fr)] relative" style={{ minHeight: columnMinHeight }}>
+                    <div className="border-r border-slate-100 dark:border-slate-800">
+                      {Array.from({ length: hourCount }, (_, i) => CALENDAR_HOUR_START + i).map(h => (
+                        <div key={h} className="h-12 text-sm text-slate-500 dark:text-slate-400 pr-2 text-right border-b border-slate-50 dark:border-slate-800/40 pt-1">
+                          {formatHourLabel(h)}
+                        </div>
+                      ))}
+                    </div>
                     {weekDays.map(d => {
                       const dk = toDateKey(d);
                       const dayBookings = grouped.get(dk) ?? [];
                       const dayExternal = externalEvents.filter(e => toDateKey(new Date(e.start_at)) === dk);
                       const isToday = dk === toDateKey(today);
-                      const isEmpty = dayBookings.length === 0 && dayExternal.length === 0;
                       return (
-                        <div key={dk} className={`border-r last:border-r-0 border-slate-100 dark:border-slate-800/60 p-1.5 cursor-pointer hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors ${isToday ? 'bg-emerald-50/20 dark:bg-emerald-950/10' : ''}`}
+                        <div key={dk} className={`relative border-r last:border-r-0 border-slate-100 dark:border-slate-800/60 ${isToday ? 'bg-blue-50/30 dark:bg-blue-950/10' : ''}`}
+                          style={{ minHeight: columnMinHeight }}
                           onClick={() => { setSelectedDate(dk); setView('day'); }}>
-                          {isEmpty ? (
-                            <p className="text-[10px] text-slate-300 dark:text-slate-700 text-center mt-4">—</p>
-                          ) : (
-                            <div className="space-y-0.5">
-                              {dayExternal.slice(0, 3).map(e => (
-                                <div key={e.id} className="text-[10px] px-1 py-0.5 rounded truncate flex items-center gap-1 bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400">
-                                  <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${e.provider === 'google' ? 'bg-red-400' : e.provider === 'outlook' ? 'bg-blue-400' : 'bg-slate-400'}`} />
-                                  <span className="truncate">{e.all_day ? e.title : `${formatTime(e.start_at)} ${e.title}`}</span>
-                                </div>
-                              ))}
-                              {dayBookings.map(b => (
-                                <div key={b.id} className="text-[10px] px-1 py-0.5 rounded truncate text-white flex items-center gap-0.5" style={{ backgroundColor: b.is_critical ? '#ef4444' : ((b as any).services?.color ?? '#5864C6') }}>
-                                  {b.is_critical && <span className="shrink-0">⚠</span>}
-                                  <span className="truncate">{formatTime(b.start_time)} {b.guest_name}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
+                          {Array.from({ length: hourCount }, (_, i) => (
+                            <div key={i} className="h-12 border-b border-slate-50 dark:border-slate-800/40" />
+                          ))}
+                          <div className="absolute inset-x-1 top-0 space-y-1 p-1 pointer-events-none">
+                            {dayExternal.map(e => (
+                              <div key={e.id} title={e.title} className="text-sm p-2 rounded-md shadow-sm bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 pointer-events-auto">
+                                <p className="font-semibold truncate">{e.title}</p>
+                                <p className="text-xs mt-0.5">{e.all_day ? 'All day' : formatTime(e.start_at)}</p>
+                              </div>
+                            ))}
+                            {dayBookings.map(b => (
+                              <div key={b.id} className="pointer-events-auto"><WeekBookingCard booking={b} /></div>
+                            ))}
+                          </div>
+                          {isToday && <CurrentTimeLine />}
                         </div>
                       );
                     })}
@@ -785,76 +850,89 @@ export function AppointmentsPage() {
               const dayExternal = externalEvents.filter(e => toDateKey(new Date(e.start_at)) === selectedDate);
               const selectedDateObj = new Date(selectedDate + 'T12:00:00');
               const isToday = selectedDate === toDateKey(today);
+              const hours = Array.from({ length: CALENDAR_HOUR_END - CALENDAR_HOUR_START + 1 }, (_, i) => CALENDAR_HOUR_START + i);
               return (
-                <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
-                  <div className={`px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between ${isToday ? 'bg-emerald-50 dark:bg-emerald-950/30' : 'bg-slate-50 dark:bg-slate-800/40'}`}>
+                <div className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+                  <div className={`px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between ${isToday ? 'bg-blue-50 dark:bg-blue-950/30' : 'bg-slate-50 dark:bg-slate-800/40'}`}>
                     <div className="flex items-center gap-3">
                       <button onClick={() => { const d = new Date(selectedDate + 'T12:00:00'); d.setDate(d.getDate()-1); setSelectedDate(toDateKey(d)); }} className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded transition-colors"><ChevronLeft className="h-4 w-4" /></button>
-                      <span className={`text-sm font-semibold ${isToday ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                      <span className={`text-base font-semibold ${isToday ? 'text-[#5864C6]' : 'text-slate-700 dark:text-slate-300'}`}>
                         {DAY_NAMES[selectedDateObj.getDay()]}, {MONTH_NAMES[selectedDateObj.getMonth()]} {selectedDateObj.getDate()}, {selectedDateObj.getFullYear()}
-                        {isToday && <span className="ml-2 text-emerald-500 font-normal">Today</span>}
+                        {isToday && <span className="ml-2 text-[#5864C6] font-normal">Today</span>}
                       </span>
                       <button onClick={() => { const d = new Date(selectedDate + 'T12:00:00'); d.setDate(d.getDate()+1); setSelectedDate(toDateKey(d)); }} className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded transition-colors"><ChevronRight className="h-4 w-4" /></button>
                     </div>
-                    <button onClick={() => { setShowAddEvent(true); }} className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 transition-colors"><Plus className="h-3.5 w-3.5" />Add</button>
+                    <button onClick={() => { setShowAddEvent(true); }} className="flex items-center gap-1 text-sm text-[#5864C6] hover:opacity-80 transition-colors"><Plus className="h-4 w-4" />Add</button>
                   </div>
                   {dayBookings.length === 0 && dayExternal.length === 0 ? (
-                    <div className="text-center py-16">
-                      <CalendarDays className="h-8 w-8 text-slate-200 dark:text-slate-700 mx-auto mb-2" />
-                      <p className="text-sm text-slate-400 dark:text-slate-500">No meetings this day.</p>
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                      {dayExternal.map(e => (
-                        <div key={e.id} className="flex items-center gap-4 px-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/20">
-                          <Lock className="h-3.5 w-3.5 text-slate-300 dark:text-slate-600 shrink-0" />
-                          <p className="text-xs text-slate-400 dark:text-slate-500 w-28 shrink-0">{e.all_day ? 'All day' : `${formatTime(e.start_at)} – ${formatTime(e.end_at)}`}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate italic flex-1">{e.title}</p>
+                    <div className="relative">
+                      {hours.map(h => (
+                        <div key={h} className="flex border-b border-slate-100 dark:border-slate-800/60 min-h-[60px]">
+                          <div className="w-16 lg:w-20 shrink-0 text-sm text-slate-500 dark:text-slate-400 pr-3 pt-2 text-right border-r border-slate-100 dark:border-slate-800/60">{formatHourLabel(h)}</div>
+                          <div className="flex-1" />
                         </div>
                       ))}
-                      {dayBookings.map(b => {
-                        const svc = (b as any).services;
-                        const LocIcon = getLocationIcon(svc?.location_type);
-                        const isCanceled = b.status === 'canceled';
-                        const isCompleted = b.status === 'completed';
-                        const isTentative = b.status === 'tentative';
-                        const isPendingApproval = b.status === 'pending_approval';
-                        const isInactive = isCanceled || isCompleted;
+                      {isToday && (
+                        <div className="absolute inset-0 left-16 lg:left-20 pointer-events-none">
+                          <CurrentTimeLine />
+                        </div>
+                      )}
+                      <div className="text-center py-12">
+                        <CalendarDays className="h-8 w-8 text-slate-200 dark:text-slate-700 mx-auto mb-2" />
+                        <p className="text-sm text-slate-400 dark:text-slate-500">No meetings this day.</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      {hours.map(h => {
+                        const hourBookings = dayBookings.filter(b => new Date(b.start_time).getHours() === h);
+                        const hourExternal = dayExternal.filter(e => !e.all_day && new Date(e.start_at).getHours() === h);
+                        const allDayExternal = h === CALENDAR_HOUR_START ? dayExternal.filter(e => e.all_day) : [];
                         return (
-                          <div key={b.id} onClick={() => b.is_recurring && setDetailBooking(b)}
-                            className={`flex items-start gap-4 px-4 py-3 ${isInactive ? 'opacity-55' : ''} ${b.is_recurring ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40' : ''}`}>
-                            <div className="w-28 shrink-0"><p className="text-sm font-medium text-slate-700 dark:text-slate-200">{formatTime(b.start_time)} – {formatTime(b.end_time)}</p></div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap"><span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: svc?.color ?? '#5864C6' }} /><p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">{svc?.name ?? 'Appointment'}</p>
-                                {b.is_recurring && <span title="Recurring booking"><Repeat className="h-3.5 w-3.5 text-slate-400" /></span>}
-                                {b.is_critical && <span className="text-xs px-1.5 py-0.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-full font-semibold flex items-center gap-0.5"><BellRing className="h-3 w-3" />Critical</span>}
-                                {isTentative && <span className="text-xs px-1.5 py-0.5 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-full">Tentative</span>}
-                                {isPendingApproval && <span className="text-xs px-1.5 py-0.5 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 rounded-full">Pending</span>}
-                              </div>
-                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{b.guest_name} · {b.guest_email}</p>
-                              {svc?.location && <div className="flex items-center gap-1 mt-0.5 text-xs text-slate-400"><LocIcon className="h-3 w-3" /><span className="truncate">{svc.location}</span></div>}
+                          <div key={h} className="flex border-b border-slate-100 dark:border-slate-800/60 min-h-[60px]">
+                            <div className="w-16 lg:w-20 shrink-0 text-sm text-slate-500 dark:text-slate-400 pr-3 pt-2 text-right border-r border-slate-100 dark:border-slate-800/60">{formatHourLabel(h)}</div>
+                            <div className="flex-1 p-2 space-y-2">
+                              {allDayExternal.map(e => (
+                                <div key={e.id} title={e.title} className="text-sm p-2 rounded-lg shadow-sm bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                  <p className="font-semibold">{e.title}</p>
+                                  <p className="text-xs mt-0.5">All day</p>
+                                </div>
+                              ))}
+                              {hourExternal.map(e => (
+                                <div key={e.id} title={e.title} className="text-sm p-2 rounded-lg shadow-sm bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                  <p className="font-semibold">{e.title}</p>
+                                  <p className="text-xs text-slate-500 mt-0.5">{formatTime(e.start_at)} – {formatTime(e.end_at)}</p>
+                                </div>
+                              ))}
+                              {hourBookings.map(b => {
+                                const svc = (b as Booking & { services?: { name?: string; color?: string; location?: string; location_type?: string } }).services;
+                                const LocIcon = getLocationIcon(svc?.location_type);
+                                return (
+                                  <div key={b.id} title={bookingEventTitle(b)} className="rounded-lg shadow-sm p-3 border border-slate-100 dark:border-slate-700 min-h-[56px]" style={{ backgroundColor: `${svc?.color ?? '#5864C6'}12`, borderLeftColor: svc?.color ?? '#5864C6', borderLeftWidth: 4 }}>
+                                    <div className="flex items-center gap-2">
+                                      <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: svc?.color ?? '#5864C6' }} />
+                                      <p className="text-base font-semibold text-slate-800 dark:text-slate-100">{svc?.name ?? 'Appointment'}</p>
+                                    </div>
+                                    <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">{b.guest_name}</p>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{formatTime(b.start_time)} – {formatTime(b.end_time)}</p>
+                                    {svc?.location && (
+                                      <div className="flex items-center gap-1 mt-1 text-sm text-slate-500 dark:text-slate-400">
+                                        <LocIcon className="h-3.5 w-3.5 shrink-0" />
+                                        <span className="truncate">{svc.location}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
-                            <button
-                              onClick={() => handleToggleCritical(b)}
-                              className={`shrink-0 p-1.5 rounded transition-colors ${b.is_critical ? 'text-red-500 bg-red-50 dark:bg-red-900/20' : 'text-slate-300 dark:text-slate-600 hover:text-red-400'}`}
-                              title={b.is_critical ? 'Remove critical alert' : 'Mark as critical meeting'}
-                            >
-                              <BellRing className="h-3.5 w-3.5" />
-                            </button>
-                            {!isInactive && (
-                              <div className="shrink-0 flex items-center gap-1">
-                                {(isTentative || isPendingApproval) && (
-                                  <button onClick={() => handleApproveBooking(b.id)} className="p-1.5 text-slate-300 dark:text-slate-600 hover:text-emerald-500 transition-colors rounded" title="Approve"><Check className="h-3.5 w-3.5" /></button>
-                                )}
-                                {!isTentative && !isPendingApproval && (
-                                  <button onClick={() => handleCompleteBooking(b.id)} className="p-1.5 text-slate-300 dark:text-slate-600 hover:text-emerald-500 transition-colors rounded" title="Mark complete"><Check className="h-3.5 w-3.5" /></button>
-                                )}
-                                <button onClick={() => handleCancelBooking(b.id)} className="p-1.5 text-slate-300 dark:text-slate-600 hover:text-red-500 transition-colors rounded" title="Cancel"><X className="h-3.5 w-3.5" /></button>
-                              </div>
-                            )}
                           </div>
                         );
                       })}
+                      {isToday && (
+                        <div className="absolute inset-0 left-16 lg:left-20 pointer-events-none">
+                          <CurrentTimeLine />
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

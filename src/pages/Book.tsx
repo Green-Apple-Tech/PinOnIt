@@ -37,6 +37,7 @@ import {
   Shield,
   Zap,
   ExternalLink,
+  ChevronDown,
 } from 'lucide-react';
 
 type ReminderChannel = 'email' | 'sms' | 'whatsapp' | 'voice';
@@ -63,7 +64,25 @@ function generateId() {
 }
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const DAY_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DAY_SHORT = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+const BOOKING_NAVY = '#1a1f36';
+
+function formatTimezoneDisplay(tz: string): string {
+  try {
+    const time = new Date().toLocaleTimeString('en-US', {
+      timeZone: tz,
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    }).toLowerCase();
+    const name = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'longGeneric' })
+      .formatToParts(new Date())
+      .find((p) => p.type === 'timeZoneName')?.value ?? tz.replace(/_/g, ' ');
+    return `${name} (${time})`;
+  } catch {
+    return tz.replace(/_/g, ' ');
+  }
+}
 
 function formatTime12(time: string): string {
   const [h, m] = time.split(':');
@@ -238,13 +257,13 @@ function buildSlots(availability: AvailabilitySlot[], existingBookings: Booking[
 }
 
 function ReminderWizard({
-  brandColor,
+  accentColor,
   guestEmail,
   reminders,
   setReminders,
   onDone,
 }: {
-  brandColor: string;
+  accentColor: string;
   guestEmail: string;
   reminders: ReminderEntry[];
   setReminders: React.Dispatch<React.SetStateAction<ReminderEntry[]>>;
@@ -307,7 +326,7 @@ function ReminderWizard({
           <ArrowLeft className="h-4 w-4" /> Back to confirmation
         </button>
         <div className="flex items-center gap-2 mb-1">
-          <Bell className="h-5 w-5" style={{ color: brandColor }} />
+          <Bell className="h-5 w-5" style={{ color: accentColor }} />
           <h2 className="text-xl font-bold">Add more reminders</h2>
         </div>
         <p className="text-sm text-slate-500 dark:text-slate-400">Choose how and when you'd like to be reminded about your appointment.</p>
@@ -315,8 +334,8 @@ function ReminderWizard({
 
       {/* Default reminder (always on) */}
       <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-800 mb-4">
-        <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: brandColor + '22' }}>
-          <Mail className="h-4 w-4" style={{ color: brandColor }} />
+        <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: accentColor + '22' }}>
+          <Mail className="h-4 w-4" style={{ color: accentColor }} />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium">Email · 1 hour before</p>
@@ -330,8 +349,8 @@ function ReminderWizard({
         const Icon = channelIcon(r.channel);
         return (
           <div key={r.id} className="flex items-center gap-3 p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 mb-2">
-            <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: brandColor + '22' }}>
-              <Icon className="h-4 w-4" style={{ color: brandColor }} />
+            <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: accentColor + '22' }}>
+              <Icon className="h-4 w-4" style={{ color: accentColor }} />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium">{channelLabel(r.channel)} · {timingLabel(r.minutesBefore)}</p>
@@ -348,7 +367,7 @@ function ReminderWizard({
       {addingChannel ? (
         <div className="mt-4 p-4 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900/50 space-y-3">
           <div className="flex items-center gap-2 mb-1">
-            {(() => { const cfg = CHANNELS.find((c) => c.key === addingChannel)!; const Icon = cfg.icon; return <Icon className="h-4 w-4" style={{ color: brandColor }} />; })()}
+            {(() => { const cfg = CHANNELS.find((c) => c.key === addingChannel)!; const Icon = cfg.icon; return <Icon className="h-4 w-4" style={{ color: accentColor }} />; })()}
             <span className="text-sm font-semibold">{channelLabel(addingChannel)} reminder</span>
           </div>
           <div>
@@ -388,7 +407,7 @@ function ReminderWizard({
               Cancel
             </button>
             <button onClick={addReminder} disabled={!draftContact.trim()} className="flex-1 py-2 text-sm font-semibold text-white rounded-lg transition-all disabled:opacity-40"
-              style={{ backgroundColor: brandColor }}>
+              style={{ backgroundColor: accentColor }}>
               Add reminder
             </button>
           </div>
@@ -400,9 +419,9 @@ function ReminderWizard({
             return (
               <button key={ch.key} onClick={() => startAdding(ch.key)}
                 className="flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-opacity-100 transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 group"
-                style={{ '--brand': brandColor } as React.CSSProperties}>
-                <div className="h-9 w-9 rounded-full flex items-center justify-center group-hover:opacity-90 transition-all" style={{ backgroundColor: brandColor + '18' }}>
-                  <Icon className="h-4 w-4" style={{ color: brandColor }} />
+                style={{ '--brand': accentColor } as React.CSSProperties}>
+                <div className="h-9 w-9 rounded-full flex items-center justify-center group-hover:opacity-90 transition-all" style={{ backgroundColor: accentColor + '18' }}>
+                  <Icon className="h-4 w-4" style={{ color: accentColor }} />
                 </div>
                 <span className="text-xs font-medium">{ch.label}</span>
                 <Plus className="h-3 w-3 opacity-50" />
@@ -414,7 +433,7 @@ function ReminderWizard({
 
       <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
         <button onClick={onDone} className="w-full py-3 text-sm font-semibold text-white rounded-lg transition-all hover:opacity-90"
-          style={{ backgroundColor: brandColor }}>
+          style={{ backgroundColor: accentColor }}>
           {reminders.length > 0 ? `Save ${reminders.length + 1} reminder${reminders.length + 1 > 1 ? 's' : ''} & finish` : 'Finish without adding more'}
         </button>
       </div>
@@ -810,8 +829,6 @@ export function BookPage() {
   const prevMonth = () => { if (calMonth === 0) { setCalYear(y => y - 1); setCalMonth(11); } else setCalMonth(m => m - 1); setSelectedDate(null); setSelectedSlot(null); };
   const nextMonth = () => { if (calMonth === 11) { setCalYear(y => y + 1); setCalMonth(0); } else setCalMonth(m => m + 1); setSelectedDate(null); setSelectedSlot(null); };
 
-  const brandColor = host?.brand_color ?? '#5864C6';
-
   // ── Theme system ──────────────────────────────────────────────────────────────
   type ThemeId = 'clean' | 'bold' | 'warm';
   interface ThemeDef {
@@ -859,6 +876,10 @@ export function BookPage() {
   const pageSurfaceColor = pageTheme.surface;
   const pageBorderColor = pageTheme.border;
 
+  const calendlyStyle = !isPaidBookingPage;
+  const accentColor = calendlyStyle ? BOOKING_NAVY : pageBtnColor;
+  const focusRing = calendlyStyle ? 'focus:ring-[#1a1f36]' : 'focus:ring-emerald-500';
+
   const serviceShowsDescription = (svc: Service) => {
     if (!pageShowDesc || !svc.description) return false;
     if (isPaidBookingPage) return (svc as Service).show_description_on_paid_booking ?? true;
@@ -873,7 +894,7 @@ export function BookPage() {
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950 transition-colors">
-      <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
+      <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
     </div>
   );
 
@@ -885,7 +906,7 @@ export function BookPage() {
         </div>
         <h1 className="text-xl font-bold mb-2">Link no longer valid</h1>
         <p className="text-slate-500 dark:text-slate-400 text-sm">This single-use booking link has already been used or has expired. Contact the host for a new link.</p>
-        <Link to="/" className="mt-6 inline-block text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 text-sm font-medium">Go home</Link>
+        <Link to="/" className="mt-6 inline-block text-[#5864C6] hover:opacity-80 text-sm font-medium">Go home</Link>
       </div>
     </div>
   );
@@ -908,18 +929,18 @@ export function BookPage() {
       <div className="text-center">
         <h1 className="text-2xl font-bold mb-2">Page not found</h1>
         <p className="text-slate-500 dark:text-slate-400">This scheduling page doesn't exist.</p>
-        <Link to="/" className="mt-4 inline-block text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 text-sm">Go home</Link>
+        <Link to="/" className="mt-4 inline-block text-[#5864C6] hover:opacity-80 text-sm">Go home</Link>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen transition-colors" style={{ backgroundColor: pageBgColor, color: pageTextColor }}>
-      <div className="h-1.5 w-full" style={{ backgroundColor: pageTheme.accentBar }} />
-      <header className="border-b sticky top-0 z-40 backdrop-blur-xl transition-colors"
-        style={{ borderColor: pageBorderColor, backgroundColor: pageBgColor + 'cc' }}>
-        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-1.5 transition-colors text-sm" style={{ color: pageMutedColor }}>
+    <div className={`min-h-screen transition-colors ${calendlyStyle ? 'bg-white text-slate-800' : ''}`} style={calendlyStyle ? undefined : { backgroundColor: pageBgColor, color: pageTextColor }}>
+      {!calendlyStyle && <div className="h-1.5 w-full" style={{ backgroundColor: pageTheme.accentBar }} />}
+      <header className={`${calendlyStyle ? 'bg-white border-b border-slate-200' : 'border-b sticky top-0 z-40 backdrop-blur-xl'} transition-colors`}
+        style={calendlyStyle ? undefined : { borderColor: pageBorderColor, backgroundColor: pageBgColor + 'cc' }}>
+        <div className={`${calendlyStyle ? 'max-w-6xl' : 'max-w-5xl'} mx-auto px-6 h-14 flex items-center justify-between`}>
+          <Link to="/" className={`flex items-center gap-1.5 transition-colors text-sm ${calendlyStyle ? 'text-slate-500 hover:text-slate-800' : ''}`} style={calendlyStyle ? undefined : { color: pageMutedColor }}>
             <ArrowLeft className="h-4 w-4" /> Back
           </Link>
           <div className="flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500">
@@ -929,7 +950,7 @@ export function BookPage() {
                 Single-use link
               </span>
             )}
-            {host?.plan === 'free' ? (
+            {host?.plan === 'free' && !calendlyStyle ? (
               <Link
                 to="/"
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors font-medium"
@@ -937,58 +958,63 @@ export function BookPage() {
                 <img src="/Screenshot_2026-04-29_at_2.49.32_PM.png" alt="Pin on It" className="h-4 w-auto opacity-70" />
                 <span>Powered by Pin on It</span>
               </Link>
-            ) : (
+            ) : !calendlyStyle ? (
               <img src="/Screenshot_2026-04-29_at_2.49.32_PM.png" alt="Pin on It" className="h-5 w-auto opacity-40" />
-            )}
+            ) : null}
           </div>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-6 md:py-8">
-        <div className="grid lg:grid-cols-[280px_1fr] gap-6 md:gap-8">
-          <aside className="space-y-4">
-            <div className="flex items-center gap-3">
+      <main className={`${calendlyStyle ? 'max-w-6xl' : 'max-w-5xl'} mx-auto px-4 py-6 md:py-8`}>
+        <div className={calendlyStyle ? 'bg-white shadow-lg rounded-2xl border border-slate-200 overflow-hidden' : ''}>
+        <div className={calendlyStyle ? 'grid lg:grid-cols-[3fr_7fr]' : 'grid lg:grid-cols-[280px_1fr] gap-6 md:gap-8'}>
+          <aside className={`${calendlyStyle ? 'p-6 md:p-8 lg:border-r border-slate-200 space-y-5' : 'space-y-4'}`}>
+            <div className={`flex gap-4 ${calendlyStyle ? 'flex-col sm:flex-row lg:flex-col items-start' : 'items-center gap-3'}`}>
               {pageBusinessPhoto ? (
-                <img src={pageBusinessPhoto} alt={pageDisplayName} className="h-14 w-14 rounded-full object-cover" />
+                <img src={pageBusinessPhoto} alt={pageDisplayName} className={`rounded-full object-cover ${calendlyStyle ? 'h-16 w-16' : 'h-14 w-14'}`} />
               ) : (
-                <div className="h-14 w-14 rounded-full flex items-center justify-center text-white font-bold text-lg"
-                  style={{ backgroundColor: pageBtnColor + '33', border: `2px solid ${pageBtnColor}` }}>
+                <div className={`rounded-full flex items-center justify-center text-white font-bold ${calendlyStyle ? 'h-16 w-16 text-xl' : 'h-14 w-14 text-lg'}`}
+                  style={{ backgroundColor: accentColor + '33', border: `2px solid ${accentColor}` }}>
                   {(pageDisplayName || 'H').charAt(0).toUpperCase()}
                 </div>
               )}
               <div>
-                <h1 className="font-semibold text-base" style={{ color: pageTextColor }}>{pageDisplayName || 'Host'}</h1>
-                {pageTagline && <p className="text-xs" style={{ color: pageMutedColor }}>{pageTagline}</p>}
+                <h1 className={`${calendlyStyle ? 'text-2xl font-bold text-slate-800' : 'font-semibold text-base'}`} style={calendlyStyle ? undefined : { color: pageTextColor }}>{pageDisplayName || 'Host'}</h1>
+                {pageTagline && <p className={`mt-1 ${calendlyStyle ? 'text-base text-slate-500' : 'text-xs'}`} style={calendlyStyle ? undefined : { color: pageMutedColor }}>{pageTagline}</p>}
               </div>
             </div>
-            {pageBio && <p className="text-sm leading-relaxed" style={{ color: pageMutedColor }}>{pageBio}</p>}
+            {pageBio && <p className={`leading-relaxed ${calendlyStyle ? 'text-base text-slate-600' : 'text-sm'}`} style={calendlyStyle ? undefined : { color: pageMutedColor }}>{pageBio}</p>}
             {selectedService && (
-              <div className="p-4 rounded-xl space-y-2.5 text-sm border"
-                style={{ backgroundColor: pageSurfaceColor, borderColor: pageBorderColor }}>
-                <div className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: selectedService.color }} />
-                  <span className="font-medium" style={{ color: pageTextColor }}>{selectedService.name}</span>
+              <div className={`border text-sm ${calendlyStyle ? 'p-5 rounded-xl border-slate-200 shadow-sm bg-white space-y-3' : 'p-4 rounded-xl space-y-2.5'}`}
+                style={calendlyStyle ? undefined : { backgroundColor: pageSurfaceColor, borderColor: pageBorderColor }}>
+                <div className="flex items-start gap-2.5">
+                  <span className="h-2.5 w-2.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: selectedService.color }} />
+                  <span className={`${calendlyStyle ? 'text-xl font-semibold text-slate-800' : 'font-medium'}`} style={calendlyStyle ? undefined : { color: pageTextColor }}>{selectedService.name}</span>
                 </div>
-                <div className="flex items-center gap-1.5" style={{ color: pageMutedColor }}><Clock className="h-3.5 w-3.5" />{selectedService.duration_minutes} min</div>
+                <div className={`flex items-center gap-1.5 ${calendlyStyle ? 'text-base text-slate-500' : ''}`} style={calendlyStyle ? undefined : { color: pageMutedColor }}><Clock className="h-4 w-4" />{selectedService.duration_minutes} min</div>
                 {selectedService.location && (
-                  <div className="flex items-center gap-1.5" style={{ color: pageMutedColor }}>
-                    {(() => { const Icon = getLocationIcon(selectedService.location_type); return <Icon className="h-3.5 w-3.5" />; })()}
+                  <div className={`flex items-center gap-1.5 ${calendlyStyle ? 'text-base text-slate-500' : ''}`} style={calendlyStyle ? undefined : { color: pageMutedColor }}>
+                    {(() => { const Icon = getLocationIcon(selectedService.location_type); return <Icon className="h-4 w-4" />; })()}
                     {LOCATION_TYPES[selectedService.location_type]}
                   </div>
                 )}
-                {selectedService.price_cents > 0 && <div className="font-medium" style={{ color: pageBtnColor }}>${(selectedService.price_cents / 100).toFixed(2)}</div>}
+                {selectedService.price_cents > 0 && (
+                  <div className={`${calendlyStyle ? 'text-base font-semibold text-slate-800' : 'font-medium'}`} style={calendlyStyle ? undefined : { color: accentColor }}>
+                    ${(selectedService.price_cents / 100).toFixed(2)}
+                  </div>
+                )}
                 {selectedDate && (
-                  <div className="flex items-center gap-1.5 border-t pt-2" style={{ color: pageTextColor, borderColor: pageBorderColor }}>
-                    <Calendar className="h-3.5 w-3.5" />
+                  <div className={`flex items-center gap-1.5 border-t pt-3 ${calendlyStyle ? 'text-slate-800' : ''}`} style={calendlyStyle ? undefined : { color: pageTextColor, borderColor: pageBorderColor }}>
+                    <Calendar className="h-4 w-4" />
                     {new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                   </div>
                 )}
-                {selectedSlot && <div className="flex items-center gap-1.5" style={{ color: pageTextColor }}><Clock className="h-3.5 w-3.5" />{formatTime12(selectedSlot)}</div>}
+                {selectedSlot && <div className={`flex items-center gap-1.5 ${calendlyStyle ? 'text-slate-800' : ''}`} style={calendlyStyle ? undefined : { color: pageTextColor }}><Clock className="h-4 w-4" />{formatTime12(selectedSlot)}</div>}
               </div>
             )}
           </aside>
 
-          <div>
+          <div className={calendlyStyle ? 'p-6 md:p-8' : ''}>
             {step === 'service' && (
               <div>
                 <h2 className="text-xl font-bold mb-1" style={{ color: pageTextColor }}>Book an appointment</h2>
@@ -1073,56 +1099,78 @@ export function BookPage() {
             {step === 'datetime' && selectedService && (
               <div>
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold" style={{ color: pageTextColor }}>Select date & time</h2>
+                  <h2 className={`font-bold ${calendlyStyle ? 'text-xl text-slate-800' : 'text-xl'}`} style={calendlyStyle ? undefined : { color: pageTextColor }}>Select date & time</h2>
                   <button onClick={() => { setStep('service'); setSelectedService(null); setSelectedDate(null); setSelectedSlot(null); }}
-                    className="text-sm transition-colors" style={{ color: pageMutedColor }}>Change service</button>
+                    className={`text-sm transition-colors ${calendlyStyle ? 'text-slate-500 hover:text-slate-800' : ''}`} style={calendlyStyle ? undefined : { color: pageMutedColor }}>Change service</button>
                 </div>
-                {/* Calendar + time slots — stacks vertically on mobile */}
               <div className="flex flex-col gap-6">
                   <div>
                     <div className="flex items-center justify-between mb-4">
-                      <button onClick={prevMonth} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+                      <button onClick={prevMonth} className="min-h-[40px] min-w-[40px] flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors rounded-lg">
                         <ChevronLeft className="h-5 w-5" />
                       </button>
-                      <h3 className="font-semibold text-base">{MONTH_NAMES[calMonth]} {calYear}</h3>
-                      <button onClick={nextMonth} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+                      <h3 className={`font-semibold ${calendlyStyle ? 'text-base text-slate-800' : 'text-base'}`}>{MONTH_NAMES[calMonth]} {calYear}</h3>
+                      <button onClick={nextMonth} className="min-h-[40px] min-w-[40px] flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors rounded-lg">
                         <ChevronRight className="h-5 w-5" />
                       </button>
                     </div>
                     <div className="grid grid-cols-7 mb-2">
-                      {DAY_SHORT.map((d) => <div key={d} className="text-center text-xs text-slate-400 dark:text-slate-500 font-medium py-1">{d}</div>)}
+                      {DAY_SHORT.map((d) => <div key={d} className="text-center text-xs uppercase text-slate-400 font-medium py-1 tracking-wide">{d}</div>)}
                     </div>
-                    <div className="grid grid-cols-7 gap-1">
+                    <div className="grid grid-cols-7 gap-y-1">
                       {calendarDays.map((d, i) => {
                         if (!d) return <div key={`empty-${i}`} />;
                         const dk = `${calYear}-${String(calMonth + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
                         const hasSlots = displaySlotMap.has(dk);
                         const isSelected = selectedDate === dk;
-                        const isPast = new Date(calYear, calMonth, d) < today && toDateKey(new Date(calYear, calMonth, d)) !== toDateKey(today);
+                        const isToday = dk === toDateKey(today);
+                        const isPast = new Date(calYear, calMonth, d) < today && !isToday;
+                        const disabled = !hasSlots || isPast;
                         return (
-                          <button key={dk} disabled={!hasSlots || isPast} onClick={() => { setSelectedDate(dk); setSelectedSlot(null); }}
-                            className={`aspect-square flex items-center justify-center rounded-lg text-sm font-medium transition-all ${
-                              isSelected ? 'text-white' : hasSlots && !isPast ? 'text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800' : 'text-slate-300 dark:text-slate-700 cursor-not-allowed'
-                            }`}
-                            style={isSelected ? { backgroundColor: brandColor } : hasSlots && !isPast ? { border: `1px solid ${brandColor}33` } : {}}>
+                          <button key={dk} disabled={disabled} onClick={() => { setSelectedDate(dk); setSelectedSlot(null); }}
+                            className={`mx-auto h-9 w-9 flex items-center justify-center text-base font-medium transition-all rounded-full ${
+                              isSelected
+                                ? 'bg-[#1a1f36] text-white'
+                                : disabled
+                                  ? 'text-slate-300 cursor-not-allowed'
+                                  : isToday
+                                    ? 'text-slate-800 ring-2 ring-[#1a1f36] ring-offset-1 hover:bg-[#EEF2FF]'
+                                    : 'text-slate-800 hover:bg-[#EEF2FF]'
+                            }`}>
                             {d}
                           </button>
                         );
                       })}
                     </div>
+                    <div className="mt-6 pt-4 border-t border-slate-100">
+                      <label className="block text-xs font-medium text-slate-500 mb-1.5">Timezone</label>
+                      <div className="relative">
+                        <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                        <select
+                          value={guestTimezone}
+                          onChange={(e) => setGuestTimezone(e.target.value)}
+                          className={`w-full appearance-none pl-9 pr-9 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 ${focusRing} focus:outline-none focus:ring-2 transition`}
+                        >
+                          {TIMEZONES.map((tz) => <option key={tz} value={tz}>{formatTimezoneDisplay(tz)}</option>)}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                      </div>
+                      <p className="mt-1.5 text-xs text-slate-500">{formatTimezoneDisplay(guestTimezone)}</p>
+                    </div>
                   </div>
                   {selectedDate && (
                     <div>
-                      <h4 className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-3">
-                        {new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                      <h4 className="text-base font-medium text-slate-800 mb-3">
+                        {new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                       </h4>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 gap-2">
+                      <div className="grid grid-cols-2 gap-2">
                         {(displaySlotMap.get(selectedDate) ?? []).map((slot) => (
                           <button key={slot} onClick={() => { setSelectedSlot(slot); }}
-                            className={`py-3 px-3 rounded-lg text-sm font-medium transition-all min-h-[48px] ${
-                              selectedSlot === slot ? 'text-white' : 'bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-600 text-slate-900 dark:text-white'
-                            }`}
-                            style={selectedSlot === slot ? { backgroundColor: brandColor } : {}}>
+                            className={`py-3 px-4 rounded-lg text-sm font-medium transition-all ${
+                              selectedSlot === slot
+                                ? 'bg-[#1a1f36] text-white'
+                                : 'bg-white border border-slate-200 text-slate-800 hover:bg-[#EEF2FF] hover:border-slate-300'
+                            }`}>
                             {formatTime12(slot)}
                           </button>
                         ))}
@@ -1130,28 +1178,28 @@ export function BookPage() {
                     </div>
                   )}
                   {!selectedDate && (
-                    <p className="text-sm text-slate-400 dark:text-slate-500">Select a date to see available times.</p>
+                    <p className="text-sm text-slate-500">Select a date to see available times.</p>
                   )}
                 </div>
                 {selectedDate && selectedSlot && isRecurringService && (
-                  <div className="mt-4 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50/60 dark:bg-emerald-950/20 space-y-3">
+                  <div className="mt-4 p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-3">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">This is a recurring booking</p>
-                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">
+                      <p className="text-sm font-semibold text-slate-800">This is a recurring booking</p>
+                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-200 text-slate-700">
                         {recurringFrequencyLabel}
                       </span>
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">Your upcoming appointments:</p>
+                      <p className="text-xs font-semibold text-slate-500 mb-2">Your upcoming appointments:</p>
                       <ul className="space-y-1.5">
                         {recurringPreviewDates.map((dt, i) => (
-                          <li key={i} className="text-sm text-slate-700 dark:text-slate-300">
+                          <li key={i} className="text-sm text-slate-700">
                             ✓ {dt.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} at{' '}
                             {dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                           </li>
                         ))}
                       </ul>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 italic">
+                      <p className="text-xs text-slate-500 mt-2 italic">
                         ...and {selectedService?.recurrence_frequency === 'monthly' ? 'every month' : selectedService?.recurrence_frequency === 'biweekly' ? 'every 2 weeks' : 'every week'} after that
                       </p>
                     </div>
@@ -1159,7 +1207,7 @@ export function BookPage() {
                 )}
                 {selectedDate && selectedSlot && (
                   <div className="mt-4 flex justify-end">
-                    <button onClick={() => setStep('details')} className="w-full sm:w-auto px-5 py-3 text-white font-semibold rounded-lg transition-colors inline-flex items-center justify-center gap-2 min-h-[48px]" style={{ backgroundColor: brandColor }}>
+                    <button onClick={() => setStep('details')} className={`w-full sm:w-auto px-6 py-3 text-white font-semibold transition-colors inline-flex items-center justify-center gap-2 min-h-[48px] ${calendlyStyle ? 'rounded-xl bg-[#1a1f36] hover:opacity-90' : 'rounded-lg'}`} style={calendlyStyle ? undefined : { backgroundColor: accentColor }}>
                       Continue <ArrowRight className="h-4 w-4" />
                     </button>
                   </div>
@@ -1363,8 +1411,8 @@ export function BookPage() {
 
                     return (
                       <div className="mt-2 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                        <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700" style={{ backgroundColor: brandColor + '18' }}>
-                          <p className="text-sm font-bold" style={{ color: brandColor }}>Complete Your Payment</p>
+                        <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700" style={{ backgroundColor: accentColor + '18' }}>
+                          <p className="text-sm font-bold" style={{ color: accentColor }}>Complete Your Payment</p>
                           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Send {amount} using one of the options below, then confirm below to finalize your booking.</p>
                         </div>
                         <div className="p-4 space-y-2.5">
@@ -1389,7 +1437,7 @@ export function BookPage() {
                               checked={paymentConfirmed}
                               onChange={(e) => setPaymentConfirmed(e.target.checked)}
                               className="mt-0.5 h-4 w-4 rounded border-slate-300 dark:border-slate-600 focus:ring-2 shrink-0"
-                              style={{ accentColor: brandColor }}
+                              style={{ accentColor: accentColor }}
                             />
                             <span className="text-sm text-slate-700 dark:text-slate-300">
                               I confirm I have sent payment of {amount} <span className="text-red-500">*</span>
@@ -1402,7 +1450,7 @@ export function BookPage() {
 
                   <button onClick={handleBook} disabled={submitting || !guestName || !guestEmail || requiredAnswersMissing}
                     className="w-full py-3 text-white font-semibold rounded-lg transition-all disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
-                    style={{ backgroundColor: (!guestName || !guestEmail || requiredAnswersMissing) ? '#9ca3af' : brandColor }}>
+                    style={{ backgroundColor: (!guestName || !guestEmail || requiredAnswersMissing) ? '#9ca3af' : accentColor }}>
                     {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                     Confirm meeting
                   </button>
@@ -1414,8 +1462,8 @@ export function BookPage() {
               <div className="py-8 max-w-md mx-auto">
                 {/* Confirmation header */}
                 <div className="text-center mb-8">
-                  <div className="h-14 w-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: brandColor + '22' }}>
-                    <Check className="h-7 w-7" style={{ color: brandColor }} />
+                  <div className="h-14 w-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: accentColor + '22' }}>
+                    <Check className="h-7 w-7" style={{ color: accentColor }} />
                   </div>
                   <h2 className="text-2xl font-bold mb-1">You're booked!</h2>
                   <p className="text-slate-500 dark:text-slate-400 text-sm">
@@ -1461,25 +1509,25 @@ export function BookPage() {
                 {/* Part 2 prompt */}
                 <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
                   <div className="px-5 py-4 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2">
-                    <Bell className="h-4 w-4" style={{ color: brandColor }} />
+                    <Bell className="h-4 w-4" style={{ color: accentColor }} />
                     <span className="font-semibold text-sm">Reminder set</span>
                   </div>
                   <div className="px-5 py-4 space-y-4">
                     <div className="flex items-center gap-3 p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
-                      <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: brandColor + '22' }}>
-                        <Mail className="h-4 w-4" style={{ color: brandColor }} />
+                      <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: accentColor + '22' }}>
+                        <Mail className="h-4 w-4" style={{ color: accentColor }} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium">Email reminder</p>
                         <p className="text-xs text-slate-500 dark:text-slate-400">1 hour before · {guestEmail}</p>
                       </div>
-                      <Check className="h-4 w-4 shrink-0" style={{ color: brandColor }} />
+                      <Check className="h-4 w-4 shrink-0" style={{ color: accentColor }} />
                     </div>
                     <p className="text-sm text-slate-500 dark:text-slate-400">Want to add more reminders — SMS, WhatsApp, or another email?</p>
                     <button
                       onClick={() => setStep('reminders')}
                       className="w-full py-2.5 text-sm font-semibold rounded-lg border-2 transition-all hover:opacity-90"
-                      style={{ borderColor: brandColor, color: brandColor }}>
+                      style={{ borderColor: accentColor, color: accentColor }}>
                       Set up additional reminders
                     </button>
                     <button
@@ -1522,7 +1570,7 @@ export function BookPage() {
 
             {step === 'reminders' && confirmedBooking && selectedService && (
               <ReminderWizard
-                brandColor={brandColor}
+                accentColor={accentColor}
                 guestEmail={guestEmail}
                 reminders={reminders}
                 setReminders={setReminders}
@@ -1531,28 +1579,42 @@ export function BookPage() {
             )}
           </div>
         </div>
+        </div>
       </main>
-      <footer className="border-t py-4 px-6" style={{ borderColor: pageBorderColor, backgroundColor: pageSurfaceColor }}>
-        {host?.plan === 'free' && (
+      {calendlyStyle && host?.plan === 'free' && (
+        <Link
+          to="/"
+          className="fixed bottom-4 right-4 z-40 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-slate-200 shadow-md text-slate-500 hover:text-slate-700 transition-colors text-xs font-medium"
+        >
+          <img src="/Screenshot_2026-04-29_at_2.49.32_PM.png" alt="PinOnIt" className="h-3.5 w-auto opacity-70" />
+          Powered by PinOnIt
+        </Link>
+      )}
+      <footer className={`py-4 px-6 ${calendlyStyle ? 'bg-white border-t border-slate-100' : 'border-t'}`} style={calendlyStyle ? undefined : { borderColor: pageBorderColor, backgroundColor: pageSurfaceColor }}>
+        {host?.plan === 'free' && !calendlyStyle && (
           <div className="flex items-center justify-center gap-2 mb-3 pb-3 border-b border-slate-100 dark:border-slate-800">
             <Link
               to="/"
-              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors group"
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-50 border border-slate-200 hover:bg-slate-100 transition-colors group"
             >
               <img src="/Screenshot_2026-04-29_at_2.49.32_PM.png" alt="Pin on It" className="h-4 w-auto opacity-70 group-hover:opacity-100 transition-opacity" />
-              <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                Powered by Pin on It — free scheduling for anyone
+              <span className="text-xs font-semibold text-slate-600">
+                Powered by PinOnIt — free scheduling for anyone
               </span>
-              <ArrowRight className="h-3 w-3 text-emerald-500 group-hover:translate-x-0.5 transition-transform" />
+              <ArrowRight className="h-3 w-3 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
             </Link>
           </div>
         )}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-xs text-slate-400 dark:text-slate-500">
-          <Link to="/terms" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Terms of Service</Link>
-          <span className="hidden sm:inline">|</span>
-          <Link to="/privacy" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Privacy Policy</Link>
-          <span className="hidden sm:inline">|</span>
-          <span>&copy; 2026 PinOnIt. All rights reserved.</span>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-xs text-slate-400">
+          <Link to="/terms" className="hover:text-slate-600 transition-colors">Terms of Service</Link>
+          <span className="hidden sm:inline">·</span>
+          <Link to="/privacy" className="hover:text-slate-600 transition-colors">Privacy Policy</Link>
+          {!calendlyStyle && (
+            <>
+              <span className="hidden sm:inline">|</span>
+              <span>&copy; 2026 PinOnIt. All rights reserved.</span>
+            </>
+          )}
         </div>
       </footer>
     </div>
