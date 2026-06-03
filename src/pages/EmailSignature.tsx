@@ -584,7 +584,7 @@ export function EmailSignaturePage() {
                 <div className="flex items-start gap-3">
                   {data.logoUrl&&(
                     <div className="relative shrink-0">
-                      <img src={data.logoUrl} alt="Logo" className="h-12 w-auto rounded-lg border border-slate-200 dark:border-slate-700 object-contain bg-white"/>
+                      <img src={data.logoUrl} alt="Logo" width={48} height={48} loading="lazy" className="h-12 w-auto rounded-lg border border-slate-200 dark:border-slate-700 object-contain bg-white"/>
                       <button onClick={()=>set('logoUrl','')} className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-400 transition-colors">
                         <X className="h-3 w-3"/>
                       </button>

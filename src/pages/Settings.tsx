@@ -1162,7 +1162,7 @@ export function SettingsPage() {
             {logoUrl ? (
               <div className="flex items-center gap-4">
                 <div className="h-20 w-20 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center bg-slate-50 dark:bg-slate-900 overflow-hidden shrink-0">
-                  <img src={logoUrl} alt="Company logo" className="h-full w-full object-contain p-1" />
+                  <img src={logoUrl} alt="Company logo" width={80} height={80} loading="lazy" className="h-full w-full object-contain p-1" />
                 </div>
                 <div className="flex flex-col gap-2">
                   <button
@@ -1234,7 +1234,7 @@ export function SettingsPage() {
                   <div className="h-10 w-10 rounded-full flex items-center justify-center overflow-hidden shrink-0"
                     style={{ backgroundColor: brandColor + '33', border: `2px solid ${brandColor}` }}>
                     {logoUrl ? (
-                      <img src={logoUrl} alt="Logo" className="h-full w-full object-contain p-0.5" />
+                      <img src={logoUrl} alt="Logo" width={40} height={40} loading="lazy" className="h-full w-full object-contain p-0.5" />
                     ) : (
                       <span className="text-white text-sm font-bold">{(fullName || 'H').charAt(0)}</span>
                     )}

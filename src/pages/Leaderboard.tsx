@@ -116,7 +116,7 @@ export function LeaderboardPage() {
                       <div className="flex items-center gap-3">
                         <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center shrink-0 overflow-hidden">
                           {entry.avatar_url ? (
-                            <img src={entry.avatar_url} alt="" className="h-full w-full object-cover" />
+                            <img src={entry.avatar_url} alt="" width={32} height={32} loading="lazy" className="h-full w-full object-cover" />
                           ) : (
                             <span className="text-sm font-bold text-indigo-700 dark:text-indigo-500">
                               {(entry.full_name ?? '?').charAt(0).toUpperCase()}

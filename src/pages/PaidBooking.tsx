@@ -271,7 +271,7 @@ function FullPreview({
             style={isBold ? { borderColor: theme.border } : {}}>
             <div className="h-16 w-16 rounded-full overflow-hidden shrink-0 border-2" style={{ borderColor: btnColor }}>
               {photoUrl
-                ? <img src={photoUrl} alt="" className="h-full w-full object-cover" />
+                ? <img src={photoUrl} alt="" width={64} height={64} loading="lazy" className="h-full w-full object-cover" />
                 : <CameraLogoSVG />
               }
             </div>
@@ -799,7 +799,7 @@ export function PaidBookingPage() {
                       <p className="text-sm text-slate-700 dark:text-slate-300 flex-1 truncate">{svc.name}</p>
                       <label className="flex items-center gap-1.5 cursor-pointer px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-slate-300 rounded-lg transition-colors">
                         {uploadingPhoto === svc.id ? <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />
-                          : svc.banner_image_url ? <img src={svc.banner_image_url} alt="" className="h-5 w-5 rounded object-cover" />
+                          : svc.banner_image_url ? <img src={svc.banner_image_url} alt="" width={20} height={20} loading="lazy" className="h-5 w-5 rounded object-cover" />
                           : <ImageIcon className="h-3.5 w-3.5 text-slate-400" />}
                         <span className="text-xs text-slate-500">{svc.banner_image_url ? 'Change' : 'Upload'}</span>
                         <input type="file" accept="image/*" className="hidden" onChange={(e) => handleServicePhotoUpload(e, svc.id)} disabled={uploadingPhoto === svc.id} />

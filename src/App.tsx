@@ -1,6 +1,5 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
 import { AuthProvider } from './hooks/useAuth';
 import { ThemeProvider } from './hooks/useTheme';
 import { AuthForm } from './components/Auth';
@@ -12,36 +11,56 @@ import { Landing } from './pages/Landing';
 import { BookPage } from './pages/Book';
 import { BookingActionPage } from './pages/BookingAction';
 import { Onboarding } from './pages/Onboarding';
-import { Dashboard } from './pages/Dashboard';
-import { ServicesPage } from './pages/Services';
-import { AppointmentsPage } from './pages/Appointments';
-import { SettingsPage } from './pages/Settings';
-import { EmailSignaturePage } from './pages/EmailSignature';
 import { TermsPage } from './pages/Terms';
 import { PrivacyPage } from './pages/Privacy';
 import { AcceptableUsePage } from './pages/AcceptableUse';
 import { LeaderboardPage } from './pages/Leaderboard';
-import { ContactsPage } from './pages/Contacts';
-import { MeetingPollsPage } from './pages/MeetingPolls';
 import { PollVotePage } from './pages/PollVote';
-import { QRCreatorPage } from './pages/QRCreator';
-import { MoreToolsPage } from './pages/MoreTools';
-import { PaidBookingPage } from './pages/PaidBooking';
 import { StatusPage } from './pages/Status';
 import { NotFoundPage } from './pages/NotFound';
 import { SessionManager } from './components/SessionManager';
 
+const Dashboard = lazy(() =>
+  import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })),
+);
+const ServicesPage = lazy(() =>
+  import('./pages/Services').then((m) => ({ default: m.ServicesPage })),
+);
+const AppointmentsPage = lazy(() =>
+  import('./pages/Appointments').then((m) => ({ default: m.AppointmentsPage })),
+);
+const SettingsPage = lazy(() =>
+  import('./pages/Settings').then((m) => ({ default: m.SettingsPage })),
+);
+const EmailSignaturePage = lazy(() =>
+  import('./pages/EmailSignature').then((m) => ({ default: m.EmailSignaturePage })),
+);
+const ContactsPage = lazy(() =>
+  import('./pages/Contacts').then((m) => ({ default: m.ContactsPage })),
+);
+const MeetingPollsPage = lazy(() =>
+  import('./pages/MeetingPolls').then((m) => ({ default: m.MeetingPollsPage })),
+);
+const QRCreatorPage = lazy(() =>
+  import('./pages/QRCreator').then((m) => ({ default: m.QRCreatorPage })),
+);
+const MoreToolsPage = lazy(() =>
+  import('./pages/MoreTools').then((m) => ({ default: m.MoreToolsPage })),
+);
+const PaidBookingPage = lazy(() =>
+  import('./pages/PaidBooking').then((m) => ({ default: m.PaidBookingPage })),
+);
 const GroupSchedulingPage = lazy(() =>
-  import('./pages/GroupScheduling').then(m => ({ default: m.GroupSchedulingPage })),
+  import('./pages/GroupScheduling').then((m) => ({ default: m.GroupSchedulingPage })),
 );
 const CoordinateMeetingsPage = lazy(() =>
-  import('./pages/CoordinateMeetings').then(m => ({ default: m.CoordinateMeetingsPage })),
+  import('./pages/CoordinateMeetings').then((m) => ({ default: m.CoordinateMeetingsPage })),
 );
 
-function RouteFallback() {
+function DashboardFallback() {
   return (
-    <div className="flex min-h-[40vh] items-center justify-center p-8">
-      <Loader2 className="h-6 w-6 animate-spin text-slate-400" aria-label="Loading" />
+    <div className="flex items-center justify-center h-screen">
+      <div className="animate-spin h-8 w-8 border-4 border-indigo-600 border-t-transparent rounded-full" />
     </div>
   );
 }
@@ -75,7 +94,9 @@ function App() {
               path="/dashboard"
               element={
                 <ProtectedRoute>
-                  <Dashboard />
+                  <Suspense fallback={<DashboardFallback />}>
+                    <Dashboard />
+                  </Suspense>
                 </ProtectedRoute>
               }
             >
@@ -91,11 +112,11 @@ function App() {
               <Route path="more-tools" element={<MoreToolsPage />} />
               <Route path="signature" element={<EmailSignaturePage />} />
               <Route path="paid-booking" element={<PaidBookingPage />} />
-              <Route path="group-scheduling" element={<Suspense fallback={<RouteFallback />}><GroupSchedulingPage /></Suspense>} />
+              <Route path="group-scheduling" element={<GroupSchedulingPage />} />
               <Route path="group-scheduling/polls" element={<MeetingPollsPage />} />
-              <Route path="group-scheduling/coordinate" element={<Suspense fallback={<RouteFallback />}><CoordinateMeetingsPage /></Suspense>} />
+              <Route path="group-scheduling/coordinate" element={<CoordinateMeetingsPage />} />
               <Route path="polls" element={<Navigate to="/dashboard/group-scheduling" replace />} />
-              <Route path="coordinate" element={<Suspense fallback={<RouteFallback />}><CoordinateMeetingsPage /></Suspense>} />
+              <Route path="coordinate" element={<CoordinateMeetingsPage />} />
               <Route path="qr-code" element={<QRCreatorPage />} />
               <Route path="qr" element={<Navigate to="/dashboard/qr-code" replace />} />
             </Route>

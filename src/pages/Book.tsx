@@ -1162,7 +1162,14 @@ export function BookPage() {
           <aside className={`${calendlyStyle ? 'p-6 md:p-8 lg:border-r border-slate-200 space-y-5' : 'space-y-4'}`}>
             <div className={`flex gap-4 ${calendlyStyle ? 'flex-col sm:flex-row lg:flex-col items-start' : 'items-center gap-3'}`}>
               {pageBusinessPhoto ? (
-                <img src={pageBusinessPhoto} alt={pageDisplayName} className={`rounded-full object-cover ${calendlyStyle ? 'h-16 w-16' : 'h-14 w-14'}`} />
+                <img
+                  src={pageBusinessPhoto}
+                  alt={pageDisplayName}
+                  width={calendlyStyle ? 64 : 56}
+                  height={calendlyStyle ? 64 : 56}
+                  loading="lazy"
+                  className={`rounded-full object-cover ${calendlyStyle ? 'h-16 w-16' : 'h-14 w-14'}`}
+                />
               ) : (
                 <div className={`rounded-full flex items-center justify-center text-white font-bold ${calendlyStyle ? 'h-16 w-16 text-xl' : 'h-14 w-14 text-lg'}`}
                   style={{ backgroundColor: accentColor + '33', border: `2px solid ${accentColor}` }}>
@@ -1219,7 +1226,7 @@ export function BookPage() {
                           className="flex flex-col rounded-xl overflow-hidden transition-all text-left shadow-sm border"
                           style={{ backgroundColor: pageSurfaceColor, borderColor: pageBorderColor }}>
                           {pageShowImages && ext.banner_image_url
-                            ? <img src={ext.banner_image_url} alt={svc.name} className="w-full h-28 object-cover" />
+                            ? <img src={ext.banner_image_url} alt={svc.name} width={112} height={112} loading="lazy" className="w-full h-28 object-cover" />
                             : pageShowImages && <div className="w-full h-20 flex items-center justify-center" style={{ backgroundColor: pageBorderColor }}><span className="h-3 w-3 rounded-full" style={{ backgroundColor: svc.color }} /></div>
                           }
                           <div className="p-3.5 flex-1 flex flex-col gap-2">
@@ -1240,7 +1247,7 @@ export function BookPage() {
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-start gap-3 flex-1 min-w-0">
                             {pageShowImages && (ext.banner_image_url
-                              ? <img src={ext.banner_image_url} alt={svc.name} className={`rounded-lg object-cover shrink-0 ${isBoldTheme ? 'h-16 w-16' : 'h-14 w-14'}`} />
+                              ? <img src={ext.banner_image_url} alt={svc.name} width={isBoldTheme ? 64 : 56} height={isBoldTheme ? 64 : 56} loading="lazy" className={`rounded-lg object-cover shrink-0 ${isBoldTheme ? 'h-16 w-16' : 'h-14 w-14'}`} />
                               : <div className={`rounded-lg shrink-0 flex items-center justify-center ${isBoldTheme ? 'h-16 w-16' : 'h-14 w-14'}`} style={{ backgroundColor: pageBorderColor }}><span className="h-3 w-3 rounded-full" style={{ backgroundColor: svc.color }} /></div>
                             )}
                             <div className="flex-1 min-w-0">

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { useDebounce } from '../hooks/useDebounce';
 import { supabase } from '../lib/supabase';
 import { PageChecklist } from '../components/PageChecklist';
 import type { Booking, Service } from '../lib/types';
@@ -36,6 +37,8 @@ interface Contact {
 }
 
 type Filter = 'all' | 'recent' | 'upcoming';
+
+const PAGE_SIZE = 50;
 
 interface EnrichedContact extends Contact {
   meetingCount: number;
@@ -92,7 +95,11 @@ export function ContactsPage() {
   const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [filter, setFilter] = useState<Filter>('all');
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [contactsRefreshKey, setContactsRefreshKey] = useState(0);
 
   const [selected, setSelected] = useState<EnrichedContact | null>(null);
 
@@ -252,53 +259,97 @@ export function ContactsPage() {
   }, [profile?.id]);
 
   useEffect(() => {
+    setPage(0);
+  }, [debouncedSearch, filter]);
+
+  useEffect(() => {
     if (!profile) return;
     (async () => {
-      const [contactsRes, bookingsRes] = await Promise.all([
-        supabase.from('contacts').select('*').eq('host_id', profile.id).order('created_at', { ascending: false }),
-        supabase.from('bookings').select('*, services(name, color, duration_minutes)').eq('host_id', profile.id).order('start_time', { ascending: false }),
-      ]);
+      const bookingsRes = await supabase
+        .from('bookings')
+        .select('*, services(name, color, duration_minutes)')
+        .eq('host_id', profile.id)
+        .order('start_time', { ascending: false });
 
       const fetchedBookings = (bookingsRes.data ?? []) as (Booking & { services?: Service })[];
       setAllBookings(fetchedBookings);
 
-      // Auto-upsert contacts from bookings
-      const existingContacts = (contactsRes.data ?? []) as Contact[];
-      const existingEmails = new Set(existingContacts.map((c) => c.email.toLowerCase()));
+      const { data: existingRows } = await supabase
+        .from('contacts')
+        .select('email')
+        .eq('host_id', profile.id);
 
+      const existingEmails = new Set((existingRows ?? []).map((c) => c.email.toLowerCase()));
       const newFromBookings: { host_id: string; email: string; full_name: string; source: string }[] = [];
       const seen = new Set<string>();
       for (const b of fetchedBookings) {
+        if (!b.guest_email) continue;
         const key = b.guest_email.toLowerCase();
         if (!existingEmails.has(key) && !seen.has(key)) {
           seen.add(key);
-          newFromBookings.push({ host_id: profile.id, email: b.guest_email, full_name: b.guest_name, source: 'booking' });
+          newFromBookings.push({
+            host_id: profile.id,
+            email: b.guest_email,
+            full_name: b.guest_name,
+            source: 'booking',
+          });
         }
       }
 
-      let allContacts = existingContacts;
       if (newFromBookings.length) {
-        const { data: inserted } = await supabase
+        await supabase
           .from('contacts')
-          .upsert(newFromBookings, { onConflict: 'host_id,email', ignoreDuplicates: true })
-          .select();
-        if (inserted?.length) {
-          allContacts = [...existingContacts, ...(inserted as Contact[])];
-        }
-        // Refresh to get accurate list
-        const { data: refreshed } = await supabase.from('contacts').select('*').eq('host_id', profile.id).order('created_at', { ascending: false });
-        allContacts = (refreshed ?? []) as Contact[];
+          .upsert(newFromBookings, { onConflict: 'host_id,email', ignoreDuplicates: true });
+        setContactsRefreshKey((k) => k + 1);
+      }
+    })();
+  }, [profile?.id]);
+
+  useEffect(() => {
+    if (!profile) return;
+    let cancelled = false;
+
+    (async () => {
+      if (page === 0) setLoading(true);
+
+      let query = supabase
+        .from('contacts')
+        .select('*')
+        .eq('host_id', profile.id)
+        .order('created_at', { ascending: false });
+
+      const q = debouncedSearch.trim();
+      if (q) {
+        const escaped = q.replace(/[%_]/g, '\\$&');
+        query = query.or(`full_name.ilike.%${escaped}%,email.ilike.%${escaped}%`);
       }
 
-      setContacts(allContacts);
+      const { data, error } = await query.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+      if (cancelled) return;
+      if (error) {
+        console.error('Failed to load contacts:', error);
+        setLoading(false);
+        return;
+      }
+
+      const rows = (data ?? []) as Contact[];
+      setContacts((prev) => (page === 0 ? rows : [...prev, ...rows]));
+      setHasMore(rows.length === PAGE_SIZE);
       setLoading(false);
     })();
-  }, [profile]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [profile?.id, page, debouncedSearch, contactsRefreshKey]);
 
   const enriched = useMemo((): EnrichedContact[] => {
     const now = new Date();
     return contacts.map((c) => {
-      const cBookings = allBookings.filter((b) => b.guest_email.toLowerCase() === c.email.toLowerCase());
+      const cBookings = allBookings.filter(
+        (b) => b.guest_email && b.guest_email.toLowerCase() === c.email.toLowerCase(),
+      );
       const past = cBookings.filter((b) => new Date(b.start_time) < now).sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
       const future = cBookings.filter((b) => new Date(b.start_time) >= now).sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
       return {
@@ -318,12 +369,8 @@ export function ContactsPage() {
     let list = enriched;
     if (filter === 'recent') list = list.filter((c) => c.lastMeeting && new Date(c.lastMeeting) >= thirtyDaysAgo);
     if (filter === 'upcoming') list = list.filter((c) => c.nextMeeting !== null);
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter((c) => (c.full_name ?? '').toLowerCase().includes(q) || c.email.toLowerCase().includes(q));
-    }
     return list;
-  }, [enriched, filter, search]);
+  }, [enriched, filter]);
 
   const gmailContactsImported = useMemo(
     () => contacts.filter((c) => c.source === 'gmail').length,
@@ -1051,6 +1098,16 @@ export function ContactsPage() {
                 );
               })}
             </div>
+          )}
+
+          {hasMore && (
+            <button
+              type="button"
+              onClick={() => setPage((prev) => prev + 1)}
+              className="w-full py-3 text-sm font-medium text-indigo-600 hover:text-indigo-700 border border-indigo-200 rounded-xl mt-4 transition-colors"
+            >
+              Load more contacts
+            </button>
           )}
 
           <p className="text-xs text-gray-400 dark:text-slate-600 mt-3 text-center">

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import { clearClientOnboardingState } from '../lib/onboardingState';
+import { readProfileCache, writeProfileCache, clearProfileCache } from '../lib/profileCache';
 import type { User } from '@supabase/supabase-js';
 import type { Profile, Subscription } from '../lib/types';
 
@@ -23,7 +24,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(() => readProfileCache());
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [subscriptionLoaded, setSubscriptionLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -49,12 +50,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (Object.keys(patch).length > 0) {
         await supabase.from('profiles').update(patch).eq('id', userId);
-        setProfile({ ...data, ...patch });
+        const merged = { ...data, ...patch } as Profile;
+        setProfile(merged);
+        writeProfileCache(merged);
         return;
       }
     }
 
-    setProfile(data);
+    if (data) {
+      setProfile(data);
+      writeProfileCache(data);
+    } else {
+      setProfile(null);
+    }
   }, []);
 
   const fetchSubscription = useCallback(async (userId: string) => {
@@ -77,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         fetchSubscription(session.user.id);
       } else {
         setProfile(null);
+        clearProfileCache();
         setSubscription(null);
         setSubscriptionLoaded(true);
       }
@@ -140,6 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     clearClientOnboardingState();
+    clearProfileCache();
     await supabase.auth.signOut();
     window.location.href = '/login';
   };
