@@ -19,8 +19,13 @@ type Question = {
 const QUESTIONS: Question[] = [
   {
     id: 'paying',
-    message: "Hi! 👋 Are you currently paying for a scheduling tool like Calendly?",
-    options: ['Yes, Calendly', 'Yes, another tool', 'No, using nothing', 'Just browsing'],
+    message: 'Hi! 👋 Are you currently using Calendly or another scheduling tool?',
+    options: [
+      'Yes, Calendly — paying too much',
+      'Yes, another tool',
+      'No, using nothing yet',
+      'Just browsing',
+    ],
   },
   {
     id: 'pain',
@@ -83,6 +88,7 @@ export function OnboardingBot() {
   const [completed, setCompleted] = useState(false);
   const [entered, setEntered] = useState(false);
   const [animating, setAnimating] = useState(false);
+  const [calloutMessage, setCalloutMessage] = useState('');
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const triggered = useRef(false);
 
@@ -187,9 +193,25 @@ export function OnboardingBot() {
       return;
     }
 
-    advanceTimer.current = setTimeout(() => {
-      goNext();
-    }, 400);
+    const advanceQuestion = () => {
+      advanceTimer.current = setTimeout(() => {
+        goNext();
+      }, 400);
+    };
+
+    if (question.id === 'paying' && option.includes('Calendly')) {
+      setCalloutMessage(
+        "💡 PinOnIt has everything Calendly offers — plus SMS reminders, group scheduling, and paid bookings — starting at $6/month vs Calendly's $20+. No brainer."
+      );
+      if (advanceTimer.current) clearTimeout(advanceTimer.current);
+      advanceTimer.current = setTimeout(() => {
+        setCalloutMessage('');
+        goNext();
+      }, 2500);
+      return;
+    }
+
+    advanceQuestion();
   };
 
   const handleEmailNext = () => {
@@ -275,6 +297,12 @@ export function OnboardingBot() {
                     {question?.message}
                   </p>
                 </div>
+
+                {calloutMessage && (
+                  <div className="mx-4 mb-3 p-3 bg-indigo-600 text-white text-sm rounded-xl text-center font-medium animate-fade-in">
+                    {calloutMessage}
+                  </div>
+                )}
 
                 {question?.type === 'email_input' ? (
                   <div className="space-y-3 px-2">

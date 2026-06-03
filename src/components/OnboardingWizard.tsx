@@ -40,6 +40,9 @@ interface WizardProps {
 
 const STEPS = [
   'welcome',
+  'username',
+  'phone',
+  'timezone',
   'calendar',
   'calendar_purpose',
   'contacts',
@@ -214,6 +217,10 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
   const [eventName, setEventName] = useState('30-Minute Meeting');
   const [eventDuration, setEventDuration] = useState(30);
   const [eventColor, setEventColor] = useState(BRAND_SWATCHES[8].hex);
+  const [username, setUsername] = useState('');
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [hostPhone, setHostPhone] = useState('');
+  const [hostNotifyVia, setHostNotifyVia] = useState<string[]>([]);
   const [slug, setSlug] = useState('');
   const [timezone, setTimezone] = useState(profile?.timezone ?? 'America/New_York');
   const [profilePhone, setProfilePhone] = useState('');
@@ -291,8 +298,24 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
   const persistCompleted = useCallback(async () => {
     markOnboardingCompletedLocal();
     if (!user) return;
-    await supabase.from('profiles').update({ onboarding_completed: true }).eq('id', user.id);
-  }, [user]);
+    const phoneE164 = normalizePhoneE164(hostPhone) || normalizePhoneE164(profilePhone) || null;
+    let defaultChannel: 'email' | 'sms' | 'whatsapp' | 'voice' | null = null;
+    if (hostNotifyVia.includes('whatsapp')) defaultChannel = 'whatsapp';
+    else if (hostNotifyVia.includes('sms')) defaultChannel = 'sms';
+
+    const payload: Record<string, unknown> = {
+      onboarding_completed: true,
+      slug: (username || slug).trim() || null,
+      timezone,
+      phone: phoneE164,
+    };
+    if (defaultChannel) payload.default_reminder_channel = defaultChannel;
+    if (hostNotifyVia.includes('whatsapp') && phoneE164) {
+      payload.whatsapp_number = normalizePhoneE164(profileWhatsapp) || phoneE164;
+    }
+
+    await supabase.from('profiles').update(payload).eq('id', user.id);
+  }, [user, username, slug, timezone, hostPhone, profilePhone, profileWhatsapp, hostNotifyVia]);
 
   // ── Save wizard position to localStorage + DB before any redirect ────────────
   const persistWizardPosition = useCallback(async (stepIdx: number) => {
@@ -382,35 +405,66 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
   useEffect(() => {
     if (!profile) return;
     const storedPhone = profile.phone ?? '';
-    setProfilePhone(storedPhone ? blurFormatPhone(storedPhone) : '');
+    const formatted = storedPhone ? blurFormatPhone(storedPhone) : '';
+    setHostPhone(formatted);
+    setProfilePhone(formatted);
     const storedWhatsapp = profile.whatsapp_number ?? '';
     setProfileWhatsapp(storedWhatsapp ? blurFormatPhone(storedWhatsapp) : '');
-  }, [profile?.phone, profile?.whatsapp_number]);
+    if (profile.default_reminder_channel === 'sms' || profile.default_reminder_channel === 'whatsapp') {
+      setHostNotifyVia([profile.default_reminder_channel]);
+    }
+  }, [profile?.phone, profile?.whatsapp_number, profile?.default_reminder_channel]);
 
   useEffect(() => {
-    if (profile?.slug) { setSlug(profile.slug); return; }
+    if (profile?.slug) {
+      setSlug(profile.slug);
+      setUsername(profile.slug);
+      return;
+    }
     if (profile?.full_name) {
-      setSlug(sanitizeSlug(profile.full_name.trim().replace(/\s+/g, '-').slice(0, 30)));
+      const generated = sanitizeSlug(profile.full_name.trim().replace(/\s+/g, '-').slice(0, 30));
+      setSlug(generated);
+      setUsername(generated);
     }
   }, [profile]);
 
+  useEffect(() => {
+    if (profile?.timezone) {
+      setTimezone(profile.timezone);
+      return;
+    }
+    try {
+      const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (detected) setTimezone(detected);
+    } catch {
+      // keep default
+    }
+  }, [profile?.timezone]);
+
+  useEffect(() => {
+    setSlug(username);
+  }, [username]);
+
   // ── Slug checking ────────────────────────────────────────────────────────────
   useEffect(() => {
-    const trimmed = slug.trim();
-    if (!trimmed) { setSlugStatus('idle'); return; }
-    if (trimmed === profile?.slug) { setSlugStatus('available'); return; }
-    if (trimmed.length < 3) { setSlugStatus('invalid'); return; }
+    const trimmed = username.trim();
+    if (!trimmed) { setSlugStatus('idle'); setUsernameAvailable(null); return; }
+    if (trimmed === profile?.slug) { setSlugStatus('available'); setUsernameAvailable(true); return; }
+    if (trimmed.length < 3) { setSlugStatus('invalid'); setUsernameAvailable(null); return; }
     setSlugStatus('checking');
+    setUsernameAvailable(null);
     const t = setTimeout(async () => {
       const { count } = await supabase
         .from('profiles')
         .select('id', { count: 'exact', head: true })
         .eq('slug', trimmed)
         .neq('id', user?.id ?? '');
-      setSlugStatus(count === 0 ? 'available' : 'taken');
+      const available = count === 0;
+      setSlugStatus(available ? 'available' : 'taken');
+      setUsernameAvailable(available);
     }, 500);
     return () => clearTimeout(t);
-  }, [slug, profile?.slug, user?.id]);
+  }, [username, profile?.slug, user?.id]);
 
   // ── Save onboarding step ──────────────────────────────────────────────────────
   const saveStep = useCallback(async (s: number) => {
@@ -492,7 +546,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
         trial_source: 'free_trial',
       }, { onConflict: 'user_id' });
       await refreshProfile();
-      await saveStep(1);
+      await saveStep(STEPS.indexOf('welcome') + 1);
       goNext();
     } catch (e) {
       setTrialCheckoutError((e as Error).message ?? 'Could not activate trial. Try again.');
@@ -607,11 +661,56 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
     if (!user) return;
     setSaving(true);
     await supabase.from('profiles').update({
-      phone: normalizePhoneE164(profilePhone) || null,
+      phone: normalizePhoneE164(hostPhone) || normalizePhoneE164(profilePhone) || null,
       whatsapp_number: normalizePhoneE164(profileWhatsapp) || null,
     }).eq('id', user.id);
     await refreshProfile();
     await saveStep(STEPS.indexOf('profile') + 1);
+    setSaving(false);
+    goNext();
+  };
+
+  const handleSaveUsernameStep = async () => {
+    if (!user) return;
+    setSaving(true);
+    const trimmed = username.trim();
+    if (trimmed && (usernameAvailable === true || trimmed === profile?.slug)) {
+      await supabase.from('profiles').update({ slug: trimmed }).eq('id', user.id);
+      setSlug(trimmed);
+      await refreshProfile();
+    }
+    await saveStep(STEPS.indexOf('username') + 1);
+    setSaving(false);
+    goNext();
+  };
+
+  const handleSavePhoneStep = async () => {
+    if (!user) return;
+    setSaving(true);
+    const phoneE164 = normalizePhoneE164(hostPhone) || null;
+    const payload: Record<string, string | null> = { phone: phoneE164 };
+    if (hostNotifyVia.includes('whatsapp') && phoneE164) {
+      payload.whatsapp_number = phoneE164;
+    }
+    if (hostNotifyVia.includes('sms')) {
+      payload.default_reminder_channel = 'sms';
+    } else if (hostNotifyVia.includes('whatsapp')) {
+      payload.default_reminder_channel = 'whatsapp';
+    }
+    await supabase.from('profiles').update(payload).eq('id', user.id);
+    setProfilePhone(hostPhone);
+    await refreshProfile();
+    await saveStep(STEPS.indexOf('phone') + 1);
+    setSaving(false);
+    goNext();
+  };
+
+  const handleSaveTimezoneStep = async () => {
+    if (!user) return;
+    setSaving(true);
+    await supabase.from('profiles').update({ timezone }).eq('id', user.id);
+    await refreshProfile();
+    await saveStep(STEPS.indexOf('timezone') + 1);
     setSaving(false);
     goNext();
   };
@@ -621,7 +720,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
     if (!user || !eventName.trim()) return;
     setSaving(true);
     await supabase.from('profiles').update({
-      slug: slug.trim() || null,
+      slug: (username || slug).trim() || null,
       timezone,
     }).eq('id', user.id);
 
@@ -747,7 +846,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
         // Already Pro — skip any trial offer screens entirely and go straight to setup
         if (showTrialOffer && isAlreadyPro) {
           setShowTrialOffer(false);
-          saveStep(1).then(() => goNext());
+          saveStep(STEPS.indexOf('welcome') + 1).then(() => goNext());
           return null;
         }
 
@@ -958,17 +1057,138 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                     }
                   }
                   if (!isAlreadyPro) setShowTrialOffer(true);
-                  else { await saveStep(1); goNext(); }
+                  else { await saveStep(STEPS.indexOf('welcome') + 1); goNext(); }
                   return;
                 }
                 if (fromCalendly === false) {
                   if (!isAlreadyPro) { setShowTrialOffer(true); return; }
                 }
-                await saveStep(1);
+                await saveStep(STEPS.indexOf('welcome') + 1);
                 goNext();
               }}
               nextLabel={fromCalendly === null ? 'Get Started' : fromCalendly ? (scrapedEvents.length > 0 ? 'Continue' : 'Skip import') : 'Continue'}
               showBack={false}
+            />
+          </div>
+        );
+      }
+
+      // ── Step: Custom booking URL ─────────────────────────────────────────────
+      case 'username':
+        return (
+          <div>
+            <div className="mb-5">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Create your booking URL</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">This is the link you share with clients</p>
+            </div>
+            <div className="flex items-center gap-2 bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3">
+              <span className="text-gray-400 dark:text-slate-500 text-sm shrink-0">pinonit.com/</span>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                placeholder="yourname"
+                className="flex-1 bg-transparent text-sm font-medium text-gray-900 dark:text-white outline-none"
+              />
+              {slugStatus === 'checking' && <Loader2 className="h-4 w-4 animate-spin text-slate-400 shrink-0" />}
+            </div>
+            <p className="text-xs text-gray-400 dark:text-slate-500 mt-2">Lowercase letters, numbers, and hyphens only</p>
+            {usernameAvailable === false && (
+              <p className="text-xs text-red-500 mt-1">That URL is taken — try another</p>
+            )}
+            {usernameAvailable === true && (
+              <p className="text-xs text-green-500 mt-1">✓ Available!</p>
+            )}
+            {slugStatus === 'invalid' && username.trim().length > 0 && (
+              <p className="text-xs text-amber-500 mt-1">Must be at least 3 characters.</p>
+            )}
+            <NavButtons
+              onBack={goBack}
+              onNext={handleSaveUsernameStep}
+              onSkip={async () => { await saveStep(STEPS.indexOf('username') + 1); goNext(); }}
+              nextDisabled={!!username.trim() && usernameAvailable === false}
+              nextLabel="Continue"
+              loading={saving}
+            />
+          </div>
+        );
+
+      // ── Step: Phone for host reminders ───────────────────────────────────────
+      case 'phone':
+        return (
+          <div>
+            <div className="mb-5">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Your phone number</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Receive booking notifications via SMS or WhatsApp</p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <input
+                type="tel"
+                value={hostPhone}
+                onChange={(e) => setHostPhone(e.target.value)}
+                onBlur={(e) => { if (e.target.value.trim()) setHostPhone(blurFormatPhone(e.target.value)); }}
+                placeholder={PHONE_PLACEHOLDER}
+                className="w-full border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600"
+              />
+              <div>
+                <p className="text-xs font-medium text-gray-600 dark:text-slate-400 mb-2">Notify me via</p>
+                <div className="flex gap-2">
+                  {(['SMS', 'WhatsApp'] as const).map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => setHostNotifyVia((prev) =>
+                        prev.includes(opt.toLowerCase())
+                          ? prev.filter((v) => v !== opt.toLowerCase())
+                          : [...prev, opt.toLowerCase()]
+                      )}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-medium transition-colors ${
+                        hostNotifyVia.includes(opt.toLowerCase())
+                          ? 'border-indigo-600 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300'
+                          : 'border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-400'
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <NavButtons
+              onBack={goBack}
+              onNext={handleSavePhoneStep}
+              onSkip={async () => { await saveStep(STEPS.indexOf('phone') + 1); goNext(); }}
+              nextLabel="Continue"
+              loading={saving}
+            />
+          </div>
+        );
+
+      // ── Step: Timezone ───────────────────────────────────────────────────────
+      case 'timezone': {
+        const timezoneOptions = typeof Intl.supportedValuesOf === 'function'
+          ? Intl.supportedValuesOf('timeZone')
+          : [...TIMEZONES];
+        return (
+          <div>
+            <div className="mb-5">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Your timezone</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">So bookings show the right time for you and your clients</p>
+            </div>
+            <select
+              value={timezone}
+              onChange={(e) => setTimezone(e.target.value)}
+              className="w-full border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600"
+            >
+              {timezoneOptions.map((tz) => (
+                <option key={tz} value={tz}>{tz}</option>
+              ))}
+            </select>
+            <NavButtons
+              onBack={goBack}
+              onNext={handleSaveTimezoneStep}
+              nextLabel="Continue"
+              loading={saving}
             />
           </div>
         );
@@ -1008,7 +1228,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
 
               <NavButtons
                 onBack={goBack}
-                onNext={async () => { await saveStep(2); await clearWizardActive(); goNext(); }}
+                onNext={async () => { await saveStep(STEPS.indexOf('calendar') + 1); await clearWizardActive(); goNext(); }}
                 nextLabel="Continue"
               />
             </div>
@@ -1085,8 +1305,8 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
 
             <NavButtons
               onBack={goBack}
-              onNext={async () => { await saveStep(2); await clearWizardActive(); goNext(); }}
-              onSkip={async () => { await saveStep(2); await clearWizardActive(); goNext(); }}
+              onNext={async () => { await saveStep(STEPS.indexOf('calendar') + 1); await clearWizardActive(); goNext(); }}
+              onSkip={async () => { await saveStep(STEPS.indexOf('calendar') + 1); await clearWizardActive(); goNext(); }}
               nextLabel={calendars.length > 0 ? 'Continue' : 'Continue without calendar'}
             />
           </div>
@@ -1152,8 +1372,8 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
 
             <NavButtons
               onBack={goBack}
-              onNext={async () => { await saveCalendarPurposes(); await saveStep(3); goNext(); }}
-              onSkip={async () => { await saveCalendarPurposes(); await saveStep(3); goNext(); }}
+              onNext={async () => { await saveCalendarPurposes(); await saveStep(STEPS.indexOf('calendar_purpose') + 1); goNext(); }}
+              onSkip={async () => { await saveCalendarPurposes(); await saveStep(STEPS.indexOf('calendar_purpose') + 1); goNext(); }}
             />
           </div>
         );
@@ -1237,8 +1457,8 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
 
             <NavButtons
               onBack={goBack}
-              onNext={async () => { await saveStep(4); goNext(); }}
-              onSkip={async () => { await saveStep(4); goNext(); }}
+              onNext={async () => { await saveStep(STEPS.indexOf('contacts') + 1); goNext(); }}
+              onSkip={async () => { await saveStep(STEPS.indexOf('contacts') + 1); goNext(); }}
               nextLabel="Continue"
             />
           </div>
@@ -1398,40 +1618,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                 <ColorSwatchRow value={eventColor} onChange={setEventColor} size="sm" />
               </div>
 
-              {/* Booking URL slug */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">Your booking URL</label>
-                <div className="flex items-center gap-0 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-900 focus-within:ring-2 focus-within:ring-indigo-600">
-                  <span className="px-3 py-2.5 text-sm text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 shrink-0 whitespace-nowrap">
-                    pinonit.com/
-                  </span>
-                  <input
-                    value={slug}
-                    onChange={e => setSlug(sanitizeSlug(e.target.value))}
-                    placeholder="yourname"
-                    className="flex-1 px-3 py-2.5 bg-transparent text-sm text-slate-900 dark:text-white focus:outline-none"
-                  />
-                  {slugStatus === 'checking' && <Loader2 className="h-4 w-4 animate-spin text-slate-400 mr-3" />}
-                  {slugStatus === 'available' && <Check className="h-4 w-4 text-emerald-500 mr-3" />}
-                  {slugStatus === 'taken' && <X className="h-4 w-4 text-red-500 mr-3" />}
-                </div>
-                {slugStatus === 'taken' && <p className="text-xs text-red-500 mt-1">That username is taken. Try another.</p>}
-                {slugStatus === 'invalid' && <p className="text-xs text-amber-500 mt-1">Must be at least 3 characters.</p>}
-              </div>
-
-              {/* Timezone */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">Your timezone</label>
-                <select
-                  value={timezone}
-                  onChange={e => setTimezone(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
-                >
-                  {TIMEZONES.map(tz => (
-                    <option key={tz} value={tz}>{tz.replace('_', ' ')}</option>
-                  ))}
-                </select>
-              </div>
+              {/* Booking URL slug + timezone are collected earlier in the wizard */}
 
               {/* Calendar selection */}
               {calendars.filter(c => c.provider !== 'zoom').length > 0 && (
