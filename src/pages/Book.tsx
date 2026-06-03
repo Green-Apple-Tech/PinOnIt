@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useSearchParams, Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import type { Profile, Service, AvailabilitySlot, Booking, BookingQuestion, DateOverride, PaidBookingSettings, CalendarConflictSettings } from '../lib/types';
 import { LOCATION_TYPES, TIMEZONES, DEFAULT_CALENDAR_CONFLICT_SETTINGS } from '../lib/types';
@@ -508,6 +509,7 @@ interface SingleUseLinkRecord {
 
 export function BookPage() {
   const { slug, token } = useParams<{ slug?: string; token?: string }>();
+  const { user } = useAuth();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const isPaidBookingPage = Boolean(
@@ -1060,6 +1062,7 @@ export function BookPage() {
     [selectedService]
   );
   const showP2PHandles = paymentHandles ? hasAnyPaymentHandle(paymentHandles) : false;
+  const isHostViewer = !!(user?.id && host?.id && user.id === host.id);
   const selectedPaymentOption = paymentOptions.find((o) => o.id === paymentMethod);
   const showPaidBookingPayment = isPaidService && !(isRecurringService && (selectedService?.price_cents ?? 0) > 0);
   const termsDisplayText = resolveTermsText(host?.global_terms_text);
@@ -1637,6 +1640,20 @@ export function BookPage() {
                           </button>
                         ))}
                       </div>
+
+                      {isHostViewer && paymentHandles && !showP2PHandles && (
+                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-3 text-center">
+                          💡 Hosts can also accept Venmo, Cash App, Zelle, and PayPal —{' '}
+                          <a
+                            href="/dashboard/services"
+                            className="text-indigo-500 hover:underline"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            add payment handles in Settings
+                          </a>
+                        </p>
+                      )}
 
                       {showP2PHandles && paymentHandles && (
                         <div className="mt-4 border-t border-gray-200 dark:border-slate-700 pt-4">
