@@ -16,6 +16,7 @@ import {
 import { QRModal } from '../components/QRModal';
 import { ColorSwatchRow } from '../components/ColorSwatchRow';
 import { toast } from '../components/Toast';
+import { readProfileCache, writeProfileCache } from '../lib/profileCache';
 import { AnalyticsPage } from './Analytics';
 import { BillingPage } from './Billing';
 import { AvailabilityPage } from './Availability';
@@ -386,7 +387,9 @@ export function SettingsPage() {
   const [bio, setBio] = useState(profile?.bio ?? '');
   const [timezone, setTimezone] = useState(profile?.timezone ?? 'America/New_York');
 
-  const [slug, setSlug] = useState(profile?.slug ?? '');
+  const [slug, setSlug] = useState(
+    () => profile?.slug ?? readProfileCache()?.slug ?? '',
+  );
   const [bookingHeader, setBookingHeader] = useState(profile?.booking_page_header ?? '');
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url ?? '');
   const [globalRequireTerms, setGlobalRequireTerms] = useState(profile?.global_require_terms ?? false);
@@ -434,14 +437,18 @@ export function SettingsPage() {
     if (user) void refreshProfile();
   }, [user?.id, refreshProfile]);
 
-  // Hydrate booking-page fields once profile loads (fixes empty slug when profile arrives after mount)
+  // Sync username when profile loads or slug changes (e.g. after refresh / cache → network)
+  useEffect(() => {
+    if (profile?.slug) setSlug(profile.slug);
+  }, [profile?.slug]);
+
+  // Hydrate other booking-page fields once profile loads
   useEffect(() => {
     if (!profile) {
       bookingFieldsHydrated.current = false;
       return;
     }
     if (bookingFieldsHydrated.current) return;
-    setSlug(profile.slug ?? '');
     setBookingHeader(profile.booking_page_header ?? '');
     setAvatarUrl(profile.avatar_url ?? '');
     setGlobalRequireTerms(profile.global_require_terms ?? false);
@@ -557,7 +564,11 @@ export function SettingsPage() {
   }, [user]);
 
   const handleSaveBookingPage = async () => {
-    if (!profile || !user) return;
+    if (!profile?.id) {
+      console.error('No profile id');
+      toast.error('Failed to save: profile not loaded');
+      return;
+    }
 
     const normalizedSlug = slug.trim().toLowerCase();
 
@@ -581,7 +592,11 @@ export function SettingsPage() {
     setSaving(true);
     setSaved(false);
     try {
-      const { error } = await supabase
+      if (import.meta.env.DEV) {
+        console.log('Saving slug:', normalizedSlug, 'for user:', profile.id);
+      }
+
+      const { data, error } = await supabase
         .from('profiles')
         .update({
           slug: normalizedSlug || null,
@@ -590,19 +605,34 @@ export function SettingsPage() {
           global_require_terms: globalRequireTerms,
           global_terms_text: globalTermsText.trim() || DEFAULT_TERMS_TEXT,
         })
-        .eq('id', profile.id);
+        .eq('id', profile.id)
+        .select()
+        .single();
+
+      if (import.meta.env.DEV) {
+        console.log('Save result:', { data, error });
+      }
 
       if (error) throw error;
 
-      setSlug(normalizedSlug);
-      if (normalizedSlug) setSlugStatus('available');
-      toast.success('Settings saved!');
+      const savedSlug = (data?.slug as string | null) ?? normalizedSlug || null;
+      setSlug(savedSlug ?? '');
+      if (savedSlug) setSlugStatus('available');
+
+      if (data) {
+        writeProfileCache({ ...profile, ...data } as typeof profile);
+      } else {
+        writeProfileCache({ ...profile, slug: savedSlug });
+      }
+
       await refreshProfile();
+      toast.success('Settings saved successfully!');
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (err) {
-      console.error('Failed to save booking page settings:', err);
-      toast.error('Failed to save settings');
+      console.error('Save failed:', err);
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      toast.error(`Failed to save: ${message}`);
     } finally {
       setSaving(false);
     }
