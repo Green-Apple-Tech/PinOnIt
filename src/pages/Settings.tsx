@@ -592,47 +592,65 @@ export function SettingsPage() {
     setSaving(true);
     setSaved(false);
     try {
+      const slugPayload = { slug: normalizedSlug || null };
       if (import.meta.env.DEV) {
-        console.log('Saving slug:', normalizedSlug, 'for user:', profile.id);
+        console.log('Sending slug update:', slugPayload);
       }
 
-      const { data, error } = await supabase
+      const { error: slugError } = await supabase
         .from('profiles')
-        .update({
-          slug: normalizedSlug || null,
-          booking_page_header: bookingHeader.trim(),
-          avatar_url: avatarUrl.trim() || null,
-          global_require_terms: globalRequireTerms,
-          global_terms_text: globalTermsText.trim() || DEFAULT_TERMS_TEXT,
-        })
-        .eq('id', profile.id)
-        .select()
-        .single();
+        .update(slugPayload)
+        .eq('id', profile.id);
+
+      if (slugError) {
+        console.error('Slug save error:', slugError);
+        throw slugError;
+      }
+
+      const otherFields: Record<string, unknown> = {
+        booking_page_header: bookingHeader.trim(),
+        avatar_url: avatarUrl.trim() || null,
+        global_require_terms: globalRequireTerms,
+        global_terms_text: globalTermsText.trim() || DEFAULT_TERMS_TEXT,
+      };
 
       if (import.meta.env.DEV) {
-        console.log('Save result:', { data, error });
+        console.log('Sending other fields update:', otherFields);
       }
 
-      if (error) throw error;
+      const { error: otherError } = await supabase
+        .from('profiles')
+        .update(otherFields)
+        .eq('id', profile.id);
 
-      const savedSlug = (data?.slug as string | null) ?? normalizedSlug || null;
-      setSlug(savedSlug ?? '');
-      if (savedSlug) setSlugStatus('available');
-
-      if (data) {
-        writeProfileCache({ ...profile, ...data } as typeof profile);
-      } else {
-        writeProfileCache({ ...profile, slug: savedSlug });
+      if (otherError) {
+        console.error('Other fields save error:', otherError);
+        toast.warning(`Username saved, but other fields failed: ${otherError.message}`);
       }
+
+      setSlug(normalizedSlug);
+      if (normalizedSlug) setSlugStatus('available');
+
+      writeProfileCache({
+        ...profile,
+        slug: normalizedSlug || null,
+        booking_page_header: bookingHeader.trim(),
+        avatar_url: avatarUrl.trim() || null,
+        global_require_terms: globalRequireTerms,
+        global_terms_text: globalTermsText.trim() || DEFAULT_TERMS_TEXT,
+      });
 
       await refreshProfile();
-      toast.success('Settings saved successfully!');
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+
+      if (!otherError) {
+        toast.success('Settings saved!');
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      }
     } catch (err) {
       console.error('Save failed:', err);
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      toast.error(`Failed to save: ${message}`);
+      const message = err instanceof Error ? err.message : String(err);
+      toast.error(`Save failed: ${message}`);
     } finally {
       setSaving(false);
     }
