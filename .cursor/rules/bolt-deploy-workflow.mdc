@@ -27,6 +27,13 @@ alwaysApply: true
 supabase functions deploy coordinate-sms --project-ref adlusgtlwgcfyxgeoias
 ```
 
+**Calendar OAuth callbacks** — always deploy with `--no-verify-jwt` or run `./scripts/deploy-edge-functions.sh`. Without this, Google/Microsoft connect breaks with `Missing authorization header`.
+
+```bash
+supabase functions deploy google-calendar-callback --no-verify-jwt --project-ref adlusgtlwgcfyxgeoias
+supabase functions deploy outlook-calendar-callback --no-verify-jwt --project-ref adlusgtlwgcfyxgeoias
+```
+
 ## Quick verify before Publish
 
 In Bolt `CoordinateMeetings.tsx`: no `schedulingForProvider` if that UI was removed; bundle hash on pinonit.com should change after Publish.

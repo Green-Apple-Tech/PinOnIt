@@ -547,12 +547,18 @@ export function ServicesPage() {
     setNameError('');
     setSaving(true);
     const priceCents = priceStr ? Math.round(parseFloat(priceStr) * 100) : 0;
-    const payload = {
-      ...form,
+    const venmo = form.venmo_handle?.trim() || null;
+    const cashapp = form.cashapp_handle?.trim() || null;
+    const zelle = form.zelle_handle?.trim() || null;
+    const paypal = form.paypal_handle?.trim() || form.paypal_me_link?.trim() || null;
+    const { cashapp_handle: _c, zelle_handle: _z, paypal_handle: _p, payment_methods: _pm, ...formFields } = form;
+    const basePayload = {
+      ...formFields,
       price_cents: priceCents,
-      paypal_handle: form.paypal_handle?.trim() || null,
-      paypal_me_link: form.paypal_handle?.trim() || form.paypal_me_link?.trim() || null,
-      payment_methods: buildPaymentMethods(form),
+      venmo_handle: venmo,
+      cashapp_tag: cashapp,
+      zelle_contact: zelle,
+      paypal_me_link: paypal,
       booking_calendar_ids: selectedCalendarIds,
       is_recurring: form.is_recurring,
       recurrence_frequency: form.is_recurring ? form.recurrence_frequency : null,
@@ -560,14 +566,38 @@ export function ServicesPage() {
       recurrence_end_occurrences: form.is_recurring && recurrenceEndType === 'occurrences' ? form.recurrence_end_occurrences : null,
       max_recurring_clients: form.is_recurring ? (form.max_recurring_clients ?? 1) : null,
     };
+    const extendedPayload = {
+      ...basePayload,
+      cashapp_handle: cashapp,
+      zelle_handle: zelle,
+      paypal_handle: paypal,
+      payment_methods: buildPaymentMethods(form),
+    };
 
-    if (editingId === 'new') {
-      const { data } = await supabase.from('services').insert({ ...payload, host_id: profile.id }).select().maybeSingle();
-      if (data) setServices((prev) => [...prev, data as Service]);
-    } else if (editingId) {
-      const { data } = await supabase.from('services').update(payload).eq('id', editingId).select().maybeSingle();
-      if (data) setServices((prev) => prev.map((s) => (s.id === editingId ? (data as Service) : s)));
+    const saveService = async (payload: Record<string, unknown>) => {
+      if (editingId === 'new') {
+        return supabase.from('services').insert({ ...payload, host_id: profile.id }).select().maybeSingle();
+      }
+      if (editingId) {
+        return supabase.from('services').update(payload).eq('id', editingId).select().maybeSingle();
+      }
+      return { data: null, error: null };
+    };
+
+    let { data, error } = await saveService(extendedPayload);
+    if (error) {
+      ({ data, error } = await saveService(basePayload));
     }
+
+    if (data && !error) {
+      const saved = data as Service;
+      if (editingId === 'new') {
+        setServices((prev) => [...prev, saved]);
+      } else if (editingId) {
+        setServices((prev) => prev.map((s) => (s.id === editingId ? saved : s)));
+      }
+    }
+
     closeForm();
     setSaving(false);
   };

@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
+import { clearClientOnboardingState } from '../lib/onboardingState';
 import type { User } from '@supabase/supabase-js';
 import type { Profile, Subscription } from '../lib/types';
 
@@ -138,6 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    clearClientOnboardingState();
     await supabase.auth.signOut();
     window.location.href = '/login';
   };

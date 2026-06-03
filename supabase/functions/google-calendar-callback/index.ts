@@ -1,5 +1,9 @@
+// Google OAuth callback — browser redirect, no Authorization header.
+// DEPLOY (required): supabase functions deploy google-calendar-callback --no-verify-jwt --project-ref adlusgtlwgcfyxgeoias
+// Or run: ./scripts/deploy-edge-functions.sh
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { parseOAuthContext, isValidOAuthUserId } from "../_shared/oauth-state.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -176,7 +180,7 @@ Deno.serve(async (req: Request) => {
   // Use service role — Google redirects here, there is no user session
   const supabaseAdmin = createClient(supabaseUrl, serviceKey);
 
-  const APP_URL = "https://pinonit.com";
+  let redirectBase = "https://pinonit.com/dashboard/appointments";
 
   console.log("[callback] Function invoked, method:", req.method);
   console.log("[callback] GOOGLE_CLIENT_ID present:", !!clientId);
@@ -192,27 +196,13 @@ Deno.serve(async (req: Request) => {
     console.log("[callback] state present:", !!state);
     console.log("[callback] error param:", errorParam ?? "none");
 
-    // Default redirect base before state is decoded
-    let redirectBase = `${APP_URL}/dashboard/appointments`;
+    const oauth = parseOAuthContext(state);
+    let redirectBase = oauth.redirectBase;
+    let userId = oauth.userId;
+    let source = oauth.source;
 
-    // Browser OAuth redirects carry no JWT — identify user from state, then Authorization fallback
-    let userId: string | null = null;
-    let source = "calendar";
-
-    if (state) {
-      try {
-        const decoded = JSON.parse(atob(state.split(".")[0])) as { userId?: string; uid?: string; source?: string };
-        userId = decoded.userId ?? decoded.uid ?? null;
-        source = decoded.source ?? "calendar";
-        if (source === "contacts") {
-          redirectBase = `${APP_URL}/dashboard/contacts`;
-        }
-        console.log("[callback] Decoded userId from state:", userId);
-        console.log("[callback] Decoded source from state:", source);
-      } catch (e) {
-        console.error("[callback] Failed to decode state:", e);
-      }
-    }
+    console.log("[callback] Decoded userId from state:", userId);
+    console.log("[callback] Decoded source from state:", source);
 
     if (!userId) {
       const authHeader = req.headers.get("Authorization");
@@ -230,10 +220,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!userId) {
-      return new Response(
-        JSON.stringify({ code: "UNAUTHORIZED", message: "Could not identify user" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return Response.redirect(`${redirectBase}?calendar_error=invalid_state`, 302);
     }
 
     if (!code || !state) {
@@ -241,7 +228,7 @@ Deno.serve(async (req: Request) => {
       return Response.redirect(`${redirectBase}?calendar_error=missing_params`, 302);
     }
 
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
+    if (!isValidOAuthUserId(userId)) {
       console.error("[callback] Invalid userId in state");
       return Response.redirect(`${redirectBase}?calendar_error=invalid_state`, 302);
     }

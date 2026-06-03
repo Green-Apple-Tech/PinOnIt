@@ -58,6 +58,20 @@ When you change edge functions (e.g. SMS coordination):
 supabase functions deploy coordinate-sms --project-ref adlusgtlwgcfyxgeoias
 ```
 
+**Google / Microsoft calendar OAuth** — callbacks must be deployed with JWT verification **off** (Google/Microsoft redirect the browser with no auth header). If connect fails with `Missing authorization header`, run:
+
+```bash
+chmod +x scripts/deploy-edge-functions.sh
+./scripts/deploy-edge-functions.sh
+```
+
+Or individual callbacks:
+
+```bash
+supabase functions deploy google-calendar-callback --no-verify-jwt --project-ref adlusgtlwgcfyxgeoias
+supabase functions deploy outlook-calendar-callback --no-verify-jwt --project-ref adlusgtlwgcfyxgeoias
+```
+
 Database migrations: `supabase db push --linked`
 
 ---

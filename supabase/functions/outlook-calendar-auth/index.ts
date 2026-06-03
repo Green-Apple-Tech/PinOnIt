@@ -1,5 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { encodeOAuthState } from "../_shared/oauth-state.ts";
+
+// Starts Microsoft OAuth — requires authenticated user (JWT). Callback is outlook-calendar-callback.
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -55,7 +58,7 @@ Deno.serve(async (req: Request) => {
 
     const source = new URL(req.url).searchParams.get("source") ?? "calendar";
     const scopes = source === "contacts" ? CONTACTS_SCOPES : CALENDAR_SCOPES;
-    const state = btoa(JSON.stringify({ userId: user.id, uid: user.id, source }));
+    const state = encodeOAuthState(user.id, source);
     // Must exactly match the redirect URI registered in the Azure app registration
     const redirectUri = `${Deno.env.get("SUPABASE_URL")}/functions/v1/outlook-calendar-callback`;
 

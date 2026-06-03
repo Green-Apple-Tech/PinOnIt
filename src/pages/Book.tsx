@@ -102,8 +102,7 @@ function hasAnyPaymentHandle(handles: ServicePaymentHandles): boolean {
   return !!(handles.paypal_handle || handles.venmo_handle || handles.cashapp_handle || handles.zelle_handle);
 }
 
-const SERVICE_PAYMENT_COLUMNS =
-  '*, venmo_handle, cashapp_handle, zelle_handle, paypal_handle, paypal_me_link, cashapp_tag, zelle_contact, payment_methods';
+const SERVICE_SELECT = '*';
 
 function buildPaymentOptions(svc: Service, stripeAvailable: boolean): BookPaymentOption[] {
   const handles = getServicePaymentHandles(svc);
@@ -613,8 +612,8 @@ export function BookPage() {
 
       const [svcRes, availRes, bookRes, ovRes, calEvtRes] = await Promise.all([
         serviceId
-          ? supabase.from('services').select(SERVICE_PAYMENT_COLUMNS).eq('id', serviceId).eq('is_active', true)
-          : supabase.from('services').select(SERVICE_PAYMENT_COLUMNS).eq('host_id', hostId).eq('is_active', true),
+          ? supabase.from('services').select(SERVICE_SELECT).eq('id', serviceId).eq('is_active', true)
+          : supabase.from('services').select(SERVICE_SELECT).eq('host_id', hostId).eq('is_active', true),
         supabase.from('availability').select('*').eq('host_id', hostId).eq('is_active', true),
         supabase.from('bookings').select('*').eq('host_id', hostId).in('status', ['confirmed']),
         supabase.from('date_overrides').select('*').eq('host_id', hostId),
@@ -704,7 +703,12 @@ export function BookPage() {
   }, [slotMap, selectedService, bookings]);
 
   const handleSelectService = async (svc: Service) => {
-    setSelectedService(svc);
+    const { data: freshSvc } = await supabase.from('services').select(SERVICE_SELECT).eq('id', svc.id).maybeSingle();
+    const service = (freshSvc as Service | null) ?? svc;
+    setSelectedService(service);
+    if (freshSvc) {
+      setServices((prev) => prev.map((s) => (s.id === service.id ? service : s)));
+    }
     setSelectedDate(null); setSelectedSlot(null); setAnswers({});
     setRecurringAcknowledged(false);
     setPaymentConfirmed(false);

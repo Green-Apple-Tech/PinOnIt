@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { encodeOAuthState } from "../_shared/oauth-state.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -54,7 +55,7 @@ Deno.serve(async (req: Request) => {
     const scopes = source === "contacts" ? CONTACTS_SCOPES : CALENDAR_SCOPES;
 
     // Encode user id + source in state — callback reads userId from here (no JWT on redirect)
-    const state = btoa(JSON.stringify({ userId: user.id, source }));
+    const state = encodeOAuthState(user.id, source);
     // Must be the exact public URL registered in Google Cloud Console as an authorized redirect URI
     const redirectUri = `${Deno.env.get("SUPABASE_URL")}/functions/v1/google-calendar-callback`;
 

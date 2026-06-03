@@ -1,5 +1,9 @@
+// Microsoft OAuth callback — browser redirect, no Authorization header.
+// DEPLOY (required): supabase functions deploy outlook-calendar-callback --no-verify-jwt --project-ref adlusgtlwgcfyxgeoias
+// Or run: ./scripts/deploy-edge-functions.sh
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { parseOAuthContext, isValidOAuthUserId } from "../_shared/oauth-state.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -208,8 +212,7 @@ Deno.serve(async (req: Request) => {
   // Use service role — Microsoft redirects here, there is no user session
   const supabase = createClient(supabaseUrl, serviceKey);
 
-  const APP_URL = "https://pinonit.com";
-  let redirectBase = `${APP_URL}/dashboard/appointments`;
+  let redirectBase = "https://pinonit.com/dashboard/appointments";
 
   console.log("[outlook-callback] Function invoked, method:", req.method);
   console.log("[outlook-callback] AZURE_CLIENT_ID present:", !!clientId);
@@ -225,6 +228,14 @@ Deno.serve(async (req: Request) => {
     console.log("[outlook-callback] state present:", !!state);
     console.log("[outlook-callback] error param:", errorParam ?? "none");
 
+    const oauth = parseOAuthContext(state);
+    redirectBase = oauth.redirectBase;
+    let uid = oauth.userId ?? "";
+    let source = oauth.source;
+
+    console.log("[outlook-callback] Decoded uid from state:", uid || "none");
+    console.log("[outlook-callback] Decoded source from state:", source);
+
     if (errorParam) {
       const desc = url.searchParams.get("error_description") ?? errorParam;
       console.error("[outlook-callback] Microsoft returned error:", desc);
@@ -236,26 +247,14 @@ Deno.serve(async (req: Request) => {
       return Response.redirect(`${redirectBase}?calendar_error=missing_params`, 302);
     }
 
+    if (!uid || !isValidOAuthUserId(uid)) {
+      console.error("[outlook-callback] Invalid or missing user id in state");
+      return Response.redirect(`${redirectBase}?calendar_error=invalid_state`, 302);
+    }
+
     if (!clientId || !clientSecret) {
       console.error("[outlook-callback] Missing Azure OAuth credentials");
       return Response.redirect(`${redirectBase}?calendar_error=oauth_not_configured`, 302);
-    }
-
-    // Decode user id and source from state
-    let uid: string;
-    let source = "calendar";
-    try {
-      const statePayload = state.includes(".") ? state.split(".")[0] : state;
-      const decoded = JSON.parse(atob(statePayload)) as { userId?: string; uid?: string; source?: string };
-      uid = decoded.userId ?? decoded.uid ?? "";
-      if (!uid) throw new Error("missing uid");
-      source = decoded.source ?? "calendar";
-      if (source === "contacts") redirectBase = `${APP_URL}/dashboard/contacts`;
-      console.log("[outlook-callback] Decoded uid from state:", uid);
-      console.log("[outlook-callback] Decoded source from state:", source);
-    } catch (e) {
-      console.error("[outlook-callback] Failed to decode state:", e);
-      return Response.redirect(`${redirectBase}?calendar_error=invalid_state`, 302);
     }
 
     const tokenScope = source === "contacts"

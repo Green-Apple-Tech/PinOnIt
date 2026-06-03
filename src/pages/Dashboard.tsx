@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { OnboardingWizard, wizardIsActive, wizardSavedStep, onboardingIsCompleted } from '../components/OnboardingWizard';
+import { clearStaleOnboardingLocalState, markOnboardingCompletedLocal } from '../lib/onboardingState';
 import { useTheme } from '../hooks/useTheme';
 import { supabase } from '../lib/supabase';
 import type { Booking, Service } from '../lib/types';
@@ -827,11 +828,12 @@ export function Dashboard() {
     // Never show if already opened from checkout return, ?onboarding=1, or OAuth resume
     if (showWizard) return;
 
-    // localStorage says completed — never show
-    if (onboardingIsCompleted()) return;
-
-    // DB says completed — never show
+    // DB is source of truth — stale localStorage must not skip wizard after a wipe / fresh account
     if (profile.onboarding_completed) return;
+
+    if (!profile.wizard_active && onboardingIsCompleted()) {
+      clearStaleOnboardingLocalState();
+    }
 
     // Active Pro/trialing subscription — mark completed and do not show
     const isActivePro = (
@@ -1417,9 +1419,7 @@ export function Dashboard() {
             setShowWizard(false);
             setWizardInitialStep(undefined);
             // Belt-and-suspenders: ensure completed is persisted even if wizard's own handler failed
-            localStorage.setItem('onboarding_completed', '1');
-            localStorage.removeItem('wizard_active');
-            localStorage.removeItem('wizard_step');
+            markOnboardingCompletedLocal();
             if (profile) {
               supabase.from('profiles').update({ onboarding_completed: true, wizard_active: false }).eq('id', profile.id);
             }

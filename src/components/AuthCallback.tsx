@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { clearClientOnboardingState, clearStaleOnboardingLocalState } from '../lib/onboardingState';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 const REDIRECT_KEY = 'auth_redirect';
@@ -12,13 +13,16 @@ function extractParam(key: string): string | null {
   return new URLSearchParams(hash).get(key);
 }
 
-async function checkOnboardingCompleted(userId: string): Promise<boolean> {
+async function checkOnboardingCompleted(userId: string): Promise<{ completed: boolean; wizardActive: boolean }> {
   const { data } = await supabase
     .from('profiles')
-    .select('onboarding_completed')
+    .select('onboarding_completed, wizard_active')
     .eq('id', userId)
     .maybeSingle();
-  return data?.onboarding_completed === true;
+  return {
+    completed: data?.onboarding_completed === true,
+    wizardActive: data?.wizard_active === true,
+  };
 }
 
 function getPostLoginRedirect(): string {
@@ -48,9 +52,14 @@ export function AuthCallback() {
     const code = extractParam('code');
 
     const handleSession = async (userId: string) => {
-      const completed = await checkOnboardingCompleted(userId);
+      const { completed, wizardActive } = await checkOnboardingCompleted(userId);
       const redirect = getPostLoginRedirect();
       if (!completed) {
+        if (wizardActive) {
+          clearStaleOnboardingLocalState();
+        } else {
+          clearClientOnboardingState();
+        }
         navigate('/dashboard?onboarding=1', { replace: true });
       } else {
         navigate(redirect, { replace: true });

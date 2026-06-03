@@ -11,6 +11,14 @@ import {
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { ColorSwatchRow, BRAND_SWATCHES } from './ColorSwatchRow';
+import {
+  markOnboardingCompletedLocal,
+  setWizardActiveLocal,
+  clearWizardLocal,
+  onboardingIsCompletedLocal,
+  wizardIsActiveLocal,
+  wizardSavedStepLocal,
+} from '../lib/onboardingState';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -43,37 +51,9 @@ const STEPS = [
 ] as const;
 type Step = (typeof STEPS)[number];
 
-// localStorage keys
-const LS_WIZARD_ACTIVE = 'wizard_active';
-const LS_WIZARD_STEP   = 'wizard_step';
-const LS_ONBOARDING_DONE = 'onboarding_completed';
-
-export function wizardIsActive(): boolean {
-  return localStorage.getItem(LS_WIZARD_ACTIVE) === '1';
-}
-
-export function wizardSavedStep(): number {
-  return Number(localStorage.getItem(LS_WIZARD_STEP) ?? '0');
-}
-
-function lsSetWizardActive(stepIndex: number) {
-  localStorage.setItem(LS_WIZARD_ACTIVE, '1');
-  localStorage.setItem(LS_WIZARD_STEP, String(stepIndex));
-}
-
-function lsClearWizard() {
-  localStorage.removeItem(LS_WIZARD_ACTIVE);
-  localStorage.removeItem(LS_WIZARD_STEP);
-}
-
-function lsSetCompleted() {
-  localStorage.setItem(LS_ONBOARDING_DONE, '1');
-  lsClearWizard();
-}
-
-export function onboardingIsCompleted(): boolean {
-  return localStorage.getItem(LS_ONBOARDING_DONE) === '1';
-}
+export const onboardingIsCompleted = onboardingIsCompletedLocal;
+export const wizardIsActive = wizardIsActiveLocal;
+export const wizardSavedStep = wizardSavedStepLocal;
 
 
 function sanitizeSlug(val: string) {
@@ -309,14 +289,14 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
 
   // ── Persist completed state to both DB and localStorage ──────────────────────
   const persistCompleted = useCallback(async () => {
-    lsSetCompleted();
+    markOnboardingCompletedLocal();
     if (!user) return;
     await supabase.from('profiles').update({ onboarding_completed: true }).eq('id', user.id);
   }, [user]);
 
   // ── Save wizard position to localStorage + DB before any redirect ────────────
   const persistWizardPosition = useCallback(async (stepIdx: number) => {
-    lsSetWizardActive(stepIdx);
+    setWizardActiveLocal(stepIdx);
     if (!user) return;
     await supabase.from('profiles').update({
       onboarding_step: stepIdx,
@@ -326,7 +306,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
 
   // ── Clear wizard_active after it has been resumed ─────────────────────────────
   const clearWizardActive = useCallback(async () => {
-    lsClearWizard();
+    clearWizardLocal();
     if (!user) return;
     await supabase.from('profiles').update({ wizard_active: false }).eq('id', user.id);
   }, [user]);
