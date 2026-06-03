@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useSearchParams, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
@@ -212,6 +212,14 @@ function formatTime12(time: string): string {
   const ampm = hour >= 12 ? 'PM' : 'AM';
   const display = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
   return `${display}:${m} ${ampm}`;
+}
+
+function formatSelectedDateLabel(dateKey: string): string {
+  return new Date(dateKey + 'T12:00:00').toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
 }
 
 function toDateKey(d: Date): string {
@@ -558,6 +566,26 @@ export function BookPage() {
   const [stripePaymentId, setStripePaymentId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<BookPaymentMethod>('skip');
   const [recurringAcknowledged, setRecurringAcknowledged] = useState(false);
+
+  const timeRef = useRef<HTMLDivElement>(null);
+  const detailsRef = useRef<HTMLDivElement>(null);
+  const continueRef = useRef<HTMLDivElement>(null);
+
+  const handleDateSelect = useCallback((dateKey: string) => {
+    setSelectedDate(dateKey);
+    setSelectedSlot(null);
+    setTimeout(() => timeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+  }, []);
+
+  const handleSlotSelect = useCallback((slot: string) => {
+    setSelectedSlot(slot);
+    setTimeout(() => continueRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+  }, []);
+
+  const goToDetails = useCallback(() => {
+    setStep('details');
+    setTimeout(() => detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+  }, []);
 
   useEffect(() => {
     if (!slug && !token) return;
@@ -1313,79 +1341,106 @@ export function BookPage() {
                     className={`text-sm transition-colors ${calendlyStyle ? 'text-slate-500 hover:text-slate-800' : ''}`} style={calendlyStyle ? undefined : { color: pageMutedColor }}>Change service</button>
                 </div>
               <div className="flex flex-col gap-6">
-                  <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <button onClick={prevMonth} className="min-h-[40px] min-w-[40px] flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors rounded-lg">
-                        <ChevronLeft className="h-5 w-5" />
-                      </button>
-                      <h3 className={`font-semibold ${calendlyStyle ? 'text-base text-slate-800' : 'text-base'}`}>{MONTH_NAMES[calMonth]} {calYear}</h3>
-                      <button onClick={nextMonth} className="min-h-[40px] min-w-[40px] flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors rounded-lg">
-                        <ChevronRight className="h-5 w-5" />
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-7 mb-2">
-                      {DAY_SHORT.map((d) => <div key={d} className="text-center text-xs uppercase text-slate-400 font-medium py-1 tracking-wide">{d}</div>)}
-                    </div>
-                    <div className="grid grid-cols-7 gap-y-1">
-                      {calendarDays.map((d, i) => {
-                        if (!d) return <div key={`empty-${i}`} />;
-                        const dk = `${calYear}-${String(calMonth + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-                        const hasSlots = displaySlotMap.has(dk);
-                        const isSelected = selectedDate === dk;
-                        const isToday = dk === toDateKey(today);
-                        const isPast = new Date(calYear, calMonth, d) < today && !isToday;
-                        const disabled = !hasSlots || isPast;
-                        return (
-                          <button key={dk} disabled={disabled} onClick={() => { setSelectedDate(dk); setSelectedSlot(null); }}
-                            className={`mx-auto h-9 w-9 flex items-center justify-center text-base font-medium transition-all rounded-full ${
-                              isSelected
-                                ? 'bg-[#1a1f36] text-white'
-                                : disabled
+                  {!selectedDate ? (
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <button onClick={prevMonth} className="min-h-[40px] min-w-[40px] flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors rounded-lg">
+                          <ChevronLeft className="h-5 w-5" />
+                        </button>
+                        <h3 className={`font-semibold ${calendlyStyle ? 'text-base text-slate-800' : 'text-base'}`}>{MONTH_NAMES[calMonth]} {calYear}</h3>
+                        <button onClick={nextMonth} className="min-h-[40px] min-w-[40px] flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors rounded-lg">
+                          <ChevronRight className="h-5 w-5" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-7 mb-2">
+                        {DAY_SHORT.map((d) => <div key={d} className="text-center text-xs uppercase text-slate-400 font-medium py-1 tracking-wide">{d}</div>)}
+                      </div>
+                      <div className="grid grid-cols-7 gap-y-1">
+                        {calendarDays.map((d, i) => {
+                          if (!d) return <div key={`empty-${i}`} />;
+                          const dk = `${calYear}-${String(calMonth + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                          const hasSlots = displaySlotMap.has(dk);
+                          const isToday = dk === toDateKey(today);
+                          const isPast = new Date(calYear, calMonth, d) < today && !isToday;
+                          const disabled = !hasSlots || isPast;
+                          return (
+                            <button key={dk} disabled={disabled} onClick={() => handleDateSelect(dk)}
+                              className={`mx-auto h-9 w-9 flex items-center justify-center text-base font-medium transition-all rounded-full ${
+                                disabled
                                   ? 'text-slate-300 cursor-not-allowed'
                                   : isToday
                                     ? 'text-slate-800 ring-2 ring-[#1a1f36] ring-offset-1 hover:bg-[#EEF2FF]'
                                     : 'text-slate-800 hover:bg-[#EEF2FF]'
-                            }`}>
-                            {d}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <div className="mt-6 pt-4 border-t border-slate-100">
-                      <label className="block text-xs font-medium text-slate-500 mb-1.5">Timezone</label>
-                      <div className="relative">
-                        <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                        <select
-                          value={guestTimezone}
-                          onChange={(e) => setGuestTimezone(e.target.value)}
-                          className={`w-full appearance-none pl-9 pr-9 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 ${focusRing} focus:outline-none focus:ring-2 transition`}
-                        >
-                          {TIMEZONES.map((tz) => <option key={tz} value={tz}>{formatTimezoneDisplay(tz)}</option>)}
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                              }`}>
+                              {d}
+                            </button>
+                          );
+                        })}
                       </div>
-                      <p className="mt-1.5 text-xs text-slate-500">{formatTimezoneDisplay(guestTimezone)}</p>
+                      <div className="mt-6 pt-4 border-t border-slate-100">
+                        <label className="block text-xs font-medium text-slate-500 mb-1.5">Timezone</label>
+                        <div className="relative">
+                          <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                          <select
+                            value={guestTimezone}
+                            onChange={(e) => setGuestTimezone(e.target.value)}
+                            className={`w-full appearance-none pl-9 pr-9 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 ${focusRing} focus:outline-none focus:ring-2 transition`}
+                          >
+                            {TIMEZONES.map((tz) => <option key={tz} value={tz}>{formatTimezoneDisplay(tz)}</option>)}
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                        </div>
+                        <p className="mt-1.5 text-xs text-slate-500">{formatTimezoneDisplay(guestTimezone)}</p>
+                      </div>
                     </div>
-                  </div>
-                  {selectedDate && (
-                    <div>
-                      <h4 className="text-base font-medium text-slate-800 mb-3">
-                        {new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                      </h4>
+                  ) : (
+                    <div className="flex items-center justify-between p-3 bg-indigo-50 border border-indigo-200 rounded-xl">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-indigo-600" />
+                        <span className="text-sm font-medium text-indigo-900">
+                          {formatSelectedDateLabel(selectedDate)}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setSelectedDate(null); setSelectedSlot(null); }}
+                        className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  )}
+
+                  {selectedDate && !selectedSlot && (
+                    <div ref={timeRef}>
+                      <h4 className="text-base font-medium text-slate-800 mb-3">Select a time</h4>
                       <div className="grid grid-cols-2 gap-2">
                         {(displaySlotMap.get(selectedDate) ?? []).map((slot) => (
-                          <button key={slot} onClick={() => { setSelectedSlot(slot); }}
-                            className={`py-3 px-4 rounded-lg text-sm font-medium transition-all ${
-                              selectedSlot === slot
-                                ? 'bg-[#1a1f36] text-white'
-                                : 'bg-white border border-slate-200 text-slate-800 hover:bg-[#EEF2FF] hover:border-slate-300'
-                            }`}>
+                          <button key={slot} type="button" onClick={() => handleSlotSelect(slot)}
+                            className="py-3 px-4 rounded-lg text-sm font-medium transition-all bg-white border border-slate-200 text-slate-800 hover:bg-[#EEF2FF] hover:border-slate-300">
                             {formatTime12(slot)}
                           </button>
                         ))}
                       </div>
                     </div>
                   )}
+
+                  {selectedDate && selectedSlot && (
+                    <div className="flex items-center justify-between p-3 bg-indigo-50 border border-indigo-200 rounded-xl">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-indigo-600" />
+                        <span className="text-sm font-medium text-indigo-900">{formatTime12(selectedSlot)}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedSlot(null)}
+                        className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  )}
+
                   {!selectedDate && (
                     <p className="text-sm text-slate-500">Select a date to see available times.</p>
                   )}
@@ -1415,8 +1470,8 @@ export function BookPage() {
                   </div>
                 )}
                 {selectedDate && selectedSlot && (
-                  <div className="mt-4 flex justify-end">
-                    <button onClick={() => setStep('details')} className={`w-full sm:w-auto px-6 py-3 text-white font-semibold transition-colors inline-flex items-center justify-center gap-2 min-h-[48px] ${calendlyStyle ? 'rounded-xl bg-[#1a1f36] hover:opacity-90' : 'rounded-lg'}`} style={calendlyStyle ? undefined : { backgroundColor: accentColor }}>
+                  <div ref={continueRef} className="mt-4 flex justify-end">
+                    <button type="button" onClick={goToDetails} className={`w-full sm:w-auto px-6 py-3 text-white font-semibold transition-colors inline-flex items-center justify-center gap-2 min-h-[48px] ${calendlyStyle ? 'rounded-xl bg-[#1a1f36] hover:opacity-90' : 'rounded-lg'}`} style={calendlyStyle ? undefined : { backgroundColor: accentColor }}>
                       Continue <ArrowRight className="h-4 w-4" />
                     </button>
                   </div>
@@ -1425,7 +1480,7 @@ export function BookPage() {
             )}
 
             {step === 'details' && selectedService && selectedDate && selectedSlot && (
-              <div>
+              <div ref={detailsRef}>
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-bold" style={{ color: pageTextColor }}>Your details</h2>
                   <button onClick={() => setStep('datetime')} className="text-sm transition-colors" style={{ color: pageMutedColor }}>Change time</button>

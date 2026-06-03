@@ -9,7 +9,7 @@ interface BookingPaymentFormProps {
   onError: (err: string) => void;
 }
 
-export function BookingPaymentForm({
+function BookingPaymentForm({
   amountLabel,
   accentColor = '#5864C6',
   onSuccess,
@@ -64,9 +64,9 @@ export function BookingPaymentForm({
 
   if (!stripe || !elements) {
     return (
-      <div className="mt-3 flex items-center justify-center py-6 gap-2">
-        <Loader2 className="h-5 w-5 animate-spin text-indigo-500" />
-        <span className="text-sm text-gray-500 dark:text-slate-400">Loading payment form...</span>
+      <div className="flex items-center justify-center py-4 gap-2">
+        <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+        <span className="text-sm text-gray-500 dark:text-slate-400">Initializing payment...</span>
       </div>
     );
   }
@@ -79,17 +79,19 @@ export function BookingPaymentForm({
           <span className="text-sm text-gray-500 dark:text-slate-400">Preparing card fields...</span>
         </div>
       )}
-      <PaymentElement
-        options={{
-          wallets: { applePay: 'never', googlePay: 'never' },
-        }}
-        onReady={() => setElementReady(true)}
-        onLoadError={(event) => {
-          const message = event.error?.message ?? 'Unable to load card payment form.';
-          setLoadError(message);
-          onError(message);
-        }}
-      />
+      <div className={elementReady ? undefined : 'sr-only'}>
+        <PaymentElement
+          options={{
+            wallets: { applePay: 'never', googlePay: 'never' },
+          }}
+          onReady={() => setElementReady(true)}
+          onLoadError={(event) => {
+            const message = event.error?.message ?? 'Unable to load card payment form.';
+            setLoadError(message);
+            onError(message);
+          }}
+        />
+      </div>
       {elementReady && (
         <button
           type="button"
@@ -105,3 +107,6 @@ export function BookingPaymentForm({
     </div>
   );
 }
+
+export { BookingPaymentForm };
+export default BookingPaymentForm;
