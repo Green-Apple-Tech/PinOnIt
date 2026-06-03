@@ -39,7 +39,9 @@ const DEFAULT_SERVICE = {
   cancellation_policy: '', confirmation_redirect_url: null as string | null,
   location: '', location_type: 'video' as Service['location_type'],
   payment_provider: 'none' as Service['payment_provider'],
-  paypal_me_link: null as string | null, paypal_currency: 'USD',
+  paypal_me_link: null as string | null,
+  paypal_handle: null as string | null,
+  paypal_currency: 'USD',
   venmo_handle: null as string | null,
   cashapp_handle: null as string | null,
   zelle_handle: null as string | null,
@@ -78,6 +80,7 @@ function formatPrice(cents: number) {
 
 function buildPaymentMethods(form: FormState): string[] {
   const methods: string[] = [];
+  if (form.paypal_handle?.trim() || form.paypal_me_link?.trim()) methods.push('paypal');
   if (form.venmo_handle?.trim()) methods.push('venmo');
   if (form.cashapp_handle?.trim()) methods.push('cashapp');
   if (form.zelle_handle?.trim()) methods.push('zelle');
@@ -163,7 +166,7 @@ function PaymentTab({
   const paypalSelected = form.payment_provider === 'paypal';
   const p2pSelected = form.payment_provider === 'p2p';
 
-  const hasAnyP2P = !!(form.venmo_handle || form.cashapp_handle || form.zelle_handle);
+  const hasAnyP2P = !!(form.paypal_handle || form.paypal_me_link || form.venmo_handle || form.cashapp_handle || form.zelle_handle);
 
   return (
     <div className="space-y-5">
@@ -270,6 +273,16 @@ function PaymentTab({
           <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
             Optional. Shown to guests on the booking page as Venmo, Cash App, or Zelle options.
           </p>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-600 dark:text-slate-400 mb-1.5">PayPal handle</label>
+          <input
+            type="text"
+            value={form.paypal_handle ?? ''}
+            onChange={(e) => setField('paypal_handle', e.target.value || null)}
+            placeholder="paypal.me/yourname"
+            className={inputCls}
+          />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-600 dark:text-slate-400 mb-1.5">Venmo handle</label>
@@ -487,7 +500,8 @@ export function ServicesPage() {
       confirmation_redirect_url: svc.confirmation_redirect_url ?? null,
       location: svc.location ?? '', location_type: svc.location_type ?? 'video',
       payment_provider: ((svc.payment_provider as string) === 'stripe' ? 'none' : (svc.payment_provider ?? 'none')) as Service['payment_provider'],
-      paypal_me_link: (svc as any).paypal_me_link ?? null,
+      paypal_me_link: (svc as Service).paypal_handle ?? (svc as any).paypal_me_link ?? null,
+      paypal_handle: (svc as Service).paypal_handle ?? (svc as any).paypal_me_link ?? null,
       paypal_currency: svc.paypal_currency ?? 'USD',
       venmo_handle: (svc as Service).venmo_handle ?? null,
       cashapp_handle: (svc as Service).cashapp_handle ?? (svc as Service).cashapp_tag ?? null,
@@ -536,6 +550,8 @@ export function ServicesPage() {
     const payload = {
       ...form,
       price_cents: priceCents,
+      paypal_handle: form.paypal_handle?.trim() || null,
+      paypal_me_link: form.paypal_handle?.trim() || form.paypal_me_link?.trim() || null,
       payment_methods: buildPaymentMethods(form),
       booking_calendar_ids: selectedCalendarIds,
       is_recurring: form.is_recurring,

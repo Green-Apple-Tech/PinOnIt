@@ -77,11 +77,37 @@ interface BookPaymentOption {
   panelText: string;
 }
 
-function buildPaymentOptions(svc: Service, stripeAvailable: boolean): BookPaymentOption[] {
-  const extended = svc as Service & {
+export interface ServicePaymentHandles {
+  paypal_handle: string;
+  venmo_handle: string;
+  cashapp_handle: string;
+  zelle_handle: string;
+}
+
+function getServicePaymentHandles(svc: Service): ServicePaymentHandles {
+  const ext = svc as Service & {
     paypal_me_link?: string | null;
-    paypal_currency?: string;
+    cashapp_tag?: string | null;
+    zelle_contact?: string | null;
   };
+  return {
+    paypal_handle: (ext.paypal_handle ?? ext.paypal_me_link ?? '').trim(),
+    venmo_handle: (ext.venmo_handle ?? '').trim().replace(/^@/, ''),
+    cashapp_handle: (ext.cashapp_handle ?? ext.cashapp_tag ?? '').trim().replace(/^\$/, ''),
+    zelle_handle: (ext.zelle_handle ?? ext.zelle_contact ?? '').trim(),
+  };
+}
+
+function hasAnyPaymentHandle(handles: ServicePaymentHandles): boolean {
+  return !!(handles.paypal_handle || handles.venmo_handle || handles.cashapp_handle || handles.zelle_handle);
+}
+
+const SERVICE_PAYMENT_COLUMNS =
+  '*, venmo_handle, cashapp_handle, zelle_handle, paypal_handle, paypal_me_link, cashapp_tag, zelle_contact, payment_methods';
+
+function buildPaymentOptions(svc: Service, stripeAvailable: boolean): BookPaymentOption[] {
+  const handles = getServicePaymentHandles(svc);
+  const extended = svc as Service & { paypal_currency?: string };
   const amount = (svc.price_cents / 100).toFixed(2);
   const currency = extended.paypal_currency ?? 'USD';
   const opts: BookPaymentOption[] = [];
@@ -94,49 +120,47 @@ function buildPaymentOptions(svc: Service, stripeAvailable: boolean): BookPaymen
     panelText: 'text-slate-700 dark:text-slate-300',
   });
 
-  if (extended.paypal_me_link?.trim()) {
-    const base = extended.paypal_me_link.replace(/^https?:\/\//, '').replace(/^www\./, '');
-    const url = `https://${base}/${amount}${currency !== 'USD' ? `?country.x=${currency}&locale.x=en_${currency.slice(0, 2).toUpperCase()}` : ''}`;
+  if (handles.paypal_handle) {
+    const base = handles.paypal_handle.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/^paypal\.me\//, 'paypal.me/');
+    const paypalPath = base.startsWith('paypal.me/') ? base : `paypal.me/${base}`;
+    const url = `https://${paypalPath}/${amount}${currency !== 'USD' ? `?country.x=${currency}&locale.x=en_${currency.slice(0, 2).toUpperCase()}` : ''}`;
     opts.push({
       id: 'paypal',
       label: 'PayPal',
-      subtitle: extended.paypal_me_link,
+      subtitle: handles.paypal_handle,
       url,
       panelBg: 'bg-blue-50 dark:bg-blue-950/30',
       panelText: 'text-blue-700 dark:text-blue-300',
     });
   }
 
-  if (svc.venmo_handle?.trim()) {
+  if (handles.venmo_handle) {
     opts.push({
       id: 'venmo',
       label: 'Venmo',
-      subtitle: formatVenmoDisplay(svc.venmo_handle),
-      url: `https://venmo.com/${svc.venmo_handle.replace(/^@/, '')}?txn=pay&amount=${amount}&note=${encodeURIComponent(svc.name)}`,
+      subtitle: formatVenmoDisplay(handles.venmo_handle),
+      url: `https://venmo.com/${handles.venmo_handle}?txn=pay&amount=${amount}&note=${encodeURIComponent(svc.name)}`,
       panelBg: 'bg-blue-50 dark:bg-blue-950/30',
       panelText: 'text-blue-700 dark:text-blue-300',
     });
   }
 
-  const cashappHandle = svc.cashapp_handle?.trim() || svc.cashapp_tag?.trim();
-  const zelleHandle = svc.zelle_handle?.trim() || svc.zelle_contact?.trim();
-
-  if (cashappHandle) {
+  if (handles.cashapp_handle) {
     opts.push({
       id: 'cashapp',
       label: 'Cash App',
-      subtitle: formatCashappDisplay(cashappHandle),
-      url: `https://cash.app/${cashappHandle.replace(/^\$/, '')}/${amount}`,
+      subtitle: formatCashappDisplay(handles.cashapp_handle),
+      url: `https://cash.app/${handles.cashapp_handle}/${amount}`,
       panelBg: 'bg-green-50 dark:bg-green-950/30',
       panelText: 'text-green-700 dark:text-green-300',
     });
   }
 
-  if (zelleHandle) {
+  if (handles.zelle_handle) {
     opts.push({
       id: 'zelle',
       label: 'Zelle',
-      subtitle: zelleHandle,
+      subtitle: handles.zelle_handle,
       url: 'https://www.zellepay.com/',
       panelBg: 'bg-purple-50 dark:bg-purple-950/30',
       panelText: 'text-purple-700 dark:text-purple-300',
@@ -589,8 +613,8 @@ export function BookPage() {
 
       const [svcRes, availRes, bookRes, ovRes, calEvtRes] = await Promise.all([
         serviceId
-          ? supabase.from('services').select('*').eq('id', serviceId).eq('is_active', true)
-          : supabase.from('services').select('*').eq('host_id', hostId).eq('is_active', true),
+          ? supabase.from('services').select(SERVICE_PAYMENT_COLUMNS).eq('id', serviceId).eq('is_active', true)
+          : supabase.from('services').select(SERVICE_PAYMENT_COLUMNS).eq('host_id', hostId).eq('is_active', true),
         supabase.from('availability').select('*').eq('host_id', hostId).eq('is_active', true),
         supabase.from('bookings').select('*').eq('host_id', hostId).in('status', ['confirmed']),
         supabase.from('date_overrides').select('*').eq('host_id', hostId),
@@ -1027,6 +1051,11 @@ export function BookPage() {
     () => (selectedService && isPaidService ? buildPaymentOptions(selectedService, stripeAvailable) : []),
     [selectedService, isPaidService, stripeAvailable]
   );
+  const paymentHandles = useMemo(
+    () => (selectedService ? getServicePaymentHandles(selectedService) : null),
+    [selectedService]
+  );
+  const showP2PHandles = paymentHandles ? hasAnyPaymentHandle(paymentHandles) : false;
   const selectedPaymentOption = paymentOptions.find((o) => o.id === paymentMethod);
   const showPaidBookingPayment = isPaidService && !(isRecurringService && (selectedService?.price_cents ?? 0) > 0);
   const termsDisplayText = resolveTermsText(host?.global_terms_text);
@@ -1589,6 +1618,41 @@ export function BookPage() {
                           </button>
                         ))}
                       </div>
+
+                      {showP2PHandles && paymentHandles && (
+                        <div className="mt-4 border-t border-gray-200 dark:border-slate-700 pt-4">
+                          <p className="text-xs text-gray-500 dark:text-slate-400 mb-3 text-center">Or pay via</p>
+                          <div className="flex flex-col gap-2">
+                            {paymentHandles.paypal_handle && (
+                              <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-xl">
+                                <span className="text-blue-700 dark:text-blue-300 font-semibold text-sm">PayPal</span>
+                                <span className="text-blue-600 dark:text-blue-400 text-sm">{paymentHandles.paypal_handle}</span>
+                              </div>
+                            )}
+                            {paymentHandles.venmo_handle && (
+                              <div className="flex items-center justify-between p-3 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-xl">
+                                <span className="text-indigo-700 dark:text-indigo-300 font-semibold text-sm">Venmo</span>
+                                <span className="text-indigo-600 dark:text-indigo-400 text-sm">@{paymentHandles.venmo_handle}</span>
+                              </div>
+                            )}
+                            {paymentHandles.cashapp_handle && (
+                              <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-xl">
+                                <span className="text-green-700 dark:text-green-300 font-semibold text-sm">Cash App</span>
+                                <span className="text-green-600 dark:text-green-400 text-sm">${paymentHandles.cashapp_handle}</span>
+                              </div>
+                            )}
+                            {paymentHandles.zelle_handle && (
+                              <div className="flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded-xl">
+                                <span className="text-purple-700 dark:text-purple-300 font-semibold text-sm">Zelle</span>
+                                <span className="text-purple-600 dark:text-purple-400 text-sm">{paymentHandles.zelle_handle}</span>
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-400 dark:text-slate-500 text-center mt-2">
+                            Send payment note: your name + appointment date
+                          </p>
+                        </div>
+                      )}
 
                       {paymentMethod === 'stripe' && (
                         <div className="space-y-3">

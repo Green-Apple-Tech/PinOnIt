@@ -112,6 +112,7 @@ export interface Service {
   // Payment
   payment_provider: 'none' | 'paypal' | 'p2p';
   paypal_me_link: string | null;
+  paypal_handle: string | null;
   paypal_currency: string;
   venmo_handle: string | null;
   cashapp_handle: string | null;
