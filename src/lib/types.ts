@@ -116,6 +116,7 @@ export interface Service {
   venmo_handle: string | null;
   cashapp_tag: string | null;
   zelle_contact: string | null;
+  payment_methods: string[];
   // Forms
   require_terms: boolean;
   require_nda: boolean;

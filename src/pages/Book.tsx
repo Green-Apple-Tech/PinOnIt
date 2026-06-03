@@ -68,6 +68,22 @@ function reminderTimeLabel(id: string): string {
 
 type ManualPaymentMethod = { label: string; handle: string; url: string };
 
+function serviceHasP2PAlternatives(svc: Service): boolean {
+  const methods = svc.payment_methods ?? [];
+  const venmo = !!svc.venmo_handle?.trim() && (methods.length === 0 || methods.includes('venmo'));
+  const cashapp = !!svc.cashapp_tag?.trim() && (methods.length === 0 || methods.includes('cashapp'));
+  const zelle = !!svc.zelle_contact?.trim() && (methods.length === 0 || methods.includes('zelle'));
+  return venmo || cashapp || zelle;
+}
+
+function formatVenmoDisplay(handle: string): string {
+  return `@${handle.replace(/^@/, '')}`;
+}
+
+function formatCashappDisplay(tag: string): string {
+  return `$${tag.replace(/^\$/, '')}`;
+}
+
 function buildManualPaymentMethods(svc: Service): ManualPaymentMethod[] {
   const extended = svc as Service & {
     payment_provider?: string;
@@ -1543,6 +1559,41 @@ export function BookPage() {
                       )}
                       {paymentError && !paymentConfirmed && clientSecret && (
                         <p className="text-red-500 text-sm mt-2">{paymentError}</p>
+                      )}
+                      {serviceHasP2PAlternatives(selectedService) && (
+                        <div className="mt-3 border-t border-gray-200 dark:border-slate-700 pt-3">
+                          <p className="text-sm text-gray-500 dark:text-slate-400 mb-2">Or pay via</p>
+                          <div className="flex flex-col gap-2">
+                            {selectedService.venmo_handle?.trim()
+                              && (selectedService.payment_methods?.length === 0 || selectedService.payment_methods.includes('venmo')) && (
+                              <div className="flex items-center justify-between p-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+                                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Venmo</span>
+                                <span className="text-sm text-blue-600 dark:text-blue-400">
+                                  {formatVenmoDisplay(selectedService.venmo_handle)}
+                                </span>
+                              </div>
+                            )}
+                            {selectedService.cashapp_tag?.trim()
+                              && (selectedService.payment_methods?.length === 0 || selectedService.payment_methods.includes('cashapp')) && (
+                              <div className="flex items-center justify-between p-2 bg-green-50 dark:bg-green-950/30 rounded-lg">
+                                <span className="text-sm font-medium text-green-700 dark:text-green-300">Cash App</span>
+                                <span className="text-sm text-green-600 dark:text-green-400">
+                                  {formatCashappDisplay(selectedService.cashapp_tag)}
+                                </span>
+                              </div>
+                            )}
+                            {selectedService.zelle_contact?.trim()
+                              && (selectedService.payment_methods?.length === 0 || selectedService.payment_methods.includes('zelle')) && (
+                              <div className="flex items-center justify-between p-2 bg-purple-50 dark:bg-purple-950/30 rounded-lg">
+                                <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Zelle</span>
+                                <span className="text-sm text-purple-600 dark:text-purple-400">
+                                  {selectedService.zelle_contact}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-400 dark:text-slate-500 mt-2">Send payment before your appointment</p>
+                        </div>
                       )}
                     </div>
                   )}

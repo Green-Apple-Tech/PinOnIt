@@ -42,6 +42,7 @@ const DEFAULT_SERVICE = {
   paypal_me_link: null as string | null, paypal_currency: 'USD',
   venmo_handle: null as string | null, cashapp_tag: null as string | null,
   zelle_contact: null as string | null,
+  payment_methods: [] as string[],
   require_terms: false, require_nda: false,
   show_description_on_booking_page: true, show_description_on_paid_booking: true,
   is_recurring: false,
@@ -72,6 +73,14 @@ const CHANNELS = [
 function formatPrice(cents: number) {
   if (!cents) return 'Free';
   return `$${(cents / 100).toFixed(2)}`;
+}
+
+function buildPaymentMethods(form: FormState): string[] {
+  const methods: string[] = [];
+  if (form.venmo_handle?.trim()) methods.push('venmo');
+  if (form.cashapp_tag?.trim()) methods.push('cashapp');
+  if (form.zelle_contact?.trim()) methods.push('zelle');
+  return methods;
 }
 
 const inputCls = 'w-full px-3 py-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500 transition text-base md:text-sm';
@@ -152,6 +161,7 @@ function PaymentTab({
   const noPaymentSelected = form.payment_provider === 'none';
   const paypalSelected = form.payment_provider === 'paypal';
   const p2pSelected = form.payment_provider === 'p2p';
+  const showP2PFields = p2pSelected || (noPaymentSelected && !!priceStr);
 
   const hasAnyP2P = !!(form.venmo_handle || form.cashapp_tag || form.zelle_contact);
 
@@ -253,9 +263,17 @@ function PaymentTab({
         </div>
       )}
 
-      {/* P2P fields */}
-      {p2pSelected && (
+      {/* P2P fields — primary for P2P provider, optional alternatives for card/Stripe */}
+      {showP2PFields && (
         <div className="space-y-4 pt-1">
+          {!p2pSelected && (
+            <div>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">Peer-to-peer alternatives (optional)</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
+                Shown to guests below the card payment form as Venmo, Cash App, or Zelle options.
+              </p>
+            </div>
+          )}
           {/* Venmo */}
           <div className="p-4 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 space-y-3">
             <div className="flex items-center justify-between">
@@ -514,6 +532,7 @@ export function ServicesPage() {
       venmo_handle: (svc as any).venmo_handle ?? null,
       cashapp_tag: (svc as any).cashapp_tag ?? null,
       zelle_contact: (svc as any).zelle_contact ?? null,
+      payment_methods: (svc as any).payment_methods ?? [],
       require_terms: (svc as any).require_terms ?? false,
       require_nda: (svc as any).require_nda ?? false,
       show_description_on_booking_page: (svc as any).show_description_on_booking_page ?? true,
@@ -557,6 +576,7 @@ export function ServicesPage() {
     const payload = {
       ...form,
       price_cents: priceCents,
+      payment_methods: buildPaymentMethods(form),
       booking_calendar_ids: selectedCalendarIds,
       is_recurring: form.is_recurring,
       recurrence_frequency: form.is_recurring ? form.recurrence_frequency : null,
