@@ -606,8 +606,13 @@ function SingleUseLinksRow() {
 
 // ── Share panel ───────────────────────────────────────────────────────────────
 
-function buildShareUrl(slug: string, services: Service[], selectedIds: Set<string>): string {
-  const base = `${window.location.origin}/${slug}`;
+function buildShareUrl(
+  slug: string,
+  services: Service[],
+  selectedIds: Set<string>,
+  origin = (import.meta.env.VITE_APP_URL ?? 'https://pinonit.com').replace(/\/$/, ''),
+): string {
+  const base = `${origin}/${slug}`;
   if (services.length === 0 || selectedIds.size === 0 || selectedIds.size >= services.length) {
     return base;
   }
@@ -630,6 +635,10 @@ function SharePanel({
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [linkCopiedToast, setLinkCopiedToast] = useState(false);
+
+  useEffect(() => {
+    setCurrentSlug(slug);
+  }, [slug]);
 
   const copy = useCallback((text: string) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -741,7 +750,7 @@ function SharePanel({
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function Dashboard() {
-  const { user, profile, subscription, subscriptionLoaded, signOut } = useAuth();
+  const { user, profile, subscription, subscriptionLoaded, signOut, refreshProfile } = useAuth();
   const displayName = profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || '';
   const displayEmail = profile?.email || user?.email || '';
   const { theme, toggleTheme } = useTheme();
@@ -774,6 +783,23 @@ export function Dashboard() {
   const [serviceSearch, setServiceSearch] = useState('');
   const [serviceQrModal, setServiceQrModal] = useState<{ url: string; title: string } | null>(null);
   const [selectedServiceIds, setSelectedServiceIds] = useState<Set<string>>(new Set());
+
+  // Re-fetch profile on mount and when returning to dashboard (e.g. after saving slug in Settings)
+  useEffect(() => {
+    if (!user) return;
+    void refreshProfile();
+  }, [user?.id, refreshProfile]);
+
+  useEffect(() => {
+    if (location.pathname === '/dashboard') {
+      void refreshProfile();
+    }
+  }, [location.pathname, refreshProfile]);
+
+  useEffect(() => {
+    if (profile?.slug) setLiveSlug(profile.slug);
+  }, [profile?.slug]);
+
   // Handle ?checkout=success return from Stripe — show toast, resume wizard at the right step
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -939,7 +965,8 @@ export function Dashboard() {
     setSelectedServiceIds(new Set(services.map((s) => s.id)));
   }, [services]);
 
-  const bookingSlug = liveSlug ?? profile?.slug ?? '';
+  const effectiveSlug = (liveSlug || profile?.slug || '').trim();
+  const bookingSlug = effectiveSlug;
   const shareUrl = bookingSlug ? buildShareUrl(bookingSlug, services, selectedServiceIds) : '';
 
   const toggleServiceSelection = (serviceId: string) => {
@@ -1194,11 +1221,12 @@ export function Dashboard() {
             {!loading && !checklistDismissed && (() => {
               const hasCalendar = calendarCount > 0;
               const hasService = services.length > 0;
-              const hasSlug = !!profile?.slug;
+              const hasSlug = !!(profile?.slug || liveSlug);
+              const slugDisplay = profile?.slug || liveSlug || '';
               const steps = [
                 { label: 'Connect your calendar', sub: 'Sync Google or Outlook to prevent double-bookings', done: hasCalendar, to: '/dashboard/settings?tab=availability' },
                 { label: 'Create your first event type', sub: 'Define a meeting type guests can book', done: hasService, to: '/dashboard/services' },
-                { label: 'Share your booking link', sub: hasSlug ? `pinonit.com/${profile?.slug}` : 'Set a custom username in Settings', done: hasSlug, to: hasSlug ? undefined : '/dashboard/settings?tab=booking_page' },
+                { label: 'Share your booking link', sub: hasSlug ? `pinonit.com/${slugDisplay}` : 'Set a custom username in Settings', done: hasSlug, to: hasSlug ? undefined : '/dashboard/settings?tab=booking_page' },
               ];
               const completedCount = steps.filter((s) => s.done).length;
               const allDone = completedCount === steps.length;
@@ -1243,19 +1271,22 @@ export function Dashboard() {
 
             {/* Share panel / link created banner */}
             {createdUrl && <LinkCreatedBanner bookingUrl={createdUrl} onDismiss={() => setCreatedUrl('')} />}
-            {!createdUrl && (liveSlug ?? profile?.slug) && profile && (
+            {profile && effectiveSlug && !createdUrl && (
               <SharePanel
-                slug={liveSlug ?? profile.slug!}
+                slug={effectiveSlug}
                 userId={profile.id}
-                onSlugChange={(s) => setLiveSlug(s)}
-                shareUrl={shareUrl}
+                onSlugChange={(s) => {
+                  setLiveSlug(s);
+                  void refreshProfile();
+                }}
+                shareUrl={shareUrl || `https://pinonit.com/${effectiveSlug}`}
               />
             )}
 
             <SingleUseLinksRow />
 
             {/* No slug nudge */}
-            {!profile?.slug && !createdUrl && (
+            {!effectiveSlug && !createdUrl && (
               <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">Set your meeting URL</p>
