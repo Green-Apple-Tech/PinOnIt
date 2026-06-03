@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { QRModal } from '../components/QRModal';
 import { ColorSwatchRow } from '../components/ColorSwatchRow';
+import { toast } from '../components/Toast';
 import { AnalyticsPage } from './Analytics';
 import { BillingPage } from './Billing';
 import { AvailabilityPage } from './Availability';
@@ -425,8 +426,28 @@ export function SettingsPage() {
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoDragOver, setLogoDragOver] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const bookingFieldsHydrated = useRef(false);
 
   const bookingUrl = slug ? `${window.location.origin}/${slug}` : '';
+
+  useEffect(() => {
+    if (user) void refreshProfile();
+  }, [user?.id, refreshProfile]);
+
+  // Hydrate booking-page fields once profile loads (fixes empty slug when profile arrives after mount)
+  useEffect(() => {
+    if (!profile) {
+      bookingFieldsHydrated.current = false;
+      return;
+    }
+    if (bookingFieldsHydrated.current) return;
+    setSlug(profile.slug ?? '');
+    setBookingHeader(profile.booking_page_header ?? '');
+    setAvatarUrl(profile.avatar_url ?? '');
+    setGlobalRequireTerms(profile.global_require_terms ?? false);
+    setGlobalTermsText(profile.global_terms_text ?? DEFAULT_TERMS_TEXT);
+    bookingFieldsHydrated.current = true;
+  }, [profile]);
 
   useEffect(() => {
     const trimmed = slug.trim();
@@ -535,34 +556,117 @@ export function SettingsPage() {
     setLogoUploading(false);
   }, [user]);
 
-  const handleSave = async () => {
-    if (!user) return;
-    if (slugStatus === 'taken' || slugStatus === 'invalid') return;
+  const handleSaveBookingPage = async () => {
+    if (!profile || !user) return;
+
+    const normalizedSlug = slug.trim().toLowerCase();
+
+    if (normalizedSlug && normalizedSlug.length < 3) {
+      toast.error('Username must be at least 3 characters');
+      return;
+    }
+    if (slugStatus === 'checking') {
+      toast.warning('Please wait while we check username availability');
+      return;
+    }
+    if (slugStatus === 'taken') {
+      toast.error('That username is already taken');
+      return;
+    }
+    if (slugStatus === 'invalid') {
+      toast.error('Username must be at least 3 characters (letters, numbers, hyphens)');
+      return;
+    }
+
     setSaving(true);
     setSaved(false);
-    await supabase
-      .from('profiles')
-      .update({
-        full_name: fullName,
-        bio,
-        slug: slug || null,
-        timezone,
-        brand_color: brandColor,
-        booking_page_header: bookingHeader,
-        avatar_url: avatarUrl || null,
-        global_require_terms: globalRequireTerms,
-        global_terms_text: globalTermsText.trim() || DEFAULT_TERMS_TEXT,
-        show_wizard_button: showWizardButton,
-        session_timeout_minutes: sessionTimeoutMinutes,
-        phone: normalizePhoneE164(notificationPhone) || null,
-        whatsapp_number: normalizePhoneE164(notificationWhatsapp) || null,
-        default_reminder_channel: defaultReminderChannel,
-      })
-      .eq('id', user.id);
-    await refreshProfile();
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          slug: normalizedSlug || null,
+          booking_page_header: bookingHeader.trim(),
+          avatar_url: avatarUrl.trim() || null,
+          global_require_terms: globalRequireTerms,
+          global_terms_text: globalTermsText.trim() || DEFAULT_TERMS_TEXT,
+        })
+        .eq('id', profile.id);
+
+      if (error) throw error;
+
+      setSlug(normalizedSlug);
+      if (normalizedSlug) setSlugStatus('available');
+      toast.success('Settings saved!');
+      await refreshProfile();
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      console.error('Failed to save booking page settings:', err);
+      toast.error('Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveBranding = async () => {
+    if (!profile || !user) return;
+    setSaving(true);
+    setSaved(false);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          brand_color: brandColor,
+          avatar_url: avatarUrl.trim() || null,
+        })
+        .eq('id', profile.id);
+
+      if (error) throw error;
+
+      toast.success('Settings saved!');
+      await refreshProfile();
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      console.error('Failed to save branding settings:', err);
+      toast.error('Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!user || !profile) return;
+    setSaving(true);
+    setSaved(false);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: fullName,
+          bio,
+          timezone,
+          brand_color: brandColor,
+          show_wizard_button: showWizardButton,
+          session_timeout_minutes: sessionTimeoutMinutes,
+          phone: normalizePhoneE164(notificationPhone) || null,
+          whatsapp_number: normalizePhoneE164(notificationWhatsapp) || null,
+          default_reminder_channel: defaultReminderChannel,
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      toast.success('Settings saved!');
+      await refreshProfile();
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      console.error('Failed to save settings:', err);
+      toast.error('Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const copyText = (text: string, key: string) => {
@@ -1031,7 +1135,7 @@ export function SettingsPage() {
             )}
           </div>
 
-          <SaveBtn saving={saving} saved={saved} onClick={handleSave} />
+          <SaveBtn saving={saving} saved={saved} onClick={handleSaveBookingPage} />
         </div>
       )}
 
@@ -1147,7 +1251,7 @@ export function SettingsPage() {
             </div>
           </div>
 
-          <SaveBtn saving={saving} saved={saved} onClick={handleSave} />
+          <SaveBtn saving={saving} saved={saved} onClick={handleSaveBranding} />
         </div>
       )}
 
