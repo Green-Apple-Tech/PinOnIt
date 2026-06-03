@@ -66,14 +66,89 @@ function reminderTimeLabel(id: string): string {
   return REMINDER_TIMES.find((t) => t.id === id)?.label ?? id;
 }
 
-type ManualPaymentMethod = { label: string; handle: string; url: string };
+type BookPaymentMethod = 'stripe' | 'venmo' | 'paypal' | 'cashapp' | 'zelle' | 'skip';
 
-function serviceHasP2PAlternatives(svc: Service): boolean {
-  const methods = svc.payment_methods ?? [];
-  const venmo = !!svc.venmo_handle?.trim() && (methods.length === 0 || methods.includes('venmo'));
-  const cashapp = !!svc.cashapp_tag?.trim() && (methods.length === 0 || methods.includes('cashapp'));
-  const zelle = !!svc.zelle_contact?.trim() && (methods.length === 0 || methods.includes('zelle'));
-  return venmo || cashapp || zelle;
+interface BookPaymentOption {
+  id: BookPaymentMethod;
+  label: string;
+  subtitle: string;
+  url?: string;
+  panelBg: string;
+  panelText: string;
+}
+
+function buildPaymentOptions(svc: Service, stripeAvailable: boolean): BookPaymentOption[] {
+  const extended = svc as Service & {
+    paypal_me_link?: string | null;
+    paypal_currency?: string;
+  };
+  const amount = (svc.price_cents / 100).toFixed(2);
+  const currency = extended.paypal_currency ?? 'USD';
+  const opts: BookPaymentOption[] = [];
+
+  opts.push({
+    id: 'stripe',
+    label: 'Card',
+    subtitle: stripeAvailable ? 'Pay with Stripe' : 'Card payment (contact host if unavailable)',
+    panelBg: 'bg-slate-50 dark:bg-slate-800/50',
+    panelText: 'text-slate-700 dark:text-slate-300',
+  });
+
+  if (extended.paypal_me_link?.trim()) {
+    const base = extended.paypal_me_link.replace(/^https?:\/\//, '').replace(/^www\./, '');
+    const url = `https://${base}/${amount}${currency !== 'USD' ? `?country.x=${currency}&locale.x=en_${currency.slice(0, 2).toUpperCase()}` : ''}`;
+    opts.push({
+      id: 'paypal',
+      label: 'PayPal',
+      subtitle: extended.paypal_me_link,
+      url,
+      panelBg: 'bg-blue-50 dark:bg-blue-950/30',
+      panelText: 'text-blue-700 dark:text-blue-300',
+    });
+  }
+
+  if (svc.venmo_handle?.trim()) {
+    opts.push({
+      id: 'venmo',
+      label: 'Venmo',
+      subtitle: formatVenmoDisplay(svc.venmo_handle),
+      url: `https://venmo.com/${svc.venmo_handle.replace(/^@/, '')}?txn=pay&amount=${amount}&note=${encodeURIComponent(svc.name)}`,
+      panelBg: 'bg-blue-50 dark:bg-blue-950/30',
+      panelText: 'text-blue-700 dark:text-blue-300',
+    });
+  }
+
+  if (svc.cashapp_tag?.trim()) {
+    opts.push({
+      id: 'cashapp',
+      label: 'Cash App',
+      subtitle: formatCashappDisplay(svc.cashapp_tag),
+      url: `https://cash.app/${svc.cashapp_tag.replace(/^\$/, '')}/${amount}`,
+      panelBg: 'bg-green-50 dark:bg-green-950/30',
+      panelText: 'text-green-700 dark:text-green-300',
+    });
+  }
+
+  if (svc.zelle_contact?.trim()) {
+    opts.push({
+      id: 'zelle',
+      label: 'Zelle',
+      subtitle: svc.zelle_contact,
+      url: 'https://www.zellepay.com/',
+      panelBg: 'bg-purple-50 dark:bg-purple-950/30',
+      panelText: 'text-purple-700 dark:text-purple-300',
+    });
+  }
+
+  opts.push({
+    id: 'skip',
+    label: 'Skip',
+    subtitle: 'Pay later — arrange with your host',
+    panelBg: 'bg-slate-50 dark:bg-slate-800/50',
+    panelText: 'text-slate-600 dark:text-slate-400',
+  });
+
+  return opts;
 }
 
 function formatVenmoDisplay(handle: string): string {
@@ -82,55 +157,6 @@ function formatVenmoDisplay(handle: string): string {
 
 function formatCashappDisplay(tag: string): string {
   return `$${tag.replace(/^\$/, '')}`;
-}
-
-function buildManualPaymentMethods(svc: Service): ManualPaymentMethod[] {
-  const extended = svc as Service & {
-    payment_provider?: string;
-    paypal_me_link?: string | null;
-    paypal_currency?: string;
-    venmo_handle?: string | null;
-    cashapp_tag?: string | null;
-    zelle_contact?: string | null;
-  };
-  const provider = extended.payment_provider ?? 'none';
-  const currency = extended.paypal_currency ?? 'USD';
-  const methods: ManualPaymentMethod[] = [];
-
-  if (provider === 'paypal' && extended.paypal_me_link) {
-    const base = extended.paypal_me_link.replace(/^https?:\/\//, '').replace(/^www\./, '');
-    const href = `https://${base}/${(svc.price_cents / 100).toFixed(2)}${currency !== 'USD' ? `?country.x=${currency}&locale.x=en_${currency.slice(0, 2).toUpperCase()}` : ''}`;
-    methods.push({ label: 'Pay with PayPal', handle: extended.paypal_me_link, url: href });
-  }
-  if (provider === 'p2p') {
-    if (extended.venmo_handle) {
-      methods.push({
-        label: 'Pay with Venmo',
-        handle: extended.venmo_handle,
-        url: `https://venmo.com/${extended.venmo_handle.replace(/^@/, '')}?txn=pay&amount=${(svc.price_cents / 100).toFixed(2)}&note=${encodeURIComponent(svc.name)}`,
-      });
-    }
-    if (extended.cashapp_tag) {
-      methods.push({
-        label: 'Pay with Cash App',
-        handle: extended.cashapp_tag,
-        url: `https://cash.app/${extended.cashapp_tag.replace(/^\$/, '')}/${(svc.price_cents / 100).toFixed(2)}`,
-      });
-    }
-    if (extended.zelle_contact) {
-      methods.push({ label: 'Pay with Zelle', handle: extended.zelle_contact, url: 'https://www.zellepay.com/' });
-    }
-  }
-  return methods;
-}
-
-function serviceUsesStripePayment(svc: Service | null): boolean {
-  if (!svc || svc.price_cents <= 0) return false;
-  const provider = svc.payment_provider ?? 'none';
-  if (provider === 'paypal' || provider === 'p2p') {
-    return buildManualPaymentMethods(svc).length === 0;
-  }
-  return true;
 }
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -503,6 +529,7 @@ export function BookPage() {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [stripePaymentId, setStripePaymentId] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<BookPaymentMethod>('skip');
   const [recurringAcknowledged, setRecurringAcknowledged] = useState(false);
 
   useEffect(() => {
@@ -657,6 +684,7 @@ export function BookPage() {
     setPaymentError('');
     setClientSecret(null);
     setStripePaymentId(null);
+    setPaymentMethod('skip');
     const { data } = await supabase.from('booking_questions').select('*').eq('service_id', svc.id).order('sort_order');
     setQuestions((data as BookingQuestion[]) ?? []);
     setStep('datetime');
@@ -857,8 +885,8 @@ export function BookPage() {
   }, [selectedService, selectedDate, selectedSlot, host, guestName, guestEmail, phone, notifyVia, guestTimezone, guestNotes, questions, answers, singleUseLink, selectedChannels, selectedTimes, stripePaymentId]);
 
   useEffect(() => {
-    if (step !== 'details' || !selectedService || !serviceUsesStripePayment(selectedService)) {
-      setClientSecret(null);
+    if (step !== 'details' || !selectedService || selectedService.price_cents <= 0 || paymentMethod !== 'stripe') {
+      if (paymentMethod !== 'stripe') setClientSecret(null);
       return;
     }
 
@@ -882,15 +910,16 @@ export function BookPage() {
 
       if (data?.clientSecret) {
         setClientSecret(data.clientSecret);
+        setPaymentError('');
       } else {
-        setPaymentError(data?.error || error?.message || 'Failed to load payment');
+        setPaymentError(data?.error || error?.message || 'Card payment could not be loaded. Try another method or Skip.');
         setClientSecret(null);
       }
       setPaymentLoading(false);
     })();
 
     return () => { cancelled = true; };
-  }, [step, selectedService?.id, selectedService?.price_cents, selectedService?.payment_provider, guestEmail, guestName]);
+  }, [step, selectedService?.id, selectedService?.price_cents, paymentMethod, guestEmail, guestName]);
 
   const handleSaveReminders = async () => {
     if (!confirmedBooking) return;
@@ -990,9 +1019,13 @@ export function BookPage() {
     return (svc as Service).show_description_on_booking_page ?? true;
   };
   const isPaidService = selectedService ? selectedService.price_cents > 0 : false;
-  const manualPaymentMethods = selectedService ? buildManualPaymentMethods(selectedService) : [];
-  const usesStripePayment = selectedService ? serviceUsesStripePayment(selectedService) : false;
-  const usesManualPayment = isPaidService && manualPaymentMethods.length > 0;
+  const stripeAvailable = !!stripePromise;
+  const paymentOptions = useMemo(
+    () => (selectedService && isPaidService ? buildPaymentOptions(selectedService, stripeAvailable) : []),
+    [selectedService, isPaidService, stripeAvailable]
+  );
+  const selectedPaymentOption = paymentOptions.find((o) => o.id === paymentMethod);
+  const showPaidBookingPayment = isPaidService && !(isRecurringService && (selectedService?.price_cents ?? 0) > 0);
   const termsDisplayText = resolveTermsText(host?.global_terms_text);
   const requiresTerms = !!(host?.global_require_terms && selectedService?.require_terms);
   const showTermsAgreement = requiresTerms;
@@ -1002,7 +1035,7 @@ export function BookPage() {
   const hasRequiredQuestions = questions.some((q) => q.required && !answers[q.id]?.trim());
   const requiresNda = !!selectedService?.require_nda;
   const requiresRecurringAck = isRecurringService && !recurringAcknowledged;
-  const requiresPayment = (usesStripePayment || usesManualPayment) && !paymentConfirmed && !(isRecurringService && (selectedService?.price_cents ?? 0) > 0);
+  const requiresPayment = showPaidBookingPayment && paymentMethod !== 'skip' && !paymentConfirmed;
   const isValid =
     guestName.trim() !== '' &&
     (guestEmail.trim() !== '' || phone.trim() !== '') &&
@@ -1522,7 +1555,7 @@ export function BookPage() {
                       className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition resize-none" />
                   </div>
 
-                  {usesStripePayment && selectedService && (
+                  {showPaidBookingPayment && selectedService && paymentOptions.length > 0 && (
                     <div className="border border-gray-200 dark:border-slate-700 rounded-xl p-4">
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="font-medium text-gray-900 dark:text-white">Payment</h3>
@@ -1530,111 +1563,106 @@ export function BookPage() {
                           ${(selectedService.price_cents / 100).toFixed(2)}
                         </span>
                       </div>
-                      {paymentConfirmed ? (
-                        <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
-                          <Check className="h-4 w-4" />
-                          Payment complete
-                        </div>
-                      ) : stripePromise && clientSecret ? (
-                        <Elements stripe={stripePromise} options={{ clientSecret }}>
-                          <BookingPaymentForm
-                            accentColor={accentColor}
-                            onSuccess={(paymentIntentId) => {
-                              setStripePaymentId(paymentIntentId);
-                              setPaymentConfirmed(true);
-                              setPaymentError('');
-                            }}
-                            onError={(err) => setPaymentError(err)}
-                          />
-                        </Elements>
-                      ) : paymentLoading || (stripePromise && !clientSecret && !paymentError) ? (
-                        <div className="flex items-center justify-center py-4">
-                          <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-                          <span className="ml-2 text-sm text-gray-500 dark:text-slate-400">Loading payment...</span>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-amber-600 dark:text-amber-400">
-                          {paymentError || 'Payment is unavailable. Please contact the host.'}
-                        </p>
-                      )}
-                      {paymentError && !paymentConfirmed && clientSecret && (
-                        <p className="text-red-500 text-sm mt-2">{paymentError}</p>
-                      )}
-                      {serviceHasP2PAlternatives(selectedService) && (
-                        <div className="mt-3 border-t border-gray-200 dark:border-slate-700 pt-3">
-                          <p className="text-sm text-gray-500 dark:text-slate-400 mb-2">Or pay via</p>
-                          <div className="flex flex-col gap-2">
-                            {selectedService.venmo_handle?.trim()
-                              && (selectedService.payment_methods?.length === 0 || selectedService.payment_methods.includes('venmo')) && (
-                              <div className="flex items-center justify-between p-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
-                                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Venmo</span>
-                                <span className="text-sm text-blue-600 dark:text-blue-400">
-                                  {formatVenmoDisplay(selectedService.venmo_handle)}
-                                </span>
-                              </div>
-                            )}
-                            {selectedService.cashapp_tag?.trim()
-                              && (selectedService.payment_methods?.length === 0 || selectedService.payment_methods.includes('cashapp')) && (
-                              <div className="flex items-center justify-between p-2 bg-green-50 dark:bg-green-950/30 rounded-lg">
-                                <span className="text-sm font-medium text-green-700 dark:text-green-300">Cash App</span>
-                                <span className="text-sm text-green-600 dark:text-green-400">
-                                  {formatCashappDisplay(selectedService.cashapp_tag)}
-                                </span>
-                              </div>
-                            )}
-                            {selectedService.zelle_contact?.trim()
-                              && (selectedService.payment_methods?.length === 0 || selectedService.payment_methods.includes('zelle')) && (
-                              <div className="flex items-center justify-between p-2 bg-purple-50 dark:bg-purple-950/30 rounded-lg">
-                                <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Zelle</span>
-                                <span className="text-sm text-purple-600 dark:text-purple-400">
-                                  {selectedService.zelle_contact}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                          <p className="text-xs text-gray-400 dark:text-slate-500 mt-2">Send payment before your appointment</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
 
-                  {usesManualPayment && selectedService && (
-                    <div className="mt-2 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                      <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700" style={{ backgroundColor: accentColor + '18' }}>
-                        <p className="text-sm font-bold" style={{ color: accentColor }}>Complete Your Payment</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                          Send ${(selectedService.price_cents / 100).toFixed(2)} using one of the options below, then confirm below to finalize your booking.
-                        </p>
-                      </div>
-                      <div className="p-4 space-y-2.5">
-                        {manualPaymentMethods.map((pm) => (
-                          <a
-                            key={pm.url}
-                            href={pm.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center justify-between gap-3 w-full px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-600 transition-colors group"
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">Choose how you&apos;d like to pay</p>
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {paymentOptions.map((opt) => (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => {
+                              setPaymentMethod(opt.id);
+                              setPaymentConfirmed(opt.id === 'skip');
+                              setPaymentError('');
+                              if (opt.id !== 'stripe') setClientSecret(null);
+                            }}
+                            className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                              paymentMethod === opt.id
+                                ? 'border-indigo-600 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300'
+                                : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-400 hover:border-gray-400'
+                            }`}
                           >
-                            <div className="min-w-0">
-                              <p className="text-sm font-semibold text-slate-900 dark:text-white">{pm.label}</p>
-                              <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{pm.handle}</p>
-                            </div>
-                            <ExternalLink className="h-4 w-4 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 shrink-0 transition-colors" />
-                          </a>
+                            {opt.label}
+                          </button>
                         ))}
-                        <label className="flex items-start gap-3 cursor-pointer pt-1">
-                          <input
-                            type="checkbox"
-                            checked={paymentConfirmed}
-                            onChange={(e) => setPaymentConfirmed(e.target.checked)}
-                            className="mt-0.5 h-4 w-4 rounded border-slate-300 dark:border-slate-600 focus:ring-2 shrink-0"
-                            style={{ accentColor: accentColor }}
-                          />
-                          <span className="text-sm text-slate-700 dark:text-slate-300">
-                            I confirm I have sent payment of ${(selectedService.price_cents / 100).toFixed(2)} <span className="text-red-500">*</span>
-                          </span>
-                        </label>
                       </div>
+
+                      {paymentMethod === 'stripe' && (
+                        <div className="space-y-3">
+                          {paymentConfirmed ? (
+                            <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                              <Check className="h-4 w-4" />
+                              Card payment complete
+                            </div>
+                          ) : stripePromise && clientSecret ? (
+                            <Elements stripe={stripePromise} options={{ clientSecret }}>
+                              <BookingPaymentForm
+                                accentColor={accentColor}
+                                onSuccess={(paymentIntentId) => {
+                                  setStripePaymentId(paymentIntentId);
+                                  setPaymentConfirmed(true);
+                                  setPaymentError('');
+                                }}
+                                onError={(err) => setPaymentError(err)}
+                              />
+                            </Elements>
+                          ) : paymentLoading ? (
+                            <div className="flex items-center justify-center py-4">
+                              <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                              <span className="ml-2 text-sm text-gray-500 dark:text-slate-400">Loading card payment...</span>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-amber-600 dark:text-amber-400">
+                              {paymentError || 'Card payment is not available right now. Choose PayPal, Venmo, Cash App, Zelle, or Skip.'}
+                            </p>
+                          )}
+                          {paymentError && !paymentConfirmed && (
+                            <p className="text-red-500 text-sm">{paymentError}</p>
+                          )}
+                        </div>
+                      )}
+
+                      {paymentMethod !== 'stripe' && paymentMethod !== 'skip' && selectedPaymentOption && (
+                        <div className={`p-3 rounded-lg ${selectedPaymentOption.panelBg}`}>
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <span className={`text-sm font-semibold ${selectedPaymentOption.panelText}`}>
+                              {selectedPaymentOption.label}
+                            </span>
+                            <span className={`text-sm ${selectedPaymentOption.panelText}`}>
+                              {selectedPaymentOption.subtitle}
+                            </span>
+                          </div>
+                          {selectedPaymentOption.url && (
+                            <a
+                              href={selectedPaymentOption.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline mb-3"
+                            >
+                              Open {selectedPaymentOption.label} to pay <ExternalLink className="h-3.5 w-3.5" />
+                            </a>
+                          )}
+                          <label className="flex items-start gap-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={paymentConfirmed}
+                              onChange={(e) => setPaymentConfirmed(e.target.checked)}
+                              className="mt-0.5 h-4 w-4 rounded border-slate-300 dark:border-slate-600 shrink-0"
+                              style={{ accentColor }}
+                            />
+                            <span className="text-sm text-slate-700 dark:text-slate-300">
+                              I confirm I have sent ${(selectedService.price_cents / 100).toFixed(2)} via {selectedPaymentOption.label}{' '}
+                              <span className="text-red-500">*</span>
+                            </span>
+                          </label>
+                        </div>
+                      )}
+
+                      {paymentMethod === 'skip' && (
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                          No payment required to book now. You can arrange payment with your host before the appointment.
+                        </p>
+                      )}
                     </div>
                   )}
                   {showTermsAgreement && (
@@ -1666,7 +1694,7 @@ export function BookPage() {
                           : hasRequiredQuestions ? 'Please answer all required questions.'
                           : requiresNda && !ndaAgreed ? 'Please agree to the NDA above.'
                           : requiresRecurringAck ? 'Please confirm you understand this is a recurring booking.'
-                          : requiresPayment ? (usesStripePayment ? 'Please complete payment above.' : 'Please confirm your payment above.')
+                          : requiresPayment ? (paymentMethod === 'stripe' ? 'Please complete card payment above.' : 'Please confirm your payment above.')
                           : 'Please complete all required fields above.')}
                     </p>
                   )}
