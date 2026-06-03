@@ -1702,6 +1702,7 @@ export function BookPage() {
                               }}
                             >
                               <BookingPaymentForm
+                                amountLabel={`$${(selectedService.price_cents / 100).toFixed(2)}`}
                                 accentColor={accentColor}
                                 onSuccess={(paymentIntentId) => {
                                   setStripePaymentId(paymentIntentId);
