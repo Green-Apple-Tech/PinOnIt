@@ -3,11 +3,11 @@ import { PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
 import { Loader2 } from 'lucide-react';
 
 export function BookingPaymentForm({
-  accentColor,
+  accentColor = '#5864C6',
   onSuccess,
   onError,
 }: {
-  accentColor: string;
+  accentColor?: string;
   onSuccess: (paymentIntentId: string) => void;
   onError: (message: string) => void;
 }) {
@@ -24,6 +24,7 @@ export function BookingPaymentForm({
 
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
+      confirmParams: { return_url: window.location.href },
       redirect: 'if_required',
     });
 
@@ -47,11 +48,11 @@ export function BookingPaymentForm({
       <button
         type="submit"
         disabled={!stripe || !elements || processing}
-        className="w-full py-2.5 text-sm font-semibold text-white rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+        className="w-full mt-4 py-3 text-white font-semibold rounded-xl transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
         style={{ backgroundColor: accentColor }}
       >
         {processing && <Loader2 className="h-4 w-4 animate-spin" />}
-        Pay now
+        {processing ? 'Processing...' : 'Pay now'}
       </button>
     </form>
   );

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useSearchParams, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
@@ -555,11 +555,10 @@ export function BookPage() {
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   const [paymentError, setPaymentError] = useState('');
   const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [fetchingSecret, setFetchingSecret] = useState(false);
   const [stripePaymentId, setStripePaymentId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<BookPaymentMethod>('skip');
   const [recurringAcknowledged, setRecurringAcknowledged] = useState(false);
-  const paymentIntentFetchKey = useRef<string | null>(null);
 
   useEffect(() => {
     if (!slug && !token) return;
@@ -717,7 +716,7 @@ export function BookPage() {
     setPaymentConfirmed(false);
     setPaymentError('');
     setClientSecret(null);
-    paymentIntentFetchKey.current = null;
+    setFetchingSecret(false);
     setStripePaymentId(null);
     setPaymentMethod('skip');
     const { data } = await supabase.from('booking_questions').select('*').eq('service_id', svc.id).order('sort_order');
@@ -920,25 +919,20 @@ export function BookPage() {
   }, [selectedService, selectedDate, selectedSlot, host, guestName, guestEmail, phone, notifyVia, guestTimezone, guestNotes, questions, answers, singleUseLink, selectedChannels, selectedTimes, stripePaymentId]);
 
   useEffect(() => {
-    if (paymentMethod !== 'stripe') {
-      return;
-    }
-    if (step !== 'details' || !selectedService || selectedService.price_cents <= 0) {
-      return;
-    }
+    setClientSecret(null);
+    setFetchingSecret(false);
+  }, [selectedService?.id]);
 
-    const fetchKey = `${selectedService.id}:${selectedService.price_cents}`;
-    if (paymentIntentFetchKey.current === fetchKey) {
-      setPaymentLoading(false);
-      return;
-    }
+  useEffect(() => {
+    if (paymentMethod !== 'stripe') return;
+    if (clientSecret || fetchingSecret) return;
+    if (step !== 'details' || !selectedService || selectedService.price_cents <= 0) return;
 
-    let cancelled = false;
-    setPaymentLoading(true);
-    setPaymentError('');
-
-    (async () => {
+    const fetchSecret = async () => {
+      setFetchingSecret(true);
+      setPaymentError('');
       try {
+        const { data: { session } } = await supabase.auth.getSession();
         const { data, error } = await supabase.functions.invoke('create-payment-intent', {
           body: {
             amount: selectedService.price_cents,
@@ -948,46 +942,26 @@ export function BookPage() {
             guest_email: guestEmail.trim() || undefined,
             guest_name: guestName.trim() || undefined,
           },
+          headers: session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : {},
         });
-
-        if (cancelled) return;
-
+        if (error) throw error;
         if (data?.clientSecret) {
-          paymentIntentFetchKey.current = fetchKey;
           setClientSecret(data.clientSecret);
-          setPaymentError('');
         } else {
-          const msg =
-            (typeof data?.error === 'string' && data.error) ||
-            error?.message ||
-            'Failed to load payment form';
-          setPaymentError(msg);
-          setClientSecret(null);
-          paymentIntentFetchKey.current = null;
+          throw new Error(typeof data?.error === 'string' ? data.error : 'No client secret returned');
         }
       } catch (err) {
-        if (!cancelled) {
-          setPaymentError(err instanceof Error ? err.message : 'Failed to load payment form');
-          setClientSecret(null);
-          paymentIntentFetchKey.current = null;
-        }
+        setPaymentError('Unable to load payment form. Please try again.');
+        console.error('Payment intent error:', err);
       } finally {
-        if (!cancelled) setPaymentLoading(false);
+        setFetchingSecret(false);
       }
-    })();
-
-    return () => {
-      cancelled = true;
-      setPaymentLoading(false);
     };
-  }, [step, selectedService?.id, selectedService?.price_cents, selectedService?.host_id, paymentMethod]);
 
-  useEffect(() => {
-    if (paymentMethod !== 'stripe') {
-      setClientSecret(null);
-      paymentIntentFetchKey.current = null;
-    }
-  }, [paymentMethod]);
+    void fetchSecret();
+  }, [paymentMethod, selectedService?.id, selectedService?.price_cents, selectedService?.host_id, step, clientSecret, fetchingSecret]);
 
   const handleSaveReminders = async () => {
     if (!confirmedBooking) return;
@@ -1663,10 +1637,6 @@ export function BookPage() {
                               setPaymentMethod(opt.id);
                               setPaymentConfirmed(opt.id === 'skip');
                               setPaymentError('');
-                              if (opt.id !== 'stripe') {
-                                setClientSecret(null);
-                                paymentIntentFetchKey.current = null;
-                              }
                             }}
                             className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
                               paymentMethod === opt.id
@@ -1699,14 +1669,38 @@ export function BookPage() {
                       )}
 
                       {paymentMethod === 'stripe' && (
-                        <div className="mt-4 space-y-3">
+                        <div className="mt-3">
                           {paymentConfirmed ? (
                             <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
                               <Check className="h-4 w-4" />
                               Card payment complete
                             </div>
-                          ) : clientSecret && stripePromise ? (
-                            <Elements stripe={stripePromise} options={{ clientSecret }}>
+                          ) : !clientSecret ? (
+                            <div className="flex items-center justify-center py-6 gap-2">
+                              {fetchingSecret ? (
+                                <>
+                                  <Loader2 className="h-5 w-5 animate-spin text-indigo-500" />
+                                  <span className="text-sm text-gray-500 dark:text-slate-400">Loading payment form...</span>
+                                </>
+                              ) : (
+                                <span className="text-sm text-amber-600 dark:text-amber-400">
+                                  {paymentError || 'Unable to load payment form. Please try again.'}
+                                </span>
+                              )}
+                            </div>
+                          ) : !stripePromise ? (
+                            <p className="text-sm text-amber-600 dark:text-amber-400">
+                              Card payments are not configured. Choose another payment method or Skip.
+                            </p>
+                          ) : (
+                            <Elements
+                              key={clientSecret}
+                              stripe={stripePromise}
+                              options={{
+                                clientSecret,
+                                appearance: { theme: 'stripe' },
+                              }}
+                            >
                               <BookingPaymentForm
                                 accentColor={accentColor}
                                 onSuccess={(paymentIntentId) => {
@@ -1717,22 +1711,6 @@ export function BookPage() {
                                 onError={(err) => setPaymentError(err)}
                               />
                             </Elements>
-                          ) : paymentLoading ? (
-                            <div className="flex items-center justify-center py-4 gap-2">
-                              <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-                              <span className="text-sm text-gray-500 dark:text-slate-400">Loading payment form...</span>
-                            </div>
-                          ) : !stripePromise ? (
-                            <p className="text-sm text-amber-600 dark:text-amber-400">
-                              Card payments are not configured. Choose another payment method or Skip.
-                            </p>
-                          ) : (
-                            <p className="text-sm text-amber-600 dark:text-amber-400">
-                              {paymentError || 'Card payment is not available right now. Choose PayPal, Venmo, Cash App, Zelle, or Skip.'}
-                            </p>
-                          )}
-                          {paymentError && !paymentConfirmed && clientSecret && (
-                            <p className="text-red-500 text-sm">{paymentError}</p>
                           )}
                         </div>
                       )}
