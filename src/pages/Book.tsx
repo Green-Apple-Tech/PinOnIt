@@ -16,8 +16,7 @@ import {
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import { resolveTermsText } from '../lib/terms';
 import { stripePromise } from '../lib/stripe';
-import { Elements } from '@stripe/react-stripe-js';
-import { BookingPaymentForm } from '../components/BookingPaymentForm';
+import { StripeBookingCheckout } from '../components/StripeBookingCheckout';
 import {
   Calendar,
   Clock,
@@ -1693,25 +1692,18 @@ export function BookPage() {
                               Card payments are not configured. Choose another payment method or Skip.
                             </p>
                           ) : (
-                            <Elements
+                            <StripeBookingCheckout
                               key={clientSecret}
-                              stripe={stripePromise}
-                              options={{
-                                clientSecret,
-                                appearance: { theme: 'stripe' },
+                              clientSecret={clientSecret}
+                              amountLabel={`$${(selectedService.price_cents / 100).toFixed(2)}`}
+                              accentColor={accentColor}
+                              onSuccess={(paymentIntentId) => {
+                                setStripePaymentId(paymentIntentId);
+                                setPaymentConfirmed(true);
+                                setPaymentError('');
                               }}
-                            >
-                              <BookingPaymentForm
-                                amountLabel={`$${(selectedService.price_cents / 100).toFixed(2)}`}
-                                accentColor={accentColor}
-                                onSuccess={(paymentIntentId) => {
-                                  setStripePaymentId(paymentIntentId);
-                                  setPaymentConfirmed(true);
-                                  setPaymentError('');
-                                }}
-                                onError={(err) => setPaymentError(err)}
-                              />
-                            </Elements>
+                              onError={(err) => setPaymentError(err)}
+                            />
                           )}
                         </div>
                       )}
