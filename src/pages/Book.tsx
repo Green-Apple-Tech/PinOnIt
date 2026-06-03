@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useSearchParams, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
@@ -559,6 +559,7 @@ export function BookPage() {
   const [stripePaymentId, setStripePaymentId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<BookPaymentMethod>('skip');
   const [recurringAcknowledged, setRecurringAcknowledged] = useState(false);
+  const paymentIntentFetchKey = useRef<string | null>(null);
 
   useEffect(() => {
     if (!slug && !token) return;
@@ -716,6 +717,7 @@ export function BookPage() {
     setPaymentConfirmed(false);
     setPaymentError('');
     setClientSecret(null);
+    paymentIntentFetchKey.current = null;
     setStripePaymentId(null);
     setPaymentMethod('skip');
     const { data } = await supabase.from('booking_questions').select('*').eq('service_id', svc.id).order('sort_order');
@@ -918,8 +920,16 @@ export function BookPage() {
   }, [selectedService, selectedDate, selectedSlot, host, guestName, guestEmail, phone, notifyVia, guestTimezone, guestNotes, questions, answers, singleUseLink, selectedChannels, selectedTimes, stripePaymentId]);
 
   useEffect(() => {
-    if (step !== 'details' || !selectedService || selectedService.price_cents <= 0 || paymentMethod !== 'stripe') {
-      if (paymentMethod !== 'stripe') setClientSecret(null);
+    if (paymentMethod !== 'stripe') {
+      return;
+    }
+    if (step !== 'details' || !selectedService || selectedService.price_cents <= 0) {
+      return;
+    }
+
+    const fetchKey = `${selectedService.id}:${selectedService.price_cents}`;
+    if (paymentIntentFetchKey.current === fetchKey) {
+      setPaymentLoading(false);
       return;
     }
 
@@ -928,31 +938,56 @@ export function BookPage() {
     setPaymentError('');
 
     (async () => {
-      const { data, error } = await supabase.functions.invoke('create-payment-intent', {
-        body: {
-          amount: selectedService.price_cents,
-          currency: 'usd',
-          service_id: selectedService.id,
-          host_id: selectedService.host_id,
-          guest_email: guestEmail.trim() || undefined,
-          guest_name: guestName.trim() || undefined,
-        },
-      });
+      try {
+        const { data, error } = await supabase.functions.invoke('create-payment-intent', {
+          body: {
+            amount: selectedService.price_cents,
+            currency: 'usd',
+            service_id: selectedService.id,
+            host_id: selectedService.host_id,
+            guest_email: guestEmail.trim() || undefined,
+            guest_name: guestName.trim() || undefined,
+          },
+        });
 
-      if (cancelled) return;
+        if (cancelled) return;
 
-      if (data?.clientSecret) {
-        setClientSecret(data.clientSecret);
-        setPaymentError('');
-      } else {
-        setPaymentError(data?.error || error?.message || 'Card payment could not be loaded. Try another method or Skip.');
-        setClientSecret(null);
+        if (data?.clientSecret) {
+          paymentIntentFetchKey.current = fetchKey;
+          setClientSecret(data.clientSecret);
+          setPaymentError('');
+        } else {
+          const msg =
+            (typeof data?.error === 'string' && data.error) ||
+            error?.message ||
+            'Failed to load payment form';
+          setPaymentError(msg);
+          setClientSecret(null);
+          paymentIntentFetchKey.current = null;
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setPaymentError(err instanceof Error ? err.message : 'Failed to load payment form');
+          setClientSecret(null);
+          paymentIntentFetchKey.current = null;
+        }
+      } finally {
+        if (!cancelled) setPaymentLoading(false);
       }
-      setPaymentLoading(false);
     })();
 
-    return () => { cancelled = true; };
-  }, [step, selectedService?.id, selectedService?.price_cents, paymentMethod, guestEmail, guestName]);
+    return () => {
+      cancelled = true;
+      setPaymentLoading(false);
+    };
+  }, [step, selectedService?.id, selectedService?.price_cents, selectedService?.host_id, paymentMethod]);
+
+  useEffect(() => {
+    if (paymentMethod !== 'stripe') {
+      setClientSecret(null);
+      paymentIntentFetchKey.current = null;
+    }
+  }, [paymentMethod]);
 
   const handleSaveReminders = async () => {
     if (!confirmedBooking) return;
@@ -1628,7 +1663,10 @@ export function BookPage() {
                               setPaymentMethod(opt.id);
                               setPaymentConfirmed(opt.id === 'skip');
                               setPaymentError('');
-                              if (opt.id !== 'stripe') setClientSecret(null);
+                              if (opt.id !== 'stripe') {
+                                setClientSecret(null);
+                                paymentIntentFetchKey.current = null;
+                              }
                             }}
                             className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
                               paymentMethod === opt.id
@@ -1642,17 +1680,61 @@ export function BookPage() {
                       </div>
 
                       {isHostViewer && paymentHandles && !showP2PHandles && (
-                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-3 text-center">
-                          💡 Hosts can also accept Venmo, Cash App, Zelle, and PayPal —{' '}
-                          <a
-                            href="/dashboard/services"
-                            className="text-indigo-500 hover:underline"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            add payment handles in Settings
-                          </a>
-                        </p>
+                        <div className="mt-3 p-3 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-800 rounded-xl">
+                          <p className="text-sm text-indigo-700 dark:text-indigo-300 font-medium">
+                            💡 Also accept Venmo, Cash App, Zelle & PayPal
+                          </p>
+                          <p className="text-xs text-indigo-500 dark:text-indigo-400 mt-0.5">
+                            <a
+                              href="/dashboard/services"
+                              className="underline hover:text-indigo-700 dark:hover:text-indigo-300"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              Add your payment handles in Services settings
+                            </a>
+                            {' '}— guests will see them as payment options.
+                          </p>
+                        </div>
+                      )}
+
+                      {paymentMethod === 'stripe' && (
+                        <div className="mt-4 space-y-3">
+                          {paymentConfirmed ? (
+                            <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                              <Check className="h-4 w-4" />
+                              Card payment complete
+                            </div>
+                          ) : clientSecret && stripePromise ? (
+                            <Elements stripe={stripePromise} options={{ clientSecret }}>
+                              <BookingPaymentForm
+                                accentColor={accentColor}
+                                onSuccess={(paymentIntentId) => {
+                                  setStripePaymentId(paymentIntentId);
+                                  setPaymentConfirmed(true);
+                                  setPaymentError('');
+                                }}
+                                onError={(err) => setPaymentError(err)}
+                              />
+                            </Elements>
+                          ) : paymentLoading ? (
+                            <div className="flex items-center justify-center py-4 gap-2">
+                              <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                              <span className="text-sm text-gray-500 dark:text-slate-400">Loading payment form...</span>
+                            </div>
+                          ) : !stripePromise ? (
+                            <p className="text-sm text-amber-600 dark:text-amber-400">
+                              Card payments are not configured. Choose another payment method or Skip.
+                            </p>
+                          ) : (
+                            <p className="text-sm text-amber-600 dark:text-amber-400">
+                              {paymentError || 'Card payment is not available right now. Choose PayPal, Venmo, Cash App, Zelle, or Skip.'}
+                            </p>
+                          )}
+                          {paymentError && !paymentConfirmed && clientSecret && (
+                            <p className="text-red-500 text-sm">{paymentError}</p>
+                          )}
+                        </div>
                       )}
 
                       {showP2PHandles && paymentHandles && (
@@ -1687,41 +1769,6 @@ export function BookPage() {
                           <p className="text-xs text-gray-400 dark:text-slate-500 text-center mt-2">
                             Send payment note: your name + appointment date
                           </p>
-                        </div>
-                      )}
-
-                      {paymentMethod === 'stripe' && (
-                        <div className="space-y-3">
-                          {paymentConfirmed ? (
-                            <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
-                              <Check className="h-4 w-4" />
-                              Card payment complete
-                            </div>
-                          ) : stripePromise && clientSecret ? (
-                            <Elements stripe={stripePromise} options={{ clientSecret }}>
-                              <BookingPaymentForm
-                                accentColor={accentColor}
-                                onSuccess={(paymentIntentId) => {
-                                  setStripePaymentId(paymentIntentId);
-                                  setPaymentConfirmed(true);
-                                  setPaymentError('');
-                                }}
-                                onError={(err) => setPaymentError(err)}
-                              />
-                            </Elements>
-                          ) : paymentLoading ? (
-                            <div className="flex items-center justify-center py-4">
-                              <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-                              <span className="ml-2 text-sm text-gray-500 dark:text-slate-400">Loading card payment...</span>
-                            </div>
-                          ) : (
-                            <p className="text-sm text-amber-600 dark:text-amber-400">
-                              {paymentError || 'Card payment is not available right now. Choose PayPal, Venmo, Cash App, Zelle, or Skip.'}
-                            </p>
-                          )}
-                          {paymentError && !paymentConfirmed && (
-                            <p className="text-red-500 text-sm">{paymentError}</p>
-                          )}
                         </div>
                       )}
 
