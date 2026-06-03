@@ -9,7 +9,6 @@ import {
   Calendar, Mail, Video, Globe, Zap, Sparkles,
   Users, Gift, AlertCircle,
 } from 'lucide-react';
-import QRCode from 'qrcode';
 import { ColorSwatchRow, BRAND_SWATCHES } from './ColorSwatchRow';
 import {
   markOnboardingCompletedLocal,
@@ -49,7 +48,6 @@ const STEPS = [
   'profile',
   'booking_link',
   'video',
-  'qr_code',
   'done',
 ] as const;
 type Step = (typeof STEPS)[number];
@@ -176,8 +174,10 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
   const navigate = useNavigate();
 
   const [step, setStep] = useState<Step>(() => {
-    if (initialStep !== undefined && initialStep >= 0 && initialStep < STEPS.length) {
-      return STEPS[initialStep];
+    if (initialStep !== undefined && initialStep >= 0) {
+      // Clamp legacy saved indices (e.g. old qr_code / done steps after step removal)
+      const idx = Math.min(initialStep, STEPS.length - 1);
+      return STEPS[idx];
     }
     return 'welcome';
   });
@@ -277,9 +277,6 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
 
   // Video step
   const [videoCalendars, setVideoCalendars] = useState<ConnectedCalendar[]>([]);
-
-  // QR step
-  const [qrDataUrl, setQrDataUrl] = useState('');
 
   // Done step
   const [copied, setCopied] = useState(false);
@@ -794,13 +791,6 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
     goNext();
   };
 
-  // ── QR generation ────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (step !== 'qr_code' || !bookingUrl) return;
-    QRCode.toDataURL(bookingUrl, { width: 280, margin: 2, color: { dark: '#000000', light: '#ffffff' } })
-      .then(setQrDataUrl);
-  }, [step, bookingUrl]);
-
   // ── Navigation ───────────────────────────────────────────────────────────────
   const goNext = useCallback(async () => {
     const idx = STEPS.indexOf(step);
@@ -826,13 +816,6 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
     await clearWizardActive();
     if (onClose) onClose();
     else navigate('/dashboard');
-  };
-
-  const downloadQR = () => {
-    const a = document.createElement('a');
-    a.href = qrDataUrl;
-    a.download = 'booking-qr.png';
-    a.click();
   };
 
   // ── Render steps ─────────────────────────────────────────────────────────────
@@ -1722,68 +1705,12 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
               onBack={goBack}
               onNext={async () => { await saveStep(STEPS.indexOf('video') + 1); goNext(); }}
               onSkip={async () => { await saveStep(STEPS.indexOf('video') + 1); goNext(); }}
-              nextLabel="Continue"
-            />
-          </div>
-        );
-
-      // ── Step 6: QR Code ───────────────────────────────────────────────────────
-      case 'qr_code':
-        return (
-          <div>
-            <div className="mb-5">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Your booking QR code</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Share this on your business card, flyer, email signature, or social bio — anyone who scans it lands on your booking page.
-              </p>
-            </div>
-
-            {qrDataUrl ? (
-              <div className="flex flex-col items-center">
-                <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 mb-4">
-                  <img src={qrDataUrl} alt="QR Code" className="w-52 h-52" />
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 text-center">{bookingUrl}</p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={downloadQR}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-semibold rounded-xl transition-colors hover:bg-slate-700 dark:hover:bg-slate-100"
-                  >
-                    Download PNG
-                  </button>
-                  <button
-                    onClick={() => { navigator.clipboard.writeText(bookingUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-                    className="flex items-center gap-1.5 px-4 py-2 border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                  >
-                    {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
-                    {copied ? 'Copied!' : 'Copy link'}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
-              </div>
-            )}
-
-            <div className="mt-5 grid grid-cols-2 gap-2 text-xs">
-              {['Business cards', 'Email signatures', 'Presentation slides', 'Social media bio'].map(use => (
-                <div key={use} className="flex items-center gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg text-slate-600 dark:text-slate-400">
-                  <div className="h-1.5 w-1.5 rounded-full bg-indigo-600 shrink-0" />
-                  {use}
-                </div>
-              ))}
-            </div>
-
-            <NavButtons
-              onBack={goBack}
-              onNext={async () => { await saveStep(STEPS.indexOf('qr_code') + 1); goNext(); }}
               nextLabel="Finish setup"
             />
           </div>
         );
 
-      // ── Step 7: Done ──────────────────────────────────────────────────────────
+      // ── Done ──────────────────────────────────────────────────────────────────
       case 'done':
         return (
           <div className="relative overflow-hidden">
