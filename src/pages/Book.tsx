@@ -118,22 +118,25 @@ function buildPaymentOptions(svc: Service, stripeAvailable: boolean): BookPaymen
     });
   }
 
-  if (svc.cashapp_tag?.trim()) {
+  const cashappHandle = svc.cashapp_handle?.trim() || svc.cashapp_tag?.trim();
+  const zelleHandle = svc.zelle_handle?.trim() || svc.zelle_contact?.trim();
+
+  if (cashappHandle) {
     opts.push({
       id: 'cashapp',
       label: 'Cash App',
-      subtitle: formatCashappDisplay(svc.cashapp_tag),
-      url: `https://cash.app/${svc.cashapp_tag.replace(/^\$/, '')}/${amount}`,
+      subtitle: formatCashappDisplay(cashappHandle),
+      url: `https://cash.app/${cashappHandle.replace(/^\$/, '')}/${amount}`,
       panelBg: 'bg-green-50 dark:bg-green-950/30',
       panelText: 'text-green-700 dark:text-green-300',
     });
   }
 
-  if (svc.zelle_contact?.trim()) {
+  if (zelleHandle) {
     opts.push({
       id: 'zelle',
       label: 'Zelle',
-      subtitle: svc.zelle_contact,
+      subtitle: zelleHandle,
       url: 'https://www.zellepay.com/',
       panelBg: 'bg-purple-50 dark:bg-purple-950/30',
       panelText: 'text-purple-700 dark:text-purple-300',

@@ -114,8 +114,12 @@ export interface Service {
   paypal_me_link: string | null;
   paypal_currency: string;
   venmo_handle: string | null;
-  cashapp_tag: string | null;
-  zelle_contact: string | null;
+  cashapp_handle: string | null;
+  zelle_handle: string | null;
+  /** @deprecated use cashapp_handle */
+  cashapp_tag?: string | null;
+  /** @deprecated use zelle_handle */
+  zelle_contact?: string | null;
   payment_methods: string[];
   // Forms
   require_terms: boolean;

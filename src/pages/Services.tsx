@@ -40,8 +40,9 @@ const DEFAULT_SERVICE = {
   location: '', location_type: 'video' as Service['location_type'],
   payment_provider: 'none' as Service['payment_provider'],
   paypal_me_link: null as string | null, paypal_currency: 'USD',
-  venmo_handle: null as string | null, cashapp_tag: null as string | null,
-  zelle_contact: null as string | null,
+  venmo_handle: null as string | null,
+  cashapp_handle: null as string | null,
+  zelle_handle: null as string | null,
   payment_methods: [] as string[],
   require_terms: false, require_nda: false,
   show_description_on_booking_page: true, show_description_on_paid_booking: true,
@@ -78,8 +79,8 @@ function formatPrice(cents: number) {
 function buildPaymentMethods(form: FormState): string[] {
   const methods: string[] = [];
   if (form.venmo_handle?.trim()) methods.push('venmo');
-  if (form.cashapp_tag?.trim()) methods.push('cashapp');
-  if (form.zelle_contact?.trim()) methods.push('zelle');
+  if (form.cashapp_handle?.trim()) methods.push('cashapp');
+  if (form.zelle_handle?.trim()) methods.push('zelle');
   return methods;
 }
 
@@ -161,9 +162,8 @@ function PaymentTab({
   const noPaymentSelected = form.payment_provider === 'none';
   const paypalSelected = form.payment_provider === 'paypal';
   const p2pSelected = form.payment_provider === 'p2p';
-  const showP2PFields = p2pSelected || (noPaymentSelected && !!priceStr);
 
-  const hasAnyP2P = !!(form.venmo_handle || form.cashapp_tag || form.zelle_contact);
+  const hasAnyP2P = !!(form.venmo_handle || form.cashapp_handle || form.zelle_handle);
 
   return (
     <div className="space-y-5">
@@ -263,88 +263,48 @@ function PaymentTab({
         </div>
       )}
 
-      {/* P2P fields — primary for P2P provider, optional alternatives for card/Stripe */}
-      {showP2PFields && (
-        <div className="space-y-4 pt-1">
-          {!p2pSelected && (
-            <div>
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">Peer-to-peer alternatives (optional)</p>
-              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
-                Shown to guests below the card payment form as Venmo, Cash App, or Zelle options.
-              </p>
-            </div>
-          )}
-          {/* Venmo */}
-          <div className="p-4 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="h-7 w-7 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                  <DollarSign className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                </div>
-                <span className="text-sm font-semibold text-gray-900 dark:text-white">Venmo</span>
-              </div>
-              <button type="button" onClick={() => setHowTo('venmo')} className="flex items-center gap-1 text-xs text-brand-600 dark:text-brand-400 hover:underline">
-                <HelpCircle className="h-3.5 w-3.5" /> How to find this
-              </button>
-            </div>
-            <input
-              type="text"
-              value={form.venmo_handle ?? ''}
-              onChange={(e) => setField('venmo_handle', e.target.value || null)}
-              placeholder="@yourhandle"
-              className={inputCls}
-            />
-          </div>
-
-          {/* Cash App */}
-          <div className="p-4 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="h-7 w-7 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-                  <DollarSign className="h-4 w-4 text-indigo-600 dark:text-indigo-500" />
-                </div>
-                <span className="text-sm font-semibold text-gray-900 dark:text-white">Cash App</span>
-              </div>
-              <button type="button" onClick={() => setHowTo('cashapp')} className="flex items-center gap-1 text-xs text-brand-600 dark:text-brand-400 hover:underline">
-                <HelpCircle className="h-3.5 w-3.5" /> How to find this
-              </button>
-            </div>
-            <input
-              type="text"
-              value={form.cashapp_tag ?? ''}
-              onChange={(e) => setField('cashapp_tag', e.target.value || null)}
-              placeholder="$yourcashtag"
-              className={inputCls}
-            />
-          </div>
-
-          {/* Zelle */}
-          <div className="p-4 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="h-7 w-7 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                  <Smartphone className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                </div>
-                <span className="text-sm font-semibold text-gray-900 dark:text-white">Zelle</span>
-              </div>
-              <button type="button" onClick={() => setHowTo('zelle')} className="flex items-center gap-1 text-xs text-brand-600 dark:text-brand-400 hover:underline">
-                <HelpCircle className="h-3.5 w-3.5" /> How to find this
-              </button>
-            </div>
-            <input
-              type="text"
-              value={form.zelle_contact ?? ''}
-              onChange={(e) => setField('zelle_contact', e.target.value || null)}
-              placeholder="Phone number or email"
-              className={inputCls}
-            />
-          </div>
-
-          {p2pSelected && !hasAnyP2P && (
-            <p className="text-xs text-gray-400 dark:text-slate-500">Enter at least one payment handle so guests know where to send payment.</p>
-          )}
+      {/* P2P handles — always available for guest payment options */}
+      <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-slate-800">
+        <div>
+          <p className="text-sm font-semibold text-gray-900 dark:text-white">Peer-to-peer payment handles</p>
+          <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
+            Optional. Shown to guests on the booking page as Venmo, Cash App, or Zelle options.
+          </p>
         </div>
-      )}
+        <div>
+          <label className="block text-sm font-medium text-gray-600 dark:text-slate-400 mb-1.5">Venmo handle</label>
+          <input
+            type="text"
+            value={form.venmo_handle ?? ''}
+            onChange={(e) => setField('venmo_handle', e.target.value || null)}
+            placeholder="@yourhandle"
+            className={inputCls}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-600 dark:text-slate-400 mb-1.5">Cash App handle</label>
+          <input
+            type="text"
+            value={form.cashapp_handle ?? ''}
+            onChange={(e) => setField('cashapp_handle', e.target.value || null)}
+            placeholder="$yourhandle"
+            className={inputCls}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-600 dark:text-slate-400 mb-1.5">Zelle</label>
+          <input
+            type="text"
+            value={form.zelle_handle ?? ''}
+            onChange={(e) => setField('zelle_handle', e.target.value || null)}
+            placeholder="email or phone number"
+            className={inputCls}
+          />
+        </div>
+        {p2pSelected && !hasAnyP2P && (
+          <p className="text-xs text-gray-400 dark:text-slate-500">Enter at least one handle when using Peer-to-Peer as the primary payment method.</p>
+        )}
+      </div>
     </div>
   );
 }
@@ -529,9 +489,9 @@ export function ServicesPage() {
       payment_provider: ((svc.payment_provider as string) === 'stripe' ? 'none' : (svc.payment_provider ?? 'none')) as Service['payment_provider'],
       paypal_me_link: (svc as any).paypal_me_link ?? null,
       paypal_currency: svc.paypal_currency ?? 'USD',
-      venmo_handle: (svc as any).venmo_handle ?? null,
-      cashapp_tag: (svc as any).cashapp_tag ?? null,
-      zelle_contact: (svc as any).zelle_contact ?? null,
+      venmo_handle: (svc as Service).venmo_handle ?? null,
+      cashapp_handle: (svc as Service).cashapp_handle ?? (svc as Service).cashapp_tag ?? null,
+      zelle_handle: (svc as Service).zelle_handle ?? (svc as Service).zelle_contact ?? null,
       payment_methods: (svc as any).payment_methods ?? [],
       require_terms: (svc as any).require_terms ?? false,
       require_nda: (svc as any).require_nda ?? false,

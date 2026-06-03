@@ -242,6 +242,8 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
   const [createdServiceId, setCreatedServiceId] = useState<string | null>(null);
   const [bookingUrl, setBookingUrl] = useState('');
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
+  const [preferredCalendar, setPreferredCalendar] = useState<'google' | 'outlook' | null>(null);
+  const [showCalendlySwitcherBanner, setShowCalendlySwitcherBanner] = useState(false);
 
   // Contacts import step
   const [contactsGoogleConnecting, setContactsGoogleConnecting] = useState(false);
@@ -358,6 +360,43 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
   }, [user]);
 
   useEffect(() => { loadCalendars(); }, [loadCalendars]);
+
+  // Pre-fill from onboarding bot URL params or saved answers
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const calendarParam = params.get('calendar');
+    const appointmentsParam = params.get('appointments');
+    const payingParam = params.get('paying');
+
+    let botAnswers: Record<string, string> = {};
+    try {
+      const stored = localStorage.getItem('pinonit_bot_answers');
+      if (stored) botAnswers = JSON.parse(stored);
+    } catch { /* ignore */ }
+
+    const calendar = calendarParam ?? botAnswers.calendar ?? '';
+    const appointments = appointmentsParam ?? botAnswers.appointments ?? '';
+    const paying = payingParam ?? botAnswers.paying ?? '';
+
+    if (calendar.toLowerCase().includes('google')) {
+      setPreferredCalendar('google');
+    } else if (calendar.toLowerCase().includes('outlook') || calendar.toLowerCase().includes('microsoft')) {
+      setPreferredCalendar('outlook');
+    }
+
+    if (appointments) {
+      const lower = appointments.toLowerCase();
+      if (lower.includes('consultation')) setEventName('Consultation');
+      else if (lower.includes('client')) setEventName('Client Call');
+      else if (lower.includes('class') || lower.includes('coach')) setEventName('Coaching Session');
+      else if (lower.includes('team')) setEventName('Team Meeting');
+    }
+
+    if (paying.toLowerCase().includes('calendly')) {
+      setShowCalendlySwitcherBanner(true);
+      setFromCalendly(true);
+    }
+  }, []);
 
   // ── Slug from name ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -998,11 +1037,21 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
 
         return (
           <div>
+            {showCalendlySwitcherBanner && (
+              <div className="mb-4 px-3 py-2.5 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-xl text-xs text-indigo-800 dark:text-indigo-300">
+                Welcome from our setup assistant! We noticed you use Calendly — import your events below.
+              </div>
+            )}
             <div className="mb-6">
               <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Connect your first calendar</h2>
               <p className="text-sm text-slate-500 dark:text-slate-400">
                 This prevents double-bookings by checking your real availability before confirming any meeting.
               </p>
+              {preferredCalendar && (
+                <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-2 font-medium">
+                  Recommended for you: {preferredCalendar === 'google' ? 'Google Calendar' : 'Outlook / Office 365'}
+                </p>
+              )}
             </div>
 
             {calError && (
@@ -1017,6 +1066,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                 { provider: 'outlook' as const, label: 'Outlook / Office 365', desc: 'Microsoft accounts' },
               ].map(({ provider, label, desc }) => {
                 const connected = calendars.find(c => c.provider === provider);
+                const recommended = preferredCalendar === provider;
                 return (
                   <button
                     key={provider}
@@ -1025,7 +1075,9 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                     className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 transition-all text-left ${
                       connected
                         ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20'
-                        : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                        : recommended
+                          ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20 ring-2 ring-indigo-300 dark:ring-indigo-700'
+                          : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
                     }`}
                   >
                     <ProviderIcon provider={provider} />

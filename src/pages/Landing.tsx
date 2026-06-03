@@ -9,6 +9,7 @@ import {
   QrCode, DollarSign, Users,
   ChevronRight,
 } from 'lucide-react';
+import { OnboardingBot } from '../components/OnboardingBot';
 
 // ── Animated counter hook ────────────────────────────────────────────────────
 function useCounter(target: number, duration = 1800, start = false) {
@@ -696,6 +697,7 @@ export function Landing() {
           <Link to="/privacy" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Privacy Policy</Link>
         </div>
       </footer>
+      <OnboardingBot />
     </div>
   );
 }
