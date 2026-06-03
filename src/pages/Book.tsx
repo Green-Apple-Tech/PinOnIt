@@ -1492,6 +1492,9 @@ export function BookPage() {
                       />
                     </div>
                     <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{PHONE_HINT}</p>
+                    <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">
+                      By providing your phone number you consent to receive appointment-related messages. Reply STOP to opt out.
+                    </p>
                   </div>
                   {phone && (
                     <div>
@@ -1523,6 +1526,11 @@ export function BookPage() {
                           </button>
                         ))}
                       </div>
+                      {(notifyVia.includes('sms') || notifyVia.includes('whatsapp')) && (
+                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-2 leading-relaxed">
+                          By selecting SMS or WhatsApp, you agree to receive appointment reminders and notifications from {pageDisplayName || 'your host'}. Message frequency varies. Message &amp; data rates may apply. Reply STOP to unsubscribe at any time. Reply HELP for help.
+                        </p>
+                      )}
                     </div>
                   )}
                   <div>
