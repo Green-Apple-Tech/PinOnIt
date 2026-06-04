@@ -76,7 +76,45 @@ async function translateText(text: string, targetLang: string, sourceLang: strin
   }
 }
 
-async function sendTwilioVoice(to: string, message: string): Promise<{ ok: boolean; error?: string }> {
+function escapeXml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/** Human-readable lead time from template offset (minutes before event). */
+function formatTimeUntil(offsetMinutes: number): string {
+  const abs = Math.abs(offsetMinutes);
+  if (abs === 0) return 'a moment';
+  if (abs < 60) return `${abs} minute${abs === 1 ? '' : 's'}`;
+  const hours = Math.round(abs / 60);
+  if (hours < 48) return `${hours} hour${hours === 1 ? '' : 's'}`;
+  const days = Math.round(abs / 1440);
+  return `${days} day${days === 1 ? '' : 's'}`;
+}
+
+function buildPinOnItVoiceTwiml(timeUntil: string): string {
+  const line = `This is a reminder from PinOnIt. You have a booking in ${timeUntil}.`;
+  const safe = escapeXml(line);
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="Polly.Joanna">${safe}</Say>
+  <Pause length="1"/>
+  <Say voice="Polly.Joanna">${safe}</Say>
+</Response>`;
+}
+
+function buildCustomVoiceTwiml(message: string): string {
+  const safe = escapeXml(message);
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="Polly.Joanna">${safe}</Say>
+</Response>`;
+}
+
+async function sendTwilioVoice(to: string, twiml: string): Promise<{ ok: boolean; error?: string }> {
   const twilioSid = Deno.env.get('TWILIO_ACCOUNT_SID');
   const twilioToken = Deno.env.get('TWILIO_AUTH_TOKEN');
   const twilioFrom = Deno.env.get('TWILIO_PHONE_NUMBER');
@@ -85,10 +123,6 @@ async function sendTwilioVoice(to: string, message: string): Promise<{ ok: boole
     console.warn('Twilio credentials not configured — skipping voice call');
     return { ok: false, error: 'Twilio credentials not configured' };
   }
-
-  // Twilio TwiML to speak the message
-  const twiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">${message}</Say><Pause length="1"/><Say voice="alice">${message}</Say></Response>`;
-  const twimlUrl = `https://twimlets.com/echo?Twiml=${encodeURIComponent(twiml)}`;
 
   try {
     const res = await fetch(
@@ -99,7 +133,7 @@ async function sendTwilioVoice(to: string, message: string): Promise<{ ok: boole
           'Authorization': 'Basic ' + btoa(`${twilioSid}:${twilioToken}`),
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: new URLSearchParams({ From: twilioFrom, To: to, Url: twimlUrl }),
+        body: new URLSearchParams({ From: twilioFrom, To: to, Twiml: twiml }),
       }
     );
     if (!res.ok) {
@@ -399,17 +433,22 @@ Deno.serve(async (req: Request) => {
     if (sendChannel === 'voice') {
       const guestPhone = booking.guest_phone;
       if (guestPhone) {
-        // Use custom voice template from host profile if set, otherwise default script
         const hostVoiceTemplate = (hostProfile?.voice_message_template as string | null) ?? null;
-        const voiceMsg = hostVoiceTemplate
-          ? hostVoiceTemplate
-              .replace(/\{\{host_name\}\}/g, templateData.host_name)
-              .replace(/\{\{service_name\}\}/g, templateData.service_name)
-              .replace(/\{\{date\}\}/g, templateData.date)
-              .replace(/\{\{time\}\}/g, templateData.time)
-          : `Hi, this is a reminder from ${templateData.host_name} that you have a ${templateData.service_name} scheduled for ${templateData.date} at ${templateData.time}. We look forward to speaking with you.`;
+        const offsetMinutes = Math.abs((template.timing_offset_minutes as number) ?? 0);
+        const timeUntil = formatTimeUntil(offsetMinutes);
 
-        const result = await sendTwilioVoice(guestPhone, voiceMsg);
+        const twiml = hostVoiceTemplate
+          ? buildCustomVoiceTwiml(
+              hostVoiceTemplate
+                .replace(/\{\{host_name\}\}/g, templateData.host_name)
+                .replace(/\{\{service_name\}\}/g, templateData.service_name)
+                .replace(/\{\{date\}\}/g, templateData.date)
+                .replace(/\{\{time\}\}/g, templateData.time)
+                .replace(/\{\{guest_name\}\}/g, templateData.guest_name),
+            )
+          : buildPinOnItVoiceTwiml(timeUntil);
+
+        const result = await sendTwilioVoice(guestPhone, twiml);
         if (!result.ok) {
           console.warn('Voice call delivery failed:', result.error);
           deliveryStatus = 'failed';
