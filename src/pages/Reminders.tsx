@@ -126,6 +126,10 @@ const CHANNEL_INFO: { key: Channel; label: string; icon: React.ElementType; colo
   { key: 'voice',   label: 'Voice Call', icon: PhoneCall,     color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800' },
 ];
 
+/** One grid for label + 4 channel columns (header and rows share tracks). */
+const REMINDER_MATRIX_GRID =
+  'grid grid-cols-[minmax(0,1fr)_repeat(4,minmax(3.25rem,5rem))] gap-x-3 sm:gap-x-4';
+
 const inputCls = 'w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#5864C6] transition';
 const selectCls = inputCls;
 
@@ -1049,19 +1053,19 @@ export function RemindersPage({
           </div>
 
           <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-            {/* Column headers */}
-            <div className="flex items-center gap-4 px-5 py-3 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
-              <div className="flex-1 min-w-0">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">When</span>
-              </div>
-              <div className="grid grid-cols-4 gap-4 w-48 sm:w-56 shrink-0 text-center">
-                {CHANNEL_INFO.map((ch) => (
-                  <div key={ch.key} className={`flex flex-col items-center gap-1 ${ch.color}`}>
-                    <ch.icon className="h-5 w-5" />
-                    <span className="text-[10px] font-semibold uppercase tracking-wide leading-tight">{ch.label}</span>
-                  </div>
-                ))}
-              </div>
+            {/* Column headers — 5-column grid: When + 4 channels */}
+            <div
+              className={`${REMINDER_MATRIX_GRID} items-center px-5 py-3 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800`}
+            >
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">When</span>
+              {CHANNEL_INFO.map((ch) => (
+                <div key={ch.key} className={`flex flex-col items-center justify-center gap-1 text-center ${ch.color}`}>
+                  <ch.icon className="h-5 w-5 shrink-0" />
+                  <span className="text-[10px] font-semibold uppercase tracking-wide leading-tight max-w-full">
+                    {ch.label}
+                  </span>
+                </div>
+              ))}
             </div>
 
             <div className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -1070,38 +1074,36 @@ export function RemindersPage({
                 return (
                   <div
                     key={slot.key}
-                    className={`flex items-start gap-4 px-5 py-4 transition-colors ${anyActive ? 'hover:bg-[#5864C6]/5 dark:hover:bg-[#5864C6]/5' : 'hover:bg-slate-50/50 dark:hover:bg-slate-800/20 opacity-60'}`}
+                    className={`${REMINDER_MATRIX_GRID} items-center px-5 py-4 transition-colors ${anyActive ? 'hover:bg-[#5864C6]/5 dark:hover:bg-[#5864C6]/5' : 'hover:bg-slate-50/50 dark:hover:bg-slate-800/20 opacity-60'}`}
                   >
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0 pr-2">
                       <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{slot.label}</p>
                       <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{slot.sublabel}</p>
                     </div>
-                    <div className="grid grid-cols-4 gap-4 w-48 sm:w-56 shrink-0">
-                      {CHANNEL_INFO.map((ch) => {
-                        const savingId = `${slot.key}-${ch.key}`;
-                        const isSaving = savingSlot === savingId;
-                        const checked = isSlotChannelActive(slot.key, ch.key);
-                        return (
-                          <div key={ch.key} className="flex justify-center">
-                            {isSaving ? (
-                              <Loader2 className="h-5 w-5 animate-spin" style={{ color: '#5864C6' }} />
-                            ) : (
-                              <button
-                                onClick={() => handleToggleSlotChannel(slot.key, ch.key)}
-                                className={`h-6 w-6 rounded-lg flex items-center justify-center border-2 transition-all ${
-                                  checked
-                                    ? 'border-transparent'
-                                    : 'border-slate-300 dark:border-slate-600 hover:border-[#5864C6]/50'
-                                }`}
-                                style={checked ? { backgroundColor: '#5864C6', borderColor: '#5864C6' } : {}}
-                              >
-                                {checked && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
-                              </button>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
+                    {CHANNEL_INFO.map((ch) => {
+                      const savingId = `${slot.key}-${ch.key}`;
+                      const isSaving = savingSlot === savingId;
+                      const checked = isSlotChannelActive(slot.key, ch.key);
+                      return (
+                        <div key={ch.key} className="flex justify-center">
+                          {isSaving ? (
+                            <Loader2 className="h-5 w-5 animate-spin" style={{ color: '#5864C6' }} />
+                          ) : (
+                            <button
+                              onClick={() => handleToggleSlotChannel(slot.key, ch.key)}
+                              className={`h-6 w-6 rounded-lg flex items-center justify-center border-2 transition-all ${
+                                checked
+                                  ? 'border-transparent'
+                                  : 'border-slate-300 dark:border-slate-600 hover:border-[#5864C6]/50'
+                              }`}
+                              style={checked ? { backgroundColor: '#5864C6', borderColor: '#5864C6' } : {}}
+                            >
+                              {checked && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 );
               })}
