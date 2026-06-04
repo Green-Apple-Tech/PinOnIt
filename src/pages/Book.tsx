@@ -588,6 +588,33 @@ export function BookPage() {
   }, []);
 
   useEffect(() => {
+    const prefillFromProfile = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, email, phone')
+        .eq('id', session.user.id)
+        .single();
+
+      const sessionEmail = session.user.email?.trim();
+      if (profile?.full_name) {
+        setGuestName((prev) => prev || profile.full_name!);
+      }
+      if (sessionEmail) {
+        setGuestEmail((prev) => prev || sessionEmail);
+      } else if (profile?.email) {
+        setGuestEmail((prev) => prev || profile.email!);
+      }
+      if (profile?.phone) {
+        setPhone((prev) => prev || profile.phone!);
+      }
+    };
+    prefillFromProfile();
+  }, []);
+
+  useEffect(() => {
     if (!slug && !token) return;
 
     // Check expiry param before loading anything
