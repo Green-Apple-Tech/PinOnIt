@@ -3,10 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import {
-  ArrowRight, Check, CalendarDays,
-  Sun, Moon, Menu, Mail, Smartphone, CalendarCheck,
-  CreditCard, Zap, X, Link2,
-  QrCode, DollarSign, Users,
+  ArrowRight, Check,
+  Sun, Moon, Menu, Zap, X, Link2,
+  DollarSign, Users,
   ChevronRight,
 } from 'lucide-react';
 import { OnboardingBot } from '../components/OnboardingBot';
@@ -75,6 +74,63 @@ const COMP_ROWS: CompRow[] = [
   { feature: 'Email signature creator', pinonit: true, calendly: false, acuity: false },
   { feature: 'QR code booking',   pinonit: true, calendly: false, acuity: false },
 ];
+
+const CALENDLY_EDGE_FEATURES = [
+  {
+    icon: '💬',
+    title: 'SMS Reminders',
+    desc: 'Automatically text guests before every booking. Reduce no-shows by up to 80%.',
+    tag: 'Not on Calendly',
+  },
+  {
+    icon: '📱',
+    title: 'WhatsApp Reminders',
+    desc: 'Reach clients where they actually are. Send booking confirmations via WhatsApp.',
+    tag: 'Not on Calendly',
+  },
+  {
+    icon: '📧',
+    title: 'Schedule via Email & SMS',
+    desc: 'Clients can book directly from a text or email — no app, no account needed.',
+    tag: 'Not on Calendly',
+  },
+  {
+    icon: '📲',
+    title: 'QR Code Bookings',
+    desc: 'Print your booking QR on a business card, flyer, or sign. Scan to book instantly.',
+    tag: 'Not on Calendly',
+  },
+  {
+    icon: '📞',
+    title: 'Voice Call Reminders',
+    desc: 'Auto-call yourself before meetings start. Never miss an appointment again.',
+    tag: 'Not on Calendly',
+  },
+  {
+    icon: '✍️',
+    title: 'Email Signature Creator',
+    desc: 'Generate a professional email signature with your booking link built right in.',
+    tag: 'Not on Calendly',
+  },
+  {
+    icon: '🔳',
+    title: 'QR Code Creator',
+    desc: 'Create custom QR codes for any link — not just your booking page.',
+    tag: 'Not on Calendly',
+  },
+  {
+    icon: '🔔',
+    title: 'Universal Reminder App',
+    desc: 'Set reminders for ANY calendar event — not just bookings made through PinOnIt.',
+    tag: 'Not on Calendly',
+  },
+  {
+    icon: '💳',
+    title: 'Built-in Paid Bookings',
+    desc: 'Accept card, Venmo, Cash App, Zelle & PayPal. No third-party plugins needed.',
+    tag: 'Calendly charges extra',
+  },
+] as const;
 
 export function Landing() {
   const { user, loading } = useAuth();
@@ -194,82 +250,52 @@ export function Landing() {
         </div>
       </section>
 
-      {/* ── 2. FEATURE SHOWCASE ── */}
-      <section id="features" className="py-24 px-6 bg-white dark:bg-slate-950 scroll-mt-16">
-        <div className="max-w-5xl mx-auto">
+      {/* ── 2. PinOnIt vs Calendly — exclusive features ── */}
+      <section id="features" className="py-20 bg-gradient-to-b from-indigo-950 to-indigo-900 scroll-mt-16">
+        <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-14">
-            <p className="text-xs font-bold text-brand-500 uppercase tracking-widest mb-3">Everything you need</p>
-            <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-              Six powerful features. One simple app.
+            <span className="inline-block px-4 py-1.5 bg-indigo-500/20 text-indigo-300 text-xs font-semibold rounded-full uppercase tracking-widest mb-4">
+              Why PinOnIt Wins
+            </span>
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+              Everything Calendly Has.
+              <br />
+              <span className="text-indigo-400">Plus What They Don&apos;t.</span>
             </h2>
-            <p className="mt-4 text-slate-500 dark:text-slate-400 text-lg max-w-xl mx-auto">
-              Scheduling, reminders, payments, and calendar sync — all connected.
+            <p className="text-indigo-200 text-lg max-w-2xl mx-auto">
+              Calendly charges $20+/month and still can&apos;t do this. PinOnIt starts at $6/month.
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {[
-              {
-                icon: CalendarDays,
-                title: 'Smart Scheduling',
-                desc: 'Your booking link, your rules',
-                body: 'Share a link, guests pick a time. Your availability, custom questions, and meeting types — all handled automatically.',
-                color: 'bg-brand-50 dark:bg-brand-900/20',
-                iconColor: 'text-brand-500 dark:text-brand-400',
-              },
-              {
-                icon: Smartphone,
-                title: 'SMS + WhatsApp Reminders',
-                desc: 'Reduce no-shows by 80%',
-                body: 'Automated reminders via Email, SMS, and WhatsApp for any event on any calendar. Not just your bookings.',
-                color: 'bg-indigo-50 dark:bg-indigo-900/20',
-                iconColor: 'text-indigo-600 dark:text-indigo-500',
-              },
-              {
-                icon: Mail,
-                title: 'Email Signature Builder',
-                desc: 'Professional signatures in seconds',
-                body: 'Build a polished HTML email signature with your booking link built in. One-click copy into Gmail or Outlook.',
-                color: 'bg-blue-50 dark:bg-blue-900/20',
-                iconColor: 'text-blue-600 dark:text-blue-400',
-              },
-              {
-                icon: CalendarCheck,
-                title: 'Calendar Sync',
-                desc: 'Google, Outlook, Apple — all connected',
-                body: 'Sync with every major calendar to prevent double-bookings and send reminders for everything on your schedule.',
-                color: 'bg-amber-50 dark:bg-amber-900/20',
-                iconColor: 'text-amber-600 dark:text-amber-400',
-              },
-              {
-                icon: CreditCard,
-                title: 'PayPal Payments',
-                desc: 'Get paid before the meeting',
-                body: 'Collect payment at booking via PayPal or Stripe. Money in your account before the call even starts.',
-                color: 'bg-teal-50 dark:bg-teal-900/20',
-                iconColor: 'text-teal-600 dark:text-teal-400',
-              },
-              {
-                icon: QrCode,
-                title: 'QR Code Booking',
-                desc: 'Share your link anywhere, even offline',
-                body: 'Generate a scannable QR code for any event type. Perfect for business cards, slide decks, and printed materials.',
-                color: 'bg-rose-50 dark:bg-rose-900/20',
-                iconColor: 'text-rose-600 dark:text-rose-400',
-              },
-            ].map(({ icon: Icon, title, desc, body, color, iconColor }) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-12">
+            {CALENDLY_EDGE_FEATURES.map(({ icon, title, desc, tag }) => (
               <div
                 key={title}
-                className="group p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-brand-200 dark:hover:border-brand-700 hover:-translate-y-1 hover:shadow-xl transition-all"
+                className="relative bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/10 hover:border-indigo-400/40 transition-all group"
               >
-                <div className={`h-12 w-12 rounded-2xl ${color} flex items-center justify-center mb-5`}>
-                  <Icon className={`h-6 w-6 ${iconColor}`} />
+                <div className="absolute -top-3 right-4">
+                  <span className="inline-block px-2.5 py-0.5 bg-red-500/90 text-white text-xs font-bold rounded-full">
+                    {tag}
+                  </span>
                 </div>
-                <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1">{desc}</p>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">{title}</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{body}</p>
+                <div className="text-3xl mb-3" aria-hidden>{icon}</div>
+                <h3 className="text-white font-semibold text-base mb-2">{title}</h3>
+                <p className="text-indigo-200/80 text-sm leading-relaxed">{desc}</p>
               </div>
             ))}
+          </div>
+
+          <div className="text-center">
+            <Link
+              to="/signup"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-lg rounded-2xl transition-colors shadow-lg shadow-indigo-500/25"
+            >
+              Start Free — No Credit Card Needed
+              <ArrowRight className="h-5 w-5" />
+            </Link>
+            <p className="text-indigo-300/60 text-sm mt-3">
+              Free plan available · Pro from $6/month · Cancel anytime
+            </p>
           </div>
         </div>
       </section>
