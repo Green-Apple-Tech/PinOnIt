@@ -186,6 +186,11 @@ const SCREENSHOTS = [
 function ScreenshotShowcase() {
   const [active, setActive] = useState(0);
   const [animating, setAnimating] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [active]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -279,26 +284,22 @@ function ScreenshotShowcase() {
                   </div>
                 </div>
 
-                <div className="relative min-h-64">
-                  <img
-                    src={current.image}
-                    alt={current.title}
-                    className="w-full object-cover object-top"
-                    onError={(e) => {
-                      const img = e.target as HTMLImageElement;
-                      img.style.display = 'none';
-                      const fallback = img.nextElementSibling as HTMLElement;
-                      if (fallback) fallback.style.display = 'flex';
-                    }}
-                  />
-                  <div
-                    className={`hidden bg-gradient-to-br ${current.color} min-h-72 flex-col items-center justify-center p-10 text-white`}
-                    style={{ display: 'none' }}
-                  >
-                    <div className="text-7xl mb-4">{current.emoji}</div>
-                    <h3 className="text-2xl font-bold mb-2 text-center">{current.title}</h3>
-                    <p className="text-white/80 text-center text-sm max-w-xs leading-relaxed">{current.desc}</p>
-                  </div>
+                <div className="relative min-h-64 bg-slate-50 dark:bg-slate-900">
+                  {!imageFailed ? (
+                    <img
+                      key={current.image}
+                      src={current.image}
+                      alt={current.title}
+                      className="w-full block object-contain object-top"
+                      onError={() => setImageFailed(true)}
+                    />
+                  ) : (
+                    <div className={`bg-gradient-to-br ${current.color} min-h-72 flex flex-col items-center justify-center p-10 text-white`}>
+                      <div className="text-7xl mb-4">{current.emoji}</div>
+                      <h3 className="text-2xl font-bold mb-2 text-center">{current.title}</h3>
+                      <p className="text-white/80 text-center text-sm max-w-xs leading-relaxed">{current.desc}</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
