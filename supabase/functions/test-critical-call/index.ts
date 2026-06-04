@@ -47,7 +47,12 @@ Deno.serve(async (req: Request) => {
     const toPhone = profile?.phone || profile?.critical_alert_phone;
     if (!toPhone) return jsonResponse({ error: 'No phone number configured. Add one in Settings → Profile.' }, 400);
 
-    const twiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">This is a test of your PinOnIt critical meeting alert system. Your voice call alerts are working correctly.</Say></Response>`;
+    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="Polly.Joanna">This is a reminder from PinOnIt. You have a booking in 5 minutes.</Say>
+  <Pause length="1"/>
+  <Say voice="Polly.Joanna">This is a reminder from PinOnIt. You have a booking in 5 minutes.</Say>
+</Response>`;
 
     const res = await fetch(
       `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Calls.json`,

@@ -251,6 +251,7 @@ export interface Booking {
   meet_link: string | null;
   calendar_event_id: string | null;
   is_critical: boolean;
+  voice_reminder_sent?: boolean;
   is_recurring: boolean;
   recurrence_frequency: RecurrenceFrequency | null;
   parent_booking_id: string | null;
