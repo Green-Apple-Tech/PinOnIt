@@ -132,6 +132,197 @@ const CALENDLY_EDGE_FEATURES = [
   },
 ] as const;
 
+const SCREENSHOTS = [
+  {
+    title: 'Your Booking Page',
+    emoji: '📅',
+    desc: 'A clean, professional page clients book from instantly — no account needed.',
+    tag: 'Public Booking Page',
+    color: 'from-orange-500 to-orange-600',
+    image: '/screenshots/booking-page.png',
+  },
+  {
+    title: 'Send Your Availability',
+    emoji: '🔗',
+    desc: 'Share your booking link via copy, QR code, email, or text in one click.',
+    tag: 'Dashboard',
+    color: 'from-indigo-500 to-indigo-700',
+    image: '/screenshots/dashboard.png',
+  },
+  {
+    title: 'Smart Reminder System',
+    emoji: '🔔',
+    desc: 'Set reminders via Email, SMS, WhatsApp, or Voice Call — for every booking, automatically.',
+    tag: 'Reminders & Messages',
+    color: 'from-violet-500 to-violet-700',
+    image: '/screenshots/reminders.png',
+  },
+  {
+    title: 'Email Signature Creator',
+    emoji: '✍️',
+    desc: 'Generate a professional email signature with a booking button built right in.',
+    tag: 'More Tools',
+    color: 'from-purple-500 to-purple-700',
+    image: '/screenshots/email-signature.png',
+  },
+  {
+    title: 'QR Code Creator',
+    emoji: '🔳',
+    desc: 'Turn any link into a scannable QR code for business cards, flyers, and more.',
+    tag: 'More Tools',
+    color: 'from-teal-500 to-teal-700',
+    image: '/screenshots/qr-code.png',
+  },
+  {
+    title: 'Group Scheduling',
+    emoji: '👥',
+    desc: 'Run a meeting poll or coordinate via SMS when you only have phone numbers.',
+    tag: 'Group Scheduling',
+    color: 'from-blue-500 to-blue-700',
+    image: '/screenshots/group-scheduling.png',
+  },
+];
+
+function ScreenshotShowcase() {
+  const [active, setActive] = useState(0);
+  const [animating, setAnimating] = useState(false);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setAnimating(true);
+      setTimeout(() => {
+        setActive((prev) => (prev + 1) % SCREENSHOTS.length);
+        setAnimating(false);
+      }, 300);
+    }, 4500);
+    return () => clearInterval(timer);
+  }, []);
+
+  const handleSelect = (i: number) => {
+    if (i === active) return;
+    setAnimating(true);
+    setTimeout(() => {
+      setActive(i);
+      setAnimating(false);
+    }, 200);
+  };
+
+  const current = SCREENSHOTS[active];
+
+  return (
+    <section className="py-20 bg-gray-50 dark:bg-slate-900/50">
+      <div className="max-w-6xl mx-auto px-6">
+        <div className="text-center mb-12">
+          <span className="inline-block px-4 py-1.5 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-xs font-semibold rounded-full uppercase tracking-widest mb-4">
+            See It In Action
+          </span>
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3">
+            Everything you need, beautifully built
+          </h2>
+          <p className="text-gray-500 dark:text-slate-400 text-lg max-w-xl mx-auto">
+            Built for professionals who want to look great and save time.
+          </p>
+        </div>
+
+        <div className="flex flex-col lg:flex-row gap-8 items-start">
+          <div className="flex flex-col gap-2 lg:w-64 shrink-0 w-full">
+            {SCREENSHOTS.map((s, i) => (
+              <button
+                key={s.title}
+                type="button"
+                onClick={() => handleSelect(i)}
+                className={`text-left px-4 py-3 rounded-xl border transition-all ${
+                  active === i
+                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-indigo-900/30'
+                    : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300 hover:border-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'
+                }`}
+              >
+                <span
+                  className={`text-xs font-semibold uppercase tracking-wide block mb-0.5 ${
+                    active === i ? 'text-indigo-200' : 'text-gray-400 dark:text-slate-500'
+                  }`}
+                >
+                  {s.tag}
+                </span>
+                <span className="text-sm font-semibold">
+                  {s.emoji} {s.title}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div className="flex-1 w-full">
+            <div
+              className={`transition-all duration-300 ${
+                animating ? 'opacity-0 translate-y-3' : 'opacity-100 translate-y-0'
+              }`}
+            >
+              <div className="mb-4">
+                <span
+                  className={`inline-block px-3 py-1 bg-gradient-to-r ${current.color} text-white text-xs font-bold rounded-full mb-2`}
+                >
+                  {current.tag}
+                </span>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">{current.title}</h3>
+                <p className="text-gray-500 dark:text-slate-400 text-sm leading-relaxed">{current.desc}</p>
+              </div>
+
+              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-slate-700 overflow-hidden">
+                <div className="bg-gray-100 dark:bg-slate-700 px-4 py-2.5 flex items-center gap-2 border-b border-gray-200 dark:border-slate-600">
+                  <div className="flex gap-1.5">
+                    <div className="w-3 h-3 rounded-full bg-red-400" />
+                    <div className="w-3 h-3 rounded-full bg-yellow-400" />
+                    <div className="w-3 h-3 rounded-full bg-green-400" />
+                  </div>
+                  <div className="flex-1 bg-white dark:bg-slate-900 rounded-md px-3 py-1 text-xs text-gray-400 dark:text-slate-500 font-mono">
+                    pinonit.com
+                  </div>
+                </div>
+
+                <div className="relative min-h-64">
+                  <img
+                    src={current.image}
+                    alt={current.title}
+                    className="w-full object-cover object-top"
+                    onError={(e) => {
+                      const img = e.target as HTMLImageElement;
+                      img.style.display = 'none';
+                      const fallback = img.nextElementSibling as HTMLElement;
+                      if (fallback) fallback.style.display = 'flex';
+                    }}
+                  />
+                  <div
+                    className={`hidden bg-gradient-to-br ${current.color} min-h-72 flex-col items-center justify-center p-10 text-white`}
+                    style={{ display: 'none' }}
+                  >
+                    <div className="text-7xl mb-4">{current.emoji}</div>
+                    <h3 className="text-2xl font-bold mb-2 text-center">{current.title}</h3>
+                    <p className="text-white/80 text-center text-sm max-w-xs leading-relaxed">{current.desc}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-center gap-2 mt-5">
+                {SCREENSHOTS.map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => handleSelect(i)}
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      active === i ? 'bg-indigo-600 w-6' : 'bg-gray-300 dark:bg-slate-600 w-2 hover:bg-indigo-300'
+                    }`}
+                    aria-label={`Show screenshot ${i + 1}`}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function Landing() {
   const { user, loading } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -249,6 +440,8 @@ export function Landing() {
           </p>
         </div>
       </section>
+
+      <ScreenshotShowcase />
 
       {/* ── 2. PinOnIt vs Calendly — exclusive features ── */}
       <section id="features" className="py-20 bg-gradient-to-b from-indigo-950 to-indigo-900 scroll-mt-16">
