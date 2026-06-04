@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { PageChecklist } from '../components/PageChecklist';
 import type { MessageTemplate, ReminderRule, MessageLogEntry, Service } from '../lib/types';
 import { SUPPORTED_LANGUAGES, TEMPLATE_VARIABLES } from '../lib/types';
+import { formatErrorMessage } from '../lib/errors';
+import { toast } from '../components/Toast';
 import {
   Bell, Plus, Trash2, X, Check, Loader2, Mail, MessageSquare,
   Languages, Clock, ChevronDown, ChevronUp, Eye, Settings2,
@@ -140,9 +142,21 @@ function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
-  const { user, profile, subscription } = useAuth();
+export function RemindersPage({
+  embedded,
+  onOpenProfileTab,
+}: {
+  embedded?: boolean;
+  onOpenProfileTab?: () => void;
+} = {}) {
+  const navigate = useNavigate();
+  const { user, profile, subscription, refreshProfile } = useAuth();
   const isPro = (subscription?.plan ?? profile?.plan ?? 'free') === 'pro';
+
+  const goToProfileSettings = useCallback(() => {
+    onOpenProfileTab?.();
+    navigate('/dashboard/settings?tab=profile');
+  }, [navigate, onOpenProfileTab]);
 
   // Contact channels (profiles.phone / whatsapp_number)
   const [contactPhone, setContactPhone] = useState('');
@@ -327,12 +341,22 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
   const handleSaveContact = async () => {
     if (!profile) return;
     setSavingContact(true);
-    await supabase.from('profiles').update({
-      phone: normalizePhoneE164(contactPhone) || null,
-      whatsapp_number: normalizePhoneE164(contactWhatsapp) || null,
-    }).eq('id', profile.id);
-    setSavingContact(false);
-    setEditingContact(false);
+    try {
+      const phoneE164 = normalizePhoneE164(contactPhone.trim());
+      const whatsappE164 = normalizePhoneE164(contactWhatsapp.trim()) || phoneE164;
+      const { error } = await supabase.from('profiles').update({
+        phone: phoneE164 || null,
+        whatsapp_number: whatsappE164 || null,
+      }).eq('id', profile.id);
+      if (error) throw error;
+      await refreshProfile();
+      setEditingContact(false);
+    } catch (err) {
+      console.error('Failed to save contact channels:', err);
+      toast.error(`Failed to save: ${formatErrorMessage(err)}`);
+    } finally {
+      setSavingContact(false);
+    }
   };
 
   const isSlotChannelActive = (slotKey: string, channel: Channel): boolean => {
@@ -614,6 +638,10 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
             </p>
             <Link
               to="/dashboard/settings?tab=profile"
+              onClick={(e) => {
+                e.preventDefault();
+                goToProfileSettings();
+              }}
               className="inline-flex items-center gap-1 mt-1.5 text-sm font-semibold text-amber-700 dark:text-amber-300 hover:underline"
             >
               Add phone number →
@@ -1150,7 +1178,14 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
               { label: 'SMS', icon: Smartphone, value: contactPhone, placeholder: 'Add phone to enable SMS' },
               { label: 'WhatsApp', icon: MessageSquare, value: contactWhatsapp || (effectiveWhatsapp && !contactWhatsapp ? blurFormatPhone(effectiveWhatsapp) : ''), placeholder: 'Add number to enable WhatsApp' },
             ].map(({ label, icon: Icon, value, placeholder }) => (
-              <div key={label} className="flex items-center gap-3 px-5 py-3">
+              <div
+                key={label}
+                role={!value ? 'button' : undefined}
+                tabIndex={!value ? 0 : undefined}
+                onClick={!value ? () => setEditingContact(true) : undefined}
+                onKeyDown={!value ? (e) => { if (e.key === 'Enter' || e.key === ' ') setEditingContact(true); } : undefined}
+                className={`flex items-center gap-3 px-5 py-3 ${!value ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors' : ''}`}
+              >
                 <Icon className="h-4 w-4 text-slate-400 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</span>
@@ -1586,7 +1621,14 @@ export function RemindersPage({ embedded }: { embedded?: boolean } = {}) {
                     )}
                     <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                       Uses your profile phone number.{' '}
-                      <Link to="/dashboard/settings?tab=profile" className="font-medium text-brand-500 hover:underline">
+                      <Link
+                        to="/dashboard/settings?tab=profile"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          goToProfileSettings();
+                        }}
+                        className="font-medium text-brand-500 hover:underline"
+                      >
                         {contactPhone ? 'Update in Settings → Profile' : 'Add phone number →'}
                       </Link>
                     </p>

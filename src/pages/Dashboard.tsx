@@ -1061,6 +1061,33 @@ export function Dashboard() {
     </Link>
   );
 
+  const renderAccountBar = (opts?: { compact?: boolean }) => (
+    <div className={`flex items-center gap-2 ${opts?.compact ? '' : 'gap-2.5'}`}>
+      <div className="h-8 w-8 bg-gray-200 dark:bg-slate-700 rounded-full flex items-center justify-center text-xs font-bold text-gray-700 dark:text-white shrink-0">
+        {initials}
+      </div>
+      {!opts?.compact && (
+        <>
+          <div className="hidden sm:block min-w-0 max-w-[140px] lg:max-w-[180px]">
+            <p className="text-sm font-medium truncate leading-tight">{displayName || 'User'}</p>
+            <p className="text-xs text-gray-400 dark:text-slate-500 truncate">{displayEmail}</p>
+          </div>
+          <span className="hidden sm:inline shrink-0 text-xs px-2 py-0.5 bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400 rounded-full font-medium border border-brand-100 dark:border-brand-500/20">
+            {planName.charAt(0).toUpperCase() + planName.slice(1)}
+          </span>
+        </>
+      )}
+      <div className="flex items-center gap-0.5">
+        <button onClick={toggleTheme} className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors rounded-lg" title="Toggle theme">
+          {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </button>
+        <button onClick={() => setShowLogoutConfirm(true)} className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors rounded-lg" title="Sign out">
+          <LogOut className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-950 text-gray-900 dark:text-white flex transition-colors">
 
@@ -1094,35 +1121,9 @@ export function Dashboard() {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-2 space-y-0.5 overflow-y-auto">
+        <nav className="flex-1 px-2 pb-4 space-y-0.5 overflow-y-auto">
           {mainNavItems.map((item) => renderNavLink(item, { collapsed: sidebarCollapsed }))}
         </nav>
-
-        {/* Bottom section */}
-        <div className="border-t border-gray-200 dark:border-slate-800 p-3 space-y-2">
-          {!sidebarCollapsed && (
-            <div className="flex items-center gap-2.5 px-2 py-1.5">
-              <div className="h-8 w-8 bg-gray-200 dark:bg-slate-700 rounded-full flex items-center justify-center text-xs font-bold text-gray-700 dark:text-white shrink-0">
-                {initials}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate leading-tight">{displayName || 'User'}</p>
-                <p className="text-xs text-gray-400 dark:text-slate-500 truncate">{displayEmail}</p>
-              </div>
-              <span className="shrink-0 text-xs px-2 py-0.5 bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400 rounded-full font-medium border border-brand-100 dark:border-brand-500/20">
-                {planName.charAt(0).toUpperCase() + planName.slice(1)}
-              </span>
-            </div>
-          )}
-          <div className={`flex items-center gap-1 ${sidebarCollapsed ? 'flex-col' : 'px-2'}`}>
-            <button onClick={toggleTheme} className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors rounded-lg" title="Toggle theme">
-              {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </button>
-            <button onClick={() => setShowLogoutConfirm(true)} className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors rounded-lg" title="Sign out">
-              <LogOut className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
       </aside>
 
       {/* ── Mobile sidebar overlay ── */}
@@ -1147,34 +1148,20 @@ export function Dashboard() {
                 Create
               </button>
             </div>
-            <nav className="flex-1 px-2 space-y-0.5 overflow-y-auto">
+            <nav className="flex-1 px-2 pb-4 space-y-0.5 overflow-y-auto">
               {mainNavItems.map((item) => renderNavLink(item, { onNavigate: () => setMobileMenuOpen(false) }))}
             </nav>
-            <div className="border-t border-gray-200 dark:border-slate-800 p-4">
-              <div className="flex items-center gap-2.5 mb-3">
-                <div className="h-8 w-8 bg-gray-200 dark:bg-slate-700 rounded-full flex items-center justify-center text-xs font-bold">{initials}</div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{displayName || 'User'}</p>
-                  <p className="text-xs text-gray-400 truncate">{displayEmail}</p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={toggleTheme} className="flex-1 flex items-center justify-center gap-2 py-2 text-xs text-gray-500 hover:text-gray-900 border border-gray-200 rounded-lg transition-colors">
-                  {theme === 'dark' ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
-                  {theme === 'dark' ? 'Light' : 'Dark'}
-                </button>
-                <button onClick={() => setShowLogoutConfirm(true)} className="flex-1 flex items-center justify-center gap-2 py-2 text-xs text-gray-500 hover:text-red-600 border border-gray-200 rounded-lg transition-colors">
-                  <LogOut className="h-3.5 w-3.5" />
-                  Sign out
-                </button>
-              </div>
-            </div>
           </aside>
         </div>
       )}
 
       {/* ── Main content ── */}
       <div className="flex-1 min-w-0 flex flex-col">
+
+        {/* Desktop account bar — upper right */}
+        <header className="hidden md:flex sticky top-0 z-40 border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-2.5 items-center justify-end shrink-0">
+          {renderAccountBar()}
+        </header>
 
         {/* Mobile top bar */}
         <header className="md:hidden border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-950 sticky top-0 z-40 px-4 h-14 flex items-center justify-between">
@@ -1184,9 +1171,7 @@ export function Dashboard() {
           <a href="https://pinonit.com" target="_blank" rel="noopener noreferrer">
             <img src="/pinonit_logo.png" alt="Pin on It" className="h-8 w-auto" />
           </a>
-          <div className="h-8 w-8 bg-gray-200 dark:bg-slate-700 rounded-full flex items-center justify-center text-xs font-bold text-gray-700 dark:text-white">
-            {initials}
-          </div>
+          {renderAccountBar({ compact: true })}
         </header>
 
         {/* Dashboard home */}

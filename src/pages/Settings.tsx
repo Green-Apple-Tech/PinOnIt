@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { TIMEZONES } from '../lib/types';
@@ -7,6 +7,7 @@ import type { EmergencyContact, Profile } from '../lib/types';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import { resolveDefaultReminderChannel, type ReminderChannelPreference } from '../lib/reminderChannels';
 import { DEFAULT_TERMS_TEXT } from '../lib/terms';
+import { formatErrorMessage } from '../lib/errors';
 import {
   Save, Loader2, Copy, Check, Code, Palette, ExternalLink, Upload, X,
   ImagePlus, CheckCircle2, AlertCircle, Link2, QrCode, Users, Gift,
@@ -363,6 +364,7 @@ function IntegrationsTab({ userId }: { userId: string | undefined }) {
 export function SettingsPage() {
   const { user, profile, refreshProfile } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Read ?tab= query param to allow deep-linking from redirects
   const initialSection = (): SettingsSection => {
@@ -508,6 +510,19 @@ export function SettingsPage() {
     const email = profile?.email ?? user?.email ?? '';
     if (email) setNewEmail(email);
   }, [profile?.email, user?.email]);
+
+  const openProfileTab = useCallback(() => {
+    setSection('general');
+    setTab('profile');
+    navigate('/dashboard/settings?tab=profile', { replace: true });
+  }, [navigate]);
+
+  const openSettingsSection = useCallback((nextSection: SettingsSection, nextTab: SettingsTab = 'profile') => {
+    setSection(nextSection);
+    if (nextSection === 'general') setTab(nextTab);
+    const tabParam = nextSection === 'general' ? nextTab : nextSection;
+    navigate(`/dashboard/settings?tab=${tabParam}`, { replace: true });
+  }, [navigate]);
 
   const handleAddEmergencyContact = async () => {
     if (!user || !newContactLabel.trim() || !newContactPhone.trim()) return;
@@ -699,22 +714,23 @@ export function SettingsPage() {
       const whatsappE164 =
         normalizePhoneE164(notificationWhatsapp.trim()) || phoneE164;
 
+      const payload = {
+        full_name: fullName.trim(),
+        bio: bio.trim(),
+        timezone,
+        show_wizard_button: showWizardButton,
+        session_timeout_minutes: sessionTimeoutMinutes,
+        phone: phoneE164 || null,
+        whatsapp_number: whatsappE164 || null,
+        default_reminder_channel: defaultReminderChannel,
+      };
+
       const { data, error } = await supabase
         .from('profiles')
-        .update({
-          full_name: fullName.trim(),
-          bio: bio.trim(),
-          timezone,
-          brand_color: brandColor,
-          show_wizard_button: showWizardButton,
-          session_timeout_minutes: sessionTimeoutMinutes,
-          phone: phoneE164 || null,
-          whatsapp_number: whatsappE164 || null,
-          default_reminder_channel: defaultReminderChannel,
-        })
+        .update(payload)
         .eq('id', profile.id)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
 
@@ -730,8 +746,7 @@ export function SettingsPage() {
       setTimeout(() => setSaved(false), 2000);
     } catch (err) {
       console.error('Failed to save settings:', err);
-      const message = err instanceof Error ? err.message : String(err);
-      toast.error(`Failed to save settings: ${message}`);
+      toast.error(`Failed to save settings: ${formatErrorMessage(err)}`);
     } finally {
       setSaving(false);
     }
@@ -746,7 +761,7 @@ export function SettingsPage() {
       if (error) throw error;
       toast.success('Confirmation email sent to new address');
     } catch (err) {
-      toast.error(`Failed to update email: ${err instanceof Error ? err.message : String(err)}`);
+      toast.error(`Failed to update email: ${formatErrorMessage(err)}`);
     } finally {
       setUpdatingEmail(false);
     }
@@ -794,7 +809,7 @@ export function SettingsPage() {
         ] as { key: SettingsSection; label: string }[]).map((s) => (
           <button
             key={s.key}
-            onClick={() => setSection(s.key)}
+            onClick={() => openSettingsSection(s.key, tab)}
             className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap ${
               section === s.key
                 ? 'border-[#5864C6] text-[#5864C6]'
@@ -810,7 +825,7 @@ export function SettingsPage() {
       {section === 'availability' && <AvailabilityPage embedded />}
 
       {/* Reminders & Messages section */}
-      {section === 'reminders' && <RemindersPage embedded />}
+      {section === 'reminders' && <RemindersPage embedded onOpenProfileTab={openProfileTab} />}
 
       {/* Analytics section */}
       {section === 'analytics' && <AnalyticsPage embedded />}
