@@ -406,10 +406,12 @@ export function SettingsPage() {
   // Notifications (profile phone + default reminder channel)
   const [notificationPhone, setNotificationPhone] = useState('');
   const [notificationWhatsapp, setNotificationWhatsapp] = useState('');
-  const [defaultReminderChannel, setDefaultReminderChannel] = useState<ReminderChannelPreference>('whatsapp');
+  const [defaultReminderChannel, setDefaultReminderChannel] = useState<ReminderChannelPreference>(
+    resolveDefaultReminderChannel(profile?.default_reminder_channel),
+  );
 
   // Voice reminders
-  const [voiceReminderEnabled, setVoiceReminderEnabled] = useState(profile?.voice_reminder_enabled ?? false);
+  const [voiceReminderEnabled, setVoiceReminderEnabled] = useState(profile?.voice_reminder_enabled ?? true);
   const defaultVoiceScript = 'Hi {{host_name}}, reminder: you have a {{service_name}} with {{guest_name}} scheduled for {{date}} at {{time}}. This is your PinOnIt reminder.';
   const [voiceMessageTemplate, setVoiceMessageTemplate] = useState(profile?.voice_message_template ?? '');
   const [savingVoice, setSavingVoice] = useState(false);
@@ -503,8 +505,9 @@ export function SettingsPage() {
       const storedWhatsapp = profile.whatsapp_number ?? '';
       setNotificationWhatsapp(storedWhatsapp ? blurFormatPhone(storedWhatsapp) : '');
       setDefaultReminderChannel(resolveDefaultReminderChannel(profile.default_reminder_channel));
+      setVoiceReminderEnabled(profile.voice_reminder_enabled ?? true);
     }
-  }, [profile?.id, profile?.session_timeout_minutes, profile?.phone, profile?.whatsapp_number, profile?.default_reminder_channel]);
+  }, [profile?.id, profile?.session_timeout_minutes, profile?.phone, profile?.whatsapp_number, profile?.default_reminder_channel, profile?.voice_reminder_enabled]);
 
   useEffect(() => {
     const email = profile?.email ?? user?.email ?? '';
@@ -723,6 +726,7 @@ export function SettingsPage() {
         phone: phoneE164 || null,
         whatsapp_number: whatsappE164 || null,
         default_reminder_channel: defaultReminderChannel,
+        voice_reminder_enabled: voiceReminderEnabled,
       };
 
       const { data, error } = await supabase

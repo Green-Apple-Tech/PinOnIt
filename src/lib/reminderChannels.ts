@@ -1,6 +1,6 @@
 export type ReminderChannelPreference = 'email' | 'sms' | 'whatsapp' | 'voice';
 
-export const DEFAULT_REMINDER_CHANNEL: ReminderChannelPreference = 'whatsapp';
+export const DEFAULT_REMINDER_CHANNEL: ReminderChannelPreference = 'email';
 
 export function resolveDefaultReminderChannel(
   value: string | null | undefined

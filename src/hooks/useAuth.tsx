@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback, type React
 import { supabase } from '../lib/supabase';
 import { clearClientOnboardingState } from '../lib/onboardingState';
 import { readProfileCache, writeProfileCache, clearProfileCache } from '../lib/profileCache';
+import { allocateUniqueSlug, slugFromEmail } from '../lib/profileSlug';
 import type { User } from '@supabase/supabase-js';
 import type { Profile, Subscription } from '../lib/types';
 
@@ -40,13 +41,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .maybeSingle();
 
     if (data) {
-      // Backfill email / full_name from the auth session if the profile row is missing them.
-      // This happens with Microsoft OAuth when the provider doesn't return email in the
-      // standard claim and the trigger stored a null/empty value.
-      const patch: Record<string, string> = {};
+      // Backfill missing profile fields after signup (OAuth gaps, pre-migration accounts).
+      const patch: Record<string, string | boolean> = {};
       if (!data.email && authUser?.email) patch.email = authUser.email;
       if (!data.full_name && authUser?.user_metadata?.full_name) patch.full_name = authUser.user_metadata.full_name;
       if (!data.full_name && authUser?.user_metadata?.name) patch.full_name = authUser.user_metadata.name;
+
+      const emailForSlug = authUser?.email ?? data.email;
+      if (!data.slug && emailForSlug) {
+        patch.slug = await allocateUniqueSlug(slugFromEmail(emailForSlug), userId);
+      }
 
       if (Object.keys(patch).length > 0) {
         await supabase.from('profiles').update(patch).eq('id', userId);
@@ -55,9 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         writeProfileCache(merged);
         return;
       }
-    }
 
-    if (data) {
       setProfile(data);
       writeProfileCache(data);
     } else {
