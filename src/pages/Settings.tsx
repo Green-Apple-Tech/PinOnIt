@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { TIMEZONES } from '../lib/types';
-import type { EmergencyContact } from '../lib/types';
+import type { EmergencyContact, Profile } from '../lib/types';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import { resolveDefaultReminderChannel, type ReminderChannelPreference } from '../lib/reminderChannels';
 import { DEFAULT_TERMS_TEXT } from '../lib/terms';
@@ -423,6 +423,8 @@ export function SettingsPage() {
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [newEmail, setNewEmail] = useState(profile?.email ?? user?.email ?? '');
+  const [updatingEmail, setUpdatingEmail] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [showQR, setShowQR] = useState(false);
   const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle');
@@ -490,7 +492,7 @@ export function SettingsPage() {
     }
   }, [location.search]);
 
-  // Sync notification/session fields whenever profile changes (safe — not edited in-page before save)
+  // Sync notification/session fields when profile loads or after save refreshes profile
   useEffect(() => {
     if (profile) {
       setSessionTimeoutMinutes(profile.session_timeout_minutes ?? null);
@@ -500,7 +502,12 @@ export function SettingsPage() {
       setNotificationWhatsapp(storedWhatsapp ? blurFormatPhone(storedWhatsapp) : '');
       setDefaultReminderChannel(resolveDefaultReminderChannel(profile.default_reminder_channel));
     }
-  }, [profile?.session_timeout_minutes, profile?.phone, profile?.whatsapp_number, profile?.default_reminder_channel]);
+  }, [profile?.id, profile?.session_timeout_minutes, profile?.phone, profile?.whatsapp_number, profile?.default_reminder_channel]);
+
+  useEffect(() => {
+    const email = profile?.email ?? user?.email ?? '';
+    if (email) setNewEmail(email);
+  }, [profile?.email, user?.email]);
 
   const handleAddEmergencyContact = async () => {
     if (!user || !newContactLabel.trim() || !newContactPhone.trim()) return;
@@ -688,22 +695,34 @@ export function SettingsPage() {
     setSaving(true);
     setSaved(false);
     try {
-      const { error } = await supabase
+      const phoneE164 = normalizePhoneE164(notificationPhone.trim());
+      const whatsappE164 =
+        normalizePhoneE164(notificationWhatsapp.trim()) || phoneE164;
+
+      const { data, error } = await supabase
         .from('profiles')
         .update({
-          full_name: fullName,
-          bio,
+          full_name: fullName.trim(),
+          bio: bio.trim(),
           timezone,
           brand_color: brandColor,
           show_wizard_button: showWizardButton,
           session_timeout_minutes: sessionTimeoutMinutes,
-          phone: normalizePhoneE164(notificationPhone) || null,
-          whatsapp_number: normalizePhoneE164(notificationWhatsapp) || null,
+          phone: phoneE164 || null,
+          whatsapp_number: whatsappE164 || null,
           default_reminder_channel: defaultReminderChannel,
         })
-        .eq('id', user.id);
+        .eq('id', profile.id)
+        .select()
+        .single();
 
       if (error) throw error;
+
+      if (data) {
+        writeProfileCache(data as Profile);
+        setNotificationPhone(data.phone ? blurFormatPhone(data.phone) : '');
+        setNotificationWhatsapp(data.whatsapp_number ? blurFormatPhone(data.whatsapp_number) : '');
+      }
 
       toast.success('Settings saved!');
       await refreshProfile();
@@ -711,9 +730,25 @@ export function SettingsPage() {
       setTimeout(() => setSaved(false), 2000);
     } catch (err) {
       console.error('Failed to save settings:', err);
-      toast.error('Failed to save settings');
+      const message = err instanceof Error ? err.message : String(err);
+      toast.error(`Failed to save settings: ${message}`);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleUpdateEmail = async () => {
+    const trimmed = newEmail.trim();
+    if (!trimmed || trimmed === (profile?.email ?? user?.email ?? '')) return;
+    setUpdatingEmail(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ email: trimmed });
+      if (error) throw error;
+      toast.success('Confirmation email sent to new address');
+    } catch (err) {
+      toast.error(`Failed to update email: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setUpdatingEmail(false);
     }
   };
 
@@ -808,8 +843,23 @@ export function SettingsPage() {
           <h2 className="text-lg font-semibold">Profile</h2>
           <div>
             <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">Email</label>
-            <input type="email" value={profile?.email || user?.email || ''} disabled placeholder="No email on file"
-              className="w-full px-4 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-400 cursor-not-allowed" />
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                className="flex-1 px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
+              />
+              <button
+                type="button"
+                onClick={handleUpdateEmail}
+                disabled={newEmail.trim() === (profile?.email ?? user?.email ?? '') || updatingEmail}
+                className="px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg disabled:opacity-50 hover:bg-indigo-700 transition-colors shrink-0"
+              >
+                {updatingEmail ? 'Updating...' : 'Update'}
+              </button>
+            </div>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">A confirmation link will be sent to the new email address.</p>
           </div>
           <div>
             <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">Full name</label>
