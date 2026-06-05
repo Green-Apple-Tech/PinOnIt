@@ -832,30 +832,19 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
     setCalendlyConnecting(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      if (!token) {
+      if (!session) {
         setScrapeError('Please sign in again to connect Calendly.');
         setCalendlyConnecting(false);
         return;
       }
       await persistWizardPosition(STEPS.indexOf('welcome'));
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/calendly-auth`,
-        {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-          },
-        }
-      );
-      const json = await res.json() as { url?: string; error?: string };
-      if (!res.ok || json.error || !json.url) {
-        setScrapeError(json.error ?? 'Could not start Calendly connection.');
+      const { data, error } = await supabase.functions.invoke<{ url?: string; error?: string }>('calendly-auth');
+      if (error || data?.error || !data?.url) {
+        setScrapeError(data?.error ?? error?.message ?? 'Could not start Calendly connection.');
         setCalendlyConnecting(false);
         return;
       }
-      window.location.href = json.url;
+      window.location.href = data.url;
     } catch (e) {
       setScrapeError(String(e));
       setCalendlyConnecting(false);
