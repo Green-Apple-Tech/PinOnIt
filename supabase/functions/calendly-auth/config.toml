@@ -1,0 +1,2 @@
+# Browser OAuth starts via window.location (?token=) cannot send Authorization headers.
+verify_jwt = false

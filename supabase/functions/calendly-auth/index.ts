@@ -30,7 +30,12 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const authHeader = req.headers.get("Authorization") ?? "";
+    const url = new URL(req.url);
+    const queryToken = url.searchParams.get("token");
+    const authHeader = queryToken
+      ? `Bearer ${queryToken}`
+      : (req.headers.get("Authorization") ?? "");
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
@@ -61,6 +66,15 @@ Deno.serve(async (req: Request) => {
 
     const oauthUrl = `${CALENDLY_AUTH_URL}?${params}`;
 
+    // Legacy frontend: direct browser navigation with ?token= (no Authorization header).
+    if (queryToken) {
+      return new Response(null, {
+        status: 302,
+        headers: { ...corsHeaders, Location: oauthUrl },
+      });
+    }
+
+    // Current frontend: supabase.functions.invoke with Authorization header.
     return new Response(JSON.stringify({ url: oauthUrl }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
