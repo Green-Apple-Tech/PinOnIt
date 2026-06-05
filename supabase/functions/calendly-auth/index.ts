@@ -30,11 +30,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const url = new URL(req.url);
-    const queryToken = url.searchParams.get("token");
-    const authHeader = queryToken
-      ? `Bearer ${queryToken}`
-      : (req.headers.get("Authorization") ?? "");
+    const authHeader = req.headers.get("Authorization") ?? "";
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
@@ -64,13 +60,6 @@ Deno.serve(async (req: Request) => {
     });
 
     const oauthUrl = `${CALENDLY_AUTH_URL}?${params}`;
-
-    if (queryToken) {
-      return new Response(null, {
-        status: 302,
-        headers: { ...corsHeaders, Location: oauthUrl },
-      });
-    }
 
     return new Response(JSON.stringify({ url: oauthUrl }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -348,14 +348,36 @@ export function Onboarding() {
 
   const handleConnectCalendly = async () => {
     setScrapeError('');
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
-    if (!token) {
-      setScrapeError('Please sign in again to connect Calendly.');
-      return;
-    }
     setCalendlyConnecting(true);
-    window.location.href = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/calendly-auth?token=${encodeURIComponent(token)}`;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        setScrapeError('Please sign in again to connect Calendly.');
+        setCalendlyConnecting(false);
+        return;
+      }
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/calendly-auth`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+        }
+      );
+      const json = await res.json() as { url?: string; error?: string };
+      if (!res.ok || json.error || !json.url) {
+        setScrapeError(json.error ?? 'Could not start Calendly connection.');
+        setCalendlyConnecting(false);
+        return;
+      }
+      window.location.href = json.url;
+    } catch (e) {
+      setScrapeError(String(e));
+      setCalendlyConnecting(false);
+    }
   };
 
   const handleScrape = async () => {

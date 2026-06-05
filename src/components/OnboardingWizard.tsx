@@ -829,15 +829,37 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
   // ── Calendly OAuth + scrape import ───────────────────────────────────────────
   const handleConnectCalendly = async () => {
     setScrapeError('');
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
-    if (!token) {
-      setScrapeError('Please sign in again to connect Calendly.');
-      return;
-    }
     setCalendlyConnecting(true);
-    await persistWizardPosition(STEPS.indexOf('welcome'));
-    window.location.href = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/calendly-auth?token=${encodeURIComponent(token)}`;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        setScrapeError('Please sign in again to connect Calendly.');
+        setCalendlyConnecting(false);
+        return;
+      }
+      await persistWizardPosition(STEPS.indexOf('welcome'));
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/calendly-auth`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+        }
+      );
+      const json = await res.json() as { url?: string; error?: string };
+      if (!res.ok || json.error || !json.url) {
+        setScrapeError(json.error ?? 'Could not start Calendly connection.');
+        setCalendlyConnecting(false);
+        return;
+      }
+      window.location.href = json.url;
+    } catch (e) {
+      setScrapeError(String(e));
+      setCalendlyConnecting(false);
+    }
   };
 
   const handleScrape = async () => {
@@ -1370,23 +1392,29 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                         type="button"
                         onClick={() => void handleConnectCalendly()}
                         disabled={calendlyConnecting}
-                        className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white border-2 border-blue-600 text-blue-600 font-semibold rounded-xl hover:bg-blue-50 disabled:opacity-50 transition-colors mb-4"
+                        className="w-full flex flex-col items-center gap-1 py-3 px-4 bg-white border-2 border-blue-600 text-blue-600 rounded-xl hover:bg-blue-50 disabled:opacity-50 transition-colors mb-4"
                       >
-                        {calendlyConnecting ? (
-                          <Loader2 className="h-5 w-5 animate-spin" />
-                        ) : (
-                          <img src="https://calendly.com/favicon.ico" alt="" className="w-5 h-5" />
-                        )}
-                        Connect Calendly Account (Recommended)
+                        <span className="flex items-center justify-center gap-3 font-semibold">
+                          {calendlyConnecting ? (
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                          ) : (
+                            <img src="https://calendly.com/favicon.ico" alt="" className="w-5 h-5" />
+                          )}
+                          Connect Calendly Account (Recommended)
+                        </span>
+                        <span className="text-xs font-normal text-blue-500 dark:text-blue-400">
+                          Imports your full schedule, availability, meeting links & profile — 2 minutes
+                        </span>
                       </button>
 
                       <div className="flex items-center gap-3 mb-4">
                         <div className="flex-1 h-px bg-gray-200 dark:bg-slate-700" />
-                        <span className="text-sm text-gray-400 dark:text-slate-500">or</span>
+                        <span className="text-base font-semibold text-gray-500 dark:text-slate-400">or</span>
                         <div className="flex-1 h-px bg-gray-200 dark:bg-slate-700" />
                       </div>
 
                       <p className="text-sm font-semibold text-blue-900 dark:text-blue-300">Paste your Calendly profile URL</p>
+                      <p className="text-xs text-blue-600/80 dark:text-blue-400/80 mb-1">Basic import — event names and durations only</p>
                       <p className="text-xs text-blue-600 dark:text-blue-400">e.g. https://calendly.com/yourname</p>
                       <div className="flex gap-2">
                         <input
