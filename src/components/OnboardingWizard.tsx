@@ -7,7 +7,7 @@ import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } fr
 import {
   ArrowRight, ArrowLeft, Check, X, Loader2, Copy, ExternalLink, Pencil,
   Calendar, Mail, Video, Globe, Zap, Sparkles,
-  Users, Gift, AlertCircle,
+  Users, Gift, AlertCircle, MapPin, Clock,
 } from 'lucide-react';
 import { ColorSwatchRow, BRAND_SWATCHES } from './ColorSwatchRow';
 import {
@@ -27,6 +27,67 @@ interface ConnectedCalendar {
   provider_account_email: string;
   calendar_name: string;
   sync_enabled: boolean;
+}
+
+interface CalendlyImportedEvent {
+  name: string;
+  duration_minutes: number;
+  description: string;
+  color: string;
+  selected: boolean;
+  location_type?: 'video' | 'in_person' | 'phone' | 'custom';
+  location?: string;
+  buffer_before_minutes?: number;
+  buffer_after_minutes?: number;
+  is_active?: boolean;
+  calendly_slug?: string | null;
+  calendly_event_type_uri?: string | null;
+}
+
+interface CalendlyImportedProfile {
+  full_name: string | null;
+  avatar_url: string | null;
+  timezone: string | null;
+  email: string | null;
+  slug: string | null;
+}
+
+interface CalendlyImportedAvailability {
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+}
+
+interface CalendlyImportResponse {
+  source?: 'oauth' | 'scrape';
+  oauth_recommended?: boolean;
+  oauth_banner?: string;
+  error?: string;
+  username?: string | null;
+  profile?: CalendlyImportedProfile | null;
+  availability?: CalendlyImportedAvailability[];
+  events?: CalendlyImportedEvent[];
+}
+
+const AVAIL_DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function formatAvailTime(time: string): string {
+  const [h, m] = time.split(':');
+  const hour = parseInt(h, 10);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const display = hour % 12 || 12;
+  return `${display}:${m} ${ampm}`;
+}
+
+function calendlyLocationLabel(type?: string, location?: string): string {
+  if (location?.trim()) return location.trim();
+  switch (type) {
+    case 'video': return 'Video call';
+    case 'in_person': return 'In person';
+    case 'phone': return 'Phone call';
+    case 'custom': return 'Custom location';
+    default: return '—';
+  }
 }
 
 interface WizardProps {
@@ -188,7 +249,14 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
   const [calendlyUrl, setCalendlyUrl] = useState('');
   const [scraping, setScraping] = useState(false);
   const [scrapeError, setScrapeError] = useState('');
-  const [scrapedEvents, setScrapedEvents] = useState<{ name: string; duration_minutes: number; description: string; color: string; selected: boolean }[]>([]);
+  const [scrapedEvents, setScrapedEvents] = useState<CalendlyImportedEvent[]>([]);
+  const [importedProfile, setImportedProfile] = useState<CalendlyImportedProfile | null>(null);
+  const [importedAvailability, setImportedAvailability] = useState<CalendlyImportedAvailability[]>([]);
+  const [importSource, setImportSource] = useState<'oauth' | 'scrape' | null>(null);
+  const [oauthBanner, setOauthBanner] = useState('');
+  const [calendlyConnected, setCalendlyConnected] = useState(false);
+  const [calendlyConnecting, setCalendlyConnecting] = useState(false);
+  const calendlyImportRan = useRef(false);
   const [trialActivated, setTrialActivated] = useState(false);
   const [showTrialOffer, setShowTrialOffer] = useState(false);
   const [trialAgreed, setTrialAgreed] = useState(false);
@@ -360,6 +428,179 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
   }, [user]);
 
   useEffect(() => { loadCalendars(); }, [loadCalendars]);
+
+  const applyCalendlyImportResponse = useCallback((data: CalendlyImportResponse) => {
+    if (data.error) {
+      setScrapeError(data.error);
+      return;
+    }
+    setImportSource(data.source ?? 'scrape');
+    setOauthBanner(data.oauth_banner ?? (data.oauth_recommended
+      ? 'Connect your Calendly account to import your full schedule, availability, and meeting links.'
+      : ''));
+    setImportedProfile(data.profile ?? null);
+    setImportedAvailability(data.availability ?? []);
+    if (data.profile?.timezone) setTimezone(data.profile.timezone);
+    if (data.profile?.slug && !username) setUsername(data.profile.slug);
+    if (data.username && !calendlyUrl) setCalendlyUrl(`https://calendly.com/${data.username}`);
+    setScrapedEvents((data.events ?? []).map(e => ({ ...e, selected: e.is_active !== false })));
+  }, [calendlyUrl, username]);
+
+  const activateCalendlyTrial = useCallback(async () => {
+    if (trialActivated || !user) return;
+    const trialEnd = new Date();
+    trialEnd.setDate(trialEnd.getDate() + 14);
+    await supabase.from('subscriptions').upsert({
+      user_id: user.id,
+      stripe_customer_id: `trial_${user.id}`,
+      plan: 'pro', status: 'trialing',
+      trial_ends_at: trialEnd.toISOString(),
+      trial_source: 'calendly_migration',
+    }, { onConflict: 'user_id' });
+    await supabase.from('profiles').update({ plan: 'pro' }).eq('id', user.id);
+    setTrialActivated(true);
+  }, [trialActivated, user]);
+
+  const saveCalendlyImport = useCallback(async (selected: CalendlyImportedEvent[]) => {
+    if (!user) return;
+
+    if (importedProfile) {
+      const profileUpdate: Record<string, string | null> = {};
+      if (importedProfile.full_name) profileUpdate.full_name = importedProfile.full_name;
+      if (importedProfile.avatar_url) profileUpdate.avatar_url = importedProfile.avatar_url;
+      if (importedProfile.timezone) profileUpdate.timezone = importedProfile.timezone;
+      if (Object.keys(profileUpdate).length) {
+        await supabase.from('profiles').update(profileUpdate).eq('id', user.id);
+        if (profileUpdate.timezone) setTimezone(profileUpdate.timezone);
+      }
+    }
+
+    if (importedAvailability.length > 0) {
+      await supabase.from('availability').delete().eq('host_id', user.id);
+      for (const slot of importedAvailability) {
+        await supabase.from('availability').insert({
+          host_id: user.id,
+          day_of_week: slot.day_of_week,
+          start_time: slot.start_time,
+          end_time: slot.end_time,
+          is_active: true,
+        });
+      }
+    }
+
+    if (selected.length > 0) {
+      await supabase.from('services').delete().eq('host_id', user.id);
+      for (const svc of selected) {
+        await supabase.from('services').insert({
+          host_id: user.id,
+          name: svc.name,
+          duration_minutes: svc.duration_minutes,
+          description: svc.description || '',
+          price_cents: 0,
+          location_type: svc.location_type ?? 'video',
+          location: svc.location ?? '',
+          buffer_before_minutes: svc.buffer_before_minutes ?? 0,
+          buffer_after_minutes: svc.buffer_after_minutes ?? 0,
+          is_active: svc.is_active !== false,
+          color: svc.color,
+          calendly_slug: svc.calendly_slug ?? null,
+          calendly_event_type_uri: svc.calendly_event_type_uri ?? null,
+        });
+      }
+    }
+  }, [user, importedProfile, importedAvailability]);
+
+  const runCalendlyImport = useCallback(async (opts?: { url?: string; oauthOnly?: boolean }) => {
+    setScraping(true);
+    setScrapeError('');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        Apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      };
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      const body: Record<string, string> = {};
+      if (opts?.oauthOnly) {
+        // OAuth path — token lookup on server; url optional
+      } else if (opts?.url?.trim()) {
+        body.url = opts.url.trim();
+      } else if (calendlyUrl.trim()) {
+        body.url = calendlyUrl.trim();
+      }
+
+      const resp = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scrape-calendly`,
+        { method: 'POST', headers, body: JSON.stringify(body) }
+      );
+      const data = await resp.json() as CalendlyImportResponse;
+      if (data.source === 'oauth') {
+        setCalendlyConnected(true);
+        setOauthBanner('');
+      }
+      applyCalendlyImportResponse(data);
+      await activateCalendlyTrial();
+    } catch (e) {
+      setScrapeError((e as Error).message ?? 'Failed to reach Calendly.');
+    }
+    setScraping(false);
+  }, [activateCalendlyTrial, applyCalendlyImportResponse, calendlyUrl]);
+
+  const checkCalendlyConnection = useCallback(async () => {
+    if (!user) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+      const resp = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scrape-calendly`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+            Apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({ action: 'status' }),
+        }
+      );
+      const data = await resp.json() as { connected?: boolean; username?: string | null };
+      setCalendlyConnected(!!data.connected);
+      if (data.username && !calendlyUrl) setCalendlyUrl(`https://calendly.com/${data.username}`);
+    } catch {
+      // ignore
+    }
+  }, [user, calendlyUrl]);
+
+  useEffect(() => {
+    if (fromCalendly) void checkCalendlyConnection();
+  }, [fromCalendly, checkCalendlyConnection]);
+
+  useEffect(() => {
+    if (!user || calendlyImportRan.current) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('calendly_connected') !== '1') return;
+    calendlyImportRan.current = true;
+    setFromCalendly(true);
+    setCalendlyConnected(true);
+    void runCalendlyImport({ oauthOnly: true });
+    const url = new URL(window.location.href);
+    url.searchParams.delete('calendly_connected');
+    url.searchParams.delete('calendly_error');
+    window.history.replaceState({}, '', url.toString());
+  }, [user, runCalendlyImport]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const err = params.get('calendly_error');
+    if (!err) return;
+    setScrapeError(`Calendly connection failed: ${err}`);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('calendly_error');
+    window.history.replaceState({}, '', url.toString());
+  }, []);
 
   // Pre-fill from onboarding bot URL params or saved answers
   useEffect(() => {
@@ -585,40 +826,55 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
     }
   };
 
-  // ── Calendly scrape ──────────────────────────────────────────────────────────
-  const handleScrape = async () => {
-    if (!calendlyUrl.trim()) return;
-    setScraping(true);
+  // ── Calendly OAuth + scrape import ───────────────────────────────────────────
+  const handleConnectCalendly = async () => {
+    setCalendlyConnecting(true);
     setScrapeError('');
     try {
-      const resp = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scrape-calendly`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Apikey: import.meta.env.VITE_SUPABASE_ANON_KEY },
-          body: JSON.stringify({ url: calendlyUrl.trim() }),
-        }
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token ?? '';
+      await persistWizardPosition(STEPS.indexOf('welcome'));
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/calendly-auth`,
+        { headers: { Authorization: `Bearer ${token}`, Apikey: import.meta.env.VITE_SUPABASE_ANON_KEY } }
       );
-      const data = await resp.json() as { error?: string; events?: { name: string; duration_minutes: number; description: string; color: string }[] };
-      if (data.error) { setScrapeError(data.error); setScraping(false); return; }
-      setScrapedEvents((data.events ?? []).map(e => ({ ...e, selected: true })));
-      if (!trialActivated && user) {
-        const trialEnd = new Date();
-        trialEnd.setDate(trialEnd.getDate() + 14);
-        await supabase.from('subscriptions').upsert({
-          user_id: user.id,
-          stripe_customer_id: `trial_${user.id}`,
-          plan: 'pro', status: 'trialing',
-          trial_ends_at: trialEnd.toISOString(),
-          trial_source: 'calendly_migration',
-        }, { onConflict: 'user_id' });
-        await supabase.from('profiles').update({ plan: 'pro' }).eq('id', user.id);
-        setTrialActivated(true);
+      const json = await res.json() as { url?: string; error?: string };
+      if (json.error || !json.url) {
+        setScrapeError(json.error ?? 'Could not start Calendly connection.');
+        setCalendlyConnecting(false);
+        return;
       }
+      window.location.href = json.url;
     } catch (e) {
-      setScrapeError((e as Error).message ?? 'Failed to reach Calendly.');
+      setScrapeError(String(e));
+      setCalendlyConnecting(false);
     }
-    setScraping(false);
+  };
+
+  const handleScrape = async () => {
+    if (!calendlyConnected && !calendlyUrl.trim()) return;
+    await runCalendlyImport({
+      oauthOnly: calendlyConnected,
+      url: calendlyUrl.trim() || undefined,
+    });
+  };
+
+  const handleCalendlyImportContinue = async () => {
+    if (!user) return;
+    setSaving(true);
+    try {
+      const selected = scrapedEvents.filter(e => e.selected);
+      if (selected.length || importedProfile || importedAvailability.length) {
+        await saveCalendlyImport(selected.length ? selected : scrapedEvents);
+      }
+      if (!isAlreadyPro) setShowTrialOffer(true);
+      else {
+        await saveStep(STEPS.indexOf('welcome') + 1);
+        goNext();
+      }
+    } finally {
+      setSaving(false);
+    }
   };
 
   // ── OAuth calendar connect — saves wizard position before redirect ────────────
@@ -733,21 +989,32 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
         // Delete existing placeholder/default services for this host
         await supabase.from('services').delete().eq('host_id', user.id);
         // Re-insert selected scraped services with calendar IDs applied
-        const { data: insertedSvcs } = await supabase.from('services').insert(
-          selected.map(svc => ({
+        for (const svc of selected) {
+          await supabase.from('services').insert({
             host_id: user.id,
             name: svc.name,
             duration_minutes: svc.duration_minutes,
             description: svc.description || '',
             price_cents: 0,
-            location_type: 'video',
-            location: '',
-            is_active: true,
+            location_type: svc.location_type ?? 'video',
+            location: svc.location ?? '',
+            buffer_before_minutes: svc.buffer_before_minutes ?? 0,
+            buffer_after_minutes: svc.buffer_after_minutes ?? 0,
+            is_active: svc.is_active !== false,
             color: svc.color,
+            calendly_slug: svc.calendly_slug ?? null,
+            calendly_event_type_uri: svc.calendly_event_type_uri ?? null,
             booking_calendar_ids: calIds,
-          }))
-        ).select();
-        const firstSvc = insertedSvcs?.[0];
+          });
+        }
+        const { data: firstSvc } = await supabase
+          .from('services')
+          .select('id')
+          .eq('host_id', user.id)
+          .eq('is_active', true)
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle();
         if (firstSvc) {
           setCreatedServiceId(firstSvc.id);
           const url = slug.trim()
@@ -980,78 +1247,212 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
               ))}
             </div>
 
-            {fromCalendly === true && (
-              <div className="mb-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
-                <p className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-2">Paste your Calendly profile URL</p>
-                <p className="text-xs text-blue-600 dark:text-blue-400 mb-3">e.g. https://calendly.com/yourname</p>
-                <div className="flex gap-2">
-                  <input
-                    value={calendlyUrl}
-                    onChange={e => setCalendlyUrl(e.target.value)}
-                    placeholder="https://calendly.com/yourname"
-                    className="flex-1 px-3 py-2 bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                  />
-                  <button
-                    onClick={handleScrape}
-                    disabled={scraping || !calendlyUrl.trim()}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-1.5"
-                  >
-                    {scraping ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
-                    Import
-                  </button>
-                </div>
-                {scrapeError && <p className="text-xs text-red-500 mt-2">{scrapeError}</p>}
-                {scrapedEvents.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    <p className="text-xs font-semibold text-blue-800 dark:text-blue-300">Found {scrapedEvents.length} event types:</p>
-                    {scrapedEvents.map((e, i) => (
-                      <label key={i} className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={e.selected}
-                          onChange={() => setScrapedEvents(prev => prev.map((ev, idx) => idx === i ? { ...ev, selected: !ev.selected } : ev))}
-                          className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-600"
-                        />
-                        <span className="text-sm text-slate-700 dark:text-slate-300">{e.name} ({e.duration_minutes}m)</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+            {fromCalendly === true && (() => {
+              const hasImportPreview =
+                !scraping &&
+                !scrapeError &&
+                (scrapedEvents.length > 0 || !!importedProfile || importedAvailability.length > 0);
+              const eventCount = scrapedEvents.length;
+              const hasAvailability = importedAvailability.length > 0;
+              const hasProfile = !!importedProfile;
 
-            <NavButtons
-              onNext={async () => {
-                if (fromCalendly === true && scrapedEvents.length > 0 && user) {
-                  const selected = scrapedEvents.filter(e => e.selected);
-                  if (selected.length) {
-                    for (const svc of selected) {
-                      await supabase.from('services').upsert({
-                        host_id: user.id,
-                        name: svc.name,
-                        duration_minutes: svc.duration_minutes,
-                        description: svc.description || '',
-                        price_cents: 0,
-                        location_type: 'custom',
-                        location: '',
-                        is_active: true,
-                        color: svc.color,
-                      }, { onConflict: 'host_id,name' });
-                    }
+              if (hasImportPreview) {
+                return (
+                  <div className="mb-4 space-y-5">
+                    {importedProfile && (
+                      <div className="flex items-center gap-4 p-4 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl">
+                        {importedProfile.avatar_url ? (
+                          <img
+                            src={importedProfile.avatar_url}
+                            alt=""
+                            className="h-16 w-16 rounded-full object-cover border-2 border-indigo-100 dark:border-indigo-900"
+                          />
+                        ) : (
+                          <div className="h-16 w-16 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-xl font-bold">
+                            {(importedProfile.full_name ?? '?').charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-lg font-bold text-slate-900 dark:text-white">
+                            {importedProfile.full_name ?? 'Your profile'}
+                          </p>
+                          {importedProfile.timezone && (
+                            <p className="text-sm text-slate-500 dark:text-slate-400">{importedProfile.timezone}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {eventCount > 0 && (
+                      <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden">
+                        <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white">Event types</p>
+                        </div>
+                        <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+                          {scrapedEvents.map((e, i) => (
+                            <li key={i} className="px-4 py-3 flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-medium text-slate-900 dark:text-white">{e.name}</p>
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                  <span className="inline-flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    {e.duration_minutes} min
+                                  </span>
+                                  <span className="inline-flex items-center gap-1">
+                                    <MapPin className="h-3 w-3" />
+                                    {calendlyLocationLabel(e.location_type, e.location)}
+                                  </span>
+                                </div>
+                              </div>
+                              <span
+                                className="h-3 w-3 rounded-full shrink-0 mt-1"
+                                style={{ backgroundColor: e.color || '#5864C6' }}
+                              />
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {hasAvailability && (
+                      <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden">
+                        <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white">Weekly availability</p>
+                        </div>
+                        <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+                          {[...importedAvailability]
+                            .sort((a, b) => a.day_of_week - b.day_of_week)
+                            .map((slot, i) => (
+                              <li key={i} className="px-4 py-2.5 flex items-center justify-between text-sm">
+                                <span className="font-medium text-slate-800 dark:text-slate-200">
+                                  {AVAIL_DAY_SHORT[slot.day_of_week]}
+                                </span>
+                                <span className="text-slate-500 dark:text-slate-400">
+                                  {formatAvailTime(slot.start_time)} – {formatAvailTime(slot.end_time)}
+                                </span>
+                              </li>
+                            ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 px-4 py-3 space-y-1.5">
+                      {eventCount > 0 && (
+                        <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
+                          ✓ {eventCount} event type{eventCount === 1 ? '' : 's'} imported
+                        </p>
+                      )}
+                      {hasAvailability && (
+                        <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
+                          ✓ Availability imported
+                        </p>
+                      )}
+                      {hasProfile && (
+                        <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
+                          ✓ Profile synced
+                        </p>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => void handleCalendlyImportContinue()}
+                      disabled={saving}
+                      className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-base font-bold rounded-xl shadow-lg shadow-indigo-200 dark:shadow-none transition-colors"
+                    >
+                      {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
+                      Looks good, continue
+                      <ArrowRight className="h-5 w-5" />
+                    </button>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="mb-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 space-y-3">
+                  {scraping ? (
+                    <div className="flex flex-col items-center justify-center gap-3 py-6">
+                      <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                      <p className="text-sm font-semibold text-blue-900 dark:text-blue-300">Importing from Calendly…</p>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const { data: { session } } = await supabase.auth.getSession();
+                          const token = session?.access_token;
+                          if (!token) {
+                            setScrapeError('Please sign in again to connect Calendly.');
+                            return;
+                          }
+                          await persistWizardPosition(STEPS.indexOf('welcome'));
+                          window.location.href = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/calendly-auth?token=${encodeURIComponent(token)}`;
+                        }}
+                        className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white border-2 border-blue-600 text-blue-600 font-semibold rounded-xl hover:bg-blue-50 transition-colors mb-4"
+                      >
+                        <img src="https://calendly.com/favicon.ico" alt="" className="w-5 h-5" />
+                        Connect Calendly Account (Recommended)
+                      </button>
+
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="flex-1 h-px bg-gray-200 dark:bg-slate-700" />
+                        <span className="text-sm text-gray-400 dark:text-slate-500">or</span>
+                        <div className="flex-1 h-px bg-gray-200 dark:bg-slate-700" />
+                      </div>
+
+                      <p className="text-sm font-semibold text-blue-900 dark:text-blue-300">Paste your Calendly profile URL</p>
+                      <p className="text-xs text-blue-600 dark:text-blue-400">e.g. https://calendly.com/yourname</p>
+                      <div className="flex gap-2">
+                        <input
+                          value={calendlyUrl}
+                          onChange={e => setCalendlyUrl(e.target.value)}
+                          placeholder="https://calendly.com/yourname"
+                          className="flex-1 px-3 py-2 bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => void handleScrape()}
+                          disabled={scraping || calendlyConnecting || (!calendlyConnected && !calendlyUrl.trim())}
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-1.5"
+                        >
+                          {scraping ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
+                          Import
+                        </button>
+                      </div>
+                      {oauthBanner && importSource === 'scrape' && (
+                        <div className="flex gap-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+                          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                          <span>{oauthBanner}</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {scrapeError && <p className="text-xs text-red-500">{scrapeError}</p>}
+                </div>
+              );
+            })()}
+
+            {!(
+              fromCalendly === true &&
+              !scraping &&
+              !scrapeError &&
+              (scrapedEvents.length > 0 || !!importedProfile || importedAvailability.length > 0)
+            ) && (
+              <NavButtons
+                onNext={async () => {
+                  if (fromCalendly === false) {
+                    if (!isAlreadyPro) { setShowTrialOffer(true); return; }
                   }
-                  if (!isAlreadyPro) setShowTrialOffer(true);
-                  else { await saveStep(STEPS.indexOf('welcome') + 1); goNext(); }
-                  return;
+                  await saveStep(STEPS.indexOf('welcome') + 1);
+                  goNext();
+                }}
+                nextLabel={
+                  fromCalendly === null ? 'Get Started' : fromCalendly ? 'Skip import' : 'Continue'
                 }
-                if (fromCalendly === false) {
-                  if (!isAlreadyPro) { setShowTrialOffer(true); return; }
-                }
-                await saveStep(STEPS.indexOf('welcome') + 1);
-                goNext();
-              }}
-              nextLabel={fromCalendly === null ? 'Get Started' : fromCalendly ? (scrapedEvents.length > 0 ? 'Continue' : 'Skip import') : 'Continue'}
-              showBack={false}
-            />
+                showBack={false}
+              />
+            )}
           </div>
         );
       }
