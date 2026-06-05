@@ -454,7 +454,7 @@ export function Landing() {
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
               Everything Calendly Has.
               <br />
-              <span className="text-indigo-400">Plus What They Don&apos;t.</span>
+              <span className="text-indigo-400">Plus What Calendly Doesn&apos;t.</span>
             </h2>
             <p className="text-indigo-200 text-lg max-w-2xl mx-auto">
               Calendly charges $20+/month and still can&apos;t do this. PinOnIt starts at $6/month.
