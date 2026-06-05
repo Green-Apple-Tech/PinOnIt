@@ -9,6 +9,7 @@ import {
   Check,
   Clock,
   CalendarDays,
+  Calendar,
   Sparkles,
   Loader2,
   AlertCircle,
@@ -256,6 +257,7 @@ export function Onboarding() {
   // Calendly path state
   const [calendlyStep, setCalendlyStep] = useState(0); // 0=url, 1=review, 2=calendar, 3=link, 4=success
   const [calendlyUrl, setCalendlyUrl] = useState('');
+  const [calendlyConnecting, setCalendlyConnecting] = useState(false);
   const [scraping, setScraping] = useState(false);
   const [scrapeError, setScrapeError] = useState('');
   const [scrapedEvents, setScrapedEvents] = useState<ScrapedEvent[]>([]);
@@ -342,7 +344,19 @@ export function Onboarding() {
     setSaving(false);
   }, [user, fullName, slug, timezone]);
 
-  // ── Calendly: scrape ──────────────────────────────────────────────────────
+  // ── Calendly: OAuth + scrape ───────────────────────────────────────────────
+
+  const handleConnectCalendly = async () => {
+    setScrapeError('');
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) {
+      setScrapeError('Please sign in again to connect Calendly.');
+      return;
+    }
+    setCalendlyConnecting(true);
+    window.location.href = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/calendly-auth?token=${encodeURIComponent(token)}`;
+  };
 
   const handleScrape = async () => {
     if (!calendlyUrl.trim()) return;
@@ -634,17 +648,39 @@ export function Onboarding() {
                 <p className="text-slate-500 dark:text-slate-400 text-sm">We'll pull in your event types so you don't have to rebuild from scratch.</p>
               </div>
               <TrialBanner />
-              <div className="space-y-3">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Your Calendly URL</label>
-                <input
-                  type="text"
-                  value={calendlyUrl}
-                  onChange={(e) => { setCalendlyUrl(e.target.value); setScrapeError(''); }}
-                  placeholder="calendly.com/yourname"
-                  autoFocus
-                  className={inputCls}
-                  onKeyDown={(e) => e.key === 'Enter' && handleScrape()}
-                />
+              <div className="space-y-4">
+                <button
+                  type="button"
+                  onClick={() => void handleConnectCalendly()}
+                  disabled={calendlyConnecting}
+                  className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white dark:bg-slate-900 border-2 border-[#006BFF] hover:bg-blue-50 dark:hover:bg-blue-950/20 disabled:opacity-50 text-[#006BFF] text-base font-bold rounded-2xl transition-colors shadow-sm"
+                >
+                  {calendlyConnecting ? (
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  ) : (
+                    <Calendar className="h-6 w-6" />
+                  )}
+                  Connect Calendly Account
+                </button>
+
+                <p className="text-center text-xs text-slate-400 dark:text-slate-500 tracking-widest">
+                  ── or ──
+                </p>
+
+                <div className="space-y-2">
+                  <label htmlFor="calendly-url-onboarding" className="block text-center text-xs font-medium text-slate-500 dark:text-slate-400">
+                    Paste your Calendly URL manually
+                  </label>
+                  <input
+                    id="calendly-url-onboarding"
+                    type="text"
+                    value={calendlyUrl}
+                    onChange={(e) => { setCalendlyUrl(e.target.value); setScrapeError(''); }}
+                    placeholder="https://calendly.com/yourname"
+                    className={inputCls}
+                    onKeyDown={(e) => e.key === 'Enter' && handleScrape()}
+                  />
+                </div>
                 {scrapeError && (
                   <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 rounded-xl text-sm text-red-700 dark:text-red-400">
                     <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" /> {scrapeError}
@@ -653,10 +689,10 @@ export function Onboarding() {
                 <button
                   onClick={handleScrape}
                   disabled={scraping || !calendlyUrl.trim()}
-                  className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors disabled:opacity-50 shadow-md shadow-blue-500/20"
+                  className="w-full flex items-center justify-center gap-2 py-3 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold rounded-xl transition-colors disabled:opacity-50"
                 >
-                  {scraping ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendlyLogo className="h-4 w-4" />}
-                  {scraping ? 'Importing your events...' : 'Import my events'}
+                  {scraping ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  {scraping ? 'Importing your events...' : 'Import from URL'}
                 </button>
               </div>
               <SkipLink />

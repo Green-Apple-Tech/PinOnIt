@@ -6,7 +6,7 @@ import {
   ArrowRight, Check,
   Sun, Moon, Menu, Zap, X, Link2,
   DollarSign, Users,
-  ChevronRight,
+  ChevronRight, Pause, Play,
 } from 'lucide-react';
 import { OnboardingBot } from '../components/OnboardingBot';
 
@@ -56,20 +56,20 @@ const COMP_ROWS: CompRow[] = [
   { feature: 'Pro / Paid plan',   pinonit: '$6/mo',       calendly: '$16/mo',       acuity: '$20/mo' },
   { feature: 'Referral earnings', pinonit: '$1/mo/user',  calendly: false,          acuity: false },
   { section: 'Event Types' },
-  { feature: 'Unlimited event types', pinonit: 'Pro+', calendly: 'Standard+', acuity: 'Emerging+' },
+  { feature: 'Unlimited event types', pinonit: 'Pro', calendly: 'Standard+', acuity: 'Emerging+' },
   { feature: 'One-tap confirm/cancel', pinonit: true, calendly: false, acuity: false },
   { section: 'Reminders' },
-  { feature: 'Email reminders',   pinonit: 'All plans', calendly: 'All plans', acuity: 'All plans' },
-  { feature: 'SMS reminders',     pinonit: 'All plans', calendly: 'Standard+', acuity: 'Emerging+' },
-  { feature: 'WhatsApp reminders',pinonit: 'All plans', calendly: false,       acuity: false },
+  { feature: 'Email reminders',   pinonit: 'Pro', calendly: 'All plans', acuity: 'All plans' },
+  { feature: 'SMS reminders',     pinonit: 'Pro', calendly: 'Standard+', acuity: 'Emerging+' },
+  { feature: 'WhatsApp reminders',pinonit: 'Pro', calendly: false,       acuity: false },
   { feature: 'Reminders for ANY calendar event', pinonit: true, calendly: false, acuity: false },
   { section: 'Calendar Sync' },
   { feature: 'Google Calendar',   pinonit: true,  calendly: true,  acuity: true },
   { feature: 'Outlook / Office 365', pinonit: true, calendly: true, acuity: true },
   { feature: 'Apple iCal (CalDAV)', pinonit: true, calendly: false, acuity: false },
   { section: 'Payments' },
-  { feature: 'Stripe payments',   pinonit: 'Pro+', calendly: 'Standard+', acuity: 'Emerging+' },
-  { feature: 'PayPal payments',   pinonit: 'Pro+', calendly: false, acuity: false },
+  { feature: 'Stripe payments',   pinonit: 'Pro', calendly: 'Standard+', acuity: 'Emerging+' },
+  { feature: 'PayPal payments',   pinonit: 'Pro', calendly: false, acuity: false },
   { section: 'Extras' },
   { feature: 'Email signature creator', pinonit: true, calendly: false, acuity: false },
   { feature: 'QR code booking',   pinonit: true, calendly: false, acuity: false },
@@ -183,25 +183,29 @@ const SCREENSHOTS = [
   },
 ];
 
+const SCREENSHOT_INTERVAL_MS = 5000;
+
 function ScreenshotShowcase() {
   const [active, setActive] = useState(0);
   const [animating, setAnimating] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
+  const [paused, setPaused] = useState(false);
 
   useEffect(() => {
     setImageFailed(false);
   }, [active]);
 
   useEffect(() => {
+    if (paused) return;
     const timer = setInterval(() => {
       setAnimating(true);
       setTimeout(() => {
         setActive((prev) => (prev + 1) % SCREENSHOTS.length);
         setAnimating(false);
       }, 300);
-    }, 4500);
+    }, SCREENSHOT_INTERVAL_MS);
     return () => clearInterval(timer);
-  }, []);
+  }, [paused]);
 
   const handleSelect = (i: number) => {
     if (i === active) return;
@@ -303,7 +307,17 @@ function ScreenshotShowcase() {
                 </div>
               </div>
 
-              <div className="flex justify-center gap-2 mt-5">
+              <div className="flex justify-center items-center gap-3 mt-5">
+                <button
+                  type="button"
+                  onClick={() => setPaused((p) => !p)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-300 text-xs font-medium hover:border-indigo-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                  aria-label={paused ? 'Resume slideshow' : 'Pause slideshow'}
+                  aria-pressed={paused}
+                >
+                  {paused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
+                  {paused ? 'Play' : 'Pause'}
+                </button>
                 {SCREENSHOTS.map((_, i) => (
                   <button
                     key={i}
@@ -424,7 +438,7 @@ export function Landing() {
         <div className="relative max-w-4xl mx-auto">
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[1.08] text-slate-900 dark:text-white mb-10 max-w-4xl mx-auto">
             A more powerful calendar scheduler —{' '}
-            <span className="text-brand-500">at half the price of Calendly.</span>
+            <span className="text-brand-500">at half the price.</span>
           </h1>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6">
@@ -713,8 +727,7 @@ export function Landing() {
             </div>
             <h2 className="text-3xl md:text-5xl font-black text-white leading-tight mb-4">
               Share PinOnIt.<br />
-              Get paid every month.<br />
-              <span className="text-indigo-500">Forever.</span>
+              Get paid every month.
             </h2>
             <p className="text-slate-400 text-lg max-w-xl mx-auto mb-2">
               Earn <strong className="text-white">$1/month</strong> for every person you refer to Pro — permanently.

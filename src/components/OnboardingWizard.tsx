@@ -828,27 +828,16 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
 
   // ── Calendly OAuth + scrape import ───────────────────────────────────────────
   const handleConnectCalendly = async () => {
-    setCalendlyConnecting(true);
     setScrapeError('');
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token ?? '';
-      await persistWizardPosition(STEPS.indexOf('welcome'));
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/calendly-auth`,
-        { headers: { Authorization: `Bearer ${token}`, Apikey: import.meta.env.VITE_SUPABASE_ANON_KEY } }
-      );
-      const json = await res.json() as { url?: string; error?: string };
-      if (json.error || !json.url) {
-        setScrapeError(json.error ?? 'Could not start Calendly connection.');
-        setCalendlyConnecting(false);
-        return;
-      }
-      window.location.href = json.url;
-    } catch (e) {
-      setScrapeError(String(e));
-      setCalendlyConnecting(false);
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) {
+      setScrapeError('Please sign in again to connect Calendly.');
+      return;
     }
+    setCalendlyConnecting(true);
+    await persistWizardPosition(STEPS.indexOf('welcome'));
+    window.location.href = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/calendly-auth?token=${encodeURIComponent(token)}`;
   };
 
   const handleScrape = async () => {
@@ -1379,19 +1368,15 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                     <>
                       <button
                         type="button"
-                        onClick={async () => {
-                          const { data: { session } } = await supabase.auth.getSession();
-                          const token = session?.access_token;
-                          if (!token) {
-                            setScrapeError('Please sign in again to connect Calendly.');
-                            return;
-                          }
-                          await persistWizardPosition(STEPS.indexOf('welcome'));
-                          window.location.href = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/calendly-auth?token=${encodeURIComponent(token)}`;
-                        }}
-                        className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white border-2 border-blue-600 text-blue-600 font-semibold rounded-xl hover:bg-blue-50 transition-colors mb-4"
+                        onClick={() => void handleConnectCalendly()}
+                        disabled={calendlyConnecting}
+                        className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white border-2 border-blue-600 text-blue-600 font-semibold rounded-xl hover:bg-blue-50 disabled:opacity-50 transition-colors mb-4"
                       >
-                        <img src="https://calendly.com/favicon.ico" alt="" className="w-5 h-5" />
+                        {calendlyConnecting ? (
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : (
+                          <img src="https://calendly.com/favicon.ico" alt="" className="w-5 h-5" />
+                        )}
                         Connect Calendly Account (Recommended)
                       </button>
 

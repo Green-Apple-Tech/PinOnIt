@@ -6,6 +6,7 @@ export interface OAuthStatePayload {
   userId?: string;
   uid?: string;
   source?: string;
+  codeVerifier?: string;
 }
 
 export interface OAuthContext {
@@ -21,13 +22,17 @@ export function isValidOAuthUserId(id: string): boolean {
 }
 
 export function oauthRedirectBase(source: string): string {
-  return source === "contacts"
-    ? `${OAUTH_APP_URL}/dashboard/contacts`
-    : `${OAUTH_APP_URL}/dashboard/appointments`;
+  if (source === "contacts") {
+    return `${OAUTH_APP_URL}/dashboard/contacts`;
+  }
+  if (source === "calendly_import") {
+    return `${OAUTH_APP_URL}/dashboard`;
+  }
+  return `${OAUTH_APP_URL}/dashboard/appointments`;
 }
 
-export function encodeOAuthState(userId: string, source: string): string {
-  const json = JSON.stringify({ userId, uid: userId, source });
+export function encodeOAuthState(userId: string, source: string, codeVerifier?: string): string {
+  const json = JSON.stringify({ userId, uid: userId, source, codeVerifier });
   return btoa(json).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 

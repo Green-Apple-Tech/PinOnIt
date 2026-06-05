@@ -626,7 +626,6 @@ export function RemindersPage({
           storageKey="reminders_checklist"
           items={[
             { id: 'template', label: 'Create your first reminder template', why: 'Templates are the messages sent to guests before meetings', done: templates.length > 0 },
-            { id: 'rule', label: 'Set up a reminder rule', why: 'Rules control which template fires and how far in advance', done: rules.length > 0 },
             { id: 'phone', label: 'Add your phone number for SMS/WhatsApp', why: 'Required to receive SMS and WhatsApp reminders yourself', done: !!(contactPhone || effectiveWhatsapp) },
           ]}
         />

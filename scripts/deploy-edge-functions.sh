@@ -15,17 +15,20 @@ deploy() {
 }
 
 # OAuth / webhook callbacks — never require JWT at the gateway
-for fn in google-calendar-callback outlook-calendar-callback zoom-callback stripe-webhook; do
+for fn in google-calendar-callback outlook-calendar-callback calendly-callback zoom-callback stripe-webhook; do
   deploy "$fn" --no-verify-jwt
 done
 
 # OAuth starters — require authenticated user
-for fn in google-calendar-auth outlook-calendar-auth zoom-auth; do
+for fn in google-calendar-auth outlook-calendar-auth calendly-auth zoom-auth; do
   deploy "$fn"
 done
 
+deploy scrape-calendly
+
 echo ""
-echo "Done. OAuth callbacks deployed with --no-verify-jwt (Google + Microsoft + Zoom + Stripe webhook)."
+echo "Done. OAuth callbacks deployed with --no-verify-jwt (Google + Microsoft + Calendly + Zoom + Stripe webhook)."
 echo "If calendar connect fails with 'Missing authorization header', re-run this script or:"
 echo "  supabase functions deploy google-calendar-callback --no-verify-jwt --project-ref $PROJECT_REF"
 echo "  supabase functions deploy outlook-calendar-callback --no-verify-jwt --project-ref $PROJECT_REF"
+echo "  supabase functions deploy calendly-callback --no-verify-jwt --project-ref $PROJECT_REF"

@@ -401,8 +401,8 @@ export function AvailabilityPage({ embedded }: { embedded?: boolean } = {}) {
       <PageChecklist
         storageKey="availability_checklist"
         items={[
-          { id: 'schedule', label: 'Set your weekly schedule', why: 'Guests can only book during your available hours', done: slots.length > 0, to: '?tab=weekly' },
-          { id: 'calendar', label: 'Connect a calendar', why: 'Prevents double-bookings by checking your real availability', done: calendarCount > 0, to: '?tab=calendar' },
+          { id: 'schedule', label: 'Set your weekly schedule', why: 'Guests can only book during your available hours', done: slots.length > 0, action: () => setTab('weekly') },
+          { id: 'calendar', label: 'Connect a calendar', why: 'Prevents double-bookings by checking your real availability', done: calendarCount > 0, action: () => setTab('calendar') },
         ]}
       />
 
