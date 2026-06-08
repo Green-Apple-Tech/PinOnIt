@@ -28,6 +28,9 @@ export function oauthRedirectBase(source: string): string {
   if (source === "calendly_import") {
     return `${OAUTH_APP_URL}/dashboard`;
   }
+  if (source === "wizard") {
+    return `${OAUTH_APP_URL}/dashboard`;
+  }
   return `${OAUTH_APP_URL}/dashboard/appointments`;
 }
 

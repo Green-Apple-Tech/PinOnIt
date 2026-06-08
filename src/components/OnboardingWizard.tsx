@@ -838,7 +838,9 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
         return;
       }
       await persistWizardPosition(STEPS.indexOf('welcome'));
-      const { data, error } = await supabase.functions.invoke<{ url?: string; error?: string }>('calendly-auth');
+      const { data, error } = await supabase.functions.invoke<{ url?: string; error?: string }>('calendly-auth', {
+        body: { source: 'wizard' },
+      });
       if (error || data?.error || !data?.url) {
         setScrapeError(data?.error ?? error?.message ?? 'Could not start Calendly connection.');
         setCalendlyConnecting(false);

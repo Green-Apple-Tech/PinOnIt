@@ -89,6 +89,7 @@ Deno.serve(async (req: Request) => {
 
     const dest = new URL(redirectBase);
     dest.searchParams.set("calendly_connected", "1");
+    if (source === "wizard") dest.searchParams.set("wizard", "true");
     return Response.redirect(dest.toString(), 302);
   } catch (err) {
     console.error("[calendly-callback]", err);

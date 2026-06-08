@@ -52,7 +52,18 @@ Deno.serve(async (req: Request) => {
     const codeVerifier = generateCodeVerifier();
     const codeChallenge = await generateCodeChallenge(codeVerifier);
     const redirectUri = calendlyRedirectUri(Deno.env.get("SUPABASE_URL")!);
-    const state = encodeOAuthState(user.id, "calendly_import", codeVerifier);
+
+    // Allow callers to pass a source (e.g. "wizard") so the callback can
+    // redirect back to the right place after OAuth completes.
+    let bodySource = "calendly_import";
+    if (req.method === "POST") {
+      try {
+        const body = await req.json() as { source?: string };
+        if (body.source) bodySource = body.source;
+      } catch { /* no body or non-JSON — use default */ }
+    }
+
+    const state = encodeOAuthState(user.id, bodySource, codeVerifier);
 
     const params = new URLSearchParams({
       client_id: clientId,

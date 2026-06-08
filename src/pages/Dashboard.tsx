@@ -845,6 +845,15 @@ export function Dashboard() {
     }
   }, []);
 
+  // Reopen wizard after Calendly OAuth redirect that originated from the wizard
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('wizard') === 'true') {
+      setShowWizard(true);
+      window.history.replaceState({}, '', '/dashboard');
+    }
+  }, []);
+
   // Auto-show wizard only for genuinely new users — runs once after ALL data has loaded
   useEffect(() => {
     // Wait until profile, local data, AND subscription have all settled
