@@ -1502,7 +1502,10 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
         );
 
       // ── Step: Phone for host reminders ───────────────────────────────────────
-      case 'phone':
+      case 'phone': {
+        const canContinuePhone =
+          !hostPhone.trim() ||
+          (hostPhone.trim().length > 0 && hostNotifyVia.length > 0);
         return (
           <div>
             <div className="mb-5">
@@ -1521,36 +1524,56 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
               <div>
                 <p className="text-xs font-medium text-gray-600 dark:text-slate-400 mb-2">Notify me via</p>
                 <div className="flex gap-2">
-                  {(['SMS', 'WhatsApp'] as const).map((opt) => (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => setHostNotifyVia((prev) =>
-                        prev.includes(opt.toLowerCase())
-                          ? prev.filter((v) => v !== opt.toLowerCase())
-                          : [...prev, opt.toLowerCase()]
-                      )}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-medium transition-colors ${
-                        hostNotifyVia.includes(opt.toLowerCase())
-                          ? 'border-indigo-600 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300'
-                          : 'border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-400'
-                      }`}
-                    >
-                      {opt}
-                    </button>
-                  ))}
+                  {(['SMS', 'WhatsApp'] as const).map((opt) => {
+                    const key = opt.toLowerCase();
+                    const active = hostNotifyVia.includes(key);
+                    return (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => setHostNotifyVia((prev) =>
+                          active ? prev.filter((v) => v !== key) : [...prev, key]
+                        )}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-medium transition-colors ${
+                          active
+                            ? 'border-indigo-600 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300'
+                            : 'border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-400 hover:border-gray-400 dark:hover:border-slate-500'
+                        }`}
+                        aria-pressed={active}
+                      >
+                        <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                          active ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300 dark:border-slate-600'
+                        }`}>
+                          {active && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 10 8"><path d="M1 4l3 3 5-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                        </span>
+                        {opt}
+                      </button>
+                    );
+                  })}
                 </div>
+                {hostPhone.trim() && hostNotifyVia.length === 0 && (
+                  <p className="text-red-500 text-xs mt-2">
+                    Please select at least one notification method, or click Skip.
+                  </p>
+                )}
               </div>
             </div>
             <NavButtons
               onBack={goBack}
               onNext={handleSavePhoneStep}
-              onSkip={async () => { await saveStep(STEPS.indexOf('phone') + 1); goNext(); }}
+              onSkip={async () => {
+                setHostPhone('');
+                setHostNotifyVia([]);
+                await saveStep(STEPS.indexOf('phone') + 1);
+                goNext();
+              }}
               nextLabel="Continue"
+              nextDisabled={!canContinuePhone}
               loading={saving}
             />
           </div>
         );
+      }
 
       // ── Step: Timezone ───────────────────────────────────────────────────────
       case 'timezone': {
