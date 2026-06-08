@@ -406,6 +406,7 @@ export function SettingsPage() {
   // Notifications (profile phone + default reminder channel)
   const [notificationPhone, setNotificationPhone] = useState('');
   const [notificationWhatsapp, setNotificationWhatsapp] = useState('');
+  const [notificationEmail, setNotificationEmail] = useState(profile?.notification_email ?? '');
   const [defaultReminderChannel, setDefaultReminderChannel] = useState<ReminderChannelPreference>(
     resolveDefaultReminderChannel(profile?.default_reminder_channel),
   );
@@ -506,8 +507,9 @@ export function SettingsPage() {
       setNotificationWhatsapp(storedWhatsapp ? blurFormatPhone(storedWhatsapp) : '');
       setDefaultReminderChannel(resolveDefaultReminderChannel(profile.default_reminder_channel));
       setVoiceReminderEnabled(profile.voice_reminder_enabled ?? true);
+      setNotificationEmail(profile.notification_email ?? '');
     }
-  }, [profile?.id, profile?.session_timeout_minutes, profile?.phone, profile?.whatsapp_number, profile?.default_reminder_channel, profile?.voice_reminder_enabled]);
+  }, [profile?.id, profile?.session_timeout_minutes, profile?.phone, profile?.whatsapp_number, profile?.default_reminder_channel, profile?.voice_reminder_enabled, profile?.notification_email]);
 
   useEffect(() => {
     const email = profile?.email ?? user?.email ?? '';
@@ -727,6 +729,7 @@ export function SettingsPage() {
         whatsapp_number: whatsappE164 || null,
         default_reminder_channel: defaultReminderChannel,
         voice_reminder_enabled: voiceReminderEnabled,
+        notification_email: notificationEmail.trim() || null,
       };
 
       const { data, error } = await supabase
@@ -742,6 +745,7 @@ export function SettingsPage() {
         writeProfileCache(data as Profile);
         setNotificationPhone(data.phone ? blurFormatPhone(data.phone) : '');
         setNotificationWhatsapp(data.whatsapp_number ? blurFormatPhone(data.whatsapp_number) : '');
+        setNotificationEmail(data.notification_email ?? '');
       }
 
       toast.success('Settings saved!');
@@ -879,6 +883,21 @@ export function SettingsPage() {
               </button>
             </div>
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">A confirmation link will be sent to the new email address.</p>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">
+              Notification email <span className="text-slate-400 dark:text-slate-500 font-normal">(optional)</span>
+            </label>
+            <input
+              type="email"
+              value={notificationEmail}
+              onChange={e => setNotificationEmail(e.target.value)}
+              placeholder="assistant@yourcompany.com"
+              className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
+            />
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+              Booking confirmations and reminders will also be sent here — useful for assistants, team inboxes, or email forwarding.
+            </p>
           </div>
           <div>
             <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">Full name</label>

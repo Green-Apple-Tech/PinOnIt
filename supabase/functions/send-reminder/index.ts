@@ -226,6 +226,50 @@ function jsonResponse(body: object, status = 200): Response {
   });
 }
 
+function hostEmailRecipients(hostProfile: Record<string, unknown>): string[] {
+  const hostEmail = (hostProfile?.email as string | null | undefined)?.trim();
+  const notificationEmail = (hostProfile?.notification_email as string | null | undefined)?.trim();
+  const recipients: string[] = [];
+  if (hostEmail) recipients.push(hostEmail);
+  if (notificationEmail && notificationEmail !== hostEmail) recipients.push(notificationEmail);
+  return recipients;
+}
+
+async function sendResendEmail(
+  to: string[],
+  subject: string,
+  msgBody: string,
+  resendKey: string,
+): Promise<boolean> {
+  const fromEmail = Deno.env.get('RESEND_FROM_EMAIL') ?? 'Pin on It <noreply@pinonit.app>';
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${resendKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: fromEmail,
+        to,
+        subject,
+        text: msgBody,
+        html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#020617;color:#e2e8f0;border-radius:8px;">${
+          msgBody.split('\n').map((line: string) => `<p style="margin:0 0 12px">${line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;')}</p>`).join('')
+        }</div>`,
+      }),
+    });
+    if (!res.ok) {
+      console.error('Resend error:', await res.text());
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error('Resend send error:', e);
+    return false;
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -294,7 +338,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: booking } = await supabase
       .from('bookings')
-      .select('*, services(name, duration_minutes), profiles(full_name, slug, timezone)')
+      .select('*, services(name, duration_minutes), profiles(full_name, slug, timezone, email, notification_email)')
       .eq('id', booking_id)
       .maybeSingle();
 
@@ -358,32 +402,45 @@ Deno.serve(async (req: Request) => {
     // ── Email via Resend ─────────────────────────────────────────────────────
     const resendKey = Deno.env.get('RESEND_API_KEY');
     if (sendChannel === 'email' && resendKey) {
-      try {
-        const fromEmail = Deno.env.get('RESEND_FROM_EMAIL') ?? 'Pin on It <noreply@pinonit.app>';
-        const res = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${resendKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            from: fromEmail,
-            to: [booking.guest_email],
-            subject: subject ?? 'Your appointment reminder',
-            text: msgBody,
-            html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#020617;color:#e2e8f0;border-radius:8px;">${
-              msgBody.split('\n').map((line: string) => `<p style="margin:0 0 12px">${line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;')}</p>`).join('')
-            }</div>`,
-          }),
-        });
-        if (!res.ok) {
-          const err = await res.text();
-          console.error('Resend error:', err);
-          deliveryStatus = 'failed';
-        }
-      } catch (e) {
-        console.error('Resend send error:', e);
+      if (booking.guest_email) {
+        const ok = await sendResendEmail(
+          [booking.guest_email],
+          subject ?? 'Your appointment reminder',
+          msgBody,
+          resendKey,
+        );
+        if (!ok) deliveryStatus = 'failed';
+      } else {
         deliveryStatus = 'failed';
+      }
+
+      // Host copies for booking confirmations and reminders
+      if (template.type === 'confirmation' || template.type === 'reminder') {
+        const recipients = hostEmailRecipients(hostProfile);
+        if (recipients.length > 0) {
+          const hostSubject = template.type === 'confirmation'
+            ? `New booking: ${templateData.service_name} with ${templateData.guest_name}`
+            : `Upcoming: ${templateData.service_name} with ${templateData.guest_name} — ${templateData.date} at ${templateData.time}`;
+          const hostBody = template.type === 'confirmation'
+            ? [
+                'You have a new booking.',
+                '',
+                `Guest: ${templateData.guest_name}`,
+                `Service: ${templateData.service_name}`,
+                `When: ${templateData.date} at ${templateData.time} (${templateData.timezone})`,
+                `Duration: ${templateData.duration}`,
+              ].join('\n')
+            : [
+                `Reminder: ${templateData.guest_name} has ${templateData.service_name} scheduled.`,
+                '',
+                `When: ${templateData.date} at ${templateData.time} (${templateData.timezone})`,
+                `Duration: ${templateData.duration}`,
+              ].join('\n');
+
+          for (const recipient of recipients) {
+            await sendResendEmail([recipient], hostSubject, hostBody, resendKey);
+          }
+        }
       }
     }
 

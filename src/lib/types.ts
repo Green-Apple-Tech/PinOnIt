@@ -24,6 +24,7 @@ export const DEFAULT_CALENDAR_CONFLICT_SETTINGS: CalendarConflictSettings = {
 export interface Profile {
   id: string;
   email: string;
+  notification_email: string | null;
   full_name: string | null;
   avatar_url: string | null;
   bio: string | null;
