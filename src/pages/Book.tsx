@@ -1578,7 +1578,7 @@ export function BookPage() {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                      Phone number <span className="text-slate-400 dark:text-slate-500 font-normal">(optional)</span>
+                      Phone number <span className="text-slate-400 dark:text-slate-500 font-normal">(optional) — for SMS reminders</span>
                     </label>
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500" />
@@ -1592,8 +1592,8 @@ export function BookPage() {
                       />
                     </div>
                     <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{PHONE_HINT}</p>
-                    <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">
-                      By providing your phone number you consent to receive appointment-related messages. Reply STOP to opt out.
+                    <p className="text-xs text-gray-400 dark:text-slate-500 mt-1.5">
+                      By providing your phone number, you agree to receive SMS appointment reminders from the host. Message and data rates may apply. Text STOP to unsubscribe.
                     </p>
                   </div>
                   {phone && (
