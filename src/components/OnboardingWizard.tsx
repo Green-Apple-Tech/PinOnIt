@@ -161,33 +161,45 @@ function NavButtons({
   loading?: boolean;
   showBack?: boolean;
 }) {
+  const isBlocked = (nextDisabled || loading) && !loading;
   return (
-    <div className="flex items-center gap-3 mt-8">
-      {showBack && onBack && (
+    <div className="mt-8">
+      <div className="flex items-center gap-3">
+        {showBack && onBack && (
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1.5 px-4 py-2.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 rounded-xl transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" /> Back
+          </button>
+        )}
         <button
-          onClick={onBack}
-          className="flex items-center gap-1.5 px-4 py-2.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 rounded-xl transition-colors"
+          onClick={onNext}
+          disabled={nextDisabled || loading}
+          className={`flex-1 flex items-center justify-center gap-2 px-6 py-2.5 font-semibold rounded-xl transition-all text-sm ${
+            nextDisabled && !loading
+              ? 'bg-gray-200 dark:bg-slate-700 text-gray-400 dark:text-slate-500 cursor-not-allowed'
+              : 'text-white hover:opacity-90 cursor-pointer'
+          }`}
+          style={nextDisabled && !loading ? {} : { backgroundColor: '#5864C6' }}
         >
-          <ArrowLeft className="h-4 w-4" /> Back
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          {nextLabel}
+          {!loading && <ArrowRight className="h-4 w-4" />}
         </button>
-      )}
-      <button
-        onClick={onNext}
-        disabled={nextDisabled || loading}
-        className="flex-1 flex items-center justify-center gap-2 px-6 py-2.5 disabled:opacity-50 text-white font-semibold rounded-xl transition-all text-sm hover:opacity-90"
-        style={{ backgroundColor: '#5864C6' }}
-      >
-        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-        {nextLabel}
-        {!loading && <ArrowRight className="h-4 w-4" />}
-      </button>
-      {onSkip && (
-        <button
-          onClick={onSkip}
-          className="px-4 py-2.5 text-sm text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
-        >
-          Skip
-        </button>
+        {onSkip && (
+          <button
+            onClick={onSkip}
+            className="px-4 py-2.5 text-sm text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+          >
+            Skip
+          </button>
+        )}
+      </div>
+      {isBlocked && (
+        <p className="text-xs text-red-400 text-center mt-2">
+          Please complete this step{onSkip ? ' or click Skip' : ''} to continue.
+        </p>
       )}
     </div>
   );
@@ -1454,6 +1466,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                 nextLabel={
                   fromCalendly === null ? 'Get Started' : fromCalendly ? 'Skip import' : 'Continue'
                 }
+                nextDisabled={fromCalendly === null}
                 showBack={false}
               />
             )}
@@ -1493,7 +1506,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
             <NavButtons
               onBack={goBack}
               onNext={handleSaveUsernameStep}
-              onSkip={async () => { await saveStep(STEPS.indexOf('username') + 1); goNext(); }}
+              onSkip={async () => { setUsername(''); setSlug(''); await saveStep(STEPS.indexOf('username') + 1); goNext(); }}
               nextDisabled={!!username.trim() && usernameAvailable === false}
               nextLabel="Continue"
               loading={saving}
