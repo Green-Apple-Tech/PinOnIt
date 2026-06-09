@@ -485,26 +485,28 @@ export function EmailSignaturePage() {
           {/* Style carousel */}
           <div>
             <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Style</p>
-            <div className="flex items-center gap-3">
-              <button onClick={goPrev} className="shrink-0 h-14 w-14 rounded-full border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600 transition-colors shadow-sm" aria-label="Previous style">
-                <ChevronLeft className="h-7 w-7 text-slate-600 dark:text-slate-300"/>
-              </button>
-              <div className="flex-1 rounded-xl border-2 border-slate-900 dark:border-slate-200 bg-white dark:bg-slate-900/50 p-4 transition-all">
-                <CarouselPreview htmlString={htmlString} />
-                <div className="flex items-center justify-end mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-                  <span className="text-xs font-semibold tabular-nums text-slate-400 dark:text-slate-500">
-                    {styleIndex + 1} / {STYLES.length}
-                  </span>
-                </div>
+            {/* Preview card */}
+            <div className="rounded-xl border-2 border-slate-900 dark:border-slate-200 bg-white dark:bg-slate-900/50 p-4 transition-all mb-3">
+              <CarouselPreview htmlString={htmlString} />
+              <div className="flex items-center justify-end mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <span className="text-xs font-semibold tabular-nums text-slate-400 dark:text-slate-500">
+                  {styleIndex + 1} / {STYLES.length}
+                </span>
               </div>
-              <button onClick={goNext} className="shrink-0 h-14 w-14 rounded-full border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600 transition-colors shadow-sm" aria-label="Next style">
-                <ChevronRight className="h-7 w-7 text-slate-600 dark:text-slate-300"/>
-              </button>
             </div>
-            <div className="flex items-center justify-center gap-1.5 mt-3">
-              {STYLES.map((s, i) => (
-                <button key={s.key} onClick={() => setStyle(s.key)} className={`rounded-full transition-all ${i === styleIndex ? 'w-4 h-2 bg-slate-900 dark:bg-slate-200' : 'w-2 h-2 bg-slate-300 dark:bg-slate-600 hover:bg-slate-400 dark:hover:bg-slate-500'}`} aria-label={s.label}/>
-              ))}
+            {/* Nav arrows — row on all sizes, larger tap targets */}
+            <div className="flex items-center justify-center gap-4">
+              <button onClick={goPrev} className="w-12 h-12 rounded-full border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600 transition-colors shadow-sm touch-manipulation" aria-label="Previous style">
+                <ChevronLeft className="h-6 w-6 text-slate-600 dark:text-slate-300"/>
+              </button>
+              <div className="flex items-center gap-1.5">
+                {STYLES.map((s, i) => (
+                  <button key={s.key} onClick={() => setStyle(s.key)} className={`rounded-full transition-all ${i === styleIndex ? 'w-4 h-2 bg-slate-900 dark:bg-slate-200' : 'w-2 h-2 bg-slate-300 dark:bg-slate-600 hover:bg-slate-400 dark:hover:bg-slate-500'}`} aria-label={s.label}/>
+                ))}
+              </div>
+              <button onClick={goNext} className="w-12 h-12 rounded-full border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600 transition-colors shadow-sm touch-manipulation" aria-label="Next style">
+                <ChevronRight className="h-6 w-6 text-slate-600 dark:text-slate-300"/>
+              </button>
             </div>
             <div className="flex gap-3 mt-4">
               <button onClick={handleCopy} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-white hover:opacity-90" style={{ backgroundColor: '#5864C6' }}>
