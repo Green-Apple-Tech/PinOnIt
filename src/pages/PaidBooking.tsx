@@ -446,6 +446,12 @@ export function PaidBookingPage() {
   const [addingCategory, setAddingCategory] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = useCallback((msg: string, type: 'success' | 'error') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3500);
+  }, []);
 
   // Load profile settings
   useEffect(() => {
@@ -502,16 +508,40 @@ export function PaidBookingPage() {
   const handleBusinessPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
-    setUploadingPhoto('business');
-    const ext = file.name.split('.').pop();
-    const path = `${user.id}/paid-booking-photo.${ext}`;
-    const { error } = await supabase.storage.from('avatars').upload(path, file, { upsert: true });
-    if (!error) {
-      const { data } = supabase.storage.from('avatars').getPublicUrl(path);
-      set('business_photo_url', data.publicUrl);
+
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Photo must be under 5MB', 'error');
+      e.target.value = '';
+      return;
     }
-    setUploadingPhoto(null);
-    e.target.value = '';
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      showToast('Please use JPG, PNG, or WebP', 'error');
+      e.target.value = '';
+      return;
+    }
+
+    setUploadingPhoto('business');
+    try {
+      const ext = file.name.split('.').pop() ?? 'jpg';
+      const path = `${user.id}/avatar.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(path);
+
+      set('business_photo_url', publicUrl);
+      await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id);
+      showToast('Photo updated!', 'success');
+    } catch {
+      showToast('Upload failed. Please try again.', 'error');
+    } finally {
+      setUploadingPhoto(null);
+      e.target.value = '';
+    }
   };
 
   const handleServicePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>, svcId: string) => {
@@ -663,16 +693,38 @@ export function PaidBookingPage() {
         {/* Profile photo + name + tagline */}
         <div className="flex items-start gap-4">
           <div className="shrink-0">
-            <div
-              onClick={() => photoInputRef.current?.click()}
-              className="h-16 w-16 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center cursor-pointer hover:border-[#5864C6] transition-colors overflow-hidden relative group"
-              style={photoUrl ? { backgroundImage: `url(${photoUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
-            >
-              {!photoUrl && (uploadingPhoto === 'business' ? <Loader2 className="h-5 w-5 animate-spin text-slate-400" /> : <ImageIcon className="h-5 w-5 text-slate-400" />)}
-              {photoUrl && <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"><ImageIcon className="h-4 w-4 text-white" /></div>}
+            <div className="relative group cursor-pointer" onClick={() => photoInputRef.current?.click()}>
+              <div className="w-24 h-24 rounded-full border-2 border-dashed border-gray-300 dark:border-slate-600 flex items-center justify-center overflow-hidden bg-gray-50 dark:bg-slate-800 hover:border-[#5864C6] dark:hover:border-[#5864C6] transition-colors relative">
+                {photoUrl ? (
+                  <img src={photoUrl} alt="Business photo" className="w-full h-full object-cover rounded-full" />
+                ) : (
+                  <div className="flex flex-col items-center gap-1">
+                    <ImageIcon className="h-8 w-8 text-gray-300 dark:text-slate-600" />
+                    <span className="text-xs text-gray-400 dark:text-slate-500">Photo</span>
+                  </div>
+                )}
+                {uploadingPhoto === 'business' && (
+                  <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center">
+                    <Loader2 className="h-6 w-6 animate-spin text-white" />
+                  </div>
+                )}
+                {photoUrl && uploadingPhoto !== 'business' && (
+                  <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ImageIcon className="h-5 w-5 text-white" />
+                  </div>
+                )}
+              </div>
+              <div className="absolute -bottom-9 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs rounded-lg px-3 py-1.5 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                JPG, PNG or WebP · Max 5MB
+              </div>
             </div>
-            <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handleBusinessPhotoUpload} />
-            <p className="text-[10px] text-slate-400 text-center mt-1">Photo</p>
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleBusinessPhotoUpload}
+            />
           </div>
           <div className="flex-1 space-y-3">
             <div>
@@ -854,6 +906,16 @@ export function PaidBookingPage() {
       {/* ── Modals ── */}
       {showQR && bookingUrl && <QRModal url={bookingUrl} onClose={() => setShowQR(false)} />}
       {showEmbed && bookingUrl && <EmbedModal url={bookingUrl} onClose={() => setShowEmbed(false)} />}
+
+      {/* ── Toast ── */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg text-sm font-semibold text-white transition-all ${
+          toast.type === 'success' ? 'bg-emerald-600' : 'bg-red-500'
+        }`}>
+          {toast.type === 'success' ? <Check className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}
+          {toast.msg}
+        </div>
+      )}
     </div>
   );
 }
