@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { TIMEZONES } from '../lib/types';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
+import { SmsConsentText } from './SmsConsentText';
 import {
   ArrowRight, ArrowLeft, Check, X, Loader2, Copy, ExternalLink, Pencil,
   Calendar, Mail, Video, Globe, Zap, Sparkles,
@@ -593,13 +594,18 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
   useEffect(() => {
     if (!user || calendlyImportRan.current) return;
     const params = new URLSearchParams(window.location.search);
-    if (params.get('calendly_connected') !== '1') return;
+    const calendlyOk =
+      params.get('calendly_connected') === '1' ||
+      params.get('calendly_success') === '1' ||
+      params.get('calendly_success') === 'true';
+    if (!calendlyOk) return;
     calendlyImportRan.current = true;
     setFromCalendly(true);
     setCalendlyConnected(true);
     void runCalendlyImport({ oauthOnly: true });
     const url = new URL(window.location.href);
     url.searchParams.delete('calendly_connected');
+    url.searchParams.delete('calendly_success');
     url.searchParams.delete('calendly_error');
     window.history.replaceState({}, '', url.toString());
   }, [user, runCalendlyImport]);
@@ -608,6 +614,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
     const params = new URLSearchParams(window.location.search);
     const err = params.get('calendly_error');
     if (!err) return;
+    // URLSearchParams.get() already decodes; avoid decodeURIComponent (throws on bare %)
     setScrapeError(`Calendly connection failed: ${err}`);
     const url = new URL(window.location.href);
     url.searchParams.delete('calendly_error');
@@ -1273,6 +1280,10 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
               if (hasImportPreview) {
                 return (
                   <div className="mb-4 space-y-5">
+                    <div className="text-center mb-2">
+                      <p className="text-lg font-bold text-slate-900 dark:text-white">Here&apos;s what we found</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Does this look right?</p>
+                    </div>
                     {importedProfile && (
                       <div className="flex items-center gap-4 p-4 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl">
                         {importedProfile.avatar_url ? (
@@ -1385,9 +1396,10 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
               return (
                 <div className="mb-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 space-y-3">
                   {scraping ? (
-                    <div className="flex flex-col items-center justify-center gap-3 py-6">
-                      <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                      <p className="text-sm font-semibold text-blue-900 dark:text-blue-300">Importing from Calendly…</p>
+                    <div className="flex flex-col items-center justify-center gap-3 py-8">
+                      <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
+                      <p className="text-base font-semibold text-blue-900 dark:text-blue-300">Importing from Calendly…</p>
+                      <p className="text-sm text-blue-600/80 dark:text-blue-400/80">Pulling your profile, event types, and availability</p>
                     </div>
                   ) : (
                     <>
@@ -1564,6 +1576,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                     );
                   })}
                 </div>
+                <SmsConsentText />
                 {hostPhone.trim() && hostNotifyVia.length === 0 && (
                   <p className="text-red-500 text-xs mt-2">
                     Please select at least one notification method, or click Skip.
@@ -1928,6 +1941,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                   Leave blank to use your phone number above for WhatsApp. Enter a different number if your WhatsApp is on a separate device.
                 </p>
               </div>
+              <SmsConsentText className="text-xs text-gray-500 dark:text-slate-400 mt-1" />
             </div>
 
             <NavButtons

@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import { resolveDefaultReminderChannel, getWhatsappNumber } from '../lib/reminderChannels';
+import { SmsConsentText } from '../components/SmsConsentText';
+import { SMS_OPT_OUT_FOOTER } from '../lib/smsOptOut';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -45,38 +47,38 @@ const REMINDER_SLOTS = [
 const CHANNEL_TEMPLATES: Record<string, Record<Channel, { subject: string | null; body: string }>> = {
   confirmation: {
     email: { subject: 'Your {{service_name}} is confirmed', body: 'Hi {{guest_name}},\n\nYour {{service_name}} with {{host_name}} is confirmed.\n\nDate: {{date}} at {{time}} ({{timezone}})\nDuration: {{duration}}\n\n{{location}}\n\nNeed to reschedule? {{reschedule_link}}\n\n— {{host_name}}' },
-    sms: { subject: null, body: 'Hi {{guest_name}}, your {{service_name}} with {{host_name}} is confirmed for {{date}} at {{time}}. {{location}}' },
-    whatsapp: { subject: null, body: 'Hi {{guest_name}}! Your {{service_name}} with {{host_name}} is confirmed for {{date}} at {{time}}. {{location}}' },
+    sms: { subject: null, body: `Hi {{guest_name}}, your {{service_name}} with {{host_name}} is confirmed for {{date}} at {{time}}. {{location}} ${SMS_OPT_OUT_FOOTER}` },
+    whatsapp: { subject: null, body: `Hi {{guest_name}}! Your {{service_name}} with {{host_name}} is confirmed for {{date}} at {{time}}. {{location}} ${SMS_OPT_OUT_FOOTER}` },
     voice: { subject: null, body: 'Hi, this is a reminder from {{host_name}} that you have a {{service_name}} scheduled for {{date}} at {{time}}. We look forward to speaking with you.' },
   },
   reminder_15m: {
     email: { subject: 'Reminder: {{service_name}} starts in 15 minutes', body: 'Hi {{guest_name}},\n\nYour {{service_name}} with {{host_name}} starts in 15 minutes.\n\n{{location}}\n\n— {{host_name}}' },
-    sms: { subject: null, body: 'Hi {{guest_name}}, your {{service_name}} with {{host_name}} starts in 15 minutes. {{location}}' },
-    whatsapp: { subject: null, body: 'Hi {{guest_name}}! Your {{service_name}} with {{host_name}} starts in 15 minutes. {{location}}' },
+    sms: { subject: null, body: `Hi {{guest_name}}, your {{service_name}} with {{host_name}} starts in 15 minutes. {{location}} ${SMS_OPT_OUT_FOOTER}` },
+    whatsapp: { subject: null, body: `Hi {{guest_name}}! Your {{service_name}} with {{host_name}} starts in 15 minutes. {{location}} ${SMS_OPT_OUT_FOOTER}` },
     voice: { subject: null, body: 'Hi, this is a reminder from {{host_name}} that you have a {{service_name}} starting in 15 minutes. We look forward to speaking with you.' },
   },
   reminder_30m: {
     email: { subject: 'Reminder: {{service_name}} starts in 30 minutes', body: 'Hi {{guest_name}},\n\nYour {{service_name}} with {{host_name}} starts in 30 minutes.\n\n{{location}}\n\n— {{host_name}}' },
-    sms: { subject: null, body: 'Hi {{guest_name}}, your {{service_name}} with {{host_name}} starts in 30 minutes. {{location}}' },
-    whatsapp: { subject: null, body: 'Hi {{guest_name}}! Your {{service_name}} with {{host_name}} starts in 30 minutes. {{location}}' },
+    sms: { subject: null, body: `Hi {{guest_name}}, your {{service_name}} with {{host_name}} starts in 30 minutes. {{location}} ${SMS_OPT_OUT_FOOTER}` },
+    whatsapp: { subject: null, body: `Hi {{guest_name}}! Your {{service_name}} with {{host_name}} starts in 30 minutes. {{location}} ${SMS_OPT_OUT_FOOTER}` },
     voice: { subject: null, body: 'Hi, this is a reminder from {{host_name}} that you have a {{service_name}} starting in 30 minutes. We look forward to speaking with you.' },
   },
   reminder_60m: {
     email: { subject: 'Reminder: {{service_name}} starts in 1 hour', body: 'Hi {{guest_name}},\n\nYour {{service_name}} with {{host_name}} starts in 1 hour.\n\n{{location}}\n\n— {{host_name}}' },
-    sms: { subject: null, body: 'Hi {{guest_name}}, your {{service_name}} with {{host_name}} starts in 1 hour. {{location}}' },
-    whatsapp: { subject: null, body: 'Hi {{guest_name}}! Your {{service_name}} with {{host_name}} starts in 1 hour. {{location}}' },
+    sms: { subject: null, body: `Hi {{guest_name}}, your {{service_name}} with {{host_name}} starts in 1 hour. {{location}} ${SMS_OPT_OUT_FOOTER}` },
+    whatsapp: { subject: null, body: `Hi {{guest_name}}! Your {{service_name}} with {{host_name}} starts in 1 hour. {{location}} ${SMS_OPT_OUT_FOOTER}` },
     voice: { subject: null, body: 'Hi, this is a reminder from {{host_name}} that you have a {{service_name}} scheduled for {{date}} at {{time}}. We look forward to speaking with you.' },
   },
   reminder_24h: {
     email: { subject: 'Reminder: {{service_name}} tomorrow at {{time}}', body: 'Hi {{guest_name}},\n\nJust a reminder that your {{service_name}} with {{host_name}} is tomorrow at {{time}} ({{timezone}}).\n\n{{location}}\n\nSee you then!\n— {{host_name}}' },
-    sms: { subject: null, body: 'Hi {{guest_name}}, reminder: your {{service_name}} with {{host_name}} is tomorrow at {{time}}. {{location}}' },
-    whatsapp: { subject: null, body: 'Hi {{guest_name}}! Reminder: your {{service_name}} with {{host_name}} is tomorrow at {{time}}. {{location}}' },
+    sms: { subject: null, body: `Hi {{guest_name}}, reminder: your {{service_name}} with {{host_name}} is tomorrow at {{time}}. {{location}} ${SMS_OPT_OUT_FOOTER}` },
+    whatsapp: { subject: null, body: `Hi {{guest_name}}! Reminder: your {{service_name}} with {{host_name}} is tomorrow at {{time}}. {{location}} ${SMS_OPT_OUT_FOOTER}` },
     voice: { subject: null, body: 'Hi, this is a reminder from {{host_name}} that you have a {{service_name}} scheduled for tomorrow at {{time}}. We look forward to speaking with you.' },
   },
   reminder_48h: {
     email: { subject: 'Reminder: {{service_name}} in 2 days', body: 'Hi {{guest_name}},\n\nJust a heads up — your {{service_name}} with {{host_name}} is in 2 days on {{date}} at {{time}}.\n\n{{location}}\n\n— {{host_name}}' },
-    sms: { subject: null, body: 'Hi {{guest_name}}, your {{service_name}} with {{host_name}} is in 2 days — {{date}} at {{time}}. {{location}}' },
-    whatsapp: { subject: null, body: 'Hi {{guest_name}}! Your {{service_name}} with {{host_name}} is in 2 days — {{date}} at {{time}}. {{location}}' },
+    sms: { subject: null, body: `Hi {{guest_name}}, your {{service_name}} with {{host_name}} is in 2 days — {{date}} at {{time}}. {{location}} ${SMS_OPT_OUT_FOOTER}` },
+    whatsapp: { subject: null, body: `Hi {{guest_name}}! Your {{service_name}} with {{host_name}} is in 2 days — {{date}} at {{time}}. {{location}} ${SMS_OPT_OUT_FOOTER}` },
     voice: { subject: null, body: 'Hi, this is a reminder from {{host_name}} that you have a {{service_name}} scheduled for {{date}} at {{time}}. We look forward to speaking with you.' },
   },
 };
@@ -1167,6 +1169,7 @@ export function RemindersPage({
                 </div>
               </div>
             ))}
+            <SmsConsentText className="text-xs text-gray-500 dark:text-slate-400 mt-1" />
             <div className="flex items-center gap-2 pt-1">
               <button onClick={handleSaveContact} disabled={savingContact} className="px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 inline-flex items-center gap-1.5 hover:opacity-90" style={{ backgroundColor: '#5864C6' }}>
                 {savingContact ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Save
@@ -1249,6 +1252,7 @@ export function RemindersPage({
                 </button>
               </div>
               <p className="text-xs text-slate-400 dark:text-slate-500">{PHONE_HINT}</p>
+              <SmsConsentText variant="thirdParty" className="text-xs text-gray-500 dark:text-slate-400 mt-1" />
               {testSmsResult && (
                 <div className={`flex items-start gap-2 px-3 py-2.5 rounded-lg text-sm ${
                   testSmsResult.ok

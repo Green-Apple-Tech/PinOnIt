@@ -14,6 +14,7 @@ import {
   shouldStopRecurrence,
 } from '../lib/recurring';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
+import { SmsConsentText } from '../components/SmsConsentText';
 import { resolveTermsText } from '../lib/terms';
 import { stripePromise } from '../lib/stripe';
 import { StripeBookingCheckout } from '../components/StripeBookingCheckout';
@@ -395,6 +396,7 @@ function ReminderWizard({
   saving,
   onBack,
   onSave,
+  hostName,
 }: {
   accentColor: string;
   selectedChannels: string[];
@@ -404,6 +406,7 @@ function ReminderWizard({
   saving: boolean;
   onBack: () => void;
   onSave: () => void;
+  hostName?: string;
 }) {
   const toggleChannel = (id: string) => {
     setSelectedChannels((prev) =>
@@ -456,6 +459,9 @@ function ReminderWizard({
             </button>
           ))}
         </div>
+        {(selectedChannels.includes('sms') || selectedChannels.includes('whatsapp')) && (
+          <SmsConsentText variant="guestChannels" hostName={hostName} className="text-xs text-gray-400 dark:text-slate-500 mt-2 leading-relaxed" />
+        )}
       </div>
 
       <div className="mb-6">
@@ -1592,9 +1598,7 @@ export function BookPage() {
                       />
                     </div>
                     <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{PHONE_HINT}</p>
-                    <p className="text-xs text-gray-400 dark:text-slate-500 mt-1.5">
-                      By providing your phone number, you agree to receive SMS appointment reminders from the host. Message and data rates may apply. Text STOP to unsubscribe.
-                    </p>
+                    <SmsConsentText variant="guestPhone" hostName={pageDisplayName} className="text-xs text-gray-400 dark:text-slate-500 mt-1.5" />
                   </div>
                   {phone && (
                     <div>
@@ -1627,9 +1631,7 @@ export function BookPage() {
                         ))}
                       </div>
                       {(notifyVia.includes('sms') || notifyVia.includes('whatsapp')) && (
-                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-2 leading-relaxed">
-                          By selecting SMS or WhatsApp, you agree to receive appointment reminders and notifications from {pageDisplayName || 'your host'}. Message frequency varies. Message &amp; data rates may apply. Reply STOP to unsubscribe at any time. Reply HELP for help.
-                        </p>
+                        <SmsConsentText variant="guestChannels" hostName={pageDisplayName} className="text-xs text-gray-400 dark:text-slate-500 mt-2 leading-relaxed" />
                       )}
                     </div>
                   )}
@@ -1686,7 +1688,10 @@ export function BookPage() {
                             placeholder={q.field_type === 'phone' ? PHONE_PLACEHOLDER : undefined}
                             className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition" />
                           {q.field_type === 'phone' && (
-                            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{PHONE_HINT}</p>
+                            <>
+                              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{PHONE_HINT}</p>
+                              <SmsConsentText variant="guestPhone" hostName={pageDisplayName} className="text-xs text-gray-400 dark:text-slate-500 mt-1.5" />
+                            </>
                           )}
                         </>
                       )}
@@ -2045,6 +2050,7 @@ export function BookPage() {
                 saving={savingReminders}
                 onBack={() => setStep('confirmed')}
                 onSave={handleSaveReminders}
+                hostName={pageDisplayName}
               />
             )}
           </div>

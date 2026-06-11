@@ -107,14 +107,14 @@ function CreateLinkModal({ profile, onClose, onCreated }: CreateLinkModalProps) 
         reminderChannels.push({
           channel: 'sms',
           subject: null,
-          body: 'Reminder: your {{service_name}} with {{host_name}} starts in 1 hour at {{time}}. {{location}}',
+          body: 'Reminder: your {{service_name}} with {{host_name}} starts in 1 hour at {{time}}. {{location}} Reply STOP to opt out.',
         });
       }
       if (reminderWhatsapp) {
         reminderChannels.push({
           channel: 'whatsapp',
           subject: null,
-          body: 'Hi {{guest_name}}! Just a reminder that your *{{service_name}}* with {{host_name}} starts in 1 hour at {{time}}.\n\n{{location}}',
+          body: 'Hi {{guest_name}}! Just a reminder that your *{{service_name}}* with {{host_name}} starts in 1 hour at {{time}}.\n\n{{location}}\n\nReply STOP to opt out.',
         });
       }
       for (const ch of reminderChannels) {
@@ -768,14 +768,37 @@ export function Dashboard() {
   const planName = subscription?.plan ?? profile?.plan ?? 'free';
   const [checklistDismissed, setChecklistDismissed] = useState(() => localStorage.getItem('onboarding_checklist_dismissed') === '1');
   const [liveSlug, setLiveSlug] = useState<string | null>(null);
+
+  const isCalendlyOAuthSuccessReturn = () => {
+    const params = new URLSearchParams(window.location.search);
+    return (
+      params.get('calendly_connected') === '1' ||
+      params.get('calendly_success') === '1' ||
+      params.get('calendly_success') === 'true'
+    );
+  };
+
+  /** Re-open wizard after Calendly OAuth — not for completed hosts who connect outside the wizard. */
+  const shouldReopenWizardForCalendly = () => {
+    const params = new URLSearchParams(window.location.search);
+    const hasSuccess = isCalendlyOAuthSuccessReturn();
+    const hasError = !!params.get('calendly_error');
+    if (!hasSuccess && !hasError) return false;
+    if (hasError) return wizardIsActive();
+    if (wizardIsActive()) return true;
+    return !onboardingIsCompleted();
+  };
+
   // Resume wizard after OAuth redirect if wizard_active was set in localStorage
   const [showWizard, setShowWizard] = useState(() => {
     if (new URLSearchParams(window.location.search).get('onboarding') === '1') return true;
+    if (shouldReopenWizardForCalendly()) return true;
     if (!onboardingIsCompleted() && wizardIsActive()) return true;
     return false;
   });
   const [wizardChecked, setWizardChecked] = useState(false);
   const [wizardInitialStep, setWizardInitialStep] = useState<number | undefined>(() => {
+    if (shouldReopenWizardForCalendly()) return 0;
     if (!onboardingIsCompleted() && wizardIsActive()) return wizardSavedStep();
     return undefined;
   });
@@ -833,6 +856,36 @@ export function Dashboard() {
     url.searchParams.delete('checkout');
     url.searchParams.delete('wizard_step');
     url.searchParams.delete('trial_days');
+    window.history.replaceState({}, '', url.toString());
+  }, []);
+
+  // Calendly OAuth return: reopen wizard when appropriate, always strip URL params
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const hasSuccess = isCalendlyOAuthSuccessReturn();
+    const err = params.get('calendly_error');
+    if (!hasSuccess && !err) return;
+
+    const reopen = shouldReopenWizardForCalendly();
+    if (reopen) {
+      setShowWizard(true);
+      setWizardInitialStep(0);
+      // Keep URL params — OnboardingWizard import/error effects read and clean them
+      return;
+    }
+
+    if (hasSuccess) {
+      setTrialToast({ message: 'Calendly connected successfully.' });
+      setTimeout(() => setTrialToast(null), 5000);
+    } else if (err) {
+      setTrialToast({ message: `Calendly connection failed: ${err}` });
+      setTimeout(() => setTrialToast(null), 8000);
+    }
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete('calendly_connected');
+    url.searchParams.delete('calendly_success');
+    url.searchParams.delete('calendly_error');
     window.history.replaceState({}, '', url.toString());
   }, []);
 

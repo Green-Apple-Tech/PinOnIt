@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { DEFAULT_CALENDAR_CONFLICT_SETTINGS, type CalendarConflictSettings } from '../lib/types';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
+import { appendSmsOptOut } from '../lib/smsOptOut';
 import {
   type CoordPreferredTimesPayload,
   type CoordParsedSlot,
@@ -22,6 +23,7 @@ import {
   toLocalDateInput,
 } from '../lib/coordinateScheduling';
 import { Plus, X, ChevronRight, ChevronLeft, ChevronDown, Users, Clock, MapPin, MessageSquare, Check, Loader2, Trash2, AlertCircle, ArrowRight, Phone, Calendar, RefreshCw, CheckCircle2, Sparkles } from 'lucide-react';
+import { SmsConsentText } from '../components/SmsConsentText';
 
 const BRAND = '#5864C6';
 
@@ -1351,7 +1353,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
       customRangeStart,
       customRangeEnd,
     });
-    return `${body}\n\nReply STOP to opt out.`;
+    return appendSmsOptOut(body);
   };
 
   const handleSend = async () => {
@@ -1761,6 +1763,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
                     />
                   </div>
                   <p className="text-xs text-slate-400 mt-1.5">{PHONE_HINT}</p>
+                  <SmsConsentText variant="coordinate" className="text-xs text-gray-500 dark:text-slate-400 mt-1.5" />
                 </div>
 
                 {/* Role */}

@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { appendSmsOptOut } from "../_shared/sms-opt-out.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -81,7 +82,7 @@ async function sendMessage(to: string, body: string): Promise<void> {
 }
 
 async function sendSms(to: string, body: string): Promise<void> {
-  await sendMessage(to, body);
+  await sendMessage(to, appendSmsOptOut(body));
 }
 
 async function parseAvailability(
@@ -781,7 +782,7 @@ async function handleInitialSend(meetingId: string): Promise<Response> {
 
   const smsPromises = toSms.map(async (p) => {
     const body = buildCoordInviteSms(p.name, hostName, meeting, pt, meeting.selected_dates);
-    await sendSms(p.phone, `${body} Reply STOP to opt out.`);
+    await sendSms(p.phone, body);
   });
 
   await Promise.all(smsPromises);

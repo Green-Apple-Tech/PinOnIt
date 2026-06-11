@@ -35,8 +35,8 @@ Deno.serve(async (req: Request) => {
     return fail("Invalid OAuth state");
   }
 
-  const clientId = Deno.env.get("CALENDLY_CLIENT_ID");
-  const clientSecret = Deno.env.get("CALENDLY_CLIENT_SECRET");
+  const clientId = Deno.env.get("CALENDLY_CLIENT_ID")?.trim();
+  const clientSecret = Deno.env.get("CALENDLY_CLIENT_SECRET")?.trim();
   if (!clientId || !clientSecret) {
     return fail("Calendly OAuth not configured");
   }

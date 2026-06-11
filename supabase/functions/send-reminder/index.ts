@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
+import { appendSmsOptOut } from '../_shared/sms-opt-out.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -167,7 +168,7 @@ async function sendTwilioSms(to: string, body: string): Promise<{ ok: boolean; e
           'Authorization': 'Basic ' + btoa(`${twilioSid}:${twilioToken}`),
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: new URLSearchParams({ MessagingServiceSid: messagingServiceSid, To: to, Body: body }),
+        body: new URLSearchParams({ MessagingServiceSid: messagingServiceSid, To: to, Body: appendSmsOptOut(body) }),
       }
     );
     if (!res.ok) {
@@ -204,7 +205,7 @@ async function sendTwilioWhatsapp(to: string, body: string): Promise<{ ok: boole
           'Authorization': 'Basic ' + btoa(`${twilioSid}:${twilioToken}`),
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: new URLSearchParams({ From: waFrom, To: waTo, Body: body }),
+        body: new URLSearchParams({ From: waFrom, To: waTo, Body: appendSmsOptOut(body) }),
       }
     );
     if (!res.ok) {
