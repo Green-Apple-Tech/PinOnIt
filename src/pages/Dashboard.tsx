@@ -6,8 +6,15 @@ import { clearStaleOnboardingLocalState, markOnboardingCompletedLocal } from '..
 import { useTheme } from '../hooks/useTheme';
 import { supabase } from '../lib/supabase';
 import type { Booking, Service } from '../lib/types';
-import { CalendarDays, Settings, LogOut, Users, X, Check, Sun, Moon, Copy, Share2, Mail, Link2, ExternalLink, PenLine, Video, Phone, MapPin, ChevronRight, Loader2, CalendarCheck, Plus, ChevronLeft, LayoutGrid, Menu, AlertCircle, Sparkles, Search, ShoppingBag, Wrench as Tool, QrCode } from 'lucide-react';
+import { CalendarDays, Settings, LogOut, Users, X, Check, Sun, Moon, Copy, Share2, Mail, Link2, ExternalLink, PenLine, Video, Phone, MapPin, ChevronRight, Loader2, CalendarCheck, Plus, ChevronLeft, LayoutGrid, Menu, AlertCircle, Sparkles, Search, ShoppingBag, Wrench as Tool, QrCode, MessageSquare, ChevronDown } from 'lucide-react';
 import { QRModal } from '../components/QRModal';
+import {
+  buildAvailabilityEmailInvite,
+  buildAvailabilitySmsInvite,
+  openEmailComposer,
+  openSmsComposer,
+  openWhatsAppComposer,
+} from '../lib/bookingShare';
 import {
   LINK_EXPIRY_OPTIONS,
   isSingleUseLinksEnabled,
@@ -624,26 +631,40 @@ function SharePanel({
   userId,
   onSlugChange,
   shareUrl,
+  hostName,
 }: {
   slug: string;
   userId: string;
   onSlugChange: (newSlug: string) => void;
   shareUrl: string;
+  hostName?: string;
 }) {
   const [currentSlug, setCurrentSlug] = useState(slug);
   const [showEditor, setShowEditor] = useState(false);
-  const [copiedUrl, setCopiedUrl] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [linkCopiedToast, setLinkCopiedToast] = useState(false);
+  const [shareMenuOpen, setShareMenuOpen] = useState(false);
+  const [shareToast, setShareToast] = useState<string | null>(null);
+  const shareMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setCurrentSlug(slug);
   }, [slug]);
 
-  const copy = useCallback((text: string) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopiedUrl(true); setTimeout(() => setCopiedUrl(false), 2000);
-    });
+  useEffect(() => {
+    if (!shareMenuOpen) return;
+    const onPointerDown = (e: MouseEvent) => {
+      if (shareMenuRef.current && !shareMenuRef.current.contains(e.target as Node)) {
+        setShareMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    return () => document.removeEventListener('mousedown', onPointerDown);
+  }, [shareMenuOpen]);
+
+  const showShareToast = useCallback((msg: string) => {
+    setShareToast(msg);
+    setTimeout(() => setShareToast(null), 2500);
   }, []);
 
   const copyLink = useCallback(() => {
@@ -653,11 +674,47 @@ function SharePanel({
     });
   }, [shareUrl]);
 
+  const emailInvite = buildAvailabilityEmailInvite(shareUrl, hostName);
+  const smsInvite = buildAvailabilitySmsInvite(shareUrl, hostName);
+
+  const handleEmail = (provider: 'gmail' | 'outlook' | 'default') => {
+    openEmailComposer(provider, emailInvite.subject, emailInvite.body);
+    setShareMenuOpen(false);
+    showShareToast(provider === 'gmail' ? 'Opened Gmail compose' : provider === 'outlook' ? 'Opened Outlook compose' : 'Opened email app');
+  };
+
+  const handleSms = () => {
+    openSmsComposer(smsInvite);
+    setShareMenuOpen(false);
+    showShareToast('Opened Messages');
+  };
+
+  const handleWhatsApp = () => {
+    openWhatsAppComposer(smsInvite);
+    setShareMenuOpen(false);
+    showShareToast('Opened WhatsApp');
+  };
+
+  const copyEmailInvite = async () => {
+    await navigator.clipboard.writeText(`Subject: ${emailInvite.subject}\n\n${emailInvite.body}`);
+    setShareMenuOpen(false);
+    showShareToast('Email message copied');
+  };
+
+  const copySmsInvite = async () => {
+    await navigator.clipboard.writeText(smsInvite);
+    setShareMenuOpen(false);
+    showShareToast('Text message copied');
+  };
+
   const handleSaved = (newSlug: string) => {
     setCurrentSlug(newSlug);
     setShowEditor(false);
     onSlugChange(newSlug);
   };
+
+  const menuItemCls =
+    'w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors';
 
   return (
     <div className="mb-6 bg-brand-50 border border-brand-200 rounded-2xl p-5">
@@ -702,19 +759,56 @@ function SharePanel({
         </div>
       )}
 
+      {shareToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 bg-slate-900 text-white text-sm font-medium rounded-full shadow-lg">
+          {shareToast}
+        </div>
+      )}
+
       {/* Primary share actions */}
       <div className="flex flex-col gap-2 mb-3">
-        <button
-          onClick={() => copy(shareUrl)}
-          className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-            copiedUrl
-              ? 'bg-[#5864C6] text-white'
-              : 'bg-white border border-brand-200 text-brand-700 hover:bg-brand-50'
-          }`}
-        >
-          {copiedUrl ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-          {copiedUrl ? 'Copied!' : 'Share your Availability'}
-        </button>
+        <div className="relative" ref={shareMenuRef}>
+          <button
+            type="button"
+            onClick={() => setShareMenuOpen((v) => !v)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-white border border-brand-200 text-brand-700 hover:bg-brand-50 transition-colors"
+            aria-expanded={shareMenuOpen}
+            aria-haspopup="menu"
+          >
+            <Mail className="h-4 w-4" />
+            Send Availability (Email/SMS/WhatsApp)
+            <ChevronDown className={`h-4 w-4 transition-transform ${shareMenuOpen ? 'rotate-180' : ''}`} />
+          </button>
+          {shareMenuOpen && (
+            <div
+              className="absolute left-0 right-0 top-full mt-2 z-50 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl shadow-lg p-1.5"
+              role="menu"
+            >
+              <p className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-slate-500">
+                Send email with
+              </p>
+              <button type="button" onClick={() => handleEmail('gmail')} className={menuItemCls}>Gmail</button>
+              <button type="button" onClick={() => handleEmail('outlook')} className={menuItemCls}>Outlook</button>
+              <button type="button" onClick={() => handleEmail('default')} className={menuItemCls}>Default email app</button>
+              <button type="button" onClick={copyEmailInvite} className={`${menuItemCls} flex items-center gap-1.5`}>
+                <Copy className="h-3.5 w-3.5" /> Copy email message
+              </button>
+              <div className="my-1 border-t border-gray-100 dark:border-slate-800" />
+              <p className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-slate-500">
+                Send text with
+              </p>
+              <button type="button" onClick={handleSms} className={`${menuItemCls} flex items-center gap-1.5`}>
+                <MessageSquare className="h-3.5 w-3.5" /> SMS
+              </button>
+              <button type="button" onClick={handleWhatsApp} className={`${menuItemCls} flex items-center gap-1.5`}>
+                <MessageSquare className="h-3.5 w-3.5" style={{ color: '#25D366' }} /> WhatsApp
+              </button>
+              <button type="button" onClick={copySmsInvite} className={`${menuItemCls} flex items-center gap-1.5`}>
+                <Copy className="h-3.5 w-3.5" /> Copy text message
+              </button>
+            </div>
+          )}
+        </div>
         <a
           href={shareUrl}
           target="_blank"
@@ -1327,6 +1421,7 @@ export function Dashboard() {
                   void refreshProfile();
                 }}
                 shareUrl={shareUrl || `https://pinonit.com/${effectiveSlug}`}
+                hostName={profile.full_name?.trim() || undefined}
               />
             )}
 
