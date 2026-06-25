@@ -11,7 +11,7 @@ import {
   Check,
   Loader2,
   Mail,
-  Phone,
+  MessageSquare,
   ChevronRight,
   ArrowLeft,
   Calendar,
@@ -22,7 +22,9 @@ import {
   RefreshCw,
   CheckCircle2,
   AlertCircle,
+  Pencil,
 } from 'lucide-react';
+import { PHONE_PLACEHOLDER, normalizePhoneE164 } from '../lib/phone';
 
 interface Contact {
   id: string;
@@ -117,6 +119,14 @@ export function ContactsPage() {
   const [savingNotes, setSavingNotes] = useState(false);
   const [notesSaved, setNotesSaved] = useState(false);
 
+  // Detail view contact edit
+  const [editingContact, setEditingContact] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [savingContact, setSavingContact] = useState(false);
+  const [editError, setEditError] = useState('');
+
   // Gmail state
   const [gmailBannerDismissed, setGmailBannerDismissed] = useState(() =>
     localStorage.getItem('gmail_banner_dismissed') === '1'
@@ -140,7 +150,7 @@ export function ContactsPage() {
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
   const [copied, setCopied] = useState(false);
-  const [emailMenuOpen, setEmailMenuOpen] = useState(false);
+  const [openMenu, setOpenMenu] = useState<{ kind: 'email' | 'text'; menuId: string } | null>(null);
 
   const [checklistDismissed, setChecklistDismissed] = useState(
     () => localStorage.getItem('contacts_checklist_dismissed') === 'true',
@@ -443,6 +453,65 @@ export function ContactsPage() {
     setTimeout(() => setNotesSaved(false), 2000);
   };
 
+  const resetContactEditFields = (contact: EnrichedContact) => {
+    setEditName(contact.full_name ?? '');
+    setEditEmail(contact.email);
+    setEditPhone(contact.phone ? formatPhone(contact.phone) : '');
+    setEditError('');
+  };
+
+  const handleStartEditContact = () => {
+    if (!selected) return;
+    resetContactEditFields(selected);
+    setEditingContact(true);
+  };
+
+  const handleCancelEditContact = () => {
+    if (selected) resetContactEditFields(selected);
+    setEditingContact(false);
+    setEditError('');
+  };
+
+  const handleSaveContact = async () => {
+    if (!selected || !profile) return;
+    const email = editEmail.trim().toLowerCase();
+    if (!email) {
+      setEditError('Email is required.');
+      return;
+    }
+    setSavingContact(true);
+    setEditError('');
+    const phoneVal = editPhone.trim() ? normalizePhoneE164(editPhone.trim()) : null;
+    const { data, error } = await supabase
+      .from('contacts')
+      .update({
+        full_name: editName.trim() || null,
+        email,
+        phone: phoneVal,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', selected.id)
+      .eq('host_id', profile.id)
+      .select()
+      .maybeSingle();
+
+    if (error) {
+      setEditError(error.message.includes('duplicate') ? 'A contact with this email already exists.' : error.message);
+      setSavingContact(false);
+      return;
+    }
+
+    if (data) {
+      const updated = data as Contact;
+      const enrichedUpdated: EnrichedContact = { ...selected, ...updated };
+      setContacts((prev) => prev.map((c) => (c.id === updated.id ? { ...c, ...updated } : c)));
+      setSelected(enrichedUpdated);
+      setEditingContact(false);
+      showToast('Contact updated', 'success');
+    }
+    setSavingContact(false);
+  };
+
   const bookingUrl = profile?.slug
     ? `${window.location.origin}/${profile.slug}`
     : `${window.location.origin}/book/${profile?.id}`;
@@ -455,16 +524,77 @@ export function ContactsPage() {
 
   const buildBookingInvite = (contact: Contact) => {
     const firstName = contact.full_name?.split(' ')[0]?.trim() ?? '';
+    const greeting = firstName ? `Hi ${firstName},` : 'Hi,';
+    const hostName = profile?.full_name?.trim();
+    const lines = [
+      greeting,
+      '',
+      "I'd love to find a time to connect. You can grab a slot on my calendar here:",
+      '',
+      bookingUrl,
+      '',
+      'Looking forward to it!',
+    ];
+    if (hostName) lines.push(hostName);
     return {
-      subject: 'Book a meeting with me',
-      body: [
-        `Hi ${firstName},`,
-        '',
-        `You can schedule a meeting with me here: ${bookingUrl}`,
-        '',
-        'Looking forward to connecting!',
-      ].join('\n'),
+      subject: 'Schedule a meeting with me',
+      body: lines.join('\n'),
     };
+  };
+
+  const buildSmsInvite = (contact: Contact) => {
+    const firstName = contact.full_name?.split(' ')[0]?.trim() ?? '';
+    const greeting = firstName ? `Hi ${firstName},` : 'Hi,';
+    const hostName = profile?.full_name?.trim();
+    const lines = [
+      `${greeting} grab a slot on my calendar:`,
+      bookingUrl,
+      'Looking forward to it!',
+    ];
+    if (hostName) lines.push(`— ${hostName}`);
+    return lines.join('\n');
+  };
+
+  const contactSmsNumber = (contact: Contact) => {
+    if (!contact.phone?.trim()) return null;
+    const e164 = normalizePhoneE164(contact.phone);
+    return e164 || null;
+  };
+
+  const closeInviteMenus = () => {
+    setOpenMenu(null);
+  };
+
+  const isInviteMenuOpen = (kind: 'email' | 'text', menuId: string) =>
+    openMenu?.kind === kind && openMenu.menuId === menuId;
+
+  const toggleInviteMenu = (kind: 'email' | 'text', menuId: string) => {
+    setOpenMenu((prev) => (prev?.kind === kind && prev.menuId === menuId ? null : { kind, menuId }));
+  };
+
+  const openSmsComposer = (contact: Contact) => {
+    const phone = contactSmsNumber(contact);
+    if (!phone) {
+      showToast('Add a phone number to send an SMS invite', 'error');
+      return;
+    }
+    const body = buildSmsInvite(contact);
+    window.location.href = `sms:${phone}?body=${encodeURIComponent(body)}`;
+    closeInviteMenus();
+    showToast('Opened Messages', 'success');
+  };
+
+  const openWhatsAppComposer = (contact: Contact) => {
+    const phone = contactSmsNumber(contact);
+    if (!phone) {
+      showToast('Add a phone number to send a WhatsApp invite', 'error');
+      return;
+    }
+    const digits = phone.replace(/\D/g, '');
+    const body = buildSmsInvite(contact);
+    window.open(`https://wa.me/${digits}?text=${encodeURIComponent(body)}`, '_blank', 'noopener,noreferrer');
+    closeInviteMenus();
+    showToast('Opened WhatsApp', 'success');
   };
 
   const openEmailComposer = (provider: 'gmail' | 'outlook' | 'default', contact: Contact) => {
@@ -477,7 +607,7 @@ export function ContactsPage() {
         '_blank',
         'noopener,noreferrer',
       );
-      setEmailMenuOpen(false);
+      closeInviteMenus();
       showToast('Opened Gmail compose', 'success');
       return;
     }
@@ -488,20 +618,139 @@ export function ContactsPage() {
         '_blank',
         'noopener,noreferrer',
       );
-      setEmailMenuOpen(false);
+      closeInviteMenus();
       showToast('Opened Outlook compose', 'success');
       return;
     }
 
     window.location.href = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    setEmailMenuOpen(false);
+    closeInviteMenus();
   };
 
   const copyBookingInvite = async (contact: Contact) => {
     const { subject, body } = buildBookingInvite(contact);
     await navigator.clipboard.writeText(`Subject: ${subject}\n\n${body}`);
-    setEmailMenuOpen(false);
+    closeInviteMenus();
     showToast('Invite message copied', 'success');
+  };
+
+  const copySmsInvite = async (contact: Contact) => {
+    await navigator.clipboard.writeText(buildSmsInvite(contact));
+    closeInviteMenus();
+    showToast('SMS message copied', 'success');
+  };
+
+  const renderEmailMenu = (contact: Contact) => (
+    <div
+      className="absolute right-0 top-full mt-2 w-52 z-50 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl shadow-lg p-1.5"
+      role="menu"
+    >
+      <p className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-slate-500">
+        Send email with
+      </p>
+      <button
+        type="button"
+        onClick={() => openEmailComposer('gmail', contact)}
+        className="w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+      >
+        Gmail
+      </button>
+      <button
+        type="button"
+        onClick={() => openEmailComposer('outlook', contact)}
+        className="w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+      >
+        Outlook
+      </button>
+      <button
+        type="button"
+        onClick={() => openEmailComposer('default', contact)}
+        className="w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+      >
+        Default email app
+      </button>
+      <div className="my-1 border-t border-gray-100 dark:border-slate-800" />
+      <button
+        type="button"
+        onClick={() => copyBookingInvite(contact)}
+        className="w-full flex items-center gap-1.5 text-left px-2.5 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+      >
+        <Copy className="h-3.5 w-3.5" /> Copy email message
+      </button>
+    </div>
+  );
+
+  const renderTextMenu = (contact: Contact) => (
+    <div
+      className="absolute right-0 top-full mt-2 w-52 z-50 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl shadow-lg p-1.5"
+      role="menu"
+    >
+      <p className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-slate-500">
+        Send text with
+      </p>
+      <button
+        type="button"
+        onClick={() => openSmsComposer(contact)}
+        className="w-full flex items-center gap-1.5 text-left px-2.5 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+      >
+        <MessageSquare className="h-3.5 w-3.5" /> SMS
+      </button>
+      <button
+        type="button"
+        onClick={() => openWhatsAppComposer(contact)}
+        className="w-full flex items-center gap-1.5 text-left px-2.5 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+      >
+        <MessageSquare className="h-3.5 w-3.5" style={{ color: '#25D366' }} /> WhatsApp
+      </button>
+      <div className="my-1 border-t border-gray-100 dark:border-slate-800" />
+      <button
+        type="button"
+        onClick={() => copySmsInvite(contact)}
+        className="w-full flex items-center gap-1.5 text-left px-2.5 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+      >
+        <Copy className="h-3.5 w-3.5" /> Copy text message
+      </button>
+    </div>
+  );
+
+  const inviteButtonCls =
+    'flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-900 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-slate-900';
+
+  const renderContactInviteButtons = (contact: Contact, menuId: string) => {
+    const hasPhone = !!contactSmsNumber(contact);
+    return (
+      <div className="flex flex-wrap items-center gap-2 shrink-0">
+        <div className="relative">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); toggleInviteMenu('email', menuId); }}
+            className={inviteButtonCls}
+            aria-expanded={isInviteMenuOpen('email', menuId)}
+            aria-haspopup="menu"
+            title="Send booking link by email"
+          >
+            <Mail className="h-3.5 w-3.5" />
+            Email
+          </button>
+          {isInviteMenuOpen('email', menuId) && renderEmailMenu(contact)}
+        </div>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); if (hasPhone) toggleInviteMenu('text', menuId); }}
+            disabled={!hasPhone}
+            className={inviteButtonCls}
+            aria-expanded={isInviteMenuOpen('text', menuId)}
+            aria-haspopup="menu"
+            title={hasPhone ? 'Send booking link by SMS or WhatsApp' : 'Add a phone number to text this contact'}
+          >
+            <MessageSquare className="h-3.5 w-3.5" />
+            SMS / WhatsApp
+          </button>
+          {hasPhone && isInviteMenuOpen('text', menuId) && renderTextMenu(contact)}
+        </div>
+      </div>
+    );
   };
 
   const dismissGmailBanner = () => {
@@ -674,7 +923,7 @@ export function ContactsPage() {
     return (
       <main className="p-6 md:p-8 max-w-2xl">
         <button
-          onClick={() => setSelected(null)}
+          onClick={() => { closeInviteMenus(); setEditingContact(false); setSelected(null); }}
           className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white transition-colors mb-6"
         >
           <ArrowLeft className="h-4 w-4" /> Back to contacts
@@ -697,61 +946,105 @@ export function ContactsPage() {
           </div>
         </div>
 
-        {/* Send booking link */}
+        {/* Contact details */}
         <div className="bg-white dark:bg-slate-900/50 border border-gray-200 dark:border-slate-800 rounded-2xl p-4 mb-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">Send booking link</p>
-              <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">Share your scheduling page with {selected.full_name?.split(' ')[0] ?? 'this contact'}.</p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <div className="relative">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">Contact details</p>
+            {!editingContact ? (
+              <button
+                type="button"
+                onClick={handleStartEditContact}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+              >
+                <Pencil className="h-3.5 w-3.5" /> Edit
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setEmailMenuOpen((open) => !open)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
-                  aria-expanded={emailMenuOpen}
-                  aria-haspopup="menu"
+                  onClick={handleCancelEditContact}
+                  className="px-3 py-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 dark:hover:text-white transition-colors"
                 >
-                  <Mail className="h-3.5 w-3.5" /> Send invite
+                  Cancel
                 </button>
-                {emailMenuOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-52 z-20 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl shadow-lg p-1.5">
-                    <p className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-slate-500">
-                      Send with
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => openEmailComposer('gmail', selected)}
-                      className="w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
-                    >
-                      Gmail
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openEmailComposer('outlook', selected)}
-                      className="w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
-                    >
-                      Outlook
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openEmailComposer('default', selected)}
-                      className="w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
-                    >
-                      Default email app
-                    </button>
-                    <div className="my-1 border-t border-gray-100 dark:border-slate-800" />
-                    <button
-                      type="button"
-                      onClick={() => copyBookingInvite(selected)}
-                      className="w-full flex items-center gap-1.5 text-left px-2.5 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
-                    >
-                      <Copy className="h-3.5 w-3.5" /> Copy message
-                    </button>
-                  </div>
-                )}
+                <button
+                  type="button"
+                  onClick={handleSaveContact}
+                  disabled={savingContact}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
+                >
+                  {savingContact ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                  Save
+                </button>
               </div>
+            )}
+          </div>
+
+          {editingContact ? (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Full name</label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => { setEditName(e.target.value); setEditError(''); }}
+                  placeholder="Jane Smith"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Email *</label>
+                <input
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => { setEditEmail(e.target.value); setEditError(''); }}
+                  placeholder="jane@example.com"
+                  className={`${inputCls} ${editError ? 'border-red-400' : ''}`}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Phone</label>
+                <input
+                  type="tel"
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  onBlur={() => { if (editPhone.trim()) setEditPhone(formatPhone(editPhone)); }}
+                  placeholder={PHONE_PLACEHOLDER}
+                  className={inputCls}
+                />
+                <p className="text-xs text-gray-400 mt-1">Used for SMS and WhatsApp invites</p>
+              </div>
+              {editError && <p className="text-xs text-red-500">{editError}</p>}
+            </div>
+          ) : (
+            <div className="space-y-2 text-sm">
+              <div className="flex gap-3">
+                <span className="w-16 shrink-0 text-xs font-medium text-gray-400 dark:text-slate-500">Name</span>
+                <span className="text-gray-900 dark:text-white">{selected.full_name || '—'}</span>
+              </div>
+              <div className="flex gap-3">
+                <span className="w-16 shrink-0 text-xs font-medium text-gray-400 dark:text-slate-500">Email</span>
+                <span className="text-gray-900 dark:text-white break-all">{selected.email}</span>
+              </div>
+              <div className="flex gap-3">
+                <span className="w-16 shrink-0 text-xs font-medium text-gray-400 dark:text-slate-500">Phone</span>
+                <span className="text-gray-900 dark:text-white">{selected.phone ? formatPhone(selected.phone) : '—'}</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Send booking link */}
+        <div className="bg-white dark:bg-slate-900/50 border border-gray-200 dark:border-slate-800 rounded-2xl p-4 mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">Send booking link</p>
+              <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">
+                Email or text your scheduling page to {selected.full_name?.split(' ')[0] ?? 'this contact'}.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {renderContactInviteButtons(selected, 'detail')}
               <button
                 onClick={copyBookingLink}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-semibold transition-colors"
@@ -849,7 +1142,7 @@ export function ContactsPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Contacts</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
-            Everyone who has booked with you, in one place.
+            Everyone who has booked with you, in one place. Use <span className="font-medium text-gray-700 dark:text-slate-300">Email</span> or <span className="font-medium text-gray-700 dark:text-slate-300">SMS / WhatsApp</span> to share your booking link.
           </p>
         </div>
         <button
@@ -1141,53 +1434,76 @@ export function ContactsPage() {
               No contacts match your search.
             </div>
           ) : (
-            <div className="bg-white dark:bg-slate-900/50 border border-gray-200 dark:border-slate-800 rounded-2xl overflow-hidden divide-y divide-gray-50 dark:divide-slate-800/50">
+            <div className="bg-white dark:bg-slate-900/50 border border-gray-200 dark:border-slate-800 rounded-2xl overflow-visible divide-y divide-gray-50 dark:divide-slate-800/50">
               {filtered.map((c) => {
                 const ini = initials(c.full_name, c.email);
                 const color = avatarColor(c.email);
+                const hasPhone = !!contactSmsNumber(c);
                 return (
-                  <button
+                  <div
                     key={c.id}
-                    onClick={() => { setSelected(c); setEditingNotes(c.notes ?? ''); setNotesSaved(false); }}
-                    className="w-full flex items-center gap-4 px-5 py-4 hover:bg-gray-50 dark:hover:bg-slate-800/40 transition-colors text-left group"
+                    className="px-5 py-4 hover:bg-gray-50 dark:hover:bg-slate-800/40 transition-colors group"
                   >
-                    <div className={`h-10 w-10 rounded-xl ${color} flex items-center justify-center text-white font-bold text-sm shrink-0`}>
-                      {ini}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                        {c.full_name || c.email}
-                      </p>
-                      <p className="text-xs text-gray-400 dark:text-slate-500 truncate mt-0.5">{c.email}</p>
-                    </div>
-                    <div className="shrink-0 text-right hidden sm:block">
-                      <div className="flex items-center gap-3">
-                        <div>
-                          <p className="text-xs font-semibold text-gray-700 dark:text-slate-300">
-                            {c.meetingCount} {c.meetingCount === 1 ? 'meeting' : 'meetings'}
-                          </p>
-                          {c.nextMeeting ? (
-                            <p className="text-[11px] text-indigo-600 dark:text-indigo-500 mt-0.5">
-                              Next: {formatDate(c.nextMeeting)}
-                            </p>
-                          ) : c.lastMeeting ? (
-                            <p className="text-[11px] text-gray-400 dark:text-slate-500 mt-0.5">
-                              Last: {formatDate(c.lastMeeting)}
-                            </p>
-                          ) : null}
+                    <div className="flex items-start gap-3">
+                      <button
+                        type="button"
+                        onClick={() => { closeInviteMenus(); setSelected(c); setEditingNotes(c.notes ?? ''); setNotesSaved(false); }}
+                        className={`h-10 w-10 rounded-xl ${color} flex items-center justify-center text-white font-bold text-sm shrink-0`}
+                        aria-label={`Open ${c.full_name || c.email}`}
+                      >
+                        {ini}
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => { closeInviteMenus(); setSelected(c); setEditingNotes(c.notes ?? ''); setNotesSaved(false); }}
+                          className="w-full text-left"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                                {c.full_name || c.email}
+                              </p>
+                              <p className="text-xs text-gray-400 dark:text-slate-500 truncate mt-0.5">{c.email}</p>
+                            </div>
+                            <div className="shrink-0 text-right">
+                              <p className="text-xs font-semibold text-gray-700 dark:text-slate-300">
+                                {c.meetingCount} {c.meetingCount === 1 ? 'meeting' : 'meetings'}
+                              </p>
+                              {c.nextMeeting ? (
+                                <p className="text-[11px] text-indigo-600 dark:text-indigo-500 mt-0.5">
+                                  Next: {formatDate(c.nextMeeting)}
+                                </p>
+                              ) : c.lastMeeting ? (
+                                <p className="text-[11px] text-gray-400 dark:text-slate-500 mt-0.5">
+                                  Last: {formatDate(c.lastMeeting)}
+                                </p>
+                              ) : null}
+                            </div>
+                          </div>
+                        </button>
+                        <div
+                          className="flex flex-wrap items-center gap-2 mt-3"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {renderContactInviteButtons(c, c.id)}
+                          {!hasPhone && (
+                            <span className="text-[11px] text-gray-400 dark:text-slate-500">
+                              Add a phone number to enable texting
+                            </span>
+                          )}
                         </div>
-                        <div className="flex items-center gap-1.5 text-gray-300 dark:text-slate-600">
-                          {c.notes && <FileText className="h-3.5 w-3.5 text-gray-400 dark:text-slate-500" />}
-                          {c.phone && <Phone className="h-3.5 w-3.5 text-gray-400 dark:text-slate-500" />}
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-gray-300 dark:text-slate-600 group-hover:text-gray-500 dark:group-hover:text-slate-400 transition-colors" />
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => { closeInviteMenus(); setSelected(c); setEditingNotes(c.notes ?? ''); setNotesSaved(false); }}
+                        className="shrink-0 mt-1"
+                        aria-label="Open contact"
+                      >
+                        <ChevronRight className="h-4 w-4 text-gray-300 dark:text-slate-600 group-hover:text-gray-500 dark:group-hover:text-slate-400 transition-colors" />
+                      </button>
                     </div>
-                    {/* Mobile: just chevron */}
-                    <div className="shrink-0 sm:hidden">
-                      <ChevronRight className="h-4 w-4 text-gray-300 dark:text-slate-600" />
-                    </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
