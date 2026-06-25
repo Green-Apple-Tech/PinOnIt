@@ -193,7 +193,7 @@ export function SmsConsentPage() {
           </p>
           <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-2 pl-4 list-disc">
             <li>On every public booking page at <code className="text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">pinonit.com/your-name</code> (no login required), and</li>
-            <li>During host onboarding before SMS reminders are enabled.</li>
+            <li>During host onboarding and Settings when a host enters their own phone number for PinOnIt account notifications.</li>
           </ul>
         </section>
 

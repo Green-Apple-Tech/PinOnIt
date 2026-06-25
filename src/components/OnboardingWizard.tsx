@@ -1541,7 +1541,9 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
           <div>
             <div className="mb-5">
               <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Your phone number</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Optional — receive booking notifications via SMS or WhatsApp</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Optional — receive your own PinOnIt booking notifications by SMS or WhatsApp.
+              </p>
             </div>
             <div className="flex flex-col gap-3">
               <input
@@ -1567,7 +1569,9 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                     }}
                     className="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600"
                   />
-                  <span className="text-sm text-slate-700 dark:text-slate-300">Send me SMS appointment reminders</span>
+                  <span className="text-sm text-slate-700 dark:text-slate-300">
+                    I agree to receive SMS notifications for my PinOnIt account at this number.
+                  </span>
                 </label>
                 <label className="flex items-start gap-2.5 cursor-pointer">
                   <input
@@ -1582,13 +1586,15 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                     }}
                     className="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600"
                   />
-                  <span className="text-sm text-slate-700 dark:text-slate-300">Send me WhatsApp appointment reminders</span>
+                  <span className="text-sm text-slate-700 dark:text-slate-300">
+                    I agree to receive WhatsApp notifications for my PinOnIt account at this number.
+                  </span>
                 </label>
               </div>
               <SmsBookingConsent />
               {hostPhone.trim() && !hostSmsOptIn && !hostWhatsappOptIn && (
                 <p className="text-red-500 text-xs">
-                  Please check at least one notification option above, or click Skip.
+                  Please check at least one opt-in option above, or click Skip.
                 </p>
               )}
             </div>

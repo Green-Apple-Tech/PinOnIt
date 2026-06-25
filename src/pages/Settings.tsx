@@ -411,6 +411,8 @@ export function SettingsPage() {
   const [defaultReminderChannel, setDefaultReminderChannel] = useState<ReminderChannelPreference>(
     resolveDefaultReminderChannel(profile?.default_reminder_channel),
   );
+  const [hostSmsOptIn, setHostSmsOptIn] = useState(profile?.default_reminder_channel === 'sms');
+  const [hostWhatsappOptIn, setHostWhatsappOptIn] = useState(profile?.default_reminder_channel === 'whatsapp');
 
   // Voice reminders
   const [voiceReminderEnabled, setVoiceReminderEnabled] = useState(profile?.voice_reminder_enabled ?? true);
@@ -506,7 +508,10 @@ export function SettingsPage() {
       setNotificationPhone(storedPhone ? blurFormatPhone(storedPhone) : '');
       const storedWhatsapp = profile.whatsapp_number ?? '';
       setNotificationWhatsapp(storedWhatsapp ? blurFormatPhone(storedWhatsapp) : '');
-      setDefaultReminderChannel(resolveDefaultReminderChannel(profile.default_reminder_channel));
+      const resolvedChannel = resolveDefaultReminderChannel(profile.default_reminder_channel);
+      setDefaultReminderChannel(resolvedChannel);
+      setHostSmsOptIn(resolvedChannel === 'sms');
+      setHostWhatsappOptIn(resolvedChannel === 'whatsapp');
       setVoiceReminderEnabled(profile.voice_reminder_enabled ?? true);
       setNotificationEmail(profile.notification_email ?? '');
     }
@@ -720,6 +725,28 @@ export function SettingsPage() {
       const whatsappE164 =
         normalizePhoneE164(notificationWhatsapp.trim()) || phoneE164;
 
+      if (defaultReminderChannel === 'sms') {
+        if (!phoneE164) {
+          toast.error('Add your phone number before enabling SMS notifications.');
+          return;
+        }
+        if (!hostSmsOptIn) {
+          toast.error('Please check the SMS opt-in box before enabling SMS notifications.');
+          return;
+        }
+      }
+
+      if (defaultReminderChannel === 'whatsapp') {
+        if (!whatsappE164) {
+          toast.error('Add your WhatsApp or phone number before enabling WhatsApp notifications.');
+          return;
+        }
+        if (!hostWhatsappOptIn) {
+          toast.error('Please check the WhatsApp opt-in box before enabling WhatsApp notifications.');
+          return;
+        }
+      }
+
       const payload = {
         full_name: fullName.trim(),
         bio: bio.trim(),
@@ -928,7 +955,13 @@ export function SettingsPage() {
               <input
                 type="tel"
                 value={notificationPhone}
-                onChange={e => setNotificationPhone(e.target.value)}
+                onChange={e => {
+                  setNotificationPhone(e.target.value);
+                  if (!e.target.value.trim()) {
+                    setHostSmsOptIn(false);
+                    if (defaultReminderChannel === 'sms') setDefaultReminderChannel('email');
+                  }
+                }}
                 onBlur={e => { if (e.target.value.trim()) setNotificationPhone(blurFormatPhone(e.target.value)); }}
                 placeholder={PHONE_PLACEHOLDER}
                 className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
@@ -941,7 +974,13 @@ export function SettingsPage() {
               <input
                 type="tel"
                 value={notificationWhatsapp}
-                onChange={e => setNotificationWhatsapp(e.target.value)}
+                onChange={e => {
+                  setNotificationWhatsapp(e.target.value);
+                  if (!e.target.value.trim() && !notificationPhone.trim()) {
+                    setHostWhatsappOptIn(false);
+                    if (defaultReminderChannel === 'whatsapp') setDefaultReminderChannel('email');
+                  }
+                }}
                 onBlur={e => { if (e.target.value.trim()) setNotificationWhatsapp(blurFormatPhone(e.target.value)); }}
                 placeholder={PHONE_PLACEHOLDER}
                 className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
@@ -951,6 +990,45 @@ export function SettingsPage() {
               </p>
             </div>
             <SmsBookingConsent className="text-xs text-gray-500 dark:text-slate-400 mt-1" />
+            <div className="space-y-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 p-3">
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={hostSmsOptIn}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setHostSmsOptIn(checked);
+                    if (checked) setDefaultReminderChannel('sms');
+                    else if (defaultReminderChannel === 'sms') setDefaultReminderChannel('email');
+                  }}
+                  disabled={!notificationPhone.trim()}
+                  className="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600 disabled:opacity-50"
+                />
+                <span className="text-sm text-slate-700 dark:text-slate-300">
+                  I agree to receive SMS notifications for my PinOnIt account at this phone number.
+                </span>
+              </label>
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={hostWhatsappOptIn}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setHostWhatsappOptIn(checked);
+                    if (checked) setDefaultReminderChannel('whatsapp');
+                    else if (defaultReminderChannel === 'whatsapp') setDefaultReminderChannel('email');
+                  }}
+                  disabled={!notificationPhone.trim() && !notificationWhatsapp.trim()}
+                  className="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600 disabled:opacity-50"
+                />
+                <span className="text-sm text-slate-700 dark:text-slate-300">
+                  I agree to receive WhatsApp notifications for my PinOnIt account at this WhatsApp or phone number.
+                </span>
+              </label>
+              <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
+                Clients are asked for their own SMS consent separately when they enter a phone number while booking.
+              </p>
+            </div>
             <div>
               <label className="block text-xs text-slate-500 dark:text-slate-400 mb-2">Default reminder channel</label>
               <div className="flex flex-wrap gap-2">
@@ -960,7 +1038,17 @@ export function SettingsPage() {
                     <button
                       key={value}
                       type="button"
-                      onClick={() => setDefaultReminderChannel(value)}
+                      onClick={() => {
+                        if (value === 'sms' && !hostSmsOptIn) {
+                          toast.error('Check the SMS opt-in box first.');
+                          return;
+                        }
+                        if (value === 'whatsapp' && !hostWhatsappOptIn) {
+                          toast.error('Check the WhatsApp opt-in box first.');
+                          return;
+                        }
+                        setDefaultReminderChannel(value);
+                      }}
                       className={[
                         'inline-flex items-center gap-1.5 min-h-[40px] px-4 py-2 rounded-full text-sm font-semibold border transition-all',
                         active

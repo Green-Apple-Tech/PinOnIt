@@ -482,7 +482,9 @@ function ReminderWizard({
                   onChange={(e) => setSmsOptIn(e.target.checked)}
                   className="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600"
                 />
-                <span className="text-sm text-gray-700 dark:text-slate-300">Send me SMS appointment reminders</span>
+                <span className="text-sm text-gray-700 dark:text-slate-300">
+                  I agree to receive SMS appointment reminders at the phone number I provided.
+                </span>
               </label>
             )}
             {selectedChannels.includes('whatsapp') && (
@@ -493,7 +495,9 @@ function ReminderWizard({
                   onChange={(e) => setWhatsappOptIn(e.target.checked)}
                   className="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600"
                 />
-                <span className="text-sm text-gray-700 dark:text-slate-300">Send me WhatsApp appointment reminders</span>
+                <span className="text-sm text-gray-700 dark:text-slate-300">
+                  I agree to receive WhatsApp appointment reminders at the phone number I provided.
+                </span>
               </label>
             )}
             <SmsBookingConsent className="text-xs text-gray-400 dark:text-slate-500 leading-relaxed" />
@@ -1651,7 +1655,14 @@ export function BookPage() {
                       <input
                         type="tel"
                         value={phone}
-                        onChange={(e) => { setPhone(e.target.value); setDetailsError(''); }}
+                        onChange={(e) => {
+                          setPhone(e.target.value);
+                          setDetailsError('');
+                          if (!e.target.value.trim()) {
+                            setSmsOptIn(false);
+                            setWhatsappOptIn(false);
+                          }
+                        }}
                         onBlur={(e) => { if (e.target.value.trim()) setPhone(blurFormatPhone(e.target.value)); }}
                         placeholder={PHONE_PLACEHOLDER}
                         className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
@@ -1668,7 +1679,9 @@ export function BookPage() {
                           disabled={!phone.trim()}
                           className="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600 disabled:opacity-50"
                         />
-                        <span className="text-sm text-slate-700 dark:text-slate-300">Send me SMS appointment reminders</span>
+                        <span className="text-sm text-slate-700 dark:text-slate-300">
+                          I agree to receive SMS appointment reminders at the phone number I provided.
+                        </span>
                       </label>
                       <label className="flex items-start gap-2.5 cursor-pointer">
                         <input
@@ -1678,7 +1691,9 @@ export function BookPage() {
                           disabled={!phone.trim()}
                           className="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600 disabled:opacity-50"
                         />
-                        <span className="text-sm text-slate-700 dark:text-slate-300">Send me WhatsApp appointment reminders</span>
+                        <span className="text-sm text-slate-700 dark:text-slate-300">
+                          I agree to receive WhatsApp appointment reminders at the phone number I provided.
+                        </span>
                       </label>
                     </div>
                   </div>
