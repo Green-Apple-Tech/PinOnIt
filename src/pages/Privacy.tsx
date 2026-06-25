@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Shield, Database, Eye, Share2, Clock, Mail, ExternalLink, Globe, User, Cookie, Server, Lock } from 'lucide-react';
+import { ArrowLeft, Shield, Database, Eye, Share2, Clock, Mail, ExternalLink, Globe, User, Cookie, Server, Lock, MessageSquare } from 'lucide-react';
 import { Footer } from '../components/Footer';
+import { SMS_PRIVACY_DISCLOSURE } from '../lib/smsCompliance';
 
 interface Section {
   icon: React.ElementType;
@@ -51,6 +52,19 @@ const sections: Section[] = [
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Respond to support requests and communicate service updates.</span></li>
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Improve the Service through aggregated, anonymized usage analysis. We do not sell your personal data.</span></li>
         </ul>
+      </div>
+    ),
+  },
+  {
+    icon: MessageSquare,
+    title: 'SMS Notifications',
+    content: (
+      <div className="space-y-3">
+        <p>{SMS_PRIVACY_DISCLOSURE}</p>
+        <p>
+          For more detail on our SMS program, including example messages and opt-in instructions, see our{' '}
+          <Link to="/sms-consent" className="text-brand-600 dark:text-brand-400 hover:underline">SMS Consent page</Link>.
+        </p>
       </div>
     ),
   },

@@ -140,6 +140,7 @@ export function ContactsPage() {
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
   const [copied, setCopied] = useState(false);
+  const [emailMenuOpen, setEmailMenuOpen] = useState(false);
 
   const [checklistDismissed, setChecklistDismissed] = useState(
     () => localStorage.getItem('contacts_checklist_dismissed') === 'true',
@@ -452,6 +453,57 @@ export function ContactsPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const buildBookingInvite = (contact: Contact) => {
+    const firstName = contact.full_name?.split(' ')[0]?.trim() ?? '';
+    return {
+      subject: 'Book a meeting with me',
+      body: [
+        `Hi ${firstName},`,
+        '',
+        `You can schedule a meeting with me here: ${bookingUrl}`,
+        '',
+        'Looking forward to connecting!',
+      ].join('\n'),
+    };
+  };
+
+  const openEmailComposer = (provider: 'gmail' | 'outlook' | 'default', contact: Contact) => {
+    const { subject, body } = buildBookingInvite(contact);
+    const to = contact.email;
+
+    if (provider === 'gmail') {
+      window.open(
+        `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,
+        '_blank',
+        'noopener,noreferrer',
+      );
+      setEmailMenuOpen(false);
+      showToast('Opened Gmail compose', 'success');
+      return;
+    }
+
+    if (provider === 'outlook') {
+      window.open(
+        `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(to)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,
+        '_blank',
+        'noopener,noreferrer',
+      );
+      setEmailMenuOpen(false);
+      showToast('Opened Outlook compose', 'success');
+      return;
+    }
+
+    window.location.href = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    setEmailMenuOpen(false);
+  };
+
+  const copyBookingInvite = async (contact: Contact) => {
+    const { subject, body } = buildBookingInvite(contact);
+    await navigator.clipboard.writeText(`Subject: ${subject}\n\n${body}`);
+    setEmailMenuOpen(false);
+    showToast('Invite message copied', 'success');
+  };
+
   const dismissGmailBanner = () => {
     setGmailBannerDismissed(true);
     localStorage.setItem('gmail_banner_dismissed', '1');
@@ -653,12 +705,53 @@ export function ContactsPage() {
               <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">Share your scheduling page with {selected.full_name?.split(' ')[0] ?? 'this contact'}.</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <a
-                href={`mailto:${selected.email}?subject=Book a meeting with me&body=Hi ${selected.full_name?.split(' ')[0] ?? ''},\n\nYou can schedule a meeting with me here: ${bookingUrl}\n\nLooking forward to connecting!`}
-                className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
-              >
-                <Mail className="h-3.5 w-3.5" /> Email
-              </a>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setEmailMenuOpen((open) => !open)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+                  aria-expanded={emailMenuOpen}
+                  aria-haspopup="menu"
+                >
+                  <Mail className="h-3.5 w-3.5" /> Send invite
+                </button>
+                {emailMenuOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-52 z-20 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl shadow-lg p-1.5">
+                    <p className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-slate-500">
+                      Send with
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => openEmailComposer('gmail', selected)}
+                      className="w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+                    >
+                      Gmail
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openEmailComposer('outlook', selected)}
+                      className="w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+                    >
+                      Outlook
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openEmailComposer('default', selected)}
+                      className="w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+                    >
+                      Default email app
+                    </button>
+                    <div className="my-1 border-t border-gray-100 dark:border-slate-800" />
+                    <button
+                      type="button"
+                      onClick={() => copyBookingInvite(selected)}
+                      className="w-full flex items-center gap-1.5 text-left px-2.5 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+                    >
+                      <Copy className="h-3.5 w-3.5" /> Copy message
+                    </button>
+                  </div>
+                )}
+              </div>
               <button
                 onClick={copyBookingLink}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-semibold transition-colors"

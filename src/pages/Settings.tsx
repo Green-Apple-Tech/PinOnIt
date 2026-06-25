@@ -22,7 +22,7 @@ import { AnalyticsPage } from './Analytics';
 import { BillingPage } from './Billing';
 import { AvailabilityPage } from './Availability';
 import { RemindersPage } from './Reminders';
-import { SmsConsentText } from '../components/SmsConsentText';
+import { SmsBookingConsent } from '../components/SmsConsentText';
 
 type SettingsSection = 'general' | 'availability' | 'reminders' | 'analytics' | 'billing';
 type SettingsTab = 'profile' | 'booking_page' | 'branding' | 'embed' | 'referrals' | 'integrations';
@@ -950,7 +950,7 @@ export function SettingsPage() {
                 Leave blank to use your phone number above for WhatsApp. Enter a different number if your WhatsApp is on a separate device.
               </p>
             </div>
-            <SmsConsentText className="text-xs text-gray-500 dark:text-slate-400 mt-1" />
+            <SmsBookingConsent className="text-xs text-gray-500 dark:text-slate-400 mt-1" />
             <div>
               <label className="block text-xs text-slate-500 dark:text-slate-400 mb-2">Default reminder channel</label>
               <div className="flex flex-wrap gap-2">
@@ -1092,7 +1092,7 @@ export function SettingsPage() {
                     className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-400 transition"
                   />
                   <p className="text-xs text-slate-400 mt-1">{PHONE_HINT}</p>
-                  <SmsConsentText variant="thirdParty" className="text-xs text-gray-500 dark:text-slate-400 mt-1.5" />
+                  <SmsBookingConsent className="text-xs text-gray-500 dark:text-slate-400 mt-1.5" />
                 </div>
               </div>
               <button

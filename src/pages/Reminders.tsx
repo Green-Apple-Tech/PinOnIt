@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import { resolveDefaultReminderChannel, getWhatsappNumber } from '../lib/reminderChannels';
-import { SmsConsentText } from '../components/SmsConsentText';
+import { SmsBookingConsent } from '../components/SmsConsentText';
 import { SMS_OPT_OUT_FOOTER } from '../lib/smsOptOut';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -1169,7 +1169,7 @@ export function RemindersPage({
                 </div>
               </div>
             ))}
-            <SmsConsentText className="text-xs text-gray-500 dark:text-slate-400 mt-1" />
+            <SmsBookingConsent className="text-xs text-gray-500 dark:text-slate-400 mt-1" />
             <div className="flex items-center gap-2 pt-1">
               <button onClick={handleSaveContact} disabled={savingContact} className="px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 inline-flex items-center gap-1.5 hover:opacity-90" style={{ backgroundColor: '#5864C6' }}>
                 {savingContact ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Save
@@ -1252,7 +1252,7 @@ export function RemindersPage({
                 </button>
               </div>
               <p className="text-xs text-slate-400 dark:text-slate-500">{PHONE_HINT}</p>
-              <SmsConsentText variant="thirdParty" className="text-xs text-gray-500 dark:text-slate-400 mt-1" />
+              <SmsBookingConsent className="text-xs text-gray-500 dark:text-slate-400 mt-1" />
               {testSmsResult && (
                 <div className={`flex items-start gap-2 px-3 py-2.5 rounded-lg text-sm ${
                   testSmsResult.ok

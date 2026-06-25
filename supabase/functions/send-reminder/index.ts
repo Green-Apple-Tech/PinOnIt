@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { appendSmsOptOut } from '../_shared/sms-opt-out.ts';
+import { bookingAllowsGuestSms, bookingAllowsGuestWhatsapp } from '../_shared/sms-compliance.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -447,8 +448,11 @@ Deno.serve(async (req: Request) => {
 
     // ── SMS via Twilio ───────────────────────────────────────────────────────
     if (sendChannel === 'sms') {
-      const guestPhone = booking.guest_phone;
-      if (guestPhone) {
+      if (!bookingAllowsGuestSms(booking)) {
+        console.warn('Guest has not opted in to SMS or has no phone, booking:', booking_id);
+        deliveryStatus = 'failed';
+      } else {
+        const guestPhone = booking.guest_phone!;
         const smsBody = [
           `Hi ${templateData.guest_name}, reminder: you have a ${templateData.duration} meeting with ${templateData.host_name} on ${templateData.date} at ${templateData.time}.`,
           booking.meeting_link ? `Join: ${booking.meeting_link}` : '',
@@ -460,16 +464,16 @@ Deno.serve(async (req: Request) => {
           console.warn('SMS delivery failed:', result.error);
           deliveryStatus = 'failed';
         }
-      } else {
-        console.warn('No guest phone number for SMS reminder, booking:', booking_id);
-        deliveryStatus = 'failed';
       }
     }
 
     // ── WhatsApp via Twilio ──────────────────────────────────────────────────
     if (sendChannel === 'whatsapp') {
-      const guestPhone = booking.guest_phone;
-      if (guestPhone) {
+      if (!bookingAllowsGuestWhatsapp(booking)) {
+        console.warn('Guest has not opted in to WhatsApp or has no phone, booking:', booking_id);
+        deliveryStatus = 'failed';
+      } else {
+        const guestPhone = booking.guest_phone!;
         const waBody = msgBody || [
           `Hi ${templateData.guest_name}, reminder: you have a ${templateData.duration} meeting with ${templateData.host_name} on ${templateData.date} at ${templateData.time}.`,
           booking.meeting_link ? `Join: ${booking.meeting_link}` : '',
@@ -481,9 +485,6 @@ Deno.serve(async (req: Request) => {
           console.warn('WhatsApp delivery failed:', result.error);
           deliveryStatus = 'failed';
         }
-      } else {
-        console.warn('No guest phone number for WhatsApp reminder, booking:', booking_id);
-        deliveryStatus = 'failed';
       }
     }
 

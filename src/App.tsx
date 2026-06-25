@@ -13,6 +13,7 @@ import { BookingActionPage } from './pages/BookingAction';
 import { Onboarding } from './pages/Onboarding';
 import { TermsPage } from './pages/Terms';
 import { PrivacyPage } from './pages/Privacy';
+import { SmsConsentPage } from './pages/SmsConsent';
 import { AcceptableUsePage } from './pages/AcceptableUse';
 import { LeaderboardPage } from './pages/Leaderboard';
 import { PollVotePage } from './pages/PollVote';
@@ -81,6 +82,7 @@ function App() {
             <Route path="/" element={<Landing />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/sms-consent" element={<SmsConsentPage />} />
             <Route path="/acceptable-use" element={<AcceptableUsePage />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/status" element={<StatusPage />} />

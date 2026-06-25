@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { TIMEZONES } from '../lib/types';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
-import { SmsConsentText } from './SmsConsentText';
+import { SmsBookingConsent } from './SmsConsentText';
 import {
   ArrowRight, ArrowLeft, Check, X, Loader2, Copy, ExternalLink, Pencil,
   Calendar, Mail, Video, Globe, Zap, Sparkles,
@@ -302,6 +302,8 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [hostPhone, setHostPhone] = useState('');
   const [hostNotifyVia, setHostNotifyVia] = useState<string[]>([]);
+  const [hostSmsOptIn, setHostSmsOptIn] = useState(false);
+  const [hostWhatsappOptIn, setHostWhatsappOptIn] = useState(false);
   const [slug, setSlug] = useState('');
   const [timezone, setTimezone] = useState(profile?.timezone ?? 'America/New_York');
   const [profilePhone, setProfilePhone] = useState('');
@@ -667,8 +669,12 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
     setProfilePhone(formatted);
     const storedWhatsapp = profile.whatsapp_number ?? '';
     setProfileWhatsapp(storedWhatsapp ? blurFormatPhone(storedWhatsapp) : '');
-    if (profile.default_reminder_channel === 'sms' || profile.default_reminder_channel === 'whatsapp') {
-      setHostNotifyVia([profile.default_reminder_channel]);
+    if (profile.default_reminder_channel === 'sms') {
+      setHostSmsOptIn(true);
+      setHostNotifyVia((prev) => (prev.includes('sms') ? prev : [...prev, 'sms']));
+    } else if (profile.default_reminder_channel === 'whatsapp') {
+      setHostWhatsappOptIn(true);
+      setHostNotifyVia((prev) => (prev.includes('whatsapp') ? prev : [...prev, 'whatsapp']));
     }
   }, [profile?.phone, profile?.whatsapp_number, profile?.default_reminder_channel]);
 
@@ -963,12 +969,12 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
     setSaving(true);
     const phoneE164 = normalizePhoneE164(hostPhone) || null;
     const payload: Record<string, string | null> = { phone: phoneE164 };
-    if (hostNotifyVia.includes('whatsapp') && phoneE164) {
+    if (phoneE164 && hostWhatsappOptIn) {
       payload.whatsapp_number = phoneE164;
     }
-    if (hostNotifyVia.includes('sms')) {
+    if (phoneE164 && hostSmsOptIn) {
       payload.default_reminder_channel = 'sms';
-    } else if (hostNotifyVia.includes('whatsapp')) {
+    } else if (phoneE164 && hostWhatsappOptIn) {
       payload.default_reminder_channel = 'whatsapp';
     }
     await supabase.from('profiles').update(payload).eq('id', user.id);
@@ -1530,12 +1536,12 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
       case 'phone': {
         const canContinuePhone =
           !hostPhone.trim() ||
-          (hostPhone.trim().length > 0 && hostNotifyVia.length > 0);
+          (hostPhone.trim().length > 0 && (hostSmsOptIn || hostWhatsappOptIn));
         return (
           <div>
             <div className="mb-5">
               <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Your phone number</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Receive booking notifications via SMS or WhatsApp</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Optional — receive booking notifications via SMS or WhatsApp</p>
             </div>
             <div className="flex flex-col gap-3">
               <input
@@ -1546,43 +1552,45 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                 placeholder={PHONE_PLACEHOLDER}
                 className="w-full border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600"
               />
-              <div>
-                <p className="text-xs font-medium text-gray-600 dark:text-slate-400 mb-2">Notify me via</p>
-                <div className="flex gap-2">
-                  {(['SMS', 'WhatsApp'] as const).map((opt) => {
-                    const key = opt.toLowerCase();
-                    const active = hostNotifyVia.includes(key);
-                    return (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => setHostNotifyVia((prev) =>
-                          active ? prev.filter((v) => v !== key) : [...prev, key]
-                        )}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-medium transition-colors ${
-                          active
-                            ? 'border-indigo-600 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300'
-                            : 'border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-400 hover:border-gray-400 dark:hover:border-slate-500'
-                        }`}
-                        aria-pressed={active}
-                      >
-                        <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
-                          active ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300 dark:border-slate-600'
-                        }`}>
-                          {active && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 10 8"><path d="M1 4l3 3 5-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                        </span>
-                        {opt}
-                      </button>
-                    );
-                  })}
-                </div>
-                <SmsConsentText />
-                {hostPhone.trim() && hostNotifyVia.length === 0 && (
-                  <p className="text-red-500 text-xs mt-2">
-                    Please select at least one notification method, or click Skip.
-                  </p>
-                )}
+              <p className="text-xs text-slate-400">{PHONE_HINT}</p>
+              <div className="space-y-2.5 pt-1">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={hostSmsOptIn}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setHostSmsOptIn(checked);
+                      setHostNotifyVia((prev) =>
+                        checked ? (prev.includes('sms') ? prev : [...prev, 'sms']) : prev.filter((v) => v !== 'sms')
+                      );
+                    }}
+                    className="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600"
+                  />
+                  <span className="text-sm text-slate-700 dark:text-slate-300">Send me SMS appointment reminders</span>
+                </label>
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={hostWhatsappOptIn}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setHostWhatsappOptIn(checked);
+                      setHostNotifyVia((prev) =>
+                        checked ? (prev.includes('whatsapp') ? prev : [...prev, 'whatsapp']) : prev.filter((v) => v !== 'whatsapp')
+                      );
+                    }}
+                    className="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600"
+                  />
+                  <span className="text-sm text-slate-700 dark:text-slate-300">Send me WhatsApp appointment reminders</span>
+                </label>
               </div>
+              <SmsBookingConsent />
+              {hostPhone.trim() && !hostSmsOptIn && !hostWhatsappOptIn && (
+                <p className="text-red-500 text-xs">
+                  Please check at least one notification option above, or click Skip.
+                </p>
+              )}
             </div>
             <NavButtons
               onBack={goBack}
@@ -1590,6 +1598,8 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
               onSkip={async () => {
                 setHostPhone('');
                 setHostNotifyVia([]);
+                setHostSmsOptIn(false);
+                setHostWhatsappOptIn(false);
                 await saveStep(STEPS.indexOf('phone') + 1);
                 goNext();
               }}
@@ -1941,7 +1951,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                   Leave blank to use your phone number above for WhatsApp. Enter a different number if your WhatsApp is on a separate device.
                 </p>
               </div>
-              <SmsConsentText className="text-xs text-gray-500 dark:text-slate-400 mt-1" />
+              <SmsBookingConsent className="text-xs text-gray-500 dark:text-slate-400 mt-1" />
             </div>
 
             <NavButtons

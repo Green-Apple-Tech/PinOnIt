@@ -14,7 +14,7 @@ import {
   shouldStopRecurrence,
 } from '../lib/recurring';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
-import { SmsConsentText } from '../components/SmsConsentText';
+import { SmsBookingConsent } from '../components/SmsConsentText';
 import { resolveTermsText } from '../lib/terms';
 import { stripePromise } from '../lib/stripe';
 import { StripeBookingCheckout } from '../components/StripeBookingCheckout';
@@ -396,7 +396,11 @@ function ReminderWizard({
   saving,
   onBack,
   onSave,
-  hostName,
+  guestPhone,
+  smsOptIn,
+  setSmsOptIn,
+  whatsappOptIn,
+  setWhatsappOptIn,
 }: {
   accentColor: string;
   selectedChannels: string[];
@@ -407,6 +411,11 @@ function ReminderWizard({
   onBack: () => void;
   onSave: () => void;
   hostName?: string;
+  guestPhone?: string;
+  smsOptIn: boolean;
+  setSmsOptIn: React.Dispatch<React.SetStateAction<boolean>>;
+  whatsappOptIn: boolean;
+  setWhatsappOptIn: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   const toggleChannel = (id: string) => {
     setSelectedChannels((prev) =>
@@ -420,7 +429,11 @@ function ReminderWizard({
     );
   };
 
-  const canSave = selectedChannels.length > 0 && selectedTimes.length > 0;
+  const canSave =
+    selectedChannels.length > 0 &&
+    selectedTimes.length > 0 &&
+    (!selectedChannels.includes('sms') || (!!guestPhone?.trim() && smsOptIn)) &&
+    (!selectedChannels.includes('whatsapp') || (!!guestPhone?.trim() && whatsappOptIn));
 
   return (
     <div className="py-8 max-w-md mx-auto">
@@ -460,7 +473,34 @@ function ReminderWizard({
           ))}
         </div>
         {(selectedChannels.includes('sms') || selectedChannels.includes('whatsapp')) && (
-          <SmsConsentText variant="guestChannels" hostName={hostName} className="text-xs text-gray-400 dark:text-slate-500 mt-2 leading-relaxed" />
+          <div className="mt-3 space-y-2">
+            {selectedChannels.includes('sms') && (
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={smsOptIn}
+                  onChange={(e) => setSmsOptIn(e.target.checked)}
+                  className="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600"
+                />
+                <span className="text-sm text-gray-700 dark:text-slate-300">Send me SMS appointment reminders</span>
+              </label>
+            )}
+            {selectedChannels.includes('whatsapp') && (
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={whatsappOptIn}
+                  onChange={(e) => setWhatsappOptIn(e.target.checked)}
+                  className="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600"
+                />
+                <span className="text-sm text-gray-700 dark:text-slate-300">Send me WhatsApp appointment reminders</span>
+              </label>
+            )}
+            <SmsBookingConsent className="text-xs text-gray-400 dark:text-slate-500 leading-relaxed" />
+            {selectedChannels.includes('sms') && !guestPhone?.trim() && (
+              <p className="text-xs text-amber-600 dark:text-amber-400">Add a phone number on your booking to receive SMS reminders.</p>
+            )}
+          </div>
         )}
       </div>
 
@@ -556,7 +596,8 @@ export function BookPage() {
   const [guestName, setGuestName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [notifyVia, setNotifyVia] = useState<string[]>(['email']);
+  const [smsOptIn, setSmsOptIn] = useState(false);
+  const [whatsappOptIn, setWhatsappOptIn] = useState(false);
   const [detailsError, setDetailsError] = useState('');
   const [guestTimezone, setGuestTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York');
   const [guestNotes, setGuestNotes] = useState('');
@@ -619,6 +660,13 @@ export function BookPage() {
     };
     prefillFromProfile();
   }, []);
+
+  useEffect(() => {
+    if (!phone.trim()) {
+      setSmsOptIn(false);
+      setWhatsappOptIn(false);
+    }
+  }, [phone]);
 
   useEffect(() => {
     if (!slug && !token) return;
@@ -821,13 +869,13 @@ export function BookPage() {
     const phoneVal = phone.trim() ? normalizePhoneE164(phone.trim()) : null;
     const notifyViaPayload: string[] = [];
     if (email) notifyViaPayload.push('email');
-    if (phoneVal) {
-      for (const ch of notifyVia) {
-        if ((ch === 'sms' || ch === 'whatsapp') && !notifyViaPayload.includes(ch)) {
-          notifyViaPayload.push(ch);
-        }
-      }
-    }
+    if (phoneVal && smsOptIn) notifyViaPayload.push('sms');
+    if (phoneVal && whatsappOptIn) notifyViaPayload.push('whatsapp');
+    const effectiveReminderChannels = selectedChannels.filter((ch) => {
+      if (ch === 'sms') return !!(phoneVal && smsOptIn);
+      if (ch === 'whatsapp') return !!(phoneVal && whatsappOptIn);
+      return true;
+    });
     const { data } = await supabase.from('bookings').insert({
       service_id: selectedService.id,
       host_id: host.id,
@@ -842,7 +890,7 @@ export function BookPage() {
       status: 'confirmed',
       is_recurring: isRecurring,
       recurrence_frequency: isRecurring ? selectedService.recurrence_frequency : null,
-      reminder_channels: selectedChannels,
+      reminder_channels: effectiveReminderChannels.length > 0 ? effectiveReminderChannels : ['email'],
       reminder_times: selectedTimes,
       stripe_payment_id: stripePaymentId,
     }).select().maybeSingle();
@@ -956,7 +1004,7 @@ export function BookPage() {
             is_recurring: true,
             recurrence_frequency: freq,
             parent_booking_id: data.id,
-            reminder_channels: selectedChannels,
+            reminder_channels: effectiveReminderChannels.length > 0 ? effectiveReminderChannels : ['email'],
             reminder_times: selectedTimes,
           });
         }
@@ -976,7 +1024,7 @@ export function BookPage() {
       } catch { /* non-blocking */ }
     }
     return data as Booking | null;
-  }, [selectedService, selectedDate, selectedSlot, host, guestName, guestEmail, phone, notifyVia, guestTimezone, guestNotes, questions, answers, singleUseLink, selectedChannels, selectedTimes, stripePaymentId]);
+  }, [selectedService, selectedDate, selectedSlot, host, guestName, guestEmail, phone, smsOptIn, whatsappOptIn, guestTimezone, guestNotes, questions, answers, singleUseLink, selectedChannels, selectedTimes, stripePaymentId]);
 
   useEffect(() => {
     setClientSecret(null);
@@ -1026,17 +1074,29 @@ export function BookPage() {
   const handleSaveReminders = async () => {
     if (!confirmedBooking) return;
     setSavingReminders(true);
+    const phoneVal = confirmedBooking.guest_phone?.trim() || null;
+    const effectiveChannels = selectedChannels.filter((ch) => {
+      if (ch === 'sms') return !!(phoneVal && smsOptIn);
+      if (ch === 'whatsapp') return !!(phoneVal && whatsappOptIn);
+      return true;
+    });
+    const notifyViaUpdate: string[] = [];
+    if (confirmedBooking.guest_email) notifyViaUpdate.push('email');
+    if (phoneVal && smsOptIn) notifyViaUpdate.push('sms');
+    if (phoneVal && whatsappOptIn) notifyViaUpdate.push('whatsapp');
     if (confirmedBooking.action_token) {
       await supabase.rpc('save_guest_reminder_prefs', {
         p_booking_id: confirmedBooking.id,
         p_action_token: confirmedBooking.action_token,
-        p_reminder_channels: selectedChannels,
+        p_reminder_channels: effectiveChannels.length > 0 ? effectiveChannels : ['email'],
         p_reminder_times: selectedTimes,
+        p_notify_via: notifyViaUpdate.length > 0 ? notifyViaUpdate : null,
       });
       setConfirmedBooking({
         ...confirmedBooking,
-        reminder_channels: selectedChannels,
+        reminder_channels: effectiveChannels.length > 0 ? effectiveChannels : ['email'],
         reminder_times: selectedTimes,
+        notify_via: notifyViaUpdate.length > 0 ? notifyViaUpdate : null,
       });
     }
     setRemindersDone(true);
@@ -1584,7 +1644,7 @@ export function BookPage() {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                      Phone number <span className="text-slate-400 dark:text-slate-500 font-normal">(optional) — for SMS reminders</span>
+                      Phone number <span className="text-slate-400 dark:text-slate-500 font-normal">(optional)</span>
                     </label>
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500" />
@@ -1597,44 +1657,31 @@ export function BookPage() {
                         className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
                       />
                     </div>
+                    <SmsBookingConsent />
                     <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{PHONE_HINT}</p>
-                    <SmsConsentText variant="guestPhone" hostName={pageDisplayName} className="text-xs text-gray-400 dark:text-slate-500 mt-1.5" />
-                  </div>
-                  {phone && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
-                        Also notify me via
+                    <div className="space-y-2.5 mt-3">
+                      <label className="flex items-start gap-2.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={smsOptIn}
+                          onChange={(e) => setSmsOptIn(e.target.checked)}
+                          disabled={!phone.trim()}
+                          className="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600 disabled:opacity-50"
+                        />
+                        <span className="text-sm text-slate-700 dark:text-slate-300">Send me SMS appointment reminders</span>
                       </label>
-                      <div className="flex gap-2 flex-wrap">
-                        {(['SMS', 'WhatsApp'] as const).map((opt) => (
-                          <button
-                            key={opt}
-                            type="button"
-                            onClick={() => setNotifyVia((prev) =>
-                              prev.includes(opt.toLowerCase())
-                                ? prev.filter((v) => v !== opt.toLowerCase())
-                                : [...prev, opt.toLowerCase()]
-                            )}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
-                              notifyVia.includes(opt.toLowerCase())
-                                ? 'border-indigo-600 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300'
-                                : 'border-gray-300 dark:border-slate-700 text-gray-600 dark:text-slate-400 hover:border-gray-400 dark:hover:border-slate-600'
-                            }`}
-                          >
-                            <div className={`w-4 h-4 rounded border flex items-center justify-center ${
-                              notifyVia.includes(opt.toLowerCase()) ? 'bg-indigo-600 border-indigo-600' : 'border-gray-400 dark:border-slate-500'
-                            }`}>
-                              {notifyVia.includes(opt.toLowerCase()) && <Check className="h-3 w-3 text-white" />}
-                            </div>
-                            {opt}
-                          </button>
-                        ))}
-                      </div>
-                      {(notifyVia.includes('sms') || notifyVia.includes('whatsapp')) && (
-                        <SmsConsentText variant="guestChannels" hostName={pageDisplayName} className="text-xs text-gray-400 dark:text-slate-500 mt-2 leading-relaxed" />
-                      )}
+                      <label className="flex items-start gap-2.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={whatsappOptIn}
+                          onChange={(e) => setWhatsappOptIn(e.target.checked)}
+                          disabled={!phone.trim()}
+                          className="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600 disabled:opacity-50"
+                        />
+                        <span className="text-sm text-slate-700 dark:text-slate-300">Send me WhatsApp appointment reminders</span>
+                      </label>
                     </div>
-                  )}
+                  </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Your timezone</label>
                     <div className="relative">
@@ -1689,8 +1736,8 @@ export function BookPage() {
                             className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition" />
                           {q.field_type === 'phone' && (
                             <>
+                              <SmsBookingConsent />
                               <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{PHONE_HINT}</p>
-                              <SmsConsentText variant="guestPhone" hostName={pageDisplayName} className="text-xs text-gray-400 dark:text-slate-500 mt-1.5" />
                             </>
                           )}
                         </>
@@ -2050,7 +2097,11 @@ export function BookPage() {
                 saving={savingReminders}
                 onBack={() => setStep('confirmed')}
                 onSave={handleSaveReminders}
-                hostName={pageDisplayName}
+                guestPhone={confirmedBooking.guest_phone ?? phone}
+                smsOptIn={smsOptIn}
+                setSmsOptIn={setSmsOptIn}
+                whatsappOptIn={whatsappOptIn}
+                setWhatsappOptIn={setWhatsappOptIn}
               />
             )}
           </div>

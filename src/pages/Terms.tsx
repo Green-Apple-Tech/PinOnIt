@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
-import { ArrowLeft, FileText, Zap, CreditCard, Users, Ban, AlertTriangle, Scale, Mail, Gift, Gavel, ShieldAlert, Umbrella, Plug, BookOpen, HardDrive, Globe } from 'lucide-react';
+import { ArrowLeft, FileText, Zap, CreditCard, Users, Ban, AlertTriangle, Scale, Mail, Gift, Gavel, ShieldAlert, Umbrella, Plug, BookOpen, HardDrive, Globe, MessageSquare } from 'lucide-react';
 import { Footer } from '../components/Footer';
+import { SMS_TERMS_DISCLOSURE } from '../lib/smsCompliance';
 
 interface Section {
   icon: React.ElementType;
@@ -69,6 +70,20 @@ const sections: Section[] = [
         </div>
         <p className="text-xs text-slate-400 dark:text-slate-500">
           Plan features, pricing, and availability are subject to change. We will provide at least 30 days' notice before increasing prices for existing subscribers.
+        </p>
+      </div>
+    ),
+  },
+  {
+    icon: MessageSquare,
+    title: 'SMS Notifications',
+    content: (
+      <div className="space-y-3">
+        <p>{SMS_TERMS_DISCLOSURE}</p>
+        <p>
+          See our{' '}
+          <Link to="/sms-consent" className="text-brand-600 dark:text-brand-400 hover:underline">SMS Consent page</Link>{' '}
+          and <Link to="/privacy" className="text-brand-600 dark:text-brand-400 hover:underline">Privacy Policy</Link> for additional information.
         </p>
       </div>
     ),
