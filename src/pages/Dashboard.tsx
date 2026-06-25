@@ -573,7 +573,7 @@ function SingleUseLinksRow() {
           <div className="min-w-0">
             <p className="text-sm font-semibold text-gray-900 dark:text-white">Single use links</p>
             <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
-              Each link can only be used once — expires after one booking.
+              Hand out a booking link that stops working once it&apos;s been used. Pick how long it stays valid: until <span className="font-medium text-gray-600 dark:text-slate-300">1 booking</span> is made, or for <span className="font-medium text-gray-600 dark:text-slate-300">7</span> or <span className="font-medium text-gray-600 dark:text-slate-300">30 days</span> — whichever comes first.
             </p>
           </div>
         </div>

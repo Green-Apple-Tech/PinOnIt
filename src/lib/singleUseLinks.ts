@@ -2,7 +2,6 @@ export type LinkExpiryValue = '1_booking' | '24_hours' | '7_days' | '30_days';
 
 export const LINK_EXPIRY_OPTIONS: { value: LinkExpiryValue; label: string }[] = [
   { value: '1_booking', label: '1 booking' },
-  { value: '24_hours', label: '24 hours' },
   { value: '7_days', label: '7 days' },
   { value: '30_days', label: '30 days' },
 ];
@@ -17,7 +16,6 @@ export function linkExpiryToDays(expiry: string | null | undefined): number {
 }
 
 export function daysToLinkExpiry(days: number | null | undefined): LinkExpiryValue {
-  if (days === 1) return '24_hours';
   if (days === 7) return '7_days';
   if (days === 30) return '30_days';
   return '1_booking';
@@ -27,7 +25,11 @@ export function resolveLinkExpiry(profile: {
   link_expiry?: string | null;
   default_link_expiry_days?: number | null;
 }): LinkExpiryValue {
-  if (profile.link_expiry && LINK_EXPIRY_OPTIONS.some((o) => o.value === profile.link_expiry)) {
+  if (
+    profile.link_expiry &&
+    profile.link_expiry !== '24_hours' &&
+    LINK_EXPIRY_OPTIONS.some((o) => o.value === profile.link_expiry)
+  ) {
     return profile.link_expiry as LinkExpiryValue;
   }
   return daysToLinkExpiry(profile.default_link_expiry_days);
