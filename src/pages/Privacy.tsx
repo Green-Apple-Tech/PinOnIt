@@ -15,7 +15,7 @@ const sections: Section[] = [
     title: 'Introduction',
     content: (
       <p>
-        PinOnIt ("<strong>we</strong>", "<strong>us</strong>", or "<strong>our</strong>") is a scheduling and meeting management platform operated by PinOnIt, Inc. This Privacy Policy explains how we collect, use, and protect your personal information when you use{' '}
+        PinOnIt ("<strong>we</strong>", "<strong>us</strong>", or "<strong>our</strong>") is a scheduling and meeting management platform operated by Miami Expeditions LLC, doing business as PinOnIt. This Privacy Policy explains how we collect, use, and protect your personal information when you use{' '}
         <a href="https://pinonit.com" className="text-brand-600 dark:text-brand-400 hover:underline">pinonit.com</a>{' '}
         and any related services (collectively, the "<strong>Service</strong>"). By using the Service, you agree to the practices described in this policy.
       </p>
@@ -266,7 +266,7 @@ const sections: Section[] = [
           For any privacy-related questions, data subject requests (access, deletion, correction, portability), or to report a potential data breach, please contact our privacy team:
         </p>
         <div className="p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl space-y-1">
-          <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">PinOnIt, Inc. — Privacy Team</p>
+          <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Miami Expeditions LLC (DBA PinOnIt) — Privacy Team</p>
           <p className="text-sm text-slate-600 dark:text-slate-400">Email: <a href="mailto:support@pinonit.com" className="text-brand-600 dark:text-brand-400 hover:underline font-medium">support@pinonit.com</a></p>
           <p className="text-sm text-slate-500 dark:text-slate-500">Subject line: "Privacy Request — [Type of Request]"</p>
         </div>
@@ -298,6 +298,9 @@ export function PrivacyPage() {
             </h1>
           </div>
           <p className="text-sm text-slate-400 dark:text-slate-500">Last updated: May 28, 2026</p>
+          <p className="mt-4 text-sm leading-relaxed text-slate-600 dark:text-slate-400 p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl">
+            PinOnIt is a DBA (Doing Business As) of Miami Expeditions LLC. This website and the PinOnIt appointment scheduling platform are owned and operated by Miami Expeditions LLC.
+          </p>
         </div>
 
         <div className="space-y-10">

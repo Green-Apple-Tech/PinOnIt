@@ -922,12 +922,17 @@ export function Landing() {
             <a href="#pricing" className="hover:text-slate-900 dark:hover:text-white transition-colors">Pricing</a>
             <a href="#earn" className="hover:text-slate-900 dark:hover:text-white transition-colors">Referral Program</a>
           </div>
-          <p className="text-sm text-slate-400">&copy; {new Date().getFullYear()} Pin on It. All rights reserved.</p>
+          <div className="text-center md:text-right">
+            <p className="text-sm text-slate-400">&copy; 2026 Miami Expeditions LLC. All Rights Reserved.</p>
+            <p className="text-xs text-slate-400 mt-1">PinOnIt is a product and DBA of Miami Expeditions LLC.</p>
+          </div>
         </div>
-        <div className="max-w-6xl mx-auto border-t border-slate-100 dark:border-slate-800 pt-5 flex items-center justify-center gap-4 text-xs text-slate-400 dark:text-slate-500">
+        <div className="max-w-6xl mx-auto border-t border-slate-100 dark:border-slate-800 pt-5 flex flex-col items-center justify-center gap-2 text-center text-xs text-slate-400 dark:text-slate-500">
           <Link to="/terms" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Terms of Service</Link>
           <span>|</span>
           <Link to="/privacy" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Privacy Policy</Link>
+          <span>|</span>
+          <Link to="/sms-consent" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">SMS Consent</Link>
         </div>
       </footer>
       <OnboardingBot />

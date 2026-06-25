@@ -306,6 +306,9 @@ export function TermsPage() {
             </h1>
           </div>
           <p className="text-sm text-slate-400 dark:text-slate-500">Last updated: May 28, 2026</p>
+          <p className="mt-4 text-sm leading-relaxed text-slate-600 dark:text-slate-400 p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl">
+            These Terms govern the PinOnIt platform, a DBA of Miami Expeditions LLC.
+          </p>
         </div>
 
         <div className="space-y-10">

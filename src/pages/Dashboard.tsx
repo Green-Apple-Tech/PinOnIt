@@ -1472,12 +1472,14 @@ export function Dashboard() {
         {!isActive('/dashboard') && <Outlet />}
 
         <footer className="mt-auto border-t border-gray-200 dark:border-slate-800 py-4 px-6 bg-white dark:bg-slate-950">
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-xs text-gray-400 dark:text-slate-500">
-            <Link to="/terms" className="hover:text-gray-600 dark:hover:text-slate-300 transition-colors">Terms of Service</Link>
-            <span className="hidden sm:inline">·</span>
-            <Link to="/privacy" className="hover:text-gray-600 dark:hover:text-slate-300 transition-colors">Privacy Policy</Link>
-            <span className="hidden sm:inline">·</span>
-            <span>&copy; 2026 Pin on It. All rights reserved.</span>
+          <div className="flex flex-col items-center justify-center gap-2 text-center text-xs text-gray-400 dark:text-slate-500">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
+              <Link to="/terms" className="hover:text-gray-600 dark:hover:text-slate-300 transition-colors">Terms of Service</Link>
+              <span className="hidden sm:inline">·</span>
+              <Link to="/privacy" className="hover:text-gray-600 dark:hover:text-slate-300 transition-colors">Privacy Policy</Link>
+            </div>
+            <p>PinOnIt is a DBA of Miami Expeditions LLC.</p>
+            <p>&copy; 2026 Miami Expeditions LLC. All Rights Reserved.</p>
           </div>
         </footer>
       </div>
