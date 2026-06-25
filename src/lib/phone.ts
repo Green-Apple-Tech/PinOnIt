@@ -1,5 +1,5 @@
 /** Friendly US-style placeholder for phone inputs. */
-export const PHONE_PLACEHOLDER = '(305) 321-2060';
+export const PHONE_PLACEHOLDER = '305-661-XXXX';
 
 /** Brief helper shown below phone inputs. */
 export const PHONE_HINT = 'No +1 needed for US numbers. For international, include + and country code.';

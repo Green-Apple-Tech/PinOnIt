@@ -8,7 +8,7 @@ import {
   ChevronDown, Image as ImageIcon, Palette,
   LayoutGrid, List, User, Save, AlertCircle,
   QrCode, Code, ChevronRight, X, Download, Link2,
-  Settings2, ShoppingBag,
+  Settings2, ShoppingBag, Mail, MessageSquare,
 } from 'lucide-react';
 import { ColorSwatchRow } from '../components/ColorSwatchRow';
 
@@ -426,6 +426,230 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
   );
 }
 
+// ─── Share helpers ────────────────────────────────────────────────────────────
+
+function buildPaidBookingEmailInvite(bookingUrl: string, displayName: string, hostName?: string) {
+  const name = displayName.trim() || 'me';
+  const lines = [
+    'Hi,',
+    '',
+    `You can browse my services and book a time here:`,
+    '',
+    bookingUrl,
+    '',
+    'Thanks!',
+  ];
+  if (hostName) lines.push(hostName);
+  return {
+    subject: `Book with ${name}`,
+    body: lines.join('\n'),
+  };
+}
+
+function buildPaidBookingSmsInvite(bookingUrl: string, displayName: string, hostName?: string) {
+  const name = displayName.trim() || 'me';
+  const lines = [
+    `Hi — book a time on my services page:`,
+    bookingUrl,
+  ];
+  if (hostName) lines.push(`— ${hostName}`);
+  else lines.push(`— ${name}`);
+  return lines.join('\n');
+}
+
+function PaidBookingShareActions({
+  bookingUrl,
+  copiedLink,
+  onCopyLink,
+  onShowQR,
+  onShowEmbed,
+  displayName,
+  hostName,
+  showToast,
+  showPreview = false,
+  className = '',
+}: {
+  bookingUrl: string | null;
+  copiedLink: boolean;
+  onCopyLink: () => void;
+  onShowQR: () => void;
+  onShowEmbed: () => void;
+  displayName: string;
+  hostName?: string;
+  showToast: (msg: string, type: 'success' | 'error') => void;
+  showPreview?: boolean;
+  className?: string;
+}) {
+  const [openMenu, setOpenMenu] = useState<'email' | 'text' | null>(null);
+  const disabled = !bookingUrl;
+
+  const closeMenu = () => setOpenMenu(null);
+  const toggleMenu = (kind: 'email' | 'text') =>
+    setOpenMenu((prev) => (prev === kind ? null : kind));
+
+  const emailInvite = bookingUrl
+    ? buildPaidBookingEmailInvite(bookingUrl, displayName, hostName)
+    : null;
+  const smsInvite = bookingUrl
+    ? buildPaidBookingSmsInvite(bookingUrl, displayName, hostName)
+    : null;
+
+  const openEmailComposer = (provider: 'gmail' | 'outlook' | 'default') => {
+    if (!emailInvite) return;
+    const { subject, body } = emailInvite;
+
+    if (provider === 'gmail') {
+      window.open(
+        `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,
+        '_blank',
+        'noopener,noreferrer',
+      );
+      closeMenu();
+      showToast('Opened Gmail compose', 'success');
+      return;
+    }
+
+    if (provider === 'outlook') {
+      window.open(
+        `https://outlook.office.com/mail/deeplink/compose?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,
+        '_blank',
+        'noopener,noreferrer',
+      );
+      closeMenu();
+      showToast('Opened Outlook compose', 'success');
+      return;
+    }
+
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    closeMenu();
+  };
+
+  const openSmsComposer = () => {
+    if (!smsInvite) return;
+    window.location.href = `sms:?body=${encodeURIComponent(smsInvite)}`;
+    closeMenu();
+    showToast('Opened Messages', 'success');
+  };
+
+  const openWhatsAppComposer = () => {
+    if (!smsInvite) return;
+    window.open(`https://wa.me/?text=${encodeURIComponent(smsInvite)}`, '_blank', 'noopener,noreferrer');
+    closeMenu();
+    showToast('Opened WhatsApp', 'success');
+  };
+
+  const copyEmailInvite = async () => {
+    if (!emailInvite) return;
+    await navigator.clipboard.writeText(`Subject: ${emailInvite.subject}\n\n${emailInvite.body}`);
+    closeMenu();
+    showToast('Email message copied', 'success');
+  };
+
+  const copySmsInvite = async () => {
+    if (!smsInvite) return;
+    await navigator.clipboard.writeText(smsInvite);
+    closeMenu();
+    showToast('Text message copied', 'success');
+  };
+
+  const btnBase =
+    'flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600';
+  const disabledCls = disabled ? 'opacity-40 cursor-not-allowed' : '';
+
+  const menuCls =
+    'absolute left-0 top-full mt-2 w-52 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg p-1.5';
+  const menuItemCls =
+    'w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors';
+
+  return (
+    <div className={`flex flex-wrap gap-3 ${className}`}>
+      <button onClick={onCopyLink} disabled={disabled}
+        className={`${btnBase} ${disabledCls} ${copiedLink ? 'border-transparent text-white' : ''}`}
+        style={copiedLink ? { backgroundColor: '#5864C6' } : {}}>
+        {copiedLink ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+        {copiedLink ? 'Copied!' : 'Copy Link'}
+      </button>
+      <button onClick={onShowQR} disabled={disabled} className={`${btnBase} ${disabledCls}`}>
+        <QrCode className="h-4 w-4" /> QR Code
+      </button>
+      <button onClick={onShowEmbed} disabled={disabled} className={`${btnBase} ${disabledCls}`}>
+        <Code className="h-4 w-4" /> Embed HTML
+      </button>
+
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => !disabled && toggleMenu('email')}
+          disabled={disabled}
+          className={`${btnBase} ${disabledCls}`}
+          aria-expanded={openMenu === 'email'}
+          aria-haspopup="menu"
+        >
+          <Mail className="h-4 w-4" /> Email
+          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${openMenu === 'email' ? 'rotate-180' : ''}`} />
+        </button>
+        {openMenu === 'email' && (
+          <div className={menuCls} role="menu">
+            <p className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+              Send email with
+            </p>
+            <button type="button" onClick={() => openEmailComposer('gmail')} className={menuItemCls}>Gmail</button>
+            <button type="button" onClick={() => openEmailComposer('outlook')} className={menuItemCls}>Outlook</button>
+            <button type="button" onClick={() => openEmailComposer('default')} className={menuItemCls}>Default email app</button>
+            <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+            <button type="button" onClick={copyEmailInvite} className={`${menuItemCls} flex items-center gap-1.5`}>
+              <Copy className="h-3.5 w-3.5" /> Copy email message
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => !disabled && toggleMenu('text')}
+          disabled={disabled}
+          className={`${btnBase} ${disabledCls}`}
+          aria-expanded={openMenu === 'text'}
+          aria-haspopup="menu"
+        >
+          <MessageSquare className="h-4 w-4" /> SMS / WhatsApp
+          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${openMenu === 'text' ? 'rotate-180' : ''}`} />
+        </button>
+        {openMenu === 'text' && (
+          <div className={menuCls} role="menu">
+            <p className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+              Send text with
+            </p>
+            <button type="button" onClick={openSmsComposer} className={`${menuItemCls} flex items-center gap-1.5`}>
+              <MessageSquare className="h-3.5 w-3.5" /> SMS
+            </button>
+            <button type="button" onClick={openWhatsAppComposer} className={`${menuItemCls} flex items-center gap-1.5`}>
+              <MessageSquare className="h-3.5 w-3.5" style={{ color: '#25D366' }} /> WhatsApp
+            </button>
+            <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+            <button type="button" onClick={copySmsInvite} className={`${menuItemCls} flex items-center gap-1.5`}>
+              <Copy className="h-3.5 w-3.5" /> Copy text message
+            </button>
+          </div>
+        )}
+      </div>
+
+      {showPreview && bookingUrl && (
+        <a href={bookingUrl} target="_blank" rel="noopener noreferrer" className={btnBase}>
+          <ExternalLink className="h-4 w-4" /> Preview Live
+        </a>
+      )}
+      {showPreview && !bookingUrl && (
+        <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 self-center">
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+          Set a username in Settings to get your booking URL
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export function PaidBookingPage() {
@@ -594,7 +818,7 @@ export function PaidBookingPage() {
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Paid Booking Page</h1>
           </div>
           <p className="text-sm text-slate-500 dark:text-slate-400 max-w-lg">
-            Create a beautiful service menu your clients can book from — share via link, QR code, or embed in your website.
+            Create a beautiful service menu your clients can book from — share via link, email, text, QR code, or embed in your website.
           </p>
         </div>
         <button onClick={handleSave} disabled={saving}
@@ -606,38 +830,17 @@ export function PaidBookingPage() {
       </div>
 
       {/* ── Share action buttons ── */}
-      <div className="flex flex-wrap gap-3">
-        <button onClick={copyLink} disabled={!bookingUrl}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all ${
-            copiedLink
-              ? 'border-transparent text-white'
-              : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600'
-          } ${!bookingUrl ? 'opacity-40 cursor-not-allowed' : ''}`}
-          style={copiedLink ? { backgroundColor: '#5864C6' } : {}}>
-          {copiedLink ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-          {copiedLink ? 'Copied!' : 'Copy Link'}
-        </button>
-        <button onClick={() => setShowQR(true)} disabled={!bookingUrl}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 ${!bookingUrl ? 'opacity-40 cursor-not-allowed' : ''}`}>
-          <QrCode className="h-4 w-4" /> QR Code
-        </button>
-        <button onClick={() => setShowEmbed(true)} disabled={!bookingUrl}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 ${!bookingUrl ? 'opacity-40 cursor-not-allowed' : ''}`}>
-          <Code className="h-4 w-4" /> Embed HTML
-        </button>
-        {bookingUrl && (
-          <a href={bookingUrl} target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300 transition-all">
-            <ExternalLink className="h-4 w-4" /> Preview Live
-          </a>
-        )}
-        {!bookingUrl && (
-          <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 self-center">
-            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-            Set a username in Settings to get your booking URL
-          </p>
-        )}
-      </div>
+      <PaidBookingShareActions
+        bookingUrl={bookingUrl}
+        copiedLink={copiedLink}
+        onCopyLink={copyLink}
+        onShowQR={() => setShowQR(true)}
+        onShowEmbed={() => setShowEmbed(true)}
+        displayName={settings.display_name || profile.full_name || ''}
+        hostName={profile.full_name?.trim() || undefined}
+        showToast={showToast}
+        showPreview
+      />
 
       {saved && bookingUrl && (
         <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm text-white" style={{ backgroundColor: '#5864C6' }}>
@@ -884,24 +1087,17 @@ export function PaidBookingPage() {
       </div>
 
       {/* ── Bottom share bar ── */}
-      <div className="flex flex-wrap gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
-        <button onClick={copyLink} disabled={!bookingUrl}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all ${
-            copiedLink ? 'border-transparent text-white' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300'
-          } ${!bookingUrl ? 'opacity-40 cursor-not-allowed' : ''}`}
-          style={copiedLink ? { backgroundColor: '#5864C6' } : {}}>
-          {copiedLink ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-          {copiedLink ? 'Copied!' : 'Copy Link'}
-        </button>
-        <button onClick={() => setShowQR(true)} disabled={!bookingUrl}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300 transition-all ${!bookingUrl ? 'opacity-40 cursor-not-allowed' : ''}`}>
-          <QrCode className="h-4 w-4" /> QR Code
-        </button>
-        <button onClick={() => setShowEmbed(true)} disabled={!bookingUrl}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300 transition-all ${!bookingUrl ? 'opacity-40 cursor-not-allowed' : ''}`}>
-          <Code className="h-4 w-4" /> Embed HTML
-        </button>
-      </div>
+      <PaidBookingShareActions
+        bookingUrl={bookingUrl}
+        copiedLink={copiedLink}
+        onCopyLink={copyLink}
+        onShowQR={() => setShowQR(true)}
+        onShowEmbed={() => setShowEmbed(true)}
+        displayName={settings.display_name || profile.full_name || ''}
+        hostName={profile.full_name?.trim() || undefined}
+        showToast={showToast}
+        className="pt-2 border-t border-slate-100 dark:border-slate-800"
+      />
 
       {/* ── Modals ── */}
       {showQR && bookingUrl && <QRModal url={bookingUrl} onClose={() => setShowQR(false)} />}
