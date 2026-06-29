@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Shield, Database, Eye, Share2, Clock, Mail, ExternalLink, Globe, User, Cookie, Server, Lock, MessageSquare } from 'lucide-react';
 import { Footer } from '../components/Footer';
-import { SMS_PRIVACY_DISCLOSURE } from '../lib/smsCompliance';
+import { SMS_PRIVACY_DISCLOSURE, SMS_OPTIONAL_POLICY_SENTENCE } from '../lib/smsCompliance';
 
 interface Section {
   icon: React.ElementType;
@@ -61,6 +61,7 @@ const sections: Section[] = [
     content: (
       <div className="space-y-3">
         <p>{SMS_PRIVACY_DISCLOSURE}</p>
+        <p>{SMS_OPTIONAL_POLICY_SENTENCE}</p>
         <p>
           For more detail on our SMS program, including example messages and opt-in instructions, see our{' '}
           <Link to="/sms-consent" className="text-brand-600 dark:text-brand-400 hover:underline">SMS Consent page</Link>.

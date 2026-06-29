@@ -14,7 +14,7 @@ import {
   shouldStopRecurrence,
 } from '../lib/recurring';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
-import { SmsBookingConsent } from '../components/SmsConsentText';
+import { SmsBookingConsent, SmsOptionalBookingNotice } from '../components/SmsConsentText';
 import { resolveTermsText } from '../lib/terms';
 import { stripePromise } from '../lib/stripe';
 import { StripeBookingCheckout } from '../components/StripeBookingCheckout';
@@ -501,6 +501,9 @@ function ReminderWizard({
               </label>
             )}
             <SmsBookingConsent className="text-xs text-gray-400 dark:text-slate-500 leading-relaxed" />
+            {selectedChannels.includes('sms') || selectedChannels.includes('whatsapp') ? (
+              <SmsOptionalBookingNotice className="mt-2" />
+            ) : null}
             {selectedChannels.includes('sms') && !guestPhone?.trim() && (
               <p className="text-xs text-amber-600 dark:text-amber-400">Add a phone number on your booking to receive SMS reminders.</p>
             )}
@@ -839,9 +842,8 @@ export function BookPage() {
   const handleBook = async () => {
     if (!selectedService) return;
     const email = guestEmail.trim();
-    const phoneVal = phone.trim();
-    if (!email && !phoneVal) {
-      setDetailsError('Please provide an email or phone number');
+    if (!email) {
+      setDetailsError('Email address is required');
       return;
     }
     setDetailsError('');
@@ -1210,7 +1212,7 @@ export function BookPage() {
   const requiresPayment = showPaidBookingPayment && paymentMethod !== 'skip' && !paymentConfirmed;
   const isValid =
     guestName.trim() !== '' &&
-    (guestEmail.trim() !== '' || phone.trim() !== '') &&
+    guestEmail.trim() !== '' &&
     (!requiresTerms || termsAgreed);
   const canSubmitDetails =
     isValid &&
@@ -1584,7 +1586,7 @@ export function BookPage() {
                 </div>
                 {/* Required fields legend */}
                 <p className="text-xs text-slate-400 dark:text-slate-500 mb-4 flex items-center gap-1">
-                  <span className="text-red-400 font-bold">*</span> Required fields · provide email or phone
+                  <span className="text-red-400 font-bold">*</span> Required fields
                 </p>
                 <div className="space-y-4">
                   {isRecurringService && selectedService.recurrence_frequency && (
@@ -1637,7 +1639,7 @@ export function BookPage() {
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                        Email address <span className="text-slate-400 dark:text-slate-500 font-normal">(optional)</span>
+                        Email address <span className="text-red-400">*</span>
                       </label>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500" />
@@ -1696,6 +1698,7 @@ export function BookPage() {
                         </span>
                       </label>
                     </div>
+                    <SmsOptionalBookingNotice className="mt-3" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Your timezone</label>
@@ -1753,6 +1756,7 @@ export function BookPage() {
                             <>
                               <SmsBookingConsent />
                               <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{PHONE_HINT}</p>
+                              <SmsOptionalBookingNotice className="mt-2" />
                             </>
                           )}
                         </>
@@ -1959,7 +1963,7 @@ export function BookPage() {
                       <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                       {detailsError
                         || (!guestName.trim() ? 'Full name is required.'
-                          : !(guestEmail.trim() || phone.trim()) ? 'Please provide an email or phone number.'
+                          : !guestEmail.trim() ? 'Email address is required.'
                           : requiresTerms && !termsAgreed ? 'Please agree to the terms above.'
                           : hasRequiredQuestions ? 'Please answer all required questions.'
                           : requiresNda && !ndaAgreed ? 'Please agree to the NDA above.'
@@ -1991,7 +1995,7 @@ export function BookPage() {
                   <p className="text-slate-500 dark:text-slate-400 text-sm">
                     Confirmation sent to{' '}
                     <span className="font-medium text-slate-700 dark:text-slate-300">
-                      {guestEmail.trim() || phone.trim()}
+                      {guestEmail.trim()}
                     </span>
                   </p>
                 </div>

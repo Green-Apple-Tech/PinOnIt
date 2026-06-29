@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { SMS_BOOKING_CONSENT_TEXT } from '../lib/smsCompliance';
+import { SMS_BOOKING_CONSENT_TEXT, SMS_OPTIONAL_BOOKING_NOTICE } from '../lib/smsCompliance';
 
 /** Standard booking / onboarding SMS opt-in disclosure with policy links. */
 export function SmsBookingConsent({ className = '' }: { className?: string }) {
@@ -16,6 +16,15 @@ export function SmsBookingConsent({ className = '' }: { className?: string }) {
         <Link to="/sms-consent" className="text-indigo-600 dark:text-indigo-400 hover:underline">SMS Consent</Link>
       </p>
     </div>
+  );
+}
+
+/** Shown on booking forms below the phone field and SMS opt-in checkbox. */
+export function SmsOptionalBookingNotice({ className = '' }: { className?: string }) {
+  return (
+    <p className={`text-xs text-slate-600 dark:text-slate-400 leading-relaxed ${className}`}>
+      {SMS_OPTIONAL_BOOKING_NOTICE}
+    </p>
   );
 }
 

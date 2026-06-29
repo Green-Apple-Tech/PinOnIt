@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, FileText, Zap, CreditCard, Users, Ban, AlertTriangle, Scale, Mail, Gift, Gavel, ShieldAlert, Umbrella, Plug, BookOpen, HardDrive, Globe, MessageSquare } from 'lucide-react';
 import { Footer } from '../components/Footer';
-import { SMS_TERMS_DISCLOSURE } from '../lib/smsCompliance';
+import { SMS_TERMS_DISCLOSURE, SMS_OPTIONAL_POLICY_SENTENCE } from '../lib/smsCompliance';
 
 interface Section {
   icon: React.ElementType;
@@ -80,6 +80,7 @@ const sections: Section[] = [
     content: (
       <div className="space-y-3">
         <p>{SMS_TERMS_DISCLOSURE}</p>
+        <p>{SMS_OPTIONAL_POLICY_SENTENCE}</p>
         <p>
           See our{' '}
           <Link to="/sms-consent" className="text-brand-600 dark:text-brand-400 hover:underline">SMS Consent page</Link>{' '}

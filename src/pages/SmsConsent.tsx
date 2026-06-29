@@ -4,7 +4,7 @@ import { ArrowLeft, MessageSquare, Phone, Ban, HelpCircle, Check, Loader2, User 
 import { Footer } from '../components/Footer';
 import { supabase } from '../lib/supabase';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
-import { SMS_BOOKING_CONSENT_TEXT } from '../lib/smsCompliance';
+import { SMS_BOOKING_CONSENT_TEXT, SMS_CONSENT_PAGE_OPTIONAL_STATEMENT } from '../lib/smsCompliance';
 
 const SMS_EXAMPLES = [
   'Reminder: Your appointment with [Host Name] is tomorrow at [Time]. Reply STOP to unsubscribe.',
@@ -165,6 +165,9 @@ export function SmsConsentPage() {
             PinOnIt sends appointment-related SMS messages only when users voluntarily opt in.
             This public page is the opt-in point and describes our SMS program, consent language, and how to opt out.
             No account or login is required.
+          </p>
+          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mt-3">
+            {SMS_CONSENT_PAGE_OPTIONAL_STATEMENT}
           </p>
         </div>
 
