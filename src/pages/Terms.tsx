@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, FileText, Zap, CreditCard, Users, Ban, AlertTriangle, Scale, Mail, Gift, Gavel, ShieldAlert, Umbrella, Plug, BookOpen, HardDrive, Globe, MessageSquare } from 'lucide-react';
 import { Footer } from '../components/Footer';
 import { SMS_TERMS_DISCLOSURE, SMS_OPTIONAL_POLICY_SENTENCE } from '../lib/smsCompliance';
+import { SUPPORT_EMAIL } from '../lib/contactEmail';
 
 interface Section {
   icon: React.ElementType;
@@ -200,7 +201,7 @@ const sections: Section[] = [
     content: (
       <p>
         For questions about these Terms, billing disputes, or legal notices, contact us at:{' '}
-        <a href="mailto:support@pinonit.com" className="text-brand-600 dark:text-brand-400 hover:underline font-medium">support@pinonit.com</a>
+        <a href={`mailto:${SUPPORT_EMAIL}`} className="text-brand-600 dark:text-brand-400 hover:underline font-medium">{SUPPORT_EMAIL}</a>
         <br />
         <span className="text-slate-500 dark:text-slate-500">Miami Expeditions LLC dba PinOnIt, Miami-Dade County, Florida</span>
       </p>
@@ -213,7 +214,7 @@ const sections: Section[] = [
       <div className="space-y-3">
         <p>
           Any dispute arising out of or relating to these Terms or the Service shall first be submitted to us at{' '}
-          <a href="mailto:support@pinonit.com" className="text-brand-600 dark:text-brand-400 hover:underline">support@pinonit.com</a>{' '}
+          <a href={`mailto:${SUPPORT_EMAIL}`} className="text-brand-600 dark:text-brand-400 hover:underline">{SUPPORT_EMAIL}</a>{' '}
           with your name, address, description of the claim, and relief sought. If unresolved within 45 days, disputes shall be resolved by binding arbitration administered by the American Arbitration Association (AAA) under its Consumer Arbitration Rules, conducted in Florida. The arbitrator may award any relief a court could award. Judgment on the award may be entered in any court of competent jurisdiction.
         </p>
       </div>

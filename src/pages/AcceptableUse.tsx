@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, BookOpen, CheckCircle, XCircle, Shield, Users, Lock, AlertTriangle, Globe, Scale, Mail } from 'lucide-react';
 import { Footer } from '../components/Footer';
+import { SUPPORT_EMAIL } from '../lib/contactEmail';
 
 interface Section {
   icon: React.ElementType;
@@ -85,7 +86,7 @@ const sections: Section[] = [
         <p>You are responsible for maintaining the security of your account. Specifically, you must:</p>
         <ul className="space-y-2 pl-4">
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Use a strong, unique password and not share your credentials with others.</span></li>
-          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Notify us immediately at <a href="mailto:support@pinonit.com" className="text-brand-600 dark:text-brand-400 hover:underline">support@pinonit.com</a> if you suspect unauthorized access to your account.</span></li>
+          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Notify us immediately at <a href={`mailto:${SUPPORT_EMAIL}`} className="text-brand-600 dark:text-brand-400 hover:underline">{SUPPORT_EMAIL}</a> if you suspect unauthorized access to your account.</span></li>
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Not allow third-party applications to access your account unless you have independently verified they are trustworthy.</span></li>
         </ul>
         <p>PinOnIt, Inc. is not liable for any loss or damage arising from your failure to maintain account security.</p>
@@ -115,7 +116,7 @@ const sections: Section[] = [
     content: (
       <p>
         If you become aware of any use of the Service that violates this AUP, please report it to us at{' '}
-        <a href="mailto:support@pinonit.com" className="text-brand-600 dark:text-brand-400 hover:underline">support@pinonit.com</a>{' '}
+        <a href={`mailto:${SUPPORT_EMAIL}`} className="text-brand-600 dark:text-brand-400 hover:underline">{SUPPORT_EMAIL}</a>{' '}
         with the subject line "AUP Violation Report." We investigate all credible reports and will take appropriate action, which may include disabling the offending account. We will not disclose the identity of the reporter without your consent.
       </p>
     ),
@@ -163,7 +164,7 @@ const sections: Section[] = [
     content: (
       <p>
         If you have questions about this Acceptable Use Policy, please contact us at{' '}
-        <a href="mailto:support@pinonit.com" className="text-brand-600 dark:text-brand-400 hover:underline font-medium">support@pinonit.com</a>.
+        <a href={`mailto:${SUPPORT_EMAIL}`} className="text-brand-600 dark:text-brand-400 hover:underline font-medium">{SUPPORT_EMAIL}</a>.
       </p>
     ),
   },

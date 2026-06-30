@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { appendSmsOptOut } from '../_shared/sms-opt-out.ts';
+import { NOREPLY_FROM, SUPPORT_EMAIL } from '../_shared/contact-email.ts';
 import { bookingAllowsGuestSms, bookingAllowsGuestWhatsapp } from '../_shared/sms-compliance.ts';
 
 const corsHeaders = {
@@ -243,7 +244,7 @@ async function sendResendEmail(
   msgBody: string,
   resendKey: string,
 ): Promise<boolean> {
-  const fromEmail = Deno.env.get('RESEND_FROM_EMAIL') ?? 'Pin on It <noreply@pinonit.app>';
+  const fromEmail = Deno.env.get('RESEND_FROM_EMAIL') ?? NOREPLY_FROM;
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -253,6 +254,7 @@ async function sendResendEmail(
       },
       body: JSON.stringify({
         from: fromEmail,
+        reply_to: SUPPORT_EMAIL,
         to,
         subject,
         text: msgBody,
@@ -301,7 +303,8 @@ Deno.serve(async (req: Request) => {
           method: 'POST',
           headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            from: 'PinOnIt <noreply@pinonit.com>',
+            from: NOREPLY_FROM,
+            reply_to: SUPPORT_EMAIL,
             to: [booking.guest_email],
             subject: 'Your recurring booking has been cancelled',
             text: body.message as string,

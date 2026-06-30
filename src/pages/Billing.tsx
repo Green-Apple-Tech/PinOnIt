@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { SUPPORT_EMAIL } from '../lib/contactEmail';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import {
@@ -26,7 +27,7 @@ function GuaranteeBadge() {
       </div>
       {show && (
         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-64 px-3 py-2.5 bg-slate-900 text-white text-xs rounded-xl shadow-xl leading-relaxed">
-          Not happy? Email support@pinonit.com within 60 days for a full refund, no questions asked.
+          Not happy? Email {SUPPORT_EMAIL} within 60 days for a full refund, no questions asked.
         </div>
       )}
     </div>

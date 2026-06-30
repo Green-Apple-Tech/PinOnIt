@@ -4,7 +4,8 @@ import { ArrowLeft, MessageSquare, Phone, Ban, HelpCircle, Check, Loader2, User 
 import { Footer } from '../components/Footer';
 import { supabase } from '../lib/supabase';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
-import { SMS_BOOKING_CONSENT_TEXT, SMS_CONSENT_PAGE_OPTIONAL_STATEMENT } from '../lib/smsCompliance';
+import { SMS_BOOKING_CONSENT_TEXT, SMS_BOOKING_CONSENT_DETAILS, SMS_CONSENT_PAGE_OPTIONAL_STATEMENT } from '../lib/smsCompliance';
+import { SUPPORT_EMAIL } from '../lib/contactEmail';
 
 const SMS_EXAMPLES = [
   'Reminder: Your appointment with [Host Name] is tomorrow at [Time]. Reply STOP to unsubscribe.',
@@ -43,7 +44,7 @@ function SmsOptInForm() {
     });
     setSubmitting(false);
     if (insertError) {
-      setError('Something went wrong. Please try again or email support@pinonit.com.');
+      setError(`Something went wrong. Please try again or email ${SUPPORT_EMAIL}.`);
       return;
     }
     setDone(true);
@@ -106,7 +107,7 @@ function SmsOptInForm() {
       </div>
 
       <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-        {SMS_BOOKING_CONSENT_TEXT}
+        {SMS_BOOKING_CONSENT_DETAILS}
       </p>
 
       <label className="flex items-start gap-2.5 cursor-pointer">
@@ -116,9 +117,8 @@ function SmsOptInForm() {
           onChange={(e) => { setConsent(e.target.checked); setError(''); }}
           className="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600"
         />
-        <span className="text-sm text-slate-700 dark:text-slate-300">
-          I agree to receive SMS appointment reminders and related messages from PinOnIt at the number provided.
-          Consent is not a condition of any purchase.
+        <span className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+          {SMS_BOOKING_CONSENT_TEXT}
         </span>
       </label>
 
@@ -205,8 +205,9 @@ export function SmsConsentPage() {
           <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
             The following exact disclosure is shown directly below the phone field and the SMS opt-in checkbox:
           </p>
-          <blockquote className="text-sm text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-4 leading-relaxed">
-            &ldquo;{SMS_BOOKING_CONSENT_TEXT}&rdquo;
+          <blockquote className="text-sm text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-4 leading-relaxed space-y-3">
+            <p>&ldquo;{SMS_BOOKING_CONSENT_TEXT}&rdquo;</p>
+            <p>{SMS_BOOKING_CONSENT_DETAILS}</p>
           </blockquote>
         </section>
 
@@ -250,8 +251,8 @@ export function SmsConsentPage() {
               </div>
               <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
                 Reply <strong>HELP</strong> for help or contact{' '}
-                <a href="mailto:support@pinonit.com" className="text-indigo-600 dark:text-indigo-400 hover:underline">
-                  support@pinonit.com
+                <a href={`mailto:${SUPPORT_EMAIL}`} className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                  {SUPPORT_EMAIL}
                 </a>.
               </p>
             </div>

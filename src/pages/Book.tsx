@@ -14,7 +14,7 @@ import {
   shouldStopRecurrence,
 } from '../lib/recurring';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
-import { SmsBookingConsent, SmsOptionalBookingNotice } from '../components/SmsConsentText';
+import { SmsBookingConsentCheckbox, SmsBookingConsentFootnotes } from '../components/SmsConsentText';
 import { resolveTermsText } from '../lib/terms';
 import { stripePromise } from '../lib/stripe';
 import { StripeBookingCheckout } from '../components/StripeBookingCheckout';
@@ -475,17 +475,11 @@ function ReminderWizard({
         {(selectedChannels.includes('sms') || selectedChannels.includes('whatsapp')) && (
           <div className="mt-3 space-y-2">
             {selectedChannels.includes('sms') && (
-              <label className="flex items-start gap-2.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={smsOptIn}
-                  onChange={(e) => setSmsOptIn(e.target.checked)}
-                  className="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600"
-                />
-                <span className="text-sm text-gray-700 dark:text-slate-300">
-                  I agree to receive SMS appointment reminders at the phone number I provided.
-                </span>
-              </label>
+              <SmsBookingConsentCheckbox
+                checked={smsOptIn}
+                onChange={setSmsOptIn}
+                disabled={!guestPhone?.trim()}
+              />
             )}
             {selectedChannels.includes('whatsapp') && (
               <label className="flex items-start gap-2.5 cursor-pointer">
@@ -500,10 +494,9 @@ function ReminderWizard({
                 </span>
               </label>
             )}
-            <SmsBookingConsent className="text-xs text-gray-400 dark:text-slate-500 leading-relaxed" />
-            {selectedChannels.includes('sms') || selectedChannels.includes('whatsapp') ? (
-              <SmsOptionalBookingNotice className="mt-2" />
-            ) : null}
+            {(selectedChannels.includes('sms') || selectedChannels.includes('whatsapp')) && (
+              <SmsBookingConsentFootnotes showOptionalNotice={selectedChannels.includes('sms')} className="mt-2" />
+            )}
             {selectedChannels.includes('sms') && !guestPhone?.trim() && (
               <p className="text-xs text-amber-600 dark:text-amber-400">Add a phone number on your booking to receive SMS reminders.</p>
             )}
@@ -1670,21 +1663,13 @@ export function BookPage() {
                         className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
                       />
                     </div>
-                    <SmsBookingConsent />
                     <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{PHONE_HINT}</p>
                     <div className="space-y-2.5 mt-3">
-                      <label className="flex items-start gap-2.5 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={smsOptIn}
-                          onChange={(e) => setSmsOptIn(e.target.checked)}
-                          disabled={!phone.trim()}
-                          className="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600 disabled:opacity-50"
-                        />
-                        <span className="text-sm text-slate-700 dark:text-slate-300">
-                          I agree to receive SMS appointment reminders at the phone number I provided.
-                        </span>
-                      </label>
+                      <SmsBookingConsentCheckbox
+                        checked={smsOptIn}
+                        onChange={setSmsOptIn}
+                        disabled={!phone.trim()}
+                      />
                       <label className="flex items-start gap-2.5 cursor-pointer">
                         <input
                           type="checkbox"
@@ -1698,7 +1683,7 @@ export function BookPage() {
                         </span>
                       </label>
                     </div>
-                    <SmsOptionalBookingNotice className="mt-3" />
+                    <SmsBookingConsentFootnotes className="mt-3" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Your timezone</label>
@@ -1754,9 +1739,8 @@ export function BookPage() {
                             className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition" />
                           {q.field_type === 'phone' && (
                             <>
-                              <SmsBookingConsent />
                               <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{PHONE_HINT}</p>
-                              <SmsOptionalBookingNotice className="mt-2" />
+                              <SmsBookingConsentFootnotes className="mt-2" />
                             </>
                           )}
                         </>

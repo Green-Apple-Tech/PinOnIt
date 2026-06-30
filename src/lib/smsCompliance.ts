@@ -1,6 +1,10 @@
 /** TCPA / A2P disclosure copy — keep in sync with /sms-consent and Twilio campaign registration. */
 export const SMS_BOOKING_CONSENT_TEXT =
-  'By providing your phone number, you agree to receive SMS appointment reminders related to your scheduled appointment. Message frequency varies. Message and data rates may apply. Reply STOP to unsubscribe and HELP for assistance.';
+  'By checking this box and providing your mobile phone number, you agree to receive appointment-related SMS messages from PinOnIt. Message frequency varies. Message and data rates may apply. Reply STOP to unsubscribe and HELP for assistance.';
+
+/** Shown below the SMS opt-in checkbox on booking flows (matches Twilio campaign description). */
+export const SMS_BOOKING_CONSENT_DETAILS =
+  'SMS messages are sent only if the user voluntarily enters a phone number, checks the SMS consent box, and submits the booking. SMS consent is not required to complete a booking and is not shared with third parties or affiliates for marketing purposes.';
 
 export const SMS_OPTIONAL_BOOKING_NOTICE =
   'Providing your mobile phone number and receiving SMS reminders is completely optional. You may complete your booking without providing a phone number or consenting to SMS.';

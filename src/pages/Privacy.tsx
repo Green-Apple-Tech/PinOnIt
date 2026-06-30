@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Shield, Database, Eye, Share2, Clock, Mail, ExternalLink, Globe, User, Cookie, Server, Lock, MessageSquare } from 'lucide-react';
 import { Footer } from '../components/Footer';
 import { SMS_PRIVACY_DISCLOSURE, SMS_OPTIONAL_POLICY_SENTENCE } from '../lib/smsCompliance';
+import { SUPPORT_EMAIL } from '../lib/contactEmail';
 
 interface Section {
   icon: React.ElementType;
@@ -132,7 +133,7 @@ const sections: Section[] = [
     content: (
       <p>
         We retain your data for as long as your account is active or as needed to provide the Service. You may delete your account and all associated data at any time from your account settings or by contacting us at{' '}
-        <a href="mailto:support@pinonit.com" className="text-brand-600 dark:text-brand-400 hover:underline">support@pinonit.com</a>.
+        <a href={`mailto:${SUPPORT_EMAIL}`} className="text-brand-600 dark:text-brand-400 hover:underline">{SUPPORT_EMAIL}</a>.
         Upon deletion, your personal data, booking history, and calendar connections will be permanently removed within 30 days, except where retention is required by law.
         Disconnecting a calendar integration immediately revokes our access to that calendar's data.
       </p>
@@ -161,7 +162,7 @@ const sections: Section[] = [
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Legitimate interests</strong> — security, fraud prevention, and product improvement through aggregated analytics.</span></li>
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Consent</strong> — when you explicitly opt in to marketing communications or optional integrations.</span></li>
         </ul>
-        <p><strong>Your GDPR rights:</strong> You have the right to access, rectify, erase, restrict, or port your personal data, and to object to certain processing. To exercise any of these rights, contact us at <a href="mailto:support@pinonit.com" className="text-brand-600 dark:text-brand-400 hover:underline">support@pinonit.com</a>. We will respond within 30 days. You also have the right to lodge a complaint with your local supervisory authority.</p>
+        <p><strong>Your GDPR rights:</strong> You have the right to access, rectify, erase, restrict, or port your personal data, and to object to certain processing. To exercise any of these rights, contact us at <a href={`mailto:${SUPPORT_EMAIL}`} className="text-brand-600 dark:text-brand-400 hover:underline">{SUPPORT_EMAIL}</a>. We will respond within 30 days. You also have the right to lodge a complaint with your local supervisory authority.</p>
         <p>Personal data is stored in the United States. When transferred from the EEA, we rely on Standard Contractual Clauses (SCCs) or other lawful transfer mechanisms to ensure adequate protection.</p>
       </div>
     ),
@@ -182,7 +183,7 @@ const sections: Section[] = [
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Right to Non-Discrimination</strong> — we will not discriminate against you for exercising any CCPA rights.</span></li>
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Right to Correct</strong> — you may request correction of inaccurate personal information we hold about you.</span></li>
         </ul>
-        <p>To submit a verifiable consumer request, email us at <a href="mailto:support@pinonit.com" className="text-brand-600 dark:text-brand-400 hover:underline">support@pinonit.com</a> with "CCPA Request" in the subject line. We will verify your identity before responding.</p>
+        <p>To submit a verifiable consumer request, email us at <a href={`mailto:${SUPPORT_EMAIL}`} className="text-brand-600 dark:text-brand-400 hover:underline">{SUPPORT_EMAIL}</a> with "CCPA Request" in the subject line. We will verify your identity before responding.</p>
       </div>
     ),
   },
@@ -254,7 +255,7 @@ const sections: Section[] = [
     title: "Children's Privacy",
     content: (
       <p>
-        The Service is not directed to individuals under the age of 13, or under the age of 16 for users in the EEA. We do not knowingly collect personal information from children under these ages. If you are a parent or guardian and believe your child has provided us with personal information without your consent, please contact us at <a href="mailto:support@pinonit.com" className="text-brand-600 dark:text-brand-400 hover:underline">support@pinonit.com</a> and we will delete it promptly.
+        The Service is not directed to individuals under the age of 13, or under the age of 16 for users in the EEA. We do not knowingly collect personal information from children under these ages. If you are a parent or guardian and believe your child has provided us with personal information without your consent, please contact us at <a href={`mailto:${SUPPORT_EMAIL}`} className="text-brand-600 dark:text-brand-400 hover:underline">{SUPPORT_EMAIL}</a> and we will delete it promptly.
       </p>
     ),
   },
@@ -268,7 +269,7 @@ const sections: Section[] = [
         </p>
         <div className="p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl space-y-1">
           <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Miami Expeditions LLC (DBA PinOnIt) — Privacy Team</p>
-          <p className="text-sm text-slate-600 dark:text-slate-400">Email: <a href="mailto:support@pinonit.com" className="text-brand-600 dark:text-brand-400 hover:underline font-medium">support@pinonit.com</a></p>
+          <p className="text-sm text-slate-600 dark:text-slate-400">Email: <a href={`mailto:${SUPPORT_EMAIL}`} className="text-brand-600 dark:text-brand-400 hover:underline font-medium">{SUPPORT_EMAIL}</a></p>
           <p className="text-sm text-slate-500 dark:text-slate-500">Subject line: "Privacy Request — [Type of Request]"</p>
         </div>
         <p className="text-sm text-slate-500 dark:text-slate-500">We aim to respond to all legitimate privacy requests within 30 days. For complex requests we may extend this period by an additional 60 days with notice.</p>

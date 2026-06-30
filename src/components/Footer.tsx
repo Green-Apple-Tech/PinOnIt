@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { SUPPORT_EMAIL } from '../lib/contactEmail';
 
 export function Footer() {
   return (
@@ -20,6 +21,10 @@ export function Footer() {
           <Link to="/acceptable-use" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
             Acceptable Use Policy
           </Link>
+          <span className="hidden sm:inline">|</span>
+          <a href={`mailto:${SUPPORT_EMAIL}`} className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+            Contact
+          </a>
         </div>
         <p>PinOnIt is a DBA of Miami Expeditions LLC.</p>
         <p>&copy; 2026 Miami Expeditions LLC. All Rights Reserved.</p>
