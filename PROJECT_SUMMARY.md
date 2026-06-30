@@ -1,60 +1,79 @@
 # PinOnIt - Project Summary
 
-Last updated: June 2, 2026
+Last updated: June 30, 2026
 
 ---
 
-## PinOnIt Session Summary — June 2, 2026
+## PinOnIt Session Summary — June 30, 2026
 
-### Workflow established
+### Project basics
 
-1. **Cursor edits** → `git push` → **Bolt GitHub icon** (confirm Synced, branch `main`, wait ~30s) → **Publish → Update**
-2. **`deploypinonit`** — shell alias for Supabase edge function deploys
-3. **`supabase db push --linked`** — apply migrations to linked project
-4. **No CI workflow** — GitHub Actions workflow deleted (was causing all deploy failures today)
+- **Live**: pinonit.com
+- **GitHub**: Green-Apple-Tech/PinOnIt (private, `main` branch)
+- **Local**: ~/Projects/PinOnIt
+- **Bolt**: bolt.new/~/sb1-nzt1kjlj
+- **Supabase**: adlusgtlwgcfyxgeoias
+- **Stack**: React/Vite/Tailwind, Supabase backend, Bolt Cloud hosting
 
-### Completed today
+### Deploy workflow (established and working)
 
-- **Group Scheduling page** — Meeting Poll + Align & Book Multi-Party cards
-- **Coordinate Unknown Availability form** — simplified intent-first flow
-- **Host manual confirmation** for coordinated meetings
-- **More Tools** sidebar section (QR Code + Email Signature)
-- **Single-use links** — moved to Scheduling page (fix deployed)
-- **Checkboxes on event types** with "3 of 3 events" badge
-- **Copy Link + QR buttons** on Scheduling page
-- **Separated Paid Booking** from standard booking page (`/:slug` vs `/:slug/services`)
-- **Green → indigo** color replacement throughout app (interactive UI; green kept for success toasts, Done checkmarks, connected badges)
-- **T&C checkbox off by default** — moved to Settings → Booking page; per-event override in Policy tab
-- **Twilio upgraded to paid**, A2P 10DLC registered — pending campaign approval (1–3 days)
-- **Twilio `MessagingServiceSid`** — send-reminder uses Messaging Service (correct code deployed)
-- **WhatsApp number field** + default reminder channel in Settings
-- **Session timeout** setting in Settings → Profile → Session Security
-- **Voice reminders** clarified as host-only
-- **Calendly-style public booking page** redesign pushed
-- **Calendar desktop view** improvements pushed (Appointments month/week/day)
+1. Cursor edits → `git push` → Bolt chat ("pull latest") → Publish
+2. **`deploypinonit`** — shell alias saved in `~/.zshrc`
+3. **`supabase db push --linked`** — apply migrations
+4. **No CI workflow** — GitHub Actions deleted (was blocking deploys)
 
-### Still pending
+### P0 — Twilio SMS (currently blocked)
 
-- **Twilio SMS** — waiting for A2P campaign approval (check tomorrow)
-- **Zoom app submission** incomplete (screenshots, App Listing)
-- **Google OAuth verification** in progress (4–6 weeks)
-- **DBA registration** at sunbiz.org
-- **Recurring bookings** — schema exists; full guest-facing flow not yet built
-- **Public booking page** Calendly-style redesign — pushed, needs verification on pinonit.com after Bolt Publish
-- **Calendar desktop view** — pushed, needs verification after Bolt Publish
-- **T&C migration** — run `supabase db push --linked` if `global_require_terms` / `global_terms_text` columns not yet on production DB
+- A2P 10DLC campaign was **rejected** — reason: invalid brand support email
+- **Next step**: console.twilio.com → Messaging → Regulatory Compliance → Brands → click **Miami Expeditions LLC** → update Support Email to a real working address → resubmit
+- Twilio number: +17869527242
+- Messaging Service SID: MGed3f12c87b8332f254d9a147c5ab87bd
+- Account SID: AC22cefc8bdaece88f3d02eb43dbc4efbe
+- Code correctly uses `MessagingServiceSid` (not `From`) in send-reminder, coordinate-sms, critical-alert edge functions — confirmed deployed
+- Old broken "Pin On It" Messaging Service should be deleted in Twilio; keep "Low Volume Mixed A2P Messaging Service"
 
-### Key credentials (June 2, 2026)
+### Completed this session
 
-| Service | Value |
-|---------|-------|
-| Supabase project | `adlusgtlwgcfyxgeoias` |
-| Bolt | https://bolt.new/~/sb1-nzt1kjlj |
-| GitHub | Green-Apple-Tech/PinOnIt (private) |
-| Twilio number | +1 786 952 7242 |
-| Messaging Service SID | `MGed3f12c87b8332f254d9a147c5ab87bd` |
+- Group Scheduling hub — Meeting Poll + "Align & Book Multi-Party" cards with clarifying hints
+- Coordinate Unknown Availability — simplified intent-first flow, timeframe + time-of-day pills, host manual SMS confirmation (no auto-booking)
+- More Tools sidebar section (QR Code Creator + Email Signature)
+- Single use links — moved to Scheduling page directly (was buried/broken in Settings; fixed auth-token-refresh state reset bug)
+- Checkboxes restored on event types with "X of Y events" badge controlling what's in the shared link
+- Copy Link + smaller QR Code buttons on Scheduling page, plus per-event QR icons
+- Paid Booking page separated from standard booking page (was incorrectly sharing the same public URL/theme)
+- Clean meeting link URL (removed ugly `?types=UUID` query params)
+- Green → indigo color pass throughout app (kept green for "Connected" status badges and success toasts intentionally)
+- T&C agreement checkbox now OFF by default, moved to Settings as global toggle with editable text; event-type-level override remains
+- WhatsApp number field + Default reminder channel selector in Settings → Profile
+- Session timeout / auto-logout setting in Settings (Never/30min/1hr/4hr/8hr/1day, HIPAA hint)
+- Voice reminders clarified as host-only (not sent to guests)
+- Bugbot ran via Cursor — fixed: wizard incorrectly reopening on every Calendly return, `calendly_error` opening wizard without gate, false "connected" state on OAuth failure, URL params stripped too early; added SMS opt-out (`appendSmsOptOut`) on all outbound messages and consent UI on phone entry screens
+- `.cursor/BUGBOT.md` added for future automated PR reviews
+- Photo upload on Paid Booking page — fixed handler (validation, toasts, saves to `avatar_url`), improved circle UI with tooltip
+- Email Signature carousel — mobile fix (full-width preview, nav arrows below, larger tap targets)
+
+### Still outstanding
+
+- **Twilio A2P campaign** — fix support email and resubmit (P0)
+- Zoom app marketplace submission incomplete (needs screenshots + App Listing)
+- Google OAuth verification in progress (4–6 weeks from May 28 submission)
+- DBA registration at sunbiz.org pending
+- Recurring bookings (weekly/monthly service businesses) — designed but not built
+- Public booking page Calendly-style redesign — pushed, needs visual verification on production
+- Calendar month/week/day desktop view improvements — pushed, needs visual verification
+- A few non-status green UI spots may still need indigo pass (Connected badges are correctly green and should stay)
 
 ---
+
+## Live URL
+https://pinonit.com
+
+## Legal Entity
+Miami Expeditions LLC dba PinOnIt
+
+---
+
+## Tech Stack
 
 ## Live URL
 https://pinonit.com
@@ -212,18 +231,23 @@ Do **not** rely on Bolt chat pull for routine deploys. Private repo is OK. See [
 
 - booking-reply
 - calendar-sync
-- coordinate-sms (new - Group Availability SMS coordination)
+- calendly-auth
+- calendly-callback
+- coordinate-sms (Group Availability SMS coordination)
 - create-teams-meeting
 - create-zoom-meeting
 - critical-alert
+- gmail-contacts-sync
 - google-calendar-auth
 - google-calendar-callback
 - health-monitor
 - outlook-calendar-auth
 - outlook-calendar-callback
-- parse-availability (new - AI parses natural language availability)
+- outlook-contacts-sync
+- parse-availability (AI parses natural language availability)
 - paypal-order
 - referral-signup
+- save-bot-lead
 - scrape-calendly
 - send-reminder
 - stripe-checkout
@@ -231,6 +255,7 @@ Do **not** rely on Bolt chat pull for routine deploys. Private repo is OK. See [
 - stripe-webhook
 - test-critical-call
 - verify-caldav
+- voice-reminder-scheduler
 - zoom-auth
 - zoom-callback
 
@@ -247,7 +272,7 @@ Do **not** rely on Bolt chat pull for routine deploys. Private repo is OK. See [
 - **Paid account** (upgraded June 2, 2026)
 - **Production number**: +1 786 952 7242
 - **Messaging Service SID**: MGed3f12c87b8332f254d9a147c5ab87bd
-- A2P 10DLC registered — **campaign approval pending** (1–3 days; SMS to unverified numbers blocked until approved)
+- A2P 10DLC campaign **REJECTED** — update brand support email for Miami Expeditions LLC to a real address in Twilio console and resubmit (P0)
 - SMS: `send-reminder` uses `MessagingServiceSid` / `TWILIO_MESSAGING_SERVICE_SID`
 - Voice calls working (critical meeting alerts, host voice reminders)
 - WhatsApp: profile `whatsapp_number` + default channel in Settings
@@ -345,12 +370,12 @@ Do **not** rely on Bolt chat pull for routine deploys. Private repo is OK. See [
 
 ## Known Issues / To Do
 
-- **Twilio SMS** — A2P campaign approval pending; check status daily until live
+- **Twilio A2P campaign REJECTED** — update brand support email (Miami Expeditions LLC) in Twilio console → resubmit (P0)
 - **Bolt publish required** after every GitHub push — live site won't update otherwise
 - **Verify on production** after Publish: Calendly-style booking page, calendar desktop views, indigo UI theme, T&C off-by-default
-- Run **`supabase db push --linked`** if T&C / single-use link / WhatsApp columns missing on production
+- Run **`supabase db push --linked`** if any columns missing on production
 - Zoom app submission incomplete (needs screenshots, App Listing)
-- Google OAuth verification in progress (4–6 weeks)
+- Google OAuth verification in progress (4–6 weeks from May 28)
 - PinOnIt DBA registration at sunbiz.org pending
 - Recurring bookings — DB columns exist; full booking UX not built
 - WhatsApp production may still need Meta Business verification beyond Twilio A2P
