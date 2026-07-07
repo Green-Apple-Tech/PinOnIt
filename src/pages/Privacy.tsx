@@ -30,7 +30,8 @@ const sections: Section[] = [
         <p>We collect the following categories of information:</p>
         <ul className="space-y-2 pl-4">
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Account information</strong> — your name and email address when you register for an account.</span></li>
-          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Calendar data</strong> — availability information and confirmed meeting times, but only when you explicitly connect a calendar integration. We do not access calendar data without your authorization.</span></li>
+          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Calendar data</strong> — availability information and confirmed meeting times, but only when you explicitly connect a calendar integration (Google Calendar, Outlook, Apple). We do not access calendar data without your authorization.</span></li>
+          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Contacts data</strong> — when you choose to sync contacts from Google or Outlook, we import names, email addresses, and phone numbers from your contacts list. We do not access contacts without your explicit action.</span></li>
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Booking information</strong> — names, email addresses, and any details provided by guests who book meetings through your scheduling link.</span></li>
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Usage data</strong> — technical information such as IP address, browser type, and pages visited, collected automatically to operate and improve the Service.</span></li>
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Payment information</strong> — billing details are processed and stored by Stripe. We do not store full payment card numbers.</span></li>
@@ -72,24 +73,88 @@ const sections: Section[] = [
   },
   {
     icon: ExternalLink,
-    title: 'Google Calendar Data & Limited Use Policy',
+    title: 'Google User Data — Access, Use, Storage & Sharing',
     content: (
-      <div className="space-y-3">
+      <div className="space-y-4">
         <p>
-          When you connect Google Calendar, PinOnIt accesses your calendar data <strong>solely</strong> to:
+          PinOnIt integrates with Google services when you explicitly choose to connect them. This section fully discloses how we access, use, store, and share data obtained through Google APIs, in compliance with the{' '}
+          <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400 hover:underline">Google API Services User Data Policy</a>,
+          including the Limited Use requirements.
         </p>
-        <ul className="space-y-2 pl-4">
-          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Check your availability to prevent scheduling conflicts.</span></li>
-          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Add confirmed meeting events to your calendar on your behalf.</span></li>
-        </ul>
-        <div className="mt-3 p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl">
-          <p className="font-semibold text-slate-800 dark:text-slate-200 mb-2">Our commitments regarding Google data:</p>
+
+        <div>
+          <p className="font-semibold text-slate-800 dark:text-slate-200 mb-2">Google API scopes we request and why:</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs border-collapse">
+              <thead>
+                <tr className="bg-slate-100 dark:bg-slate-800">
+                  <th className="text-left p-2 font-semibold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">Scope</th>
+                  <th className="text-left p-2 font-semibold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">Purpose</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { scope: 'userinfo.email / userinfo.profile', purpose: 'Sign in with Google — identifies your account and pre-fills your display name.' },
+                  { scope: 'calendar.readonly', purpose: 'Read calendar events to check availability and prevent double-bookings.' },
+                  { scope: 'calendar.events', purpose: 'Create and update meeting events in your calendar when a booking is confirmed or cancelled.' },
+                  { scope: 'contacts.readonly', purpose: 'Import your Google Contacts into PinOnIt so you can quickly add attendees (only when you initiate a sync).' },
+                  { scope: 'gmail.readonly (email address only)', purpose: 'Retrieve your Gmail address to link your Gmail account to your PinOnIt profile for contact sync. We do not read email message content.' },
+                ].map((row) => (
+                  <tr key={row.scope} className="even:bg-slate-50 dark:even:bg-slate-900/50">
+                    <td className="p-2 font-mono text-indigo-600 dark:text-indigo-400 border border-slate-200 dark:border-slate-700 align-top">{row.scope}</td>
+                    <td className="p-2 border border-slate-200 dark:border-slate-700 align-top">{row.purpose}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div>
+          <p className="font-semibold text-slate-800 dark:text-slate-200 mb-2">How we use Google data:</p>
           <ul className="space-y-2 pl-4">
-            <li className="flex gap-2"><span className="text-indigo-600 font-bold shrink-0">✓</span><span>We do <strong>not</strong> sell, share, or transfer your Google Calendar data to third parties.</span></li>
-            <li className="flex gap-2"><span className="text-indigo-600 font-bold shrink-0">✓</span><span>We do <strong>not</strong> use your Google data for advertising or any purpose unrelated to providing the scheduling service.</span></li>
-            <li className="flex gap-2"><span className="text-indigo-600 font-bold shrink-0">✓</span><span>We do <strong>not</strong> allow humans to read your calendar data except to provide support at your explicit request.</span></li>
-            <li className="flex gap-2"><span className="text-indigo-600 font-bold shrink-0">✓</span><span>Our use of Google API data complies with the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400 hover:underline">Google API Services User Data Policy</a>, including the Limited Use requirements.</span></li>
+            <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Calendar data is used exclusively to display your availability and write confirmed bookings to your calendar.</span></li>
+            <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Contact data is used only to populate your Contacts list inside PinOnIt when you explicitly trigger a sync.</span></li>
+            <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Your Google account email and name are used to identify your PinOnIt account.</span></li>
+            <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Google data is <strong>never</strong> used for advertising, marketing profiling, or any purpose unrelated to providing scheduling functionality to you.</span></li>
           </ul>
+        </div>
+
+        <div>
+          <p className="font-semibold text-slate-800 dark:text-slate-200 mb-2">How we store Google data:</p>
+          <ul className="space-y-2 pl-4">
+            <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>OAuth access and refresh tokens are stored encrypted in our database (Supabase / AWS). Tokens are never logged or exposed in plaintext.</span></li>
+            <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Calendar event metadata (titles, times, attendees) is stored only as needed to display your schedule and is deleted when you disconnect the integration or delete your account.</span></li>
+            <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Imported contacts are stored in your PinOnIt contacts list and are deleted with your account.</span></li>
+          </ul>
+        </div>
+
+        <div>
+          <p className="font-semibold text-slate-800 dark:text-slate-200 mb-2">How we share Google data:</p>
+          <ul className="space-y-2 pl-4">
+            <li className="flex gap-2"><span className="text-indigo-500 font-bold shrink-0">·</span><span>We do <strong>not</strong> sell, rent, or share your Google user data with third parties.</span></li>
+            <li className="flex gap-2"><span className="text-indigo-500 font-bold shrink-0">·</span><span>We do <strong>not</strong> transfer Google user data to other apps or services.</span></li>
+            <li className="flex gap-2"><span className="text-indigo-500 font-bold shrink-0">·</span><span>We do <strong>not</strong> allow humans to read your calendar or contact data except to resolve a support issue you have reported and only with your explicit permission.</span></li>
+            <li className="flex gap-2"><span className="text-indigo-500 font-bold shrink-0">·</span><span>Our infrastructure sub-processor (Supabase/AWS) stores encrypted tokens under our data processing agreement; they have no independent access to your Google data.</span></li>
+          </ul>
+        </div>
+
+        <div>
+          <p className="font-semibold text-slate-800 dark:text-slate-200 mb-2">Revoking Google access:</p>
+          <p>
+            You can disconnect Google integrations at any time from <strong>Settings → Integrations</strong> inside PinOnIt. You may also revoke access directly at{' '}
+            <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400 hover:underline">myaccount.google.com/permissions</a>.
+            Revoking access immediately prevents further calendar reads or writes. Any tokens we hold are invalidated and deleted within 30 days.
+          </p>
+        </div>
+
+        <div className="p-4 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-xl">
+          <p className="font-semibold text-indigo-800 dark:text-indigo-200 mb-1">Limited Use Compliance Statement</p>
+          <p className="text-indigo-700 dark:text-indigo-300">
+            PinOnIt's use and transfer of information received from Google APIs to any other app adheres to the{' '}
+            <a href="https://developers.google.com/terms/api-services-user-data-policy#additional_requirements_for_specific_api_scopes" target="_blank" rel="noopener noreferrer" className="underline font-medium">Google API Services User Data Policy</a>,
+            including the Limited Use requirements. We use Google user data only to provide or improve user-facing features that are prominent in PinOnIt's user interface. We do not use Google data to serve advertisements, for purposes unrelated to our scheduling service, or to build user profiles for any purpose other than delivering PinOnIt's core functionality.
+          </p>
         </div>
       </div>
     ),
@@ -299,7 +364,7 @@ export function PrivacyPage() {
               Privacy Policy
             </h1>
           </div>
-          <p className="text-sm text-slate-400 dark:text-slate-500">Last updated: May 28, 2026</p>
+          <p className="text-sm text-slate-400 dark:text-slate-500">Last updated: July 7, 2026</p>
           <p className="mt-4 text-sm leading-relaxed text-slate-600 dark:text-slate-400 p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl">
             PinOnIt is a DBA (Doing Business As) of Miami Expeditions LLC. This website and the PinOnIt appointment scheduling platform are owned and operated by Miami Expeditions LLC.
           </p>
