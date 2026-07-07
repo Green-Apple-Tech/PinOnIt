@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Shield, Database, Eye, Share2, Clock, Mail, ExternalLink, Globe, User, Cookie, Server, Lock, MessageSquare } from 'lucide-react';
 import { Footer } from '../components/Footer';
-import { SMS_PRIVACY_DISCLOSURE, SMS_OPTIONAL_POLICY_SENTENCE } from '../lib/smsCompliance';
 import { SUPPORT_EMAIL } from '../lib/contactEmail';
 
 interface Section {
@@ -59,15 +58,52 @@ const sections: Section[] = [
   },
   {
     icon: MessageSquare,
-    title: 'SMS Notifications',
+    title: 'SMS & Text Message Communications',
     content: (
-      <div className="space-y-3">
-        <p>{SMS_PRIVACY_DISCLOSURE}</p>
-        <p>{SMS_OPTIONAL_POLICY_SENTENCE}</p>
+      <div className="space-y-4">
         <p>
-          For more detail on our SMS program, including example messages and opt-in instructions, see our{' '}
-          <Link to="/sms-consent" className="text-brand-600 dark:text-brand-400 hover:underline">SMS Consent page</Link>.
+          PinOnIt sends appointment-related SMS text messages to users and their guests when a mobile phone number is voluntarily provided and SMS consent is explicitly given.
         </p>
+
+        <div>
+          <p className="font-semibold text-slate-800 dark:text-slate-200 mb-2">What we collect and why:</p>
+          <ul className="space-y-2 pl-4">
+            <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>We collect mobile phone numbers that users voluntarily provide for the purpose of sending appointment-related SMS reminders (booking confirmations, upcoming meeting reminders, cancellation notices).</span></li>
+            <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Phone numbers are collected at the time of booking or from your account profile settings.</span></li>
+            <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>We use <strong>Twilio</strong> as our SMS delivery provider. Your phone number is shared with Twilio solely for message delivery. Twilio's privacy policy is available at <a href="https://www.twilio.com/en-us/legal/privacy" target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400 hover:underline">twilio.com/en-us/legal/privacy</a>.</span></li>
+          </ul>
+        </div>
+
+        <div>
+          <p className="font-semibold text-slate-800 dark:text-slate-200 mb-2">How we use phone numbers:</p>
+          <ul className="space-y-2 pl-4">
+            <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Phone numbers are used exclusively to send transactional, appointment-related SMS messages. We do not send marketing or promotional SMS messages.</span></li>
+            <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Message frequency varies based on your appointment activity and configured reminder settings.</span></li>
+            <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Standard message and data rates may apply depending on your mobile carrier plan.</span></li>
+          </ul>
+        </div>
+
+        <div>
+          <p className="font-semibold text-slate-800 dark:text-slate-200 mb-2">Consent and opt-out:</p>
+          <ul className="space-y-2 pl-4">
+            <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>SMS consent is collected separately via a checkbox during the booking process. <strong>SMS consent is not required to complete a booking</strong> — you may schedule an appointment without providing a phone number or consenting to SMS.</span></li>
+            <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>You may opt out of SMS messages at any time by replying <strong>STOP</strong> to any message. Reply <strong>HELP</strong> for assistance. You will receive one final confirmation message and then no further messages.</span></li>
+            <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>You may also manage or remove your phone number from your PinOnIt account settings at any time.</span></li>
+          </ul>
+        </div>
+
+        <div>
+          <p className="font-semibold text-slate-800 dark:text-slate-200 mb-2">Sharing and sale of phone numbers:</p>
+          <ul className="space-y-2 pl-4">
+            <li className="flex gap-2"><span className="text-indigo-500 font-bold shrink-0">·</span><span>Phone numbers and SMS consent are <strong>never sold, rented, or shared with third parties or affiliates for marketing purposes</strong>.</span></li>
+            <li className="flex gap-2"><span className="text-indigo-500 font-bold shrink-0">·</span><span>SMS consent obtained in connection with PinOnIt is not transferred to any other app, service, or marketing platform.</span></li>
+          </ul>
+        </div>
+
+        <div className="p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-500 dark:text-slate-400">
+          For complete SMS program details, example messages, and opt-in instructions, see our{' '}
+          <Link to="/sms-consent" className="text-brand-600 dark:text-brand-400 hover:underline">SMS Consent page</Link>.
+        </div>
       </div>
     ),
   },
@@ -201,6 +237,8 @@ const sections: Section[] = [
         <a href={`mailto:${SUPPORT_EMAIL}`} className="text-brand-600 dark:text-brand-400 hover:underline">{SUPPORT_EMAIL}</a>.
         Upon deletion, your personal data, booking history, and calendar connections will be permanently removed within 30 days, except where retention is required by law.
         Disconnecting a calendar integration immediately revokes our access to that calendar's data.
+        <br /><br />
+        <strong>Phone numbers</strong> are stored only for as long as your account is active or until you opt out of SMS communications, whichever comes first. Replying STOP to any SMS message immediately removes your number from all future message queues. Removing your phone number from your account settings or deleting your account permanently deletes the stored number.
       </p>
     ),
   },
@@ -209,7 +247,7 @@ const sections: Section[] = [
     title: 'Changes to This Policy',
     content: (
       <p>
-        We may update this Privacy Policy from time to time. When we do, we will revise the "Last updated" date at the top of this page. For material changes, we will notify you by email or through a notice within the Service. Continued use of the Service after changes take effect constitutes your acceptance of the updated policy.
+        We may update this Privacy Policy from time to time. When we do, we will revise the "Last updated" date at the top of this page. For material changes — including any change to how we access, use, store, or share Google user data — we will notify you by email or through a prominent notice within the Service before the change takes effect. Continued use of the Service after changes take effect constitutes your acceptance of the updated policy.
       </p>
     ),
   },
@@ -302,13 +340,13 @@ const sections: Section[] = [
     content: (
       <div className="space-y-3">
         <p>
-          We implement a comprehensive set of technical and organizational measures to protect your personal information:
+          We implement a comprehensive set of technical and organizational measures to protect your personal information, including sensitive data such as Google user data (calendar events, contacts, OAuth tokens):
         </p>
         <ul className="space-y-2 pl-4">
-          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Encryption in transit</strong> — all data transmitted between your browser and our servers is encrypted using TLS 1.2 or higher.</span></li>
-          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Encryption at rest</strong> — stored data is encrypted at rest using AES-256 through our infrastructure provider.</span></li>
-          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Access controls</strong> — strict role-based access controls and Row Level Security (RLS) policies ensure users can only access their own data.</span></li>
-          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>OAuth tokens</strong> — third-party calendar and integration credentials are stored encrypted and are never exposed in plaintext.</span></li>
+          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Encryption in transit</strong> — all data transmitted between your browser and our servers is encrypted using TLS 1.2 or higher. This applies to all Google API communications.</span></li>
+          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Encryption at rest</strong> — stored data, including Google OAuth tokens and calendar metadata, is encrypted at rest using AES-256 through our infrastructure provider (Supabase/AWS).</span></li>
+          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Access controls</strong> — strict role-based access controls and Row Level Security (RLS) policies ensure users can only access their own data. Google user data is never accessible by other users or PinOnIt employees except as described in the Google User Data section above.</span></li>
+          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>OAuth token security</strong> — Google OAuth access and refresh tokens are stored encrypted and are never exposed in plaintext, logged, or transmitted to any party other than the Google APIs they authenticate.</span></li>
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Incident response</strong> — in the event of a data breach that is likely to result in a risk to your rights and freedoms, we will notify you and relevant authorities within 72 hours of becoming aware of the breach, as required by applicable law.</span></li>
         </ul>
         <p>Despite these measures, no internet transmission or electronic storage is completely secure. We cannot guarantee absolute security and disclaim liability for unauthorized access resulting from circumstances beyond our reasonable control.</p>

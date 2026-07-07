@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, FileText, Zap, CreditCard, Users, Ban, AlertTriangle, Scale, Mail, Gift, Gavel, ShieldAlert, Umbrella, Plug, BookOpen, HardDrive, Globe, MessageSquare } from 'lucide-react';
 import { Footer } from '../components/Footer';
-import { SMS_TERMS_DISCLOSURE, SMS_OPTIONAL_POLICY_SENTENCE } from '../lib/smsCompliance';
 import { SUPPORT_EMAIL } from '../lib/contactEmail';
 
 interface Section {
@@ -77,15 +76,55 @@ const sections: Section[] = [
   },
   {
     icon: MessageSquare,
-    title: 'SMS Notifications',
+    title: 'SMS Communications',
     content: (
-      <div className="space-y-3">
-        <p>{SMS_TERMS_DISCLOSURE}</p>
-        <p>{SMS_OPTIONAL_POLICY_SENTENCE}</p>
+      <div className="space-y-4">
         <p>
-          See our{' '}
-          <Link to="/sms-consent" className="text-brand-600 dark:text-brand-400 hover:underline">SMS Consent page</Link>{' '}
-          and <Link to="/privacy" className="text-brand-600 dark:text-brand-400 hover:underline">Privacy Policy</Link> for additional information.
+          PinOnIt sends appointment-related SMS text messages to users and booking guests who have voluntarily provided a mobile phone number and explicitly opted in. This section governs your rights and obligations with respect to SMS communications from PinOnIt.
+        </p>
+
+        <div className="p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl space-y-2">
+          <p className="font-semibold text-slate-800 dark:text-slate-200 text-xs uppercase tracking-wide">SMS Program Summary</p>
+          <ul className="space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
+            <li><strong>Program name:</strong> PinOnIt Appointment Reminders</li>
+            <li><strong>Message types:</strong> Booking confirmations, upcoming meeting reminders, cancellation and rescheduling notices</li>
+            <li><strong>Frequency:</strong> Varies based on your appointment activity and reminder settings</li>
+            <li><strong>Rates:</strong> Message and data rates may apply</li>
+            <li><strong>Provider:</strong> Twilio, Inc.</li>
+            <li><strong>Opt-out:</strong> Reply STOP to any message</li>
+            <li><strong>Help:</strong> Reply HELP or email <a href={`mailto:${SUPPORT_EMAIL}`} className="text-brand-600 dark:text-brand-400 hover:underline">{SUPPORT_EMAIL}</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <p className="font-semibold text-slate-800 dark:text-slate-200 mb-2">Consent:</p>
+          <ul className="space-y-2 pl-4">
+            <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>By providing a mobile phone number and checking the SMS consent checkbox during the booking process, you agree to receive appointment-related SMS messages from PinOnIt.</span></li>
+            <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>SMS consent is optional and is not required to schedule an appointment.</strong> You may complete a booking without providing a phone number or consenting to SMS.</span></li>
+            <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Consent applies only to transactional, appointment-related messages. We do not send marketing or promotional SMS blasts. PinOnIt SMS messages are strictly limited to appointment confirmations, reminders, and operational notices related to scheduled meetings.</span></li>
+          </ul>
+        </div>
+
+        <div>
+          <p className="font-semibold text-slate-800 dark:text-slate-200 mb-2">Opt-out and support:</p>
+          <ul className="space-y-2 pl-4">
+            <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>You may opt out of SMS messages at any time by replying <strong>STOP</strong> to any message. You will receive one final confirmation message and no further messages will be sent.</span></li>
+            <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Reply <strong>HELP</strong> for help or assistance information.</span></li>
+            <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>You may also remove your phone number at any time from Settings in your PinOnIt account.</span></li>
+          </ul>
+        </div>
+
+        <div>
+          <p className="font-semibold text-slate-800 dark:text-slate-200 mb-2">Liability:</p>
+          <ul className="space-y-2 pl-4">
+            <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>PinOnIt is not liable for delayed or undelivered SMS messages due to carrier routing, network conditions, or recipient device issues.</span></li>
+            <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>You are responsible for ensuring the mobile number you provide is accurate and that you are the authorized user of that number.</span></li>
+            <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>SMS consent is never sold, rented, or shared with third parties or affiliates for marketing purposes.</span></li>
+          </ul>
+        </div>
+
+        <p className="text-xs text-slate-400 dark:text-slate-500">
+          See our <Link to="/sms-consent" className="text-brand-600 dark:text-brand-400 hover:underline">SMS Consent page</Link> and <Link to="/privacy" className="text-brand-600 dark:text-brand-400 hover:underline">Privacy Policy</Link> for additional information.
         </p>
       </div>
     ),
@@ -262,6 +301,7 @@ const sections: Section[] = [
     content: (
       <div className="space-y-3">
         <p>You may not use the Service to: send spam or unsolicited commercial messages; harvest contact data from other users; impersonate any person or entity; circumvent any security or access controls; use automated tools to scrape or extract data; engage in any activity that could damage, disable, or impair the Service; or violate any applicable law or regulation.</p>
+        <p><strong>SMS-specific restriction:</strong> PinOnIt's SMS messaging infrastructure is approved only for transactional, appointment-related messages. You may not use PinOnIt to send marketing blasts, promotional campaigns, or any non-appointment SMS content to your guests or contacts. Doing so constitutes a material violation of these Terms and will result in immediate account suspension.</p>
         <p className="text-xs text-slate-400 dark:text-slate-500">Violation may result in immediate account termination without refund. See also our <Link to="/acceptable-use" className="text-brand-600 dark:text-brand-400 hover:underline">Acceptable Use Policy</Link>.</p>
       </div>
     ),
@@ -272,6 +312,8 @@ const sections: Section[] = [
     content: (
       <p>
         We retain your personal data for as long as your account is active or as needed to provide the Service. Upon account deletion, we will delete or anonymize your personal data within 30 days, except where retention is required by law. Calendar tokens, booking data, and contact information are deleted upon account termination.
+        <br /><br />
+        <strong>Phone numbers</strong> are stored only for as long as your account remains active or until you opt out of SMS communications, whichever comes first. Replying STOP to any SMS message or removing your phone number from account settings immediately removes your number from future message queues.
       </p>
     ),
   },
@@ -307,7 +349,7 @@ export function TermsPage() {
               Terms of Service
             </h1>
           </div>
-          <p className="text-sm text-slate-400 dark:text-slate-500">Last updated: May 28, 2026</p>
+          <p className="text-sm text-slate-400 dark:text-slate-500">Last updated: July 7, 2026</p>
           <p className="mt-4 text-sm leading-relaxed text-slate-600 dark:text-slate-400 p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl">
             These Terms govern the PinOnIt platform, a DBA of Miami Expeditions LLC.
           </p>
