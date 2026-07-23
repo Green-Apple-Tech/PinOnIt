@@ -107,12 +107,17 @@ const STEPS = [
   'calendar',
   'calendar_purpose',
   'contacts',
-  'profile',
   'booking_link',
   'video',
   'done',
 ] as const;
 type Step = (typeof STEPS)[number];
+
+/** Map saved onboarding_step from the old 11-step wizard (included `profile` at index 7). */
+function normalizeLegacyOnboardingStep(saved: number): number {
+  if (saved >= 8) return Math.min(saved - 1, STEPS.length - 1);
+  return Math.min(saved, STEPS.length - 1);
+}
 
 export const onboardingIsCompleted = onboardingIsCompletedLocal;
 export const wizardIsActive = wizardIsActiveLocal;
@@ -249,8 +254,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
 
   const [step, setStep] = useState<Step>(() => {
     if (initialStep !== undefined && initialStep >= 0) {
-      // Clamp legacy saved indices (e.g. old qr_code / done steps after step removal)
-      const idx = Math.min(initialStep, STEPS.length - 1);
+      const idx = normalizeLegacyOnboardingStep(initialStep);
       return STEPS[idx];
     }
     return 'welcome';
@@ -306,8 +310,6 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
   const [hostWhatsappOptIn, setHostWhatsappOptIn] = useState(false);
   const [slug, setSlug] = useState('');
   const [timezone, setTimezone] = useState(profile?.timezone ?? 'America/New_York');
-  const [profilePhone, setProfilePhone] = useState('');
-  const [profileWhatsapp, setProfileWhatsapp] = useState('');
   const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle');
   const [createdServiceId, setCreatedServiceId] = useState<string | null>(null);
   const [bookingUrl, setBookingUrl] = useState('');
@@ -378,7 +380,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
   const persistCompleted = useCallback(async () => {
     markOnboardingCompletedLocal();
     if (!user) return;
-    const phoneE164 = normalizePhoneE164(hostPhone) || normalizePhoneE164(profilePhone) || null;
+    const phoneE164 = normalizePhoneE164(hostPhone) || null;
     let defaultChannel: 'email' | 'sms' | 'whatsapp' | 'voice' | null = null;
     if (hostNotifyVia.includes('whatsapp')) defaultChannel = 'whatsapp';
     else if (hostNotifyVia.includes('sms')) defaultChannel = 'sms';
@@ -391,11 +393,11 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
     };
     if (defaultChannel) payload.default_reminder_channel = defaultChannel;
     if (hostNotifyVia.includes('whatsapp') && phoneE164) {
-      payload.whatsapp_number = normalizePhoneE164(profileWhatsapp) || phoneE164;
+      payload.whatsapp_number = phoneE164;
     }
 
     await supabase.from('profiles').update(payload).eq('id', user.id);
-  }, [user, username, slug, timezone, hostPhone, profilePhone, profileWhatsapp, hostNotifyVia]);
+  }, [user, username, slug, timezone, hostPhone, hostNotifyVia]);
 
   // ── Save wizard position to localStorage + DB before any redirect ────────────
   const persistWizardPosition = useCallback(async (stepIdx: number) => {
@@ -666,9 +668,6 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
     const storedPhone = profile.phone ?? '';
     const formatted = storedPhone ? blurFormatPhone(storedPhone) : '';
     setHostPhone(formatted);
-    setProfilePhone(formatted);
-    const storedWhatsapp = profile.whatsapp_number ?? '';
-    setProfileWhatsapp(storedWhatsapp ? blurFormatPhone(storedWhatsapp) : '');
     if (profile.default_reminder_channel === 'sms') {
       setHostSmsOptIn(true);
       setHostNotifyVia((prev) => (prev.includes('sms') ? prev : [...prev, 'sms']));
@@ -677,6 +676,14 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
       setHostNotifyVia((prev) => (prev.includes('whatsapp') ? prev : [...prev, 'whatsapp']));
     }
   }, [profile?.phone, profile?.whatsapp_number, profile?.default_reminder_channel]);
+
+  useEffect(() => {
+    if (!hostPhone.trim()) {
+      setHostSmsOptIn(false);
+      setHostWhatsappOptIn(false);
+      setHostNotifyVia((prev) => prev.filter((v) => v !== 'sms' && v !== 'whatsapp'));
+    }
+  }, [hostPhone]);
 
   useEffect(() => {
     if (profile?.slug) {
@@ -936,20 +943,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
     }
   };
 
-  // ── Save profile contact info (profile step) ───────────────────────────────
-  const handleSaveProfileStep = async () => {
-    if (!user) return;
-    setSaving(true);
-    await supabase.from('profiles').update({
-      phone: normalizePhoneE164(hostPhone) || normalizePhoneE164(profilePhone) || null,
-      whatsapp_number: normalizePhoneE164(profileWhatsapp) || null,
-    }).eq('id', user.id);
-    await refreshProfile();
-    await saveStep(STEPS.indexOf('profile') + 1);
-    setSaving(false);
-    goNext();
-  };
-
+  // ── Save username step ───────────────────────────────────────────────────────
   const handleSaveUsernameStep = async () => {
     if (!user) return;
     setSaving(true);
@@ -966,19 +960,27 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
 
   const handleSavePhoneStep = async () => {
     if (!user) return;
+    const hasPhone = hostPhone.trim().length > 0;
+    const bothChecked = hostSmsOptIn && hostWhatsappOptIn;
+    const anyChecked = hostSmsOptIn || hostWhatsappOptIn;
+    if ((hasPhone && !bothChecked) || (!hasPhone && anyChecked)) return;
+
     setSaving(true);
     const phoneE164 = normalizePhoneE164(hostPhone) || null;
     const payload: Record<string, string | null> = { phone: phoneE164 };
     if (phoneE164 && hostWhatsappOptIn) {
       payload.whatsapp_number = phoneE164;
+    } else if (!phoneE164) {
+      payload.whatsapp_number = null;
     }
     if (phoneE164 && hostSmsOptIn) {
       payload.default_reminder_channel = 'sms';
     } else if (phoneE164 && hostWhatsappOptIn) {
       payload.default_reminder_channel = 'whatsapp';
+    } else if (!phoneE164) {
+      payload.default_reminder_channel = null;
     }
     await supabase.from('profiles').update(payload).eq('id', user.id);
-    setProfilePhone(hostPhone);
     await refreshProfile();
     await saveStep(STEPS.indexOf('phone') + 1);
     setSaving(false);
@@ -1534,15 +1536,25 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
 
       // ── Step: Phone for host reminders ───────────────────────────────────────
       case 'phone': {
+        const hasPhone = hostPhone.trim().length > 0;
+        const bothChecked = hostSmsOptIn && hostWhatsappOptIn;
+        const anyChecked = hostSmsOptIn || hostWhatsappOptIn;
         const canContinuePhone =
-          !hostPhone.trim() ||
-          (hostPhone.trim().length > 0 && (hostSmsOptIn || hostWhatsappOptIn));
+          (!hasPhone && !anyChecked) || (hasPhone && bothChecked);
+        const phoneStepError = hasPhone && !bothChecked
+          ? 'Enter your number and check both boxes above to continue, or clear the number and click Skip.'
+          : !hasPhone && anyChecked
+            ? 'Enter your phone number above, or uncheck both boxes to continue.'
+            : null;
         return (
           <div>
             <div className="mb-5">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Your phone number</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Optional — receive your own PinOnIt booking notifications by SMS or WhatsApp.
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Your phone number</h2>
+              <p className="text-base sm:text-lg text-slate-700 dark:text-slate-300 leading-relaxed">
+                Enter your mobile number to receive PinOnIt booking notifications by SMS and WhatsApp.
+              </p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+                Optional — leave blank and click Skip if you only want email reminders.
               </p>
             </div>
             <div className="flex flex-col gap-3">
@@ -1552,14 +1564,15 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                 onChange={(e) => setHostPhone(e.target.value)}
                 onBlur={(e) => { if (e.target.value.trim()) setHostPhone(blurFormatPhone(e.target.value)); }}
                 placeholder={PHONE_PLACEHOLDER}
-                className="w-full border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                className="w-full border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3.5 text-base bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600"
               />
               <p className="text-xs text-slate-400">{PHONE_HINT}</p>
               <div className="space-y-2.5 pt-1">
-                <label className="flex items-start gap-2.5 cursor-pointer">
+                <label className={`flex items-start gap-2.5 ${hasPhone ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}>
                   <input
                     type="checkbox"
                     checked={hostSmsOptIn}
+                    disabled={!hasPhone}
                     onChange={(e) => {
                       const checked = e.target.checked;
                       setHostSmsOptIn(checked);
@@ -1567,16 +1580,17 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                         checked ? (prev.includes('sms') ? prev : [...prev, 'sms']) : prev.filter((v) => v !== 'sms')
                       );
                     }}
-                    className="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600"
+                    className="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600 disabled:opacity-50"
                   />
                   <span className="text-sm text-slate-700 dark:text-slate-300">
                     I agree to receive SMS notifications for my PinOnIt account at this number.
                   </span>
                 </label>
-                <label className="flex items-start gap-2.5 cursor-pointer">
+                <label className={`flex items-start gap-2.5 ${hasPhone ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}>
                   <input
                     type="checkbox"
                     checked={hostWhatsappOptIn}
+                    disabled={!hasPhone}
                     onChange={(e) => {
                       const checked = e.target.checked;
                       setHostWhatsappOptIn(checked);
@@ -1584,7 +1598,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                         checked ? (prev.includes('whatsapp') ? prev : [...prev, 'whatsapp']) : prev.filter((v) => v !== 'whatsapp')
                       );
                     }}
-                    className="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600"
+                    className="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600 disabled:opacity-50"
                   />
                   <span className="text-sm text-slate-700 dark:text-slate-300">
                     I agree to receive WhatsApp notifications for my PinOnIt account at this number.
@@ -1592,10 +1606,8 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                 </label>
               </div>
               <SmsBookingConsent />
-              {hostPhone.trim() && !hostSmsOptIn && !hostWhatsappOptIn && (
-                <p className="text-red-500 text-xs">
-                  Please check at least one opt-in option above, or click Skip.
-                </p>
+              {phoneStepError && (
+                <p className="text-red-500 text-sm">{phoneStepError}</p>
               )}
             </div>
             <NavButtons
@@ -1606,6 +1618,13 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                 setHostNotifyVia([]);
                 setHostSmsOptIn(false);
                 setHostWhatsappOptIn(false);
+                if (user) {
+                  await supabase.from('profiles').update({
+                    phone: null,
+                    whatsapp_number: null,
+                    default_reminder_channel: null,
+                  }).eq('id', user.id);
+                }
                 await saveStep(STEPS.indexOf('phone') + 1);
                 goNext();
               }}
@@ -1913,59 +1932,6 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
               onNext={async () => { await saveStep(STEPS.indexOf('contacts') + 1); goNext(); }}
               onSkip={async () => { await saveStep(STEPS.indexOf('contacts') + 1); goNext(); }}
               nextLabel="Continue"
-            />
-          </div>
-        );
-
-      // ── Step: Profile / notifications ───────────────────────────────────────
-      case 'profile':
-        return (
-          <div>
-            <div className="mb-5">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">How should we reach you?</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Add your phone numbers for SMS, voice, and WhatsApp reminders. You can change these anytime in Settings.
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">Phone number</label>
-                <input
-                  type="tel"
-                  value={profilePhone}
-                  onChange={e => setProfilePhone(e.target.value)}
-                  onBlur={e => { if (e.target.value.trim()) setProfilePhone(blurFormatPhone(e.target.value)); }}
-                  placeholder={PHONE_PLACEHOLDER}
-                  className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
-                />
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{PHONE_HINT}</p>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Used for SMS reminders and voice call alerts.</p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">WhatsApp number</label>
-                <input
-                  type="tel"
-                  value={profileWhatsapp}
-                  onChange={e => setProfileWhatsapp(e.target.value)}
-                  onBlur={e => { if (e.target.value.trim()) setProfileWhatsapp(blurFormatPhone(e.target.value)); }}
-                  placeholder={PHONE_PLACEHOLDER}
-                  className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
-                />
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 leading-relaxed">
-                  Leave blank to use your phone number above for WhatsApp. Enter a different number if your WhatsApp is on a separate device.
-                </p>
-              </div>
-              <SmsBookingConsent className="text-xs text-gray-500 dark:text-slate-400 mt-1" />
-            </div>
-
-            <NavButtons
-              onBack={goBack}
-              onNext={handleSaveProfileStep}
-              onSkip={async () => { await saveStep(STEPS.indexOf('profile') + 1); goNext(); }}
-              nextLabel="Continue"
-              loading={saving}
             />
           </div>
         );

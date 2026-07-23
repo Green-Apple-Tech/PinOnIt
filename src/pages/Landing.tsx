@@ -934,9 +934,11 @@ export function Landing() {
           <Link to="/privacy" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Privacy Policy</Link>
           <span>|</span>
           <Link to="/sms-consent" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">SMS Consent</Link>
-          <span>|</span>
-          <a href={`mailto:${SUPPORT_EMAIL}`} className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Contact</a>
         </div>
+        <p className="max-w-6xl mx-auto text-center text-xs text-slate-400 dark:text-slate-500 pt-2">
+          Support:{' '}
+          <a href={`mailto:${SUPPORT_EMAIL}`} className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">{SUPPORT_EMAIL}</a>
+        </p>
       </footer>
       <OnboardingBot />
     </div>

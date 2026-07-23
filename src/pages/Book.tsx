@@ -14,7 +14,12 @@ import {
   shouldStopRecurrence,
 } from '../lib/recurring';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
-import { SmsBookingConsentCheckbox, SmsBookingConsentFootnotes } from '../components/SmsConsentText';
+import { SmsBookingConsentCheckbox } from '../components/SmsConsentText';
+import {
+  buildNotifyViaPayload,
+  resolveBookingSmsConsent,
+  shouldRecordSmsOptIn,
+} from '../lib/bookingSmsConsent';
 import { resolveTermsText } from '../lib/terms';
 import { stripePromise } from '../lib/stripe';
 import { StripeBookingCheckout } from '../components/StripeBookingCheckout';
@@ -429,11 +434,16 @@ function ReminderWizard({
     );
   };
 
+  const { smsConsentGranted, whatsappConsentGranted } = resolveBookingSmsConsent(
+    guestPhone ?? '',
+    smsOptIn,
+    whatsappOptIn,
+  );
   const canSave =
     selectedChannels.length > 0 &&
     selectedTimes.length > 0 &&
-    (!selectedChannels.includes('sms') || (!!guestPhone?.trim() && smsOptIn)) &&
-    (!selectedChannels.includes('whatsapp') || (!!guestPhone?.trim() && whatsappOptIn));
+    (!selectedChannels.includes('sms') || smsConsentGranted) &&
+    (!selectedChannels.includes('whatsapp') || whatsappConsentGranted);
 
   return (
     <div className="py-8 max-w-md mx-auto">
@@ -478,7 +488,7 @@ function ReminderWizard({
               <SmsBookingConsentCheckbox
                 checked={smsOptIn}
                 onChange={setSmsOptIn}
-                disabled={!guestPhone?.trim()}
+                showDetails={false}
               />
             )}
             {selectedChannels.includes('whatsapp') && (
@@ -493,9 +503,6 @@ function ReminderWizard({
                   I agree to receive WhatsApp appointment reminders at the phone number I provided.
                 </span>
               </label>
-            )}
-            {(selectedChannels.includes('sms') || selectedChannels.includes('whatsapp')) && (
-              <SmsBookingConsentFootnotes showOptionalNotice={selectedChannels.includes('sms')} className="mt-2" />
             )}
             {selectedChannels.includes('sms') && !guestPhone?.trim() && (
               <p className="text-xs text-amber-600 dark:text-amber-400">Add a phone number on your booking to receive SMS reminders.</p>
@@ -865,14 +872,12 @@ export function BookPage() {
     const endTime = new Date(startTime.getTime() + selectedService.duration_minutes * 60000);
     const isRecurring = !!(selectedService.is_recurring && selectedService.recurrence_frequency);
     const email = guestEmail.trim();
-    const phoneVal = phone.trim() ? normalizePhoneE164(phone.trim()) : null;
-    const notifyViaPayload: string[] = [];
-    if (email) notifyViaPayload.push('email');
-    if (phoneVal && smsOptIn) notifyViaPayload.push('sms');
-    if (phoneVal && whatsappOptIn) notifyViaPayload.push('whatsapp');
+    const { guestPhone: phoneVal, smsConsentGranted, whatsappConsentGranted } =
+      resolveBookingSmsConsent(phone, smsOptIn, whatsappOptIn);
+    const notifyViaPayload = buildNotifyViaPayload(email, phone, smsOptIn, whatsappOptIn);
     const effectiveReminderChannels = selectedChannels.filter((ch) => {
-      if (ch === 'sms') return !!(phoneVal && smsOptIn);
-      if (ch === 'whatsapp') return !!(phoneVal && whatsappOptIn);
+      if (ch === 'sms') return smsConsentGranted;
+      if (ch === 'whatsapp') return whatsappConsentGranted;
       return true;
     });
     const { data } = await supabase.from('bookings').insert({
@@ -910,6 +915,18 @@ export function BookPage() {
           answer: q.field_type === 'phone' ? normalizePhoneE164(answers[q.id] ?? '') : (answers[q.id] ?? ''),
         }));
         if (answerRows.length) await supabase.from('booking_answers').insert(answerRows);
+      }
+
+      if (shouldRecordSmsOptIn(phone, smsOptIn) && phoneVal) {
+        supabase.from('sms_optins').insert({
+          name: guestName.trim() || null,
+          phone: phoneVal,
+          consent: true,
+          source: 'booking',
+          user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+        }).then(({ error }) => {
+          if (error) console.warn('SMS opt-in record failed:', error.message);
+        });
       }
 
       // Create Google Meet link if host has Google Calendar connected
@@ -1073,16 +1090,23 @@ export function BookPage() {
   const handleSaveReminders = async () => {
     if (!confirmedBooking) return;
     setSavingReminders(true);
-    const phoneVal = confirmedBooking.guest_phone?.trim() || null;
+    const phoneRaw = confirmedBooking.guest_phone ?? phone;
+    const { smsConsentGranted, whatsappConsentGranted } = resolveBookingSmsConsent(
+      phoneRaw,
+      smsOptIn,
+      whatsappOptIn,
+    );
     const effectiveChannels = selectedChannels.filter((ch) => {
-      if (ch === 'sms') return !!(phoneVal && smsOptIn);
-      if (ch === 'whatsapp') return !!(phoneVal && whatsappOptIn);
+      if (ch === 'sms') return smsConsentGranted;
+      if (ch === 'whatsapp') return whatsappConsentGranted;
       return true;
     });
-    const notifyViaUpdate: string[] = [];
-    if (confirmedBooking.guest_email) notifyViaUpdate.push('email');
-    if (phoneVal && smsOptIn) notifyViaUpdate.push('sms');
-    if (phoneVal && whatsappOptIn) notifyViaUpdate.push('whatsapp');
+    const notifyViaUpdate = buildNotifyViaPayload(
+      confirmedBooking.guest_email ?? '',
+      phoneRaw,
+      smsOptIn,
+      whatsappOptIn,
+    );
     if (confirmedBooking.action_token) {
       await supabase.rpc('save_guest_reminder_prefs', {
         p_booking_id: confirmedBooking.id,
@@ -1664,26 +1688,24 @@ export function BookPage() {
                       />
                     </div>
                     <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{PHONE_HINT}</p>
-                    <div className="space-y-2.5 mt-3">
-                      <SmsBookingConsentCheckbox
-                        checked={smsOptIn}
-                        onChange={setSmsOptIn}
+                    <SmsBookingConsentCheckbox
+                      checked={smsOptIn}
+                      onChange={setSmsOptIn}
+                      className="mt-3"
+                      showDetails={false}
+                    />
+                    <label className="flex items-start gap-2.5 cursor-pointer mt-3">
+                      <input
+                        type="checkbox"
+                        checked={whatsappOptIn}
+                        onChange={(e) => setWhatsappOptIn(e.target.checked)}
                         disabled={!phone.trim()}
+                        className="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600 disabled:opacity-50"
                       />
-                      <label className="flex items-start gap-2.5 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={whatsappOptIn}
-                          onChange={(e) => setWhatsappOptIn(e.target.checked)}
-                          disabled={!phone.trim()}
-                          className="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600 disabled:opacity-50"
-                        />
-                        <span className="text-sm text-slate-700 dark:text-slate-300">
-                          I agree to receive WhatsApp appointment reminders at the phone number I provided.
-                        </span>
-                      </label>
-                    </div>
-                    <SmsBookingConsentFootnotes className="mt-3" />
+                      <span className="text-sm text-slate-700 dark:text-slate-300">
+                        I agree to receive WhatsApp appointment reminders at the phone number I provided.
+                      </span>
+                    </label>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Your timezone</label>
@@ -1738,10 +1760,7 @@ export function BookPage() {
                             placeholder={q.field_type === 'phone' ? PHONE_PLACEHOLDER : undefined}
                             className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition" />
                           {q.field_type === 'phone' && (
-                            <>
-                              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{PHONE_HINT}</p>
-                              <SmsBookingConsentFootnotes className="mt-2" />
-                            </>
+                            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{PHONE_HINT}</p>
                           )}
                         </>
                       )}
@@ -2139,6 +2158,8 @@ export function BookPage() {
           <Link to="/terms" className="hover:text-slate-600 transition-colors">Terms of Service</Link>
           <span className="hidden sm:inline">·</span>
           <Link to="/privacy" className="hover:text-slate-600 transition-colors">Privacy Policy</Link>
+          <span className="hidden sm:inline">·</span>
+          <Link to="/sms-consent" className="hover:text-slate-600 transition-colors">SMS Consent</Link>
           {!calendlyStyle && (
             <>
               <span className="hidden sm:inline">|</span>

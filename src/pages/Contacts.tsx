@@ -1138,20 +1138,50 @@ export function ContactsPage() {
   return (
     <main className="p-6 md:p-8 max-w-3xl">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Contacts</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
             Everyone who has booked with you, in one place. Use <span className="font-medium text-gray-700 dark:text-slate-300">Email</span> or <span className="font-medium text-gray-700 dark:text-slate-300">SMS / WhatsApp</span> to share your booking link.
           </p>
         </div>
-        <button
-          onClick={() => { setShowAddForm(true); setAddName(''); setAddEmail(''); setAddPhone(''); setAddNotes(''); setAddError(''); }}
-          className="flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-full transition-all shadow-sm shrink-0"
-        >
-          <Plus className="h-4 w-4" /> Add contact
-        </button>
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {!gmailConnected && (
+            <button
+              type="button"
+              onClick={handleConnectGmail}
+              disabled={gmailConnecting}
+              className="flex items-center gap-2 px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 hover:border-red-300 dark:hover:border-red-700 text-gray-800 dark:text-slate-200 text-sm font-semibold rounded-full transition-all shadow-sm disabled:opacity-60"
+            >
+              {gmailConnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4 text-red-500" />}
+              {gmailConnecting ? 'Connecting…' : 'Import Gmail'}
+            </button>
+          )}
+          {!outlookConnected && (
+            <button
+              type="button"
+              onClick={handleConnectOutlook}
+              disabled={outlookConnecting}
+              className="flex items-center gap-2 px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-700 text-gray-800 dark:text-slate-200 text-sm font-semibold rounded-full transition-all shadow-sm disabled:opacity-60"
+            >
+              {outlookConnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4 text-blue-600" />}
+              {outlookConnecting ? 'Connecting…' : 'Import Outlook'}
+            </button>
+          )}
+          <button
+            onClick={() => { setShowAddForm(true); setAddName(''); setAddEmail(''); setAddPhone(''); setAddNotes(''); setAddError(''); }}
+            className="flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-full transition-all shadow-sm"
+          >
+            <Plus className="h-4 w-4" /> Add contact
+          </button>
+        </div>
       </div>
+
+      {(gmailError || outlookError) && !gmailConnected && !outlookConnected && (
+        <div className="mb-4 rounded-xl border border-red-200 dark:border-red-800/50 bg-red-50 dark:bg-red-950/20 px-4 py-3 text-xs text-red-600 dark:text-red-400">
+          {gmailError || outlookError}
+        </div>
+      )}
 
       {/* Contextual checklist */}
       {!checklistDismissed && (
@@ -1257,7 +1287,7 @@ export function ContactsPage() {
 
       {/* Gmail banner — connected */}
       {gmailConnected ? (
-        <div className="mb-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/50 rounded-xl overflow-hidden connected">
+        <div className="mb-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/50 rounded-xl overflow-hidden">
           <div className="flex items-center gap-3 px-4 py-3">
             <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
               <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
@@ -1387,9 +1417,33 @@ export function ContactsPage() {
             <Users className="h-7 w-7 text-brand-500 dark:text-brand-400" />
           </div>
           <h3 className="text-base font-bold text-gray-900 dark:text-white mb-2">No contacts yet</h3>
-          <p className="text-sm text-gray-500 dark:text-slate-400 max-w-xs mx-auto mb-6">
-            Your contacts will appear here automatically when someone books a meeting with you.
+          <p className="text-sm text-gray-500 dark:text-slate-400 max-w-sm mx-auto mb-6">
+            Import from Gmail or Outlook, add contacts manually, or share your booking link — guests appear here automatically when they book.
           </p>
+          <div className="flex flex-wrap items-center justify-center gap-2 mb-4">
+            {!gmailConnected && (
+              <button
+                type="button"
+                onClick={handleConnectGmail}
+                disabled={gmailConnecting}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-full transition-all disabled:opacity-60"
+              >
+                {gmailConnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                {gmailConnecting ? 'Connecting…' : 'Import from Gmail'}
+              </button>
+            )}
+            {!outlookConnected && (
+              <button
+                type="button"
+                onClick={handleConnectOutlook}
+                disabled={outlookConnecting}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-full transition-all disabled:opacity-60"
+              >
+                {outlookConnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                {outlookConnecting ? 'Connecting…' : 'Import from Outlook'}
+              </button>
+            )}
+          </div>
           <button
             onClick={copyBookingLink}
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-full transition-all"

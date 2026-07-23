@@ -23,7 +23,7 @@ export function Footer() {
           </Link>
           <span className="hidden sm:inline">|</span>
           <a href={`mailto:${SUPPORT_EMAIL}`} className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
-            Contact
+            {SUPPORT_EMAIL}
           </a>
         </div>
         <p>PinOnIt is a DBA of Miami Expeditions LLC.</p>

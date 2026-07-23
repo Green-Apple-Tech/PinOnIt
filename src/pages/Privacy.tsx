@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Shield, Database, Eye, Share2, Clock, Mail, ExternalLink, Globe, User, Cookie, Server, Lock, MessageSquare } from 'lucide-react';
 import { Footer } from '../components/Footer';
+import { SMS_BOOKING_CONSENT_CTA, SMS_OPTIONAL_POLICY_SENTENCE } from '../lib/smsCompliance';
 import { SUPPORT_EMAIL } from '../lib/contactEmail';
 
 interface Section {
@@ -61,6 +62,8 @@ const sections: Section[] = [
     title: 'SMS & Text Message Communications',
     content: (
       <div className="space-y-4">
+        <p>{SMS_BOOKING_CONSENT_CTA}</p>
+        <p>{SMS_OPTIONAL_POLICY_SENTENCE}</p>
         <p>
           PinOnIt sends appointment-related SMS text messages to users and their guests when a mobile phone number is voluntarily provided and SMS consent is explicitly given.
         </p>

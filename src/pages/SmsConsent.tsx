@@ -2,9 +2,18 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, MessageSquare, Phone, Ban, HelpCircle, Check, Loader2, User } from 'lucide-react';
 import { Footer } from '../components/Footer';
+import {
+  SmsBookingConsentCheckbox,
+  SmsBookingConsentDisclosure,
+  SmsBookingPageConsentPreview,
+} from '../components/SmsConsentText';
 import { supabase } from '../lib/supabase';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
-import { SMS_BOOKING_CONSENT_TEXT, SMS_BOOKING_CONSENT_DETAILS, SMS_CONSENT_PAGE_OPTIONAL_STATEMENT } from '../lib/smsCompliance';
+import {
+  SMS_CONSENT_PAGE_OPTIONAL_STATEMENT,
+  SMS_OPTIONAL_BOOKING_NOTICE,
+} from '../lib/smsCompliance';
+import { shouldRecordSmsOptIn } from '../lib/bookingSmsConsent';
 import { SUPPORT_EMAIL } from '../lib/contactEmail';
 
 const SMS_EXAMPLES = [
@@ -25,15 +34,15 @@ function SmsOptInForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    if (!shouldRecordSmsOptIn(phone, consent)) {
+      if (!phone.trim()) {
+        setError('Please enter a valid mobile phone number and check the consent box to opt in.');
+      } else {
+        setError('Please check the consent box to opt in to SMS reminders.');
+      }
+      return;
+    }
     const e164 = normalizePhoneE164(phone.trim());
-    if (!e164) {
-      setError('Please enter a valid mobile phone number.');
-      return;
-    }
-    if (!consent) {
-      setError('Please check the box to consent before opting in.');
-      return;
-    }
     setSubmitting(true);
     const { error: insertError } = await supabase.from('sms_optins').insert({
       name: name.trim() || null,
@@ -89,7 +98,7 @@ function SmsOptInForm() {
 
       <div>
         <label htmlFor="optin-phone" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-          Mobile phone number <span className="text-slate-400 font-normal">(optional)</span>
+          Mobile phone number <span className="text-slate-400 font-normal">(required to opt in)</span>
         </label>
         <div className="relative">
           <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -106,27 +115,10 @@ function SmsOptInForm() {
         <p className="text-xs text-slate-400 mt-1">{PHONE_HINT}</p>
       </div>
 
-      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-        {SMS_BOOKING_CONSENT_DETAILS}
-      </p>
-
-      <label className="flex items-start gap-2.5 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={consent}
-          onChange={(e) => { setConsent(e.target.checked); setError(''); }}
-          className="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600"
-        />
-        <span className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-          {SMS_BOOKING_CONSENT_TEXT}
-        </span>
-      </label>
-
-      <p className="text-xs text-slate-500 dark:text-slate-400">
-        <Link to="/privacy" className="text-indigo-600 dark:text-indigo-400 hover:underline">Privacy Policy</Link>
-        {' · '}
-        <Link to="/terms" className="text-indigo-600 dark:text-indigo-400 hover:underline">Terms of Service</Link>
-      </p>
+      <SmsBookingConsentCheckbox
+        checked={consent}
+        onChange={(v) => { setConsent(v); setError(''); }}
+      />
 
       {error && <p className="text-xs text-red-500">{error}</p>}
 
@@ -162,60 +154,45 @@ export function SmsConsentPage() {
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">SMS Consent &amp; Opt-In</h1>
           </div>
           <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-            PinOnIt sends appointment-related SMS messages only when users voluntarily opt in.
-            This public page is the opt-in point and describes our SMS program, consent language, and how to opt out.
-            No account or login is required.
+            Pin On It sends appointment-related SMS messages only when users voluntarily opt in.
+            This page requires no account or login.
           </p>
           <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mt-3">
             {SMS_CONSENT_PAGE_OPTIONAL_STATEMENT}
           </p>
         </div>
 
-        {/* Primary CTA — real, working opt-in form */}
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Opt in to SMS reminders</h2>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Booking page SMS opt-in (example)</h2>
           <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-            Enter your mobile number and check the consent box to receive appointment-related text messages.
-            Providing a phone number is optional and you can unsubscribe at any time.
+            On every public booking page at{' '}
+            <code className="text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">pinonit.com/your-name</code>,
+            guests see an optional phone field and an SMS consent checkbox that is <strong>unchecked by default</strong>.
+            {SMS_OPTIONAL_BOOKING_NOTICE}
           </p>
-          <SmsOptInForm />
-        </section>
-
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">How users opt in</h2>
-          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-            Phone numbers are <strong>optional</strong> everywhere on PinOnIt. We do not send SMS unless
-            <strong> both</strong> of the following are true:
-          </p>
-          <ol className="text-sm text-slate-600 dark:text-slate-400 space-y-2 pl-5 list-decimal">
-            <li>The user voluntarily enters a mobile phone number, and</li>
-            <li>The user checks the SMS opt-in checkbox (unchecked by default) after reading the consent disclosure.</li>
-          </ol>
-          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-            The same phone field + consent disclosure + unchecked checkbox shown above also appears:
-          </p>
-          <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-2 pl-4 list-disc">
-            <li>On every public booking page at <code className="text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">pinonit.com/your-name</code> (no login required), and</li>
-            <li>During host onboarding and Settings when a host enters their own phone number for PinOnIt account notifications.</li>
-          </ul>
+          <SmsBookingPageConsentPreview />
         </section>
 
         <section className="space-y-3">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Consent language</h2>
           <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-            The following exact disclosure is shown directly below the phone field and the SMS opt-in checkbox:
+            The exact disclosure shown next to the SMS opt-in checkbox on booking forms:
           </p>
-          <blockquote className="text-sm text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-4 leading-relaxed space-y-3">
-            <p>&ldquo;{SMS_BOOKING_CONSENT_TEXT}&rdquo;</p>
-            <p>{SMS_BOOKING_CONSENT_DETAILS}</p>
+          <blockquote className="text-sm text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-4 leading-relaxed">
+            <SmsBookingConsentDisclosure />
           </blockquote>
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Example messages</h2>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Opt in to SMS reminders</h2>
           <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-            Appointment-related messages sent through PinOnIt may look like the following:
+            You may also opt in directly on this page. SMS consent is optional and is not required to book an appointment.
           </p>
+          <SmsOptInForm />
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Example messages</h2>
           <div className="space-y-2">
             {SMS_EXAMPLES.map((msg) => (
               <div
@@ -226,9 +203,6 @@ export function SmsConsentPage() {
               </div>
             ))}
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            We do not send marketing or promotional SMS. Message frequency varies. Message and data rates may apply.
-          </p>
         </section>
 
         <section className="space-y-3">
@@ -240,8 +214,7 @@ export function SmsConsentPage() {
                 <h3 className="font-semibold text-sm text-slate-900 dark:text-white">STOP — Unsubscribe</h3>
               </div>
               <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Reply <strong>STOP</strong> to any PinOnIt SMS to unsubscribe from future appointment-related text
-                messages. You will receive a confirmation that you have been opted out.
+                Reply <strong>STOP</strong> to any Pin On It SMS to unsubscribe.
               </p>
             </div>
             <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
@@ -260,9 +233,12 @@ export function SmsConsentPage() {
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Privacy and Terms</h2>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Contact</h2>
           <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-            SMS consent is not shared with third parties or affiliates for marketing purposes. For more information:
+            Questions about SMS consent or this program:{' '}
+            <a href={`mailto:${SUPPORT_EMAIL}`} className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium">
+              {SUPPORT_EMAIL}
+            </a>
           </p>
           <div className="flex flex-wrap gap-3">
             <Link
