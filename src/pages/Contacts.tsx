@@ -1183,6 +1183,62 @@ export function ContactsPage() {
         </div>
       )}
 
+      {/* Always-visible import card — never dismissible */}
+      {(!gmailConnected || !outlookConnected) && (
+        <div className="mb-5 rounded-2xl border-2 border-indigo-200 dark:border-indigo-800 bg-indigo-50/70 dark:bg-indigo-950/30 p-5">
+          <h2 className="text-base font-bold text-slate-900 dark:text-white mb-1">
+            Import contacts
+          </h2>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            Pull contacts from Gmail or Outlook. Works even if a provider account is empty — you can connect now and sync again later.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {!gmailConnected ? (
+              <button
+                type="button"
+                onClick={handleConnectGmail}
+                disabled={gmailConnecting}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-60"
+              >
+                {gmailConnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                {gmailConnecting ? 'Connecting…' : 'Import from Gmail'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSyncGmail}
+                disabled={gmailSyncing}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-60"
+              >
+                {gmailSyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                {gmailSyncing ? 'Syncing…' : 'Sync Gmail contacts'}
+              </button>
+            )}
+            {!outlookConnected ? (
+              <button
+                type="button"
+                onClick={handleConnectOutlook}
+                disabled={outlookConnecting}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-60"
+              >
+                {outlookConnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                {outlookConnecting ? 'Connecting…' : 'Import from Outlook'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSyncOutlook}
+                disabled={outlookSyncing}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-60"
+              >
+                {outlookSyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                {outlookSyncing ? 'Syncing…' : 'Sync Outlook contacts'}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Contextual checklist */}
       {!checklistDismissed && (
         <div className="relative">
