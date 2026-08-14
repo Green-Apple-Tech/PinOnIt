@@ -254,6 +254,7 @@ export function RemindersPage({
   const [testSmsPhone, setTestSmsPhone] = useState('');
   const [testSmsSending, setTestSmsSending] = useState(false);
   const [testWhatsappSending, setTestWhatsappSending] = useState(false);
+  const [testVoiceSending, setTestVoiceSending] = useState(false);
   const [testSmsResult, setTestSmsResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   // Advanced section
@@ -574,11 +575,12 @@ export function RemindersPage({
   };
   const hasAnyReminders = templates.length > 0;
 
-  const handleTestMessage = async (channel: 'sms' | 'whatsapp') => {
+  const handleTestMessage = async (channel: 'sms' | 'whatsapp' | 'voice') => {
     const to = normalizePhoneE164(testSmsPhone);
     if (!to) return;
     if (channel === 'sms') setTestSmsSending(true);
-    else setTestWhatsappSending(true);
+    else if (channel === 'whatsapp') setTestWhatsappSending(true);
+    else setTestVoiceSending(true);
     setTestSmsResult(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -595,6 +597,7 @@ export function RemindersPage({
           body: JSON.stringify({
             test_sms: channel === 'sms',
             test_whatsapp: channel === 'whatsapp',
+            test_voice: channel === 'voice',
             to,
             guest_name: 'Test Guest',
             host_name: profile?.full_name ?? 'Your Host',
@@ -605,10 +608,16 @@ export function RemindersPage({
         }
       );
       const json = await res.json();
+      const label = channel === 'whatsapp' ? 'WhatsApp' : channel === 'voice' ? 'voicemail' : 'SMS';
       if (!res.ok || json.error) {
-        setTestSmsResult({ ok: false, message: json.error ?? 'Failed to send. Check Twilio credentials.' });
+        setTestSmsResult({ ok: false, message: json.error ?? `Failed to send ${label}. Check Twilio credentials.` });
       } else {
-        setTestSmsResult({ ok: true, message: `Test ${channel === 'whatsapp' ? 'WhatsApp' : 'SMS'} sent to ${to}` });
+        setTestSmsResult({
+          ok: true,
+          message: channel === 'voice'
+            ? `Test call started to ${to}. Answer to hear the reminder voicemail.`
+            : `Test ${label} sent to ${to}`,
+        });
         const { data: latest } = await supabase
           .from('message_log')
           .select('*')
@@ -622,6 +631,7 @@ export function RemindersPage({
     }
     setTestSmsSending(false);
     setTestWhatsappSending(false);
+    setTestVoiceSending(false);
   };
 
   if (loading) {
@@ -688,6 +698,78 @@ export function RemindersPage({
         )}
       </div>
 
+      {isPro && (
+        <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+          <button
+            type="button"
+            onClick={() => { setShowTestSms((v) => !v); setTestSmsResult(null); }}
+            className="w-full flex items-center justify-between px-5 py-4 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors"
+          >
+            <span className="flex items-center gap-2">
+              <Smartphone className="h-4 w-4 text-slate-400" />
+              Test SMS, WhatsApp &amp; voicemail
+            </span>
+            {showTestSms ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+          </button>
+          {showTestSms && (
+            <div className="border-t border-slate-200 dark:border-slate-800 px-5 py-4 space-y-3">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Send a sample to this number now. SMS and WhatsApp send a text; voicemail places a Twilio call that plays a short reminder. Results show in Activity log.
+              </p>
+              <input
+                type="tel"
+                value={testSmsPhone}
+                onChange={(e) => { setTestSmsPhone(e.target.value); setTestSmsResult(null); }}
+                onBlur={(e) => { if (e.target.value.trim()) setTestSmsPhone(blurFormatPhone(e.target.value)); }}
+                placeholder={PHONE_PLACEHOLDER}
+                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5864C6] transition"
+              />
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => void handleTestMessage('sms')}
+                  disabled={testSmsSending || testWhatsappSending || testVoiceSending || !testSmsPhone.trim()}
+                  className="px-4 py-2 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-1.5 shrink-0 hover:opacity-90" style={{ backgroundColor: '#5864C6' }}
+                >
+                  {testSmsSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />}
+                  {testSmsSending ? 'Sending…' : 'Test SMS'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleTestMessage('whatsapp')}
+                  disabled={testSmsSending || testWhatsappSending || testVoiceSending || !testSmsPhone.trim()}
+                  className="px-4 py-2 disabled:opacity-50 text-sm font-semibold rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 flex items-center gap-1.5 shrink-0 hover:bg-slate-50 dark:hover:bg-slate-800"
+                >
+                  {testWhatsappSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
+                  {testWhatsappSending ? 'Sending…' : 'Test WhatsApp'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleTestMessage('voice')}
+                  disabled={testSmsSending || testWhatsappSending || testVoiceSending || !testSmsPhone.trim()}
+                  className="px-4 py-2 disabled:opacity-50 text-sm font-semibold rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 flex items-center gap-1.5 shrink-0 hover:bg-slate-50 dark:hover:bg-slate-800"
+                >
+                  {testVoiceSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <PhoneCall className="h-4 w-4" />}
+                  {testVoiceSending ? 'Calling…' : 'Test voicemail'}
+                </button>
+              </div>
+              <p className="text-xs text-slate-400 dark:text-slate-500">{PHONE_HINT}</p>
+              <SmsBookingConsent className="text-xs text-gray-500 dark:text-slate-400 mt-1" />
+              {testSmsResult && (
+                <div className={`flex items-start gap-2 px-3 py-2.5 rounded-lg text-sm ${
+                  testSmsResult.ok
+                    ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200'
+                    : 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300'
+                }`}>
+                  {testSmsResult.ok ? <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" /> : <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />}
+                  <span>{testSmsResult.message}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
           <div>
@@ -718,7 +800,7 @@ export function RemindersPage({
             </div>
           ))}
           {log.length === 0 && (
-            <p className="px-5 py-8 text-center text-slate-400 text-sm">No messages sent yet. Use Test SMS &amp; WhatsApp on this page to send a sample.</p>
+            <p className="px-5 py-8 text-center text-slate-400 text-sm">No messages sent yet. Use the test section above to send a sample SMS, WhatsApp, or voicemail.</p>
           )}
         </div>
       </div>
@@ -1264,68 +1346,6 @@ export function RemindersPage({
           </div>
         )}
       </div>
-
-      {/* ── TEST SMS / WHATSAPP ── */}
-      {isPro && (
-        <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-          <button
-            onClick={() => { setShowTestSms((v) => !v); setTestSmsResult(null); }}
-            className="w-full flex items-center justify-between px-5 py-4 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors"
-          >
-            <span className="flex items-center gap-2">
-              <Smartphone className="h-4 w-4 text-slate-400" />
-              Test SMS &amp; WhatsApp
-            </span>
-            {showTestSms ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
-          </button>
-
-          {showTestSms && (
-            <div className="border-t border-slate-200 dark:border-slate-800 px-5 py-4 space-y-3">
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Send a sample reminder now to confirm Twilio can reach this number. Sends are recorded in Activity log.
-              </p>
-              <input
-                type="tel"
-                value={testSmsPhone}
-                onChange={(e) => { setTestSmsPhone(e.target.value); setTestSmsResult(null); }}
-                onBlur={(e) => { if (e.target.value.trim()) setTestSmsPhone(blurFormatPhone(e.target.value)); }}
-                placeholder={PHONE_PLACEHOLDER}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5864C6] transition"
-              />
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => void handleTestMessage('sms')}
-                  disabled={testSmsSending || testWhatsappSending || !testSmsPhone.trim()}
-                  className="px-4 py-2 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-1.5 shrink-0 hover:opacity-90" style={{ backgroundColor: '#5864C6' }}
-                >
-                  {testSmsSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />}
-                  {testSmsSending ? 'Sending…' : 'Send test SMS'}
-                </button>
-                <button
-                  onClick={() => void handleTestMessage('whatsapp')}
-                  disabled={testSmsSending || testWhatsappSending || !testSmsPhone.trim()}
-                  className="px-4 py-2 disabled:opacity-50 text-sm font-semibold rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 flex items-center gap-1.5 shrink-0 hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  {testWhatsappSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
-                  {testWhatsappSending ? 'Sending…' : 'Send test WhatsApp'}
-                </button>
-              </div>
-              <p className="text-xs text-slate-400 dark:text-slate-500">{PHONE_HINT}</p>
-              <SmsBookingConsent className="text-xs text-gray-500 dark:text-slate-400 mt-1" />
-              {testSmsResult && (
-                <div className={`flex items-start gap-2 px-3 py-2.5 rounded-lg text-sm ${
-                  testSmsResult.ok
-                    ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200'
-                    : 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300'
-                }`}>
-                  {testSmsResult.ok ? <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" /> : <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />}
-                  <span>{testSmsResult.message}</span>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* ── ADVANCED SECTION ── */}
       <div className="border border-slate-200 dark:border-slate-800 rounded-2xl">

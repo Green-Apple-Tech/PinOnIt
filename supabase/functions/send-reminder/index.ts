@@ -580,10 +580,10 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Test SMS / WhatsApp ──────────────────────────────────────────────────
-    if (body.test_sms || body.test_whatsapp) {
+    if (body.test_sms || body.test_whatsapp || body.test_voice) {
       const { to, guest_name, host_name, duration, date, time, meeting_link } = body;
       if (!to) return jsonResponse({ error: 'Missing to phone number' }, 400);
-      const channel = body.test_whatsapp ? 'whatsapp' : 'sms';
+      const channel = body.test_voice ? 'voice' : body.test_whatsapp ? 'whatsapp' : 'sms';
       const hostId = await hostIdFromJwt(req, supabase);
 
       const twilioSid = Deno.env.get('TWILIO_ACCOUNT_SID');
@@ -592,14 +592,17 @@ Deno.serve(async (req: Request) => {
       }
 
       const msg = [
-        `PinOnIt test ${channel === 'whatsapp' ? 'WhatsApp' : 'SMS'}: Hi ${guest_name ?? 'Guest'}, reminder: you have a ${duration ?? '30'} min meeting with ${host_name ?? 'your host'} on ${date ?? 'your scheduled date'} at ${time ?? 'your scheduled time'}.`,
+        `PinOnIt test ${channel === 'whatsapp' ? 'WhatsApp' : channel === 'voice' ? 'voice' : 'SMS'}: Hi ${guest_name ?? 'Guest'}, reminder: you have a ${duration ?? '30'} min meeting with ${host_name ?? 'your host'} on ${date ?? 'your scheduled date'} at ${time ?? 'your scheduled time'}.`,
         meeting_link ? `Join: ${meeting_link}` : '',
         '— PinOnIt',
       ].filter(Boolean).join(' ');
 
+      const voiceLine = `This is a PinOnIt test reminder. You have a test meeting with ${host_name ?? 'your host'}. This is only a test.`;
       const result = channel === 'whatsapp'
         ? await sendTwilioWhatsapp(to, msg)
-        : await sendTwilioSms(to, msg);
+        : channel === 'voice'
+          ? await sendTwilioVoice(to, buildCustomVoiceTwiml(voiceLine))
+          : await sendTwilioSms(to, msg);
 
       if (hostId) {
         await insertMessageLog(supabase, {
@@ -607,8 +610,8 @@ Deno.serve(async (req: Request) => {
           channel,
           status: result.ok ? 'sent' : 'failed',
           recipient: to,
-          subject: channel === 'whatsapp' ? 'Test WhatsApp' : 'Test SMS',
-          body: result.ok ? msg : `${msg}\n\nError: ${result.error ?? 'send failed'}`,
+          subject: channel === 'whatsapp' ? 'Test WhatsApp' : channel === 'voice' ? 'Test voicemail' : 'Test SMS',
+          body: result.ok ? (channel === 'voice' ? voiceLine : msg) : `${channel === 'voice' ? voiceLine : msg}\n\nError: ${result.error ?? 'send failed'}`,
         });
       }
 
