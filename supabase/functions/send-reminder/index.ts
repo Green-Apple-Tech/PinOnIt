@@ -1,7 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { appendSmsOptOut } from '../_shared/sms-opt-out.ts';
 import { NOREPLY_FROM, SUPPORT_EMAIL } from '../_shared/contact-email.ts';
-import { bookingAllowsGuestSms, bookingAllowsGuestWhatsapp } from '../_shared/sms-compliance.ts';
+import { bookingAllowsGuestSms, bookingAllowsGuestWhatsapp, hostAllowsSms, hostAllowsWhatsapp } from '../_shared/sms-compliance.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -357,13 +357,15 @@ Deno.serve(async (req: Request) => {
         let hostEmail: string | null = null;
         let hostPhone: string | null = null;
         let hostWhatsapp: string | null = null;
+        let hostSmsConsent = false;
+        let hostWhatsappConsent = false;
         let hostName = 'PinOnIt';
         let meetLink: string | null = null;
 
         if (ov.booking_id) {
           const { data: booking } = await supabase
             .from('bookings')
-            .select('guest_name, guest_email, guest_phone, notify_via, start_time, status, meet_link, services(name), profiles(full_name, email, notification_email, phone, whatsapp_number)')
+            .select('guest_name, guest_email, guest_phone, notify_via, start_time, status, meet_link, services(name), profiles(full_name, email, notification_email, phone, whatsapp_number, sms_opt_in, whatsapp_opt_in, default_reminder_channel)')
             .eq('id', ov.booking_id)
             .maybeSingle();
           if (!booking || booking.status === 'canceled' || booking.status === 'completed') continue;
@@ -380,6 +382,8 @@ Deno.serve(async (req: Request) => {
           hostEmail = ((hp?.notification_email as string) || (hp?.email as string) || null);
           hostPhone = (hp?.phone as string) || null;
           hostWhatsapp = (hp?.whatsapp_number as string) || hostPhone;
+          hostSmsConsent = hostAllowsSms(hp);
+          hostWhatsappConsent = hostAllowsWhatsapp(hp);
         } else if (ov.calendar_event_id) {
           const { data: ev } = await supabase
             .from('calendar_events')
@@ -391,13 +395,15 @@ Deno.serve(async (req: Request) => {
           title = ev.title || 'Calendar event';
           const { data: hp } = await supabase
             .from('profiles')
-            .select('full_name, email, notification_email, phone, whatsapp_number')
+            .select('full_name, email, notification_email, phone, whatsapp_number, sms_opt_in, whatsapp_opt_in, default_reminder_channel')
             .eq('id', ov.host_id)
             .maybeSingle();
           hostName = hp?.full_name || hostName;
           hostEmail = hp?.notification_email || hp?.email || null;
           hostPhone = hp?.phone || null;
           hostWhatsapp = hp?.whatsapp_number || hostPhone;
+          hostSmsConsent = hostAllowsSms(hp);
+          hostWhatsappConsent = hostAllowsWhatsapp(hp);
           guestName = hostName;
         }
 
@@ -422,7 +428,7 @@ Deno.serve(async (req: Request) => {
         } else if (ov.channel === 'sms') {
           const to = bookingAllowsGuestSms({ guest_phone: guestPhone, notify_via: notifyVia })
             ? guestPhone
-            : hostPhone;
+            : (hostSmsConsent ? hostPhone : null);
           if (to) {
             const result = await sendTwilioSms(to, withLink);
             if (result.ok) sent++;
@@ -430,7 +436,7 @@ Deno.serve(async (req: Request) => {
         } else if (ov.channel === 'whatsapp') {
           const to = bookingAllowsGuestWhatsapp({ guest_phone: guestPhone, notify_via: notifyVia })
             ? guestPhone
-            : hostWhatsapp;
+            : (hostWhatsappConsent ? hostWhatsapp : null);
           if (to) {
             const result = await sendTwilioWhatsapp(to, withLink);
             if (result.ok) sent++;

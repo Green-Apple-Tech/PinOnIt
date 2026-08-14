@@ -39,6 +39,8 @@ export interface Profile {
   phone: string | null;
   whatsapp_number: string | null;
   default_reminder_channel: 'email' | 'sms' | 'whatsapp' | 'voice' | null;
+  sms_opt_in?: boolean | null;
+  whatsapp_opt_in?: boolean | null;
   schedule_breaks: ScheduleBreak[];
   meeting_buffer_minutes: number;
   onboarding_completed: boolean;

@@ -35,7 +35,6 @@ export function dbStatusFromStripe(subscription: Stripe.Subscription): string {
   if (subscription.status === 'trialing') return 'trialing';
   if (subscription.status === 'active') return 'active';
   if (subscription.status === 'past_due') return 'past_due';
-  if (subscription.cancel_at_period_end) return 'canceled';
   if (subscription.status === 'canceled' || subscription.status === 'unpaid' || subscription.status === 'incomplete_expired') {
     return 'canceled';
   }
@@ -113,11 +112,11 @@ export async function applyStripeSubscription(opts: {
   const { error } = await supabase.from('subscriptions').upsert(row, { onConflict: 'user_id' });
   if (error) {
     // Fallback if unique(user_id) is not yet applied: update then insert.
-    const { data: existing } = await supabase
+    const { data: existingRows } = await supabase
       .from('subscriptions')
       .select('id')
-      .eq('user_id', userId)
-      .maybeSingle();
+      .eq('user_id', userId);
+    const existing = existingRows?.[0];
     if (existing?.id) {
       const { error: updErr } = await supabase.from('subscriptions').update(row).eq('id', existing.id);
       if (updErr) throw updErr;
@@ -132,6 +131,10 @@ export async function applyStripeSubscription(opts: {
   return { plan: profilePlan, status };
 }
 
+export function isLiveStripeStatus(status: string): boolean {
+  return status === 'active' || status === 'trialing' || status === 'past_due';
+}
+
 export async function findPaidStripeSubscription(
   stripe: Stripe,
   customerId: string
@@ -142,8 +145,26 @@ export async function findPaidStripeSubscription(
     limit: 10,
     expand: ['data.items.data.price'],
   });
-  const live = list.data.find((s) =>
-    s.status === 'active' || s.status === 'trialing' || s.status === 'past_due'
-  );
+  const live = list.data.find((s) => isLiveStripeStatus(s.status));
   return live ?? list.data[0] ?? null;
+}
+
+export async function findPaidSubscriptionForEmail(
+  stripe: Stripe,
+  email: string,
+  preferredUserId?: string | null,
+): Promise<{ customerId: string; subscription: Stripe.Subscription } | null> {
+  const found = await stripe.customers.list({ email, limit: 20 });
+  const ranked = [...found.data].sort((a, b) => {
+    const aMeta = a.metadata?.supabase_user_id === preferredUserId ? 1 : 0;
+    const bMeta = b.metadata?.supabase_user_id === preferredUserId ? 1 : 0;
+    return bMeta - aMeta;
+  });
+  for (const customer of ranked) {
+    const subscription = await findPaidStripeSubscription(stripe, customer.id);
+    if (subscription && isLiveStripeStatus(subscription.status)) {
+      return { customerId: customer.id, subscription };
+    }
+  }
+  return null;
 }

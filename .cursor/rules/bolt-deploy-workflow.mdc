@@ -9,6 +9,8 @@ alwaysApply: true
 
 ## After every code change session
 
+**Commit and push without waiting to be asked** (unless the user says not to).
+
 1. **Cursor (terminal):**
    ```bash
    git add . && git commit -m "your change" && git push

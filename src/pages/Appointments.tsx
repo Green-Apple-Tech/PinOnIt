@@ -294,9 +294,15 @@ function formatHourLabel(h: number) {
   return h > 12 ? `${h - 12} PM` : `${h} AM`;
 }
 
-function bookingEventTitle(b: Booking) {
-  const svc = (b as Booking & { services?: { name?: string } }).services;
-  return `${svc?.name ?? 'Appointment'} with ${b.guest_name}`;
+const CALENDAR_REMINDER_HINT_KEY = 'calendar_reminder_hint_dismissed';
+const EVENT_HOVER_HINT = 'Click for extra reminder · Right-click for Email / SMS / WhatsApp';
+
+function EventHoverHint() {
+  return (
+    <span className="pointer-events-none absolute left-1/2 top-full z-[70] mt-1 hidden -translate-x-1/2 whitespace-nowrap rounded-lg bg-slate-800 px-2.5 py-1.5 text-[10px] font-medium text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 sm:block dark:bg-slate-700">
+      {EVENT_HOVER_HINT}
+    </span>
+  );
 }
 
 function MonthBookingCard({ booking, onOpen, onContext }: { booking: Booking; onOpen: () => void; onContext: (e: React.MouseEvent) => void }) {
@@ -304,11 +310,11 @@ function MonthBookingCard({ booking, onOpen, onContext }: { booking: Booking; on
   const title = svc?.name ?? 'Appointment';
   return (
     <div
-      title={`${bookingEventTitle(booking)} — click or right-click for extra reminder`}
       onClick={(e) => { e.stopPropagation(); onOpen(); }}
       onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onContext(e); }}
-      className="text-sm px-2 py-1.5 rounded-md shadow-sm bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 hover:shadow-md transition-shadow cursor-pointer"
+      className="group relative z-0 hover:z-20 text-sm px-2 py-1.5 rounded-md shadow-sm bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 hover:shadow-md transition-shadow cursor-pointer"
     >
+      <EventHoverHint />
       <div className="flex items-start gap-1.5">
         <span className="h-2 w-2 rounded-full shrink-0 mt-1" style={{ backgroundColor: svc?.color ?? '#5864C6' }} />
         <div className="min-w-0 flex-1">
@@ -325,12 +331,12 @@ function WeekBookingCard({ booking, onOpen, onContext }: { booking: Booking; onO
   const svc = (booking as Booking & { services?: { name?: string; color?: string } }).services;
   return (
     <div
-      title={`${bookingEventTitle(booking)} — click or right-click for extra reminder`}
       onClick={(e) => { e.stopPropagation(); onOpen(); }}
       onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onContext(e); }}
-      className="text-sm p-2 rounded-md shadow-sm border border-slate-100 dark:border-slate-700 mb-1.5 cursor-pointer"
+      className="group relative z-0 hover:z-20 text-sm p-2 rounded-md shadow-sm border border-slate-100 dark:border-slate-700 mb-1.5 cursor-pointer"
       style={{ backgroundColor: `${svc?.color ?? '#5864C6'}18`, borderLeftColor: svc?.color ?? '#5864C6', borderLeftWidth: 3 }}
     >
+      <EventHoverHint />
       <p className="font-semibold text-slate-800 dark:text-slate-100 leading-snug">{svc?.name ?? 'Appointment'}</p>
       <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">{booking.guest_name}</p>
       <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{formatTime(booking.start_time)} – {formatTime(booking.end_time)}</p>
@@ -396,6 +402,7 @@ export function AppointmentsPage() {
   const [newReminderMsg, setNewReminderMsg] = useState('');
   const [savingOverride, setSavingOverride] = useState(false);
   const [eventMenu, setEventMenu] = useState<EventMenuState | null>(null);
+  const [showReminderHint, setShowReminderHint] = useState(false);
   const [detailBooking, setDetailBooking] = useState<Booking | null>(null);
   const [cancelMsg, setCancelMsg] = useState('');
   const icsInputRef = useRef<HTMLInputElement>(null);
@@ -436,6 +443,19 @@ export function AppointmentsPage() {
   };
 
   useEffect(() => { loadData(); }, [profile]);
+
+  useEffect(() => {
+    if (loading) return;
+    try {
+      if (localStorage.getItem(CALENDAR_REMINDER_HINT_KEY) === '1') return;
+    } catch { /* ignore */ }
+    setShowReminderHint(true);
+  }, [loading]);
+
+  const dismissReminderHint = () => {
+    try { localStorage.setItem(CALENDAR_REMINDER_HINT_KEY, '1'); } catch { /* ignore */ }
+    setShowReminderHint(false);
+  };
 
   useEffect(() => {
     if (!eventMenu) return;
@@ -872,7 +892,7 @@ export function AppointmentsPage() {
           ) : view === 'month' ? (
             /* ── MONTH VIEW ── */
             <div className="w-full">
-            <div className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+            <div className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl overflow-visible">
               <div className="grid grid-cols-7 border-b border-slate-200 dark:border-slate-800">
                 {DAY_SHORT.map(d => (
                   <div key={d} className="py-2.5 text-center text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">{d}</div>
@@ -899,11 +919,11 @@ export function AppointmentsPage() {
                         {externalToShow.map(e => (
                           <div
                             key={e.id}
-                            title={`${e.title} — click or right-click for extra reminder`}
                             onClick={(ev) => { ev.stopPropagation(); void openReminderPanel({ kind: 'external', event: e }); }}
                             onContextMenu={(ev) => openEventMenu(ev, { kind: 'external', event: e })}
-                            className="text-sm px-2 py-1 rounded-md truncate flex items-center gap-1.5 bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 shadow-sm cursor-pointer"
+                            className="group relative z-0 hover:z-20 text-sm px-2 py-1 rounded-md flex items-center gap-1.5 bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 shadow-sm cursor-pointer"
                           >
+                            <EventHoverHint />
                             <span className={`h-2 w-2 rounded-full shrink-0 ${e.provider === 'google' ? 'bg-red-400' : e.provider === 'outlook' ? 'bg-blue-400' : 'bg-slate-400'}`} />
                             <span className="truncate">{e.all_day ? e.title : `${formatTime(e.start_at)} ${e.title}`}</span>
                           </div>
@@ -938,7 +958,7 @@ export function AppointmentsPage() {
               const columnMinHeight = hourCount * 48;
               return (
                 <div className="w-full overflow-x-auto">
-                <div className="w-full min-w-[720px] bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+                <div className="w-full min-w-[720px] bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl overflow-visible">
                   <div className="grid grid-cols-[4rem_repeat(7,1fr)] border-b border-slate-200 dark:border-slate-800">
                     <div className="border-r border-slate-100 dark:border-slate-800" />
                     {weekDays.map(d => {
@@ -976,11 +996,11 @@ export function AppointmentsPage() {
                             {dayExternal.map(e => (
                               <div
                                 key={e.id}
-                                title={`${e.title} — click or right-click for extra reminder`}
                                 onClick={(ev) => { ev.stopPropagation(); void openReminderPanel({ kind: 'external', event: e }); }}
                                 onContextMenu={(ev) => openEventMenu(ev, { kind: 'external', event: e })}
-                                className="text-sm p-2 rounded-md shadow-sm bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 pointer-events-auto cursor-pointer"
+                                className="group relative z-0 hover:z-20 text-sm p-2 rounded-md shadow-sm bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 pointer-events-auto cursor-pointer"
                               >
+                                <EventHoverHint />
                                 <p className="font-semibold truncate">{e.title}</p>
                                 <p className="text-xs mt-0.5">{e.all_day ? 'All day' : formatTime(e.start_at)}</p>
                               </div>
@@ -1013,7 +1033,7 @@ export function AppointmentsPage() {
               const isToday = selectedDate === toDateKey(today);
               const hours = Array.from({ length: CALENDAR_HOUR_END - CALENDAR_HOUR_START + 1 }, (_, i) => CALENDAR_HOUR_START + i);
               return (
-                <div className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+                <div className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl overflow-visible">
                   <div className={`px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between ${isToday ? 'bg-blue-50 dark:bg-blue-950/30' : 'bg-slate-50 dark:bg-slate-800/40'}`}>
                     <div className="flex items-center gap-3">
                       <button onClick={() => { const d = new Date(selectedDate + 'T12:00:00'); d.setDate(d.getDate()-1); setSelectedDate(toDateKey(d)); }} className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded transition-colors"><ChevronLeft className="h-4 w-4" /></button>
@@ -1056,11 +1076,11 @@ export function AppointmentsPage() {
                               {allDayExternal.map(e => (
                                 <div
                                   key={e.id}
-                                  title={`${e.title} — click or right-click for extra reminder`}
                                   onClick={() => { void openReminderPanel({ kind: 'external', event: e }); }}
                                   onContextMenu={(ev) => openEventMenu(ev, { kind: 'external', event: e })}
-                                  className="text-sm p-2 rounded-lg shadow-sm bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 cursor-pointer"
+                                  className="group relative z-0 hover:z-20 text-sm p-2 rounded-lg shadow-sm bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 cursor-pointer"
                                 >
+                                  <EventHoverHint />
                                   <p className="font-semibold">{e.title}</p>
                                   <p className="text-xs mt-0.5">All day</p>
                                 </div>
@@ -1068,11 +1088,11 @@ export function AppointmentsPage() {
                               {hourExternal.map(e => (
                                 <div
                                   key={e.id}
-                                  title={`${e.title} — click or right-click for extra reminder`}
                                   onClick={() => { void openReminderPanel({ kind: 'external', event: e }); }}
                                   onContextMenu={(ev) => openEventMenu(ev, { kind: 'external', event: e })}
-                                  className="text-sm p-2 rounded-lg shadow-sm bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 cursor-pointer"
+                                  className="group relative z-0 hover:z-20 text-sm p-2 rounded-lg shadow-sm bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 cursor-pointer"
                                 >
+                                  <EventHoverHint />
                                   <p className="font-semibold">{e.title}</p>
                                   <p className="text-xs text-slate-500 mt-0.5">{formatTime(e.start_at)} – {formatTime(e.end_at)}</p>
                                 </div>
@@ -1083,12 +1103,12 @@ export function AppointmentsPage() {
                                 return (
                                   <div
                                     key={b.id}
-                                    title={`${bookingEventTitle(b)} — click or right-click for extra reminder`}
                                     onClick={() => { void openReminderPanel({ kind: 'booking', booking: b }); }}
                                     onContextMenu={(ev) => openEventMenu(ev, { kind: 'booking', booking: b })}
-                                    className="rounded-lg shadow-sm p-3 border border-slate-100 dark:border-slate-700 min-h-[56px] cursor-pointer"
+                                    className="group relative z-0 hover:z-20 rounded-lg shadow-sm p-3 border border-slate-100 dark:border-slate-700 min-h-[56px] cursor-pointer"
                                     style={{ backgroundColor: `${svc?.color ?? '#5864C6'}12`, borderLeftColor: svc?.color ?? '#5864C6', borderLeftWidth: 4 }}
                                   >
+                                    <EventHoverHint />
                                     <div className="flex items-center gap-2">
                                       <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: svc?.color ?? '#5864C6' }} />
                                       <p className="text-base font-semibold text-slate-800 dark:text-slate-100">{svc?.name ?? 'Appointment'}</p>
@@ -1162,8 +1182,9 @@ export function AppointmentsPage() {
                           key={e.id}
                           onClick={() => { void openReminderPanel({ kind: 'external', event: e }); }}
                           onContextMenu={(ev) => openEventMenu(ev, { kind: 'external', event: e })}
-                          className="flex items-center gap-4 px-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/20 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/40"
+                          className="group relative flex items-center gap-4 px-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/20 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/40"
                         >
+                          <EventHoverHint />
                           <div className="pt-0.5 shrink-0">
                             <Lock className="h-3.5 w-3.5 text-slate-300 dark:text-slate-600" />
                           </div>
@@ -1198,7 +1219,8 @@ export function AppointmentsPage() {
                           <div key={b.id}
                             onClick={() => { void openReminderPanel({ kind: 'booking', booking: b }); }}
                             onContextMenu={(ev) => openEventMenu(ev, { kind: 'booking', booking: b })}
-                            className={`flex items-start gap-4 px-4 py-3 bg-white dark:bg-slate-900/30 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer ${isInactive ? 'opacity-55' : ''}`}>
+                            className={`group relative flex items-start gap-4 px-4 py-3 bg-white dark:bg-slate-900/30 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer ${isInactive ? 'opacity-55' : ''}`}>
+                            <EventHoverHint />
                             <div className="pt-0.5 shrink-0">
                               <div className={`h-4 w-4 rounded border-2 flex items-center justify-center transition-all ${
                                 isCompleted ? 'bg-indigo-600 border-indigo-600' :
@@ -1301,6 +1323,39 @@ export function AppointmentsPage() {
           onClose={() => setShowAddEvent(false)}
           onSaved={loadData}
         />
+      )}
+
+      {showReminderHint && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={dismissReminderHint}>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="px-6 pt-6 pb-4 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: '#5864C61A' }}>
+                  <BellRing className="h-5 w-5" style={{ color: '#5864C6' }} />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">Extra reminders</h2>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
+                    Click an event to add extra reminders by email, SMS, or WhatsApp. Right-click for a shortcut that sets one for 1 hour before.
+                  </p>
+                </div>
+              </div>
+              <button onClick={dismissReminderHint} className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-lg transition-colors shrink-0">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="px-6 py-4">
+              <button
+                type="button"
+                onClick={dismissReminderHint}
+                className="w-full py-2.5 text-white text-sm font-semibold rounded-xl transition-all hover:opacity-90"
+                style={{ backgroundColor: '#5864C6' }}
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {showCalendarConnect && (

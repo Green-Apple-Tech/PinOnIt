@@ -64,10 +64,17 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
       const fromCheckout = params.get('checkout') === 'success';
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.access_token) {
-        await syncStripeSubscription(session.access_token);
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const synced = await syncStripeSubscription(session.access_token);
+          if (cancelled) return;
+          await refreshProfile?.();
+          if (synced?.plan && synced.plan !== 'free') break;
+          if (attempt < 2) await new Promise((r) => setTimeout(r, 1500));
+        }
+      } else {
+        await refreshProfile?.();
       }
       if (cancelled) return;
-      await refreshProfile?.();
       if (fromCheckout) {
         setSuccessBanner(true);
         const url = new URL(window.location.href);

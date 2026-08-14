@@ -3,6 +3,8 @@ import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import {
   applyStripeSubscription,
   findPaidStripeSubscription,
+  findPaidSubscriptionForEmail,
+  isLiveStripeStatus,
   isRealStripeCustomerId,
 } from '../_shared/stripeSubscription.ts';
 
@@ -43,20 +45,47 @@ Deno.serve(async (req: Request) => {
 
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!);
 
-    const { data: existingSub } = await supabase
+    const { data: existingRows } = await supabase
       .from('subscriptions')
       .select('stripe_customer_id, stripe_subscription_id')
-      .eq('user_id', user.id)
-      .maybeSingle();
+      .eq('user_id', user.id);
 
-    let customerId = isRealStripeCustomerId(existingSub?.stripe_customer_id)
-      ? existingSub!.stripe_customer_id
-      : null;
+    const rows = existingRows ?? [];
+    const withSubId = rows.find((r) => r.stripe_subscription_id);
+    const withCustomer = rows.find((r) => isRealStripeCustomerId(r.stripe_customer_id));
 
-    if (!customerId && user.email) {
-      const found = await stripe.customers.list({ email: user.email, limit: 10 });
-      const withMeta = found.data.find((c) => c.metadata?.supabase_user_id === user.id);
-      customerId = withMeta?.id ?? found.data[0]?.id ?? null;
+    let customerId = withCustomer?.stripe_customer_id ?? null;
+    let subscription: Stripe.Subscription | null = null;
+
+    if (withSubId?.stripe_subscription_id) {
+      try {
+        subscription = await stripe.subscriptions.retrieve(withSubId.stripe_subscription_id, {
+          expand: ['items.data.price'],
+        });
+        const cid = typeof subscription.customer === 'string'
+          ? subscription.customer
+          : subscription.customer?.id;
+        if (cid) customerId = cid;
+      } catch {
+        subscription = null;
+      }
+    }
+
+    if (!subscription || !isLiveStripeStatus(subscription.status)) {
+      if (customerId) {
+        const fromCustomer = await findPaidStripeSubscription(stripe, customerId);
+        if (fromCustomer && isLiveStripeStatus(fromCustomer.status)) {
+          subscription = fromCustomer;
+        }
+      }
+    }
+
+    if ((!subscription || !isLiveStripeStatus(subscription.status)) && user.email) {
+      const fromEmail = await findPaidSubscriptionForEmail(stripe, user.email, user.id);
+      if (fromEmail) {
+        customerId = fromEmail.customerId;
+        subscription = fromEmail.subscription;
+      }
     }
 
     if (!customerId) {
@@ -69,28 +98,13 @@ Deno.serve(async (req: Request) => {
       metadata: { supabase_user_id: user.id },
     });
 
-    let subscription: Stripe.Subscription | null = null;
-    if (existingSub?.stripe_subscription_id) {
-      try {
-        subscription = await stripe.subscriptions.retrieve(existingSub.stripe_subscription_id, {
-          expand: ['items.data.price'],
-        });
-      } catch {
-        subscription = null;
-      }
-    }
-    if (!subscription || subscription.status === 'canceled' || subscription.status === 'incomplete_expired') {
-      subscription = await findPaidStripeSubscription(stripe, customerId);
-    }
-
-    if (!subscription) {
-      await supabase.from('subscriptions').upsert({
-        user_id: user.id,
-        stripe_customer_id: customerId,
+    if (!subscription || !isLiveStripeStatus(subscription.status)) {
+      // Do not clobber a paid DB row if Stripe lookup is incomplete.
+      return new Response(JSON.stringify({
+        synced: false,
         plan: 'free',
-        status: 'canceled',
-      }, { onConflict: 'user_id' });
-      return new Response(JSON.stringify({ synced: true, plan: 'free', reason: 'no_live_subscription' }), {
+        reason: 'no_live_subscription',
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }

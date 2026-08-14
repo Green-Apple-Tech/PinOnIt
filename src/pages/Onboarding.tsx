@@ -281,9 +281,13 @@ export function Onboarding() {
 
   const activateTrial = useCallback(async () => {
     if (!user || trialActivated) return;
+    const { hasStripeBilling } = await import('../lib/localTrial');
+    if (await hasStripeBilling(user.id)) {
+      setTrialActivated(true);
+      return;
+    }
     const trialEnd = new Date();
     trialEnd.setDate(trialEnd.getDate() + 14);
-    // Upsert subscription with Pro trial
     await supabase.from('subscriptions').upsert({
       user_id: user.id,
       stripe_customer_id: `trial_${user.id}`,
@@ -292,7 +296,6 @@ export function Onboarding() {
       trial_ends_at: trialEnd.toISOString(),
       trial_source: 'calendly_migration',
     }, { onConflict: 'user_id' });
-    // Also update profile plan
     await supabase.from('profiles').update({ plan: 'pro' }).eq('id', user.id);
     setTrialActivated(true);
   }, [user, trialActivated]);

@@ -5,7 +5,12 @@ import { supabase } from '../lib/supabase';
 import { TIMEZONES } from '../lib/types';
 import type { EmergencyContact, Profile } from '../lib/types';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
-import { resolveDefaultReminderChannel, type ReminderChannelPreference } from '../lib/reminderChannels';
+import {
+  hostHasSmsConsent,
+  hostHasWhatsappConsent,
+  resolveDefaultReminderChannel,
+  type ReminderChannelPreference,
+} from '../lib/reminderChannels';
 import { DEFAULT_TERMS_TEXT } from '../lib/terms';
 import { formatErrorMessage } from '../lib/errors';
 import {
@@ -411,8 +416,8 @@ export function SettingsPage() {
   const [defaultReminderChannel, setDefaultReminderChannel] = useState<ReminderChannelPreference>(
     resolveDefaultReminderChannel(profile?.default_reminder_channel),
   );
-  const [hostSmsOptIn, setHostSmsOptIn] = useState(profile?.default_reminder_channel === 'sms');
-  const [hostWhatsappOptIn, setHostWhatsappOptIn] = useState(profile?.default_reminder_channel === 'whatsapp');
+  const [hostSmsOptIn, setHostSmsOptIn] = useState(hostHasSmsConsent(profile));
+  const [hostWhatsappOptIn, setHostWhatsappOptIn] = useState(hostHasWhatsappConsent(profile));
 
   // Voice reminders
   const [voiceReminderEnabled, setVoiceReminderEnabled] = useState(profile?.voice_reminder_enabled ?? true);
@@ -510,12 +515,12 @@ export function SettingsPage() {
       setNotificationWhatsapp(storedWhatsapp ? blurFormatPhone(storedWhatsapp) : '');
       const resolvedChannel = resolveDefaultReminderChannel(profile.default_reminder_channel);
       setDefaultReminderChannel(resolvedChannel);
-      setHostSmsOptIn(resolvedChannel === 'sms');
-      setHostWhatsappOptIn(resolvedChannel === 'whatsapp');
+      setHostSmsOptIn(hostHasSmsConsent(profile));
+      setHostWhatsappOptIn(hostHasWhatsappConsent(profile));
       setVoiceReminderEnabled(profile.voice_reminder_enabled ?? true);
       setNotificationEmail(profile.notification_email ?? '');
     }
-  }, [profile?.id, profile?.session_timeout_minutes, profile?.phone, profile?.whatsapp_number, profile?.default_reminder_channel, profile?.voice_reminder_enabled, profile?.notification_email]);
+  }, [profile?.id, profile?.session_timeout_minutes, profile?.phone, profile?.whatsapp_number, profile?.default_reminder_channel, profile?.sms_opt_in, profile?.whatsapp_opt_in, profile?.voice_reminder_enabled, profile?.notification_email]);
 
   useEffect(() => {
     const email = profile?.email ?? user?.email ?? '';
@@ -756,6 +761,8 @@ export function SettingsPage() {
         phone: phoneE164 || null,
         whatsapp_number: whatsappE164 || null,
         default_reminder_channel: defaultReminderChannel,
+        sms_opt_in: hostSmsOptIn,
+        whatsapp_opt_in: hostWhatsappOptIn,
         voice_reminder_enabled: voiceReminderEnabled,
         notification_email: notificationEmail.trim() || null,
       };
@@ -998,14 +1005,16 @@ export function SettingsPage() {
                   onChange={(e) => {
                     const checked = e.target.checked;
                     setHostSmsOptIn(checked);
-                    if (checked) setDefaultReminderChannel('sms');
-                    else if (defaultReminderChannel === 'sms') setDefaultReminderChannel('email');
+                    if (!checked && defaultReminderChannel === 'sms') setDefaultReminderChannel('email');
                   }}
                   disabled={!notificationPhone.trim()}
                   className="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600 disabled:opacity-50"
                 />
                 <span className="text-sm text-slate-700 dark:text-slate-300">
                   I agree to receive SMS notifications for my PinOnIt account at this phone number.
+                  {hostSmsOptIn ? (
+                    <span className="block text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">Consent recorded</span>
+                  ) : null}
                 </span>
               </label>
               <label className="flex items-start gap-2.5 cursor-pointer">
@@ -1015,18 +1024,20 @@ export function SettingsPage() {
                   onChange={(e) => {
                     const checked = e.target.checked;
                     setHostWhatsappOptIn(checked);
-                    if (checked) setDefaultReminderChannel('whatsapp');
-                    else if (defaultReminderChannel === 'whatsapp') setDefaultReminderChannel('email');
+                    if (!checked && defaultReminderChannel === 'whatsapp') setDefaultReminderChannel('email');
                   }}
                   disabled={!notificationPhone.trim() && !notificationWhatsapp.trim()}
                   className="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600 disabled:opacity-50"
                 />
                 <span className="text-sm text-slate-700 dark:text-slate-300">
                   I agree to receive WhatsApp notifications for my PinOnIt account at this WhatsApp or phone number.
+                  {hostWhatsappOptIn ? (
+                    <span className="block text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">Consent recorded</span>
+                  ) : null}
                 </span>
               </label>
               <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
-                Clients are asked for their own SMS consent separately when they enter a phone number while booking.
+                Consent stays saved when you change the default reminder channel. Clients are asked for their own SMS consent separately when they enter a phone number while booking.
               </p>
             </div>
             <div>

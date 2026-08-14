@@ -4,6 +4,7 @@ import { clearClientOnboardingState } from '../lib/onboardingState';
 import { readProfileCache, writeProfileCache, clearProfileCache } from '../lib/profileCache';
 import { allocateUniqueSlug, slugFromEmail } from '../lib/profileSlug';
 import type { User } from '@supabase/supabase-js';
+import { pickBestSubscription } from '../lib/plan';
 import type { Profile, Subscription } from '../lib/types';
 
 interface AuthContextType {
@@ -71,9 +72,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data } = await supabase
       .from('subscriptions')
       .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
-    setSubscription(data);
+      .eq('user_id', userId);
+    setSubscription(pickBestSubscription((data ?? []) as Subscription[]));
     setSubscriptionLoaded(true);
   }, []);
 

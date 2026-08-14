@@ -25,3 +25,21 @@ export function bookingAllowsGuestWhatsapp(booking: {
   if (!phone) return false;
   return notifyViaIncludesWhatsapp(booking.notify_via);
 }
+
+export function hostAllowsSms(profile: {
+  sms_opt_in?: boolean | null;
+  default_reminder_channel?: string | null;
+} | null | undefined): boolean {
+  if (!profile) return false;
+  if (typeof profile.sms_opt_in === 'boolean') return profile.sms_opt_in;
+  return profile.default_reminder_channel === 'sms';
+}
+
+export function hostAllowsWhatsapp(profile: {
+  whatsapp_opt_in?: boolean | null;
+  default_reminder_channel?: string | null;
+} | null | undefined): boolean {
+  if (!profile) return false;
+  if (typeof profile.whatsapp_opt_in === 'boolean') return profile.whatsapp_opt_in;
+  return profile.default_reminder_channel === 'whatsapp';
+}

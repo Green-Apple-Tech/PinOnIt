@@ -392,6 +392,8 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
       phone: phoneE164,
     };
     if (defaultChannel) payload.default_reminder_channel = defaultChannel;
+    payload.sms_opt_in = hostNotifyVia.includes('sms');
+    payload.whatsapp_opt_in = hostNotifyVia.includes('whatsapp');
     if (hostNotifyVia.includes('whatsapp') && phoneE164) {
       payload.whatsapp_number = phoneE164;
     }
@@ -465,6 +467,11 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
 
   const activateCalendlyTrial = useCallback(async () => {
     if (trialActivated || !user) return;
+    const { hasStripeBilling } = await import('../lib/localTrial');
+    if (await hasStripeBilling(user.id)) {
+      setTrialActivated(true);
+      return;
+    }
     const trialEnd = new Date();
     trialEnd.setDate(trialEnd.getDate() + 14);
     await supabase.from('subscriptions').upsert({
@@ -668,14 +675,17 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
     const storedPhone = profile.phone ?? '';
     const formatted = storedPhone ? blurFormatPhone(storedPhone) : '';
     setHostPhone(formatted);
-    if (profile.default_reminder_channel === 'sms') {
-      setHostSmsOptIn(true);
-      setHostNotifyVia((prev) => (prev.includes('sms') ? prev : [...prev, 'sms']));
-    } else if (profile.default_reminder_channel === 'whatsapp') {
-      setHostWhatsappOptIn(true);
-      setHostNotifyVia((prev) => (prev.includes('whatsapp') ? prev : [...prev, 'whatsapp']));
-    }
-  }, [profile?.phone, profile?.whatsapp_number, profile?.default_reminder_channel]);
+    const smsConsent = profile.sms_opt_in === true || profile.default_reminder_channel === 'sms';
+    const whatsappConsent = profile.whatsapp_opt_in === true || profile.default_reminder_channel === 'whatsapp';
+    if (smsConsent) setHostSmsOptIn(true);
+    if (whatsappConsent) setHostWhatsappOptIn(true);
+    setHostNotifyVia((prev) => {
+      const next = new Set(prev);
+      if (smsConsent) next.add('sms');
+      if (whatsappConsent) next.add('whatsapp');
+      return Array.from(next);
+    });
+  }, [profile?.phone, profile?.whatsapp_number, profile?.default_reminder_channel, profile?.sms_opt_in, profile?.whatsapp_opt_in]);
 
   useEffect(() => {
     if (!hostPhone.trim()) {
@@ -807,14 +817,17 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
       const trialEnd = new Date();
       trialEnd.setDate(trialEnd.getDate() + 14);
       const isoEnd = trialEnd.toISOString();
-      await supabase.from('profiles').update({ plan: 'pro', trial_ends_at: isoEnd }).eq('id', user.id);
-      await supabase.from('subscriptions').upsert({
-        user_id: user.id,
-        plan: 'pro',
-        status: 'trialing',
-        trial_ends_at: isoEnd,
-        trial_source: 'free_trial',
-      }, { onConflict: 'user_id' });
+      const { hasStripeBilling } = await import('../lib/localTrial');
+      if (!(await hasStripeBilling(user.id))) {
+        await supabase.from('profiles').update({ plan: 'pro', trial_ends_at: isoEnd }).eq('id', user.id);
+        await supabase.from('subscriptions').upsert({
+          user_id: user.id,
+          plan: 'pro',
+          status: 'trialing',
+          trial_ends_at: isoEnd,
+          trial_source: 'free_trial',
+        }, { onConflict: 'user_id' });
+      }
       await refreshProfile();
       await saveStep(STEPS.indexOf('welcome') + 1);
       goNext();
@@ -967,7 +980,11 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
 
     setSaving(true);
     const phoneE164 = normalizePhoneE164(hostPhone) || null;
-    const payload: Record<string, string | null> = { phone: phoneE164 };
+    const payload: Record<string, string | boolean | null> = {
+      phone: phoneE164,
+      sms_opt_in: Boolean(phoneE164 && hostSmsOptIn),
+      whatsapp_opt_in: Boolean(phoneE164 && hostWhatsappOptIn),
+    };
     if (phoneE164 && hostWhatsappOptIn) {
       payload.whatsapp_number = phoneE164;
     } else if (!phoneE164) {
@@ -1623,6 +1640,8 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                     phone: null,
                     whatsapp_number: null,
                     default_reminder_channel: null,
+                    sms_opt_in: false,
+                    whatsapp_opt_in: false,
                   }).eq('id', user.id);
                 }
                 await saveStep(STEPS.indexOf('phone') + 1);

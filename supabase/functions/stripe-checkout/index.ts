@@ -61,11 +61,14 @@ Deno.serve(async (req: Request) => {
       resolvedPriceId = (recurring ?? prices.data[0]).id;
     }
 
-    const { data: existingSub } = await supabase
+    const { data: existingRows } = await supabase
       .from('subscriptions')
-      .select('stripe_customer_id, plan, status')
-      .eq('user_id', user.id)
-      .maybeSingle();
+      .select('id, stripe_customer_id, plan, status')
+      .eq('user_id', user.id);
+
+    const existingSub = (existingRows ?? []).find((r) => isRealStripeCustomerId(r.stripe_customer_id))
+      ?? existingRows?.[0]
+      ?? null;
 
     let customerId = isRealStripeCustomerId(existingSub?.stripe_customer_id)
       ? existingSub!.stripe_customer_id

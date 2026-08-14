@@ -9,6 +9,7 @@ export const stripePromise: Promise<Stripe | null> | null =
 
 export async function syncStripeSubscription(accessToken: string): Promise<{ plan?: string; synced?: boolean } | null> {
   const base = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
   if (!base) return null;
   try {
     const res = await fetch(`${base}/functions/v1/stripe-sync-subscription`, {
@@ -16,6 +17,7 @@ export async function syncStripeSubscription(accessToken: string): Promise<{ pla
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${accessToken}`,
+        ...(anon ? { apikey: anon } : {}),
       },
       body: '{}',
     });
