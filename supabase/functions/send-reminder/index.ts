@@ -229,6 +229,70 @@ function jsonResponse(body: object, status = 200): Response {
   });
 }
 
+const GUEST_REMINDER_TIME_OFFSETS: Record<string, number> = {
+  '15min': -15,
+  '30min': -30,
+  '1hour': -60,
+  '2hour': -120,
+  '6hour': -360,
+  '24hour': -1440,
+};
+
+type SupabaseClient = ReturnType<typeof createClient>;
+
+async function insertMessageLog(
+  supabase: SupabaseClient,
+  row: {
+    booking_id?: string | null;
+    host_id: string;
+    template_id?: string | null;
+    channel: string;
+    status: string;
+    recipient: string;
+    subject?: string | null;
+    body: string;
+  },
+): Promise<void> {
+  const { error } = await supabase.from('message_log').insert({
+    booking_id: row.booking_id ?? null,
+    host_id: row.host_id,
+    template_id: row.template_id ?? null,
+    channel: row.channel,
+    status: row.status,
+    recipient: row.recipient,
+    subject: row.subject ?? null,
+    body: row.body,
+    language: 'en',
+    sent_at: new Date().toISOString(),
+  });
+  if (error) console.error('message_log insert failed:', error.message);
+}
+
+async function alreadyLogged(
+  supabase: SupabaseClient,
+  bookingId: string,
+  channel: string,
+  subject: string,
+): Promise<boolean> {
+  const { data } = await supabase
+    .from('message_log')
+    .select('id')
+    .eq('booking_id', bookingId)
+    .eq('channel', channel)
+    .eq('subject', subject)
+    .limit(1)
+    .maybeSingle();
+  return Boolean(data);
+}
+
+async function hostIdFromJwt(req: Request, supabase: SupabaseClient): Promise<string | null> {
+  const header = req.headers.get('Authorization') ?? '';
+  const token = header.replace(/^Bearer\s+/i, '').trim();
+  if (!token || token === 'anon') return null;
+  const { data } = await supabase.auth.getUser(token);
+  return data.user?.id ?? null;
+}
+
 function hostEmailRecipients(hostProfile: Record<string, unknown>): string[] {
   const hostEmail = (hostProfile?.email as string | null | undefined)?.trim();
   const notificationEmail = (hostProfile?.notification_email as string | null | undefined)?.trim();
@@ -274,6 +338,207 @@ async function sendResendEmail(
   }
 }
 
+async function dispatchScheduledReminders(supabase: SupabaseClient): Promise<number> {
+  const now = Date.now();
+  const lateWindowMs = 25 * 60 * 1000;
+  const lookAheadMs = 50 * 60 * 60 * 1000;
+  const fromIso = new Date(now - lateWindowMs).toISOString();
+  const toIso = new Date(now + lookAheadMs).toISOString();
+
+  const { data: bookings, error } = await supabase
+    .from('bookings')
+    .select('id, host_id, service_id, guest_name, guest_email, guest_phone, notify_via, reminder_times, reminder_channels, start_time, status, meet_link, guest_timezone, action_token, services(name, duration_minutes), profiles(full_name, slug, timezone, email, notification_email, phone, whatsapp_number, sms_opt_in, whatsapp_opt_in, default_reminder_channel)')
+    .in('status', ['confirmed', 'pending', 'pending_approval'])
+    .gte('start_time', fromIso)
+    .lte('start_time', toIso)
+    .limit(300);
+
+  if (error) {
+    console.error('dispatch_scheduled bookings query failed:', error.message);
+    return 0;
+  }
+
+  let sent = 0;
+  const hostRulesCache = new Map<string, Array<{
+    id: string;
+    template_id: string;
+    timing_offset_minutes: number;
+    service_id: string | null;
+    message_templates: {
+      id: string;
+      channel: string;
+      subject: string | null;
+      body: string;
+      type: string;
+    } | null;
+  }>>();
+
+  for (const booking of bookings ?? []) {
+    const startMs = Date.parse(booking.start_time);
+    if (!Number.isFinite(startMs)) continue;
+    const hostProfile = booking.profiles as Record<string, unknown> | null;
+    const service = booking.services as Record<string, unknown> | null;
+    const hostName = (hostProfile?.full_name as string) || 'Your host';
+    const serviceName = (service?.name as string) || 'Appointment';
+    const dateStr = new Date(booking.start_time).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    const timeStr = new Date(booking.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    const duration = `${service?.duration_minutes ?? 30} min`;
+    const meetLink = booking.meet_link as string | null;
+    const hostPhone = (hostProfile?.phone as string) || null;
+    const hostWhatsapp = (hostProfile?.whatsapp_number as string) || hostPhone;
+
+    if (!hostRulesCache.has(booking.host_id)) {
+      const { data: rules } = await supabase
+        .from('reminder_rules')
+        .select('id, template_id, timing_offset_minutes, service_id, message_templates(id, channel, subject, body, type)')
+        .eq('host_id', booking.host_id)
+        .eq('is_active', true);
+      hostRulesCache.set(booking.host_id, (rules ?? []) as typeof hostRulesCache extends Map<string, infer T> ? T : never);
+    }
+    const rules = (hostRulesCache.get(booking.host_id) ?? []).filter(
+      (r) => !r.service_id || r.service_id === booking.service_id,
+    );
+
+    for (const rule of rules) {
+      const offset = rule.timing_offset_minutes;
+      if (offset === 0) continue;
+      const fireAt = startMs + offset * 60 * 1000;
+      if (fireAt > now || now - fireAt > lateWindowMs) continue;
+      const tplRaw = rule.message_templates as unknown;
+      const tpl = (Array.isArray(tplRaw) ? tplRaw[0] : tplRaw) as {
+        id: string;
+        channel: string;
+        subject: string | null;
+        body: string;
+        type: string;
+      } | null;
+      if (!tpl) continue;
+      const channel = tpl.channel === 'both' ? 'email' : tpl.channel;
+      const dedupe = `rule:${rule.id}`;
+      if (await alreadyLogged(supabase, booking.id, channel, dedupe)) continue;
+
+      const templateData: TemplateData = {
+        guest_name: booking.guest_name,
+        host_name: hostName,
+        service_name: serviceName,
+        date: dateStr,
+        time: timeStr,
+        timezone: booking.guest_timezone ?? (hostProfile?.timezone as string) ?? 'UTC',
+        duration,
+        booking_link: '',
+        cancel_link: '',
+        confirm_link: '',
+      };
+      const msgBody = fillTemplate(tpl.body, templateData);
+      const subject = tpl.subject ? fillTemplate(tpl.subject, templateData) : dedupe;
+      const delivered = await deliverChannel({
+        supabase,
+        channel,
+        booking,
+        hostProfile,
+        hostPhone,
+        hostWhatsapp,
+        msgBody,
+        emailSubject: subject,
+        meetLink,
+      });
+      if (delivered.ok) sent++;
+      await insertMessageLog(supabase, {
+        booking_id: booking.id,
+        host_id: booking.host_id,
+        template_id: tpl.id,
+        channel,
+        status: delivered.ok ? 'sent' : 'failed',
+        recipient: delivered.to || '(none)',
+        subject: dedupe,
+        body: delivered.error ? `${msgBody}\n\n${delivered.error}` : msgBody,
+      });
+    }
+
+    const times = Array.isArray(booking.reminder_times) ? booking.reminder_times as string[] : [];
+    const channels = Array.isArray(booking.reminder_channels) ? booking.reminder_channels as string[] : [];
+    for (const timeId of times) {
+      const offset = GUEST_REMINDER_TIME_OFFSETS[timeId];
+      if (typeof offset !== 'number') continue;
+      const fireAt = startMs + offset * 60 * 1000;
+      if (fireAt > now || now - fireAt > lateWindowMs) continue;
+      for (const channel of channels.filter((c) => c === 'sms' || c === 'whatsapp' || c === 'email')) {
+        const dedupe = `guest:${timeId}:${channel}`;
+        if (await alreadyLogged(supabase, booking.id, channel, dedupe)) continue;
+        const msgBody = `Hi ${booking.guest_name}, reminder: you have a ${duration} ${serviceName} with ${hostName} on ${dateStr} at ${timeStr}.${meetLink ? ` Join: ${meetLink}` : ''} — PinOnIt`;
+        const delivered = await deliverChannel({
+          supabase,
+          channel,
+          booking,
+          hostProfile,
+          hostPhone,
+          hostWhatsapp,
+          msgBody,
+          emailSubject: `Reminder: ${serviceName} (${timeId})`,
+          meetLink,
+        });
+        if (delivered.ok) sent++;
+        await insertMessageLog(supabase, {
+          booking_id: booking.id,
+          host_id: booking.host_id,
+          channel,
+          status: delivered.ok ? 'sent' : 'failed',
+          recipient: delivered.to || '(none)',
+          subject: dedupe,
+          body: delivered.error ? `${msgBody}\n\n${delivered.error}` : msgBody,
+        });
+      }
+    }
+  }
+
+  return sent;
+}
+
+async function deliverChannel(opts: {
+  supabase: SupabaseClient;
+  channel: string;
+  booking: Record<string, unknown>;
+  hostProfile: Record<string, unknown> | null;
+  hostPhone: string | null;
+  hostWhatsapp: string | null;
+  msgBody: string;
+  emailSubject: string;
+  meetLink: string | null;
+}): Promise<{ ok: boolean; to: string | null; error?: string }> {
+  const { channel, booking, hostPhone, hostWhatsapp, msgBody, emailSubject } = opts;
+  if (channel === 'email') {
+    const resendKey = Deno.env.get('RESEND_API_KEY');
+    const to = (booking.guest_email as string) || null;
+    if (!resendKey) return { ok: false, to, error: 'email not configured' };
+    if (!to) return { ok: false, to: null, error: 'no guest email' };
+    const ok = await sendResendEmail([to], emailSubject, msgBody, resendKey);
+    return { ok, to, error: ok ? undefined : 'email send failed' };
+  }
+  if (channel === 'sms') {
+    const to = bookingAllowsGuestSms({
+      guest_phone: booking.guest_phone as string | null,
+      notify_via: booking.notify_via,
+    })
+      ? (booking.guest_phone as string)
+      : hostPhone;
+    if (!to) return { ok: false, to: null, error: 'no SMS recipient' };
+    const result = await sendTwilioSms(to, msgBody);
+    return { ok: result.ok, to, error: result.error };
+  }
+  if (channel === 'whatsapp') {
+    const to = bookingAllowsGuestWhatsapp({
+      guest_phone: booking.guest_phone as string | null,
+      notify_via: booking.notify_via,
+    })
+      ? (booking.guest_phone as string)
+      : hostWhatsapp;
+    if (!to) return { ok: false, to: null, error: 'no WhatsApp recipient' };
+    const result = await sendTwilioWhatsapp(to, msgBody);
+    return { ok: result.ok, to, error: result.error };
+  }
+  return { ok: false, to: null, error: `unsupported channel ${channel}` };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -314,10 +579,12 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ success: true });
     }
 
-    // ── Test SMS mode ────────────────────────────────────────────────────────
-    if (body.test_sms) {
+    // ── Test SMS / WhatsApp ──────────────────────────────────────────────────
+    if (body.test_sms || body.test_whatsapp) {
       const { to, guest_name, host_name, duration, date, time, meeting_link } = body;
       if (!to) return jsonResponse({ error: 'Missing to phone number' }, 400);
+      const channel = body.test_whatsapp ? 'whatsapp' : 'sms';
+      const hostId = await hostIdFromJwt(req, supabase);
 
       const twilioSid = Deno.env.get('TWILIO_ACCOUNT_SID');
       if (!twilioSid) {
@@ -325,20 +592,34 @@ Deno.serve(async (req: Request) => {
       }
 
       const msg = [
-        `Hi ${guest_name ?? 'Guest'}, reminder: you have a ${duration ?? '30'} min meeting with ${host_name ?? 'your host'} on ${date ?? 'your scheduled date'} at ${time ?? 'your scheduled time'}.`,
+        `PinOnIt test ${channel === 'whatsapp' ? 'WhatsApp' : 'SMS'}: Hi ${guest_name ?? 'Guest'}, reminder: you have a ${duration ?? '30'} min meeting with ${host_name ?? 'your host'} on ${date ?? 'your scheduled date'} at ${time ?? 'your scheduled time'}.`,
         meeting_link ? `Join: ${meeting_link}` : '',
         '— PinOnIt',
       ].filter(Boolean).join(' ');
 
-      const result = await sendTwilioSms(to, msg);
+      const result = channel === 'whatsapp'
+        ? await sendTwilioWhatsapp(to, msg)
+        : await sendTwilioSms(to, msg);
+
+      if (hostId) {
+        await insertMessageLog(supabase, {
+          host_id: hostId,
+          channel,
+          status: result.ok ? 'sent' : 'failed',
+          recipient: to,
+          subject: channel === 'whatsapp' ? 'Test WhatsApp' : 'Test SMS',
+          body: result.ok ? msg : `${msg}\n\nError: ${result.error ?? 'send failed'}`,
+        });
+      }
+
       if (!result.ok) return jsonResponse({ error: result.error }, 502);
-      return jsonResponse({ success: true, to });
+      return jsonResponse({ success: true, to, channel });
     }
 
     // ── Extra event reminders (click-to-remind overrides) ────────────────────
     if (body.dispatch_event_overrides) {
       const now = Date.now();
-      const windowMs = 15 * 60 * 1000;
+      const windowMs = 30 * 60 * 1000;
       const { data: overrides } = await supabase
         .from('event_reminder_overrides')
         .select('id, channel, offset_minutes, message, booking_id, calendar_event_id, host_id')
@@ -418,29 +699,57 @@ Deno.serve(async (req: Request) => {
           `Reminder: ${title}${guestName ? ` with ${guestName}` : ''} on ${dateStr} at ${timeStr}.`;
         const withLink = meetLink ? `${msg}\nJoin: ${meetLink}` : msg;
 
+        let recipient: string | null = null;
+        let status: 'sent' | 'failed' | 'skipped' = 'skipped';
+        let errorText = '';
+
         if (ov.channel === 'email') {
           const resendKey = Deno.env.get('RESEND_API_KEY');
-          const to = guestEmail || hostEmail;
-          if (resendKey && to) {
-            await sendResendEmail([to], `Reminder: ${title}`, withLink, resendKey);
-            sent++;
+          recipient = guestEmail || hostEmail;
+          if (resendKey && recipient) {
+            const ok = await sendResendEmail([recipient], `Reminder: ${title}`, withLink, resendKey);
+            status = ok ? 'sent' : 'failed';
+            if (ok) sent++;
+            else errorText = 'email send failed';
+          } else {
+            errorText = recipient ? 'email not configured' : 'no email recipient';
           }
         } else if (ov.channel === 'sms') {
-          const to = bookingAllowsGuestSms({ guest_phone: guestPhone, notify_via: notifyVia })
+          recipient = bookingAllowsGuestSms({ guest_phone: guestPhone, notify_via: notifyVia })
             ? guestPhone
-            : (hostSmsConsent ? hostPhone : null);
-          if (to) {
-            const result = await sendTwilioSms(to, withLink);
+            : (hostPhone || null);
+          if (recipient) {
+            const result = await sendTwilioSms(recipient, withLink);
+            status = result.ok ? 'sent' : 'failed';
+            errorText = result.error ?? '';
             if (result.ok) sent++;
+          } else {
+            errorText = 'no SMS recipient (guest did not opt in and host has no phone)';
           }
         } else if (ov.channel === 'whatsapp') {
-          const to = bookingAllowsGuestWhatsapp({ guest_phone: guestPhone, notify_via: notifyVia })
+          recipient = bookingAllowsGuestWhatsapp({ guest_phone: guestPhone, notify_via: notifyVia })
             ? guestPhone
-            : (hostWhatsappConsent ? hostWhatsapp : null);
-          if (to) {
-            const result = await sendTwilioWhatsapp(to, withLink);
+            : (hostWhatsapp || null);
+          if (recipient) {
+            const result = await sendTwilioWhatsapp(recipient, withLink);
+            status = result.ok ? 'sent' : 'failed';
+            errorText = result.error ?? '';
             if (result.ok) sent++;
+          } else {
+            errorText = 'no WhatsApp recipient (guest did not opt in and host has no number)';
           }
+        }
+
+        if (ov.host_id) {
+          await insertMessageLog(supabase, {
+            booking_id: ov.booking_id,
+            host_id: ov.host_id,
+            channel: ov.channel,
+            status: status === 'sent' ? 'sent' : 'failed',
+            recipient: recipient || '(none)',
+            subject: `Extra reminder (${ov.offset_minutes ?? -60} min)`,
+            body: errorText ? `${withLink}\n\n${errorText}` : withLink,
+          });
         }
 
         await supabase
@@ -449,6 +758,16 @@ Deno.serve(async (req: Request) => {
           .eq('id', ov.id);
       }
 
+      if (body.dispatch_scheduled) {
+        const scheduled = await dispatchScheduledReminders(supabase);
+        sent += scheduled;
+      }
+
+      return jsonResponse({ success: true, sent });
+    }
+
+    if (body.dispatch_scheduled) {
+      const sent = await dispatchScheduledReminders(supabase);
       return jsonResponse({ success: true, sent });
     }
 
@@ -460,7 +779,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: booking } = await supabase
       .from('bookings')
-      .select('*, services(name, duration_minutes), profiles(full_name, slug, timezone, email, notification_email)')
+      .select('*, services(name, duration_minutes), profiles(full_name, slug, timezone, email, notification_email, phone, whatsapp_number, sms_opt_in, whatsapp_opt_in, default_reminder_channel, voice_message_template)')
       .eq('id', booking_id)
       .maybeSingle();
 
@@ -568,18 +887,20 @@ Deno.serve(async (req: Request) => {
 
     // ── SMS via Twilio ───────────────────────────────────────────────────────
     if (sendChannel === 'sms') {
-      if (!bookingAllowsGuestSms(booking)) {
-        console.warn('Guest has not opted in to SMS or has no phone, booking:', booking_id);
+      const smsTo = bookingAllowsGuestSms(booking)
+        ? booking.guest_phone
+        : ((hostProfile?.phone as string) || null);
+      if (!smsTo) {
+        console.warn('No SMS recipient (guest opt-in/phone or host phone), booking:', booking_id);
         deliveryStatus = 'failed';
       } else {
-        const guestPhone = booking.guest_phone!;
-        const smsBody = [
+        const smsBody = msgBody || [
           `Hi ${templateData.guest_name}, reminder: you have a ${templateData.duration} meeting with ${templateData.host_name} on ${templateData.date} at ${templateData.time}.`,
-          booking.meeting_link ? `Join: ${booking.meeting_link}` : '',
+          booking.meet_link ? `Join: ${booking.meet_link}` : '',
           '— PinOnIt',
         ].filter(Boolean).join(' ');
 
-        const result = await sendTwilioSms(guestPhone, smsBody);
+        const result = await sendTwilioSms(smsTo, smsBody);
         if (!result.ok) {
           console.warn('SMS delivery failed:', result.error);
           deliveryStatus = 'failed';
@@ -589,18 +910,20 @@ Deno.serve(async (req: Request) => {
 
     // ── WhatsApp via Twilio ──────────────────────────────────────────────────
     if (sendChannel === 'whatsapp') {
-      if (!bookingAllowsGuestWhatsapp(booking)) {
-        console.warn('Guest has not opted in to WhatsApp or has no phone, booking:', booking_id);
+      const waTo = bookingAllowsGuestWhatsapp(booking)
+        ? booking.guest_phone
+        : ((hostProfile?.whatsapp_number as string) || (hostProfile?.phone as string) || null);
+      if (!waTo) {
+        console.warn('No WhatsApp recipient, booking:', booking_id);
         deliveryStatus = 'failed';
       } else {
-        const guestPhone = booking.guest_phone!;
         const waBody = msgBody || [
           `Hi ${templateData.guest_name}, reminder: you have a ${templateData.duration} meeting with ${templateData.host_name} on ${templateData.date} at ${templateData.time}.`,
-          booking.meeting_link ? `Join: ${booking.meeting_link}` : '',
+          booking.meet_link ? `Join: ${booking.meet_link}` : '',
           '— PinOnIt',
         ].filter(Boolean).join(' ');
 
-        const result = await sendTwilioWhatsapp(guestPhone, waBody);
+        const result = await sendTwilioWhatsapp(waTo, waBody);
         if (!result.ok) {
           console.warn('WhatsApp delivery failed:', result.error);
           deliveryStatus = 'failed';
@@ -648,7 +971,7 @@ Deno.serve(async (req: Request) => {
         channel: sendChannel,
         status: deliveryStatus,
         recipient: sendChannel === 'sms' || sendChannel === 'whatsapp' || sendChannel === 'voice'
-          ? (booking.guest_phone ?? booking.guest_email)
+          ? (booking.guest_phone ?? (hostProfile?.phone as string) ?? booking.guest_email)
           : booking.guest_email,
         subject,
         body: msgBody,

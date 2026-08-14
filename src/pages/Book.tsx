@@ -1027,9 +1027,10 @@ export function BookPage() {
       }
 
       try {
-        const { data: rules } = await supabase.from('reminder_rules').select('template_id').eq('host_id', host.id).eq('is_active', true);
+        const { data: rules } = await supabase.from('reminder_rules').select('template_id, timing_offset_minutes').eq('host_id', host.id).eq('is_active', true);
         if (rules?.length) {
           for (const rule of rules) {
+            if ((rule.timing_offset_minutes ?? 0) !== 0) continue;
             fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-reminder`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },

@@ -305,7 +305,7 @@ export interface MessageTemplate {
 
 export interface MessageLogEntry {
   id: string;
-  booking_id: string;
+  booking_id: string | null;
   host_id: string;
   template_id: string | null;
   channel: 'email' | 'sms' | 'whatsapp' | 'voice';

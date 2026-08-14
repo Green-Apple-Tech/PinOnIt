@@ -250,9 +250,10 @@ export function RemindersPage({
   const [previewChannel, setPreviewChannel] = useState<Channel>('whatsapp');
 
   // Test SMS
-  const [showTestSms, setShowTestSms] = useState(false);
+  const [showTestSms, setShowTestSms] = useState(Boolean(embedded));
   const [testSmsPhone, setTestSmsPhone] = useState('');
   const [testSmsSending, setTestSmsSending] = useState(false);
+  const [testWhatsappSending, setTestWhatsappSending] = useState(false);
   const [testSmsResult, setTestSmsResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   // Advanced section
@@ -299,7 +300,7 @@ export function RemindersPage({
       const [tplRes, ruleRes, logRes, svcRes] = await Promise.all([
         supabase.from('message_templates').select('*').eq('host_id', profile.id).order('created_at'),
         supabase.from('reminder_rules').select('*, message_templates(*), services(*)').eq('host_id', profile.id).order('timing_offset_minutes'),
-        supabase.from('message_log').select('*').eq('host_id', profile.id).order('created_at', { ascending: false }).limit(50),
+        supabase.from('message_log').select('*').eq('host_id', profile.id).order('created_at', { ascending: false }).limit(200),
         supabase.from('services').select('*').eq('host_id', profile.id),
       ]);
       const storedPhone = (profile as { phone?: string }).phone ?? '';
@@ -322,6 +323,10 @@ export function RemindersPage({
       setLog(logRes.data ?? []);
       setServices(svcRes.data ?? []);
       setLoading(false);
+      if (!testSmsPhone) {
+        const seed = storedPhone || (profile as { whatsapp_number?: string }).whatsapp_number || '';
+        if (seed) setTestSmsPhone(blurFormatPhone(seed));
+      }
 
       // Seed default 1-hour email reminder for brand-new users
       if (loadedTemplates.length === 0) {
@@ -569,10 +574,11 @@ export function RemindersPage({
   };
   const hasAnyReminders = templates.length > 0;
 
-  const handleTestSms = async () => {
+  const handleTestMessage = async (channel: 'sms' | 'whatsapp') => {
     const to = normalizePhoneE164(testSmsPhone);
     if (!to) return;
-    setTestSmsSending(true);
+    if (channel === 'sms') setTestSmsSending(true);
+    else setTestWhatsappSending(true);
     setTestSmsResult(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -587,7 +593,8 @@ export function RemindersPage({
             Apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
           },
           body: JSON.stringify({
-            test_sms: true,
+            test_sms: channel === 'sms',
+            test_whatsapp: channel === 'whatsapp',
             to,
             guest_name: 'Test Guest',
             host_name: profile?.full_name ?? 'Your Host',
@@ -601,12 +608,20 @@ export function RemindersPage({
       if (!res.ok || json.error) {
         setTestSmsResult({ ok: false, message: json.error ?? 'Failed to send. Check Twilio credentials.' });
       } else {
-        setTestSmsResult({ ok: true, message: `Test SMS sent to ${to}` });
+        setTestSmsResult({ ok: true, message: `Test ${channel === 'whatsapp' ? 'WhatsApp' : 'SMS'} sent to ${to}` });
+        const { data: latest } = await supabase
+          .from('message_log')
+          .select('*')
+          .eq('host_id', profile?.id)
+          .order('created_at', { ascending: false })
+          .limit(200);
+        if (latest) setLog(latest);
       }
     } catch (e) {
       setTestSmsResult({ ok: false, message: String(e) });
     }
     setTestSmsSending(false);
+    setTestWhatsappSending(false);
   };
 
   if (loading) {
@@ -671,6 +686,41 @@ export function RemindersPage({
             <Plus className="h-4 w-4" /> Add Reminder
           </button>
         )}
+      </div>
+
+      <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Activity log</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Email, SMS, WhatsApp, and voice messages — including tests and extra reminders.
+            </p>
+          </div>
+        </div>
+        <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-[420px] overflow-y-auto">
+          {log.map((entry) => (
+            <div key={entry.id} className="px-5 py-3 flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3 min-w-0">
+                {entry.channel === 'email' ? <Mail className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" /> : entry.channel === 'whatsapp' ? <MessageSquare className="h-4 w-4 shrink-0 mt-0.5" style={{ color: '#5864C6' }} /> : entry.channel === 'voice' ? <PhoneCall className="h-4 w-4 text-violet-400 shrink-0 mt-0.5" /> : <Smartphone className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />}
+                <div className="min-w-0">
+                  <p className="text-sm text-slate-900 dark:text-white truncate">{entry.recipient}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{entry.subject || entry.body}</p>
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                <span className={`text-xs px-2 py-0.5 rounded-full ${entry.status === 'sent' || entry.status === 'delivered' ? '' : entry.status === 'failed' ? 'bg-red-500/10 text-red-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`} style={entry.status === 'sent' || entry.status === 'delivered' ? { backgroundColor: '#5864C620', color: '#5864C6' } : {}}>
+                  {entry.status}
+                </span>
+                <span className="text-[11px] text-slate-400">
+                  {new Date(entry.sent_at || entry.created_at).toLocaleString()}
+                </span>
+              </div>
+            </div>
+          ))}
+          {log.length === 0 && (
+            <p className="px-5 py-8 text-center text-slate-400 text-sm">No messages sent yet. Use Test SMS &amp; WhatsApp on this page to send a sample.</p>
+          )}
+        </div>
       </div>
 
       {/* ── FIRST-TIME SETUP GUIDE (shown when no reminders exist, not for Pro) ── */}
@@ -1215,7 +1265,7 @@ export function RemindersPage({
         )}
       </div>
 
-      {/* ── TEST SMS (Pro only) ── */}
+      {/* ── TEST SMS / WHATSAPP ── */}
       {isPro && (
         <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
           <button
@@ -1224,7 +1274,7 @@ export function RemindersPage({
           >
             <span className="flex items-center gap-2">
               <Smartphone className="h-4 w-4 text-slate-400" />
-              Send a test SMS
+              Test SMS &amp; WhatsApp
             </span>
             {showTestSms ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
           </button>
@@ -1232,24 +1282,32 @@ export function RemindersPage({
           {showTestSms && (
             <div className="border-t border-slate-200 dark:border-slate-800 px-5 py-4 space-y-3">
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Send a sample reminder SMS to any number to verify your Twilio integration.
+                Send a sample reminder now to confirm Twilio can reach this number. Sends are recorded in Activity log.
               </p>
-              <div className="flex gap-2">
-                <input
-                  type="tel"
-                  value={testSmsPhone}
-                  onChange={(e) => { setTestSmsPhone(e.target.value); setTestSmsResult(null); }}
-                  onBlur={(e) => { if (e.target.value.trim()) setTestSmsPhone(blurFormatPhone(e.target.value)); }}
-                  placeholder={PHONE_PLACEHOLDER}
-                  className="flex-1 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5864C6] transition"
-                />
+              <input
+                type="tel"
+                value={testSmsPhone}
+                onChange={(e) => { setTestSmsPhone(e.target.value); setTestSmsResult(null); }}
+                onBlur={(e) => { if (e.target.value.trim()) setTestSmsPhone(blurFormatPhone(e.target.value)); }}
+                placeholder={PHONE_PLACEHOLDER}
+                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5864C6] transition"
+              />
+              <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={handleTestSms}
-                  disabled={testSmsSending || !testSmsPhone.trim()}
+                  onClick={() => void handleTestMessage('sms')}
+                  disabled={testSmsSending || testWhatsappSending || !testSmsPhone.trim()}
                   className="px-4 py-2 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-1.5 shrink-0 hover:opacity-90" style={{ backgroundColor: '#5864C6' }}
                 >
                   {testSmsSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />}
-                  {testSmsSending ? 'Sending…' : 'Send test'}
+                  {testSmsSending ? 'Sending…' : 'Send test SMS'}
+                </button>
+                <button
+                  onClick={() => void handleTestMessage('whatsapp')}
+                  disabled={testSmsSending || testWhatsappSending || !testSmsPhone.trim()}
+                  className="px-4 py-2 disabled:opacity-50 text-sm font-semibold rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 flex items-center gap-1.5 shrink-0 hover:bg-slate-50 dark:hover:bg-slate-800"
+                >
+                  {testWhatsappSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
+                  {testWhatsappSending ? 'Sending…' : 'Send test WhatsApp'}
                 </button>
               </div>
               <p className="text-xs text-slate-400 dark:text-slate-500">{PHONE_HINT}</p>
@@ -1257,12 +1315,10 @@ export function RemindersPage({
               {testSmsResult && (
                 <div className={`flex items-start gap-2 px-3 py-2.5 rounded-lg text-sm ${
                   testSmsResult.ok
-                    ? 'bg-[#5864C6]/5 dark:bg-[#5864C6]/10 border border-[#5864C6]/30 text-[#5864C6] dark:text-[#8891e8]'
-                    : 'bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-400'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200'
+                    : 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300'
                 }`}>
-                  {testSmsResult.ok
-                    ? <Check className="h-4 w-4 shrink-0 mt-0.5" />
-                    : <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />}
+                  {testSmsResult.ok ? <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" /> : <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />}
                   <span>{testSmsResult.message}</span>
                 </div>
               )}
@@ -1577,7 +1633,7 @@ export function RemindersPage({
               {/* Log tab */}
               {advancedTab === 'log' && (
                 <div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">History of all automated messages sent.</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Full history also appears in Activity log above.</p>
                   <div className="space-y-2">
                     {log.map((entry) => (
                       <div key={entry.id} className="p-3 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-between gap-3">
@@ -1591,7 +1647,7 @@ export function RemindersPage({
                         <div className="flex items-center gap-3 shrink-0">
                           {entry.language !== 'en' && <span className="text-xs inline-flex items-center gap-0.5" style={{ color: '#5864C6' }}><Languages className="h-3 w-3" />{SUPPORTED_LANGUAGES[entry.language] ?? entry.language}</span>}
                           <span className={`text-xs px-2 py-0.5 rounded-full ${entry.status === 'sent' || entry.status === 'delivered' ? 'text-white' : entry.status === 'failed' ? 'bg-red-500/10 text-red-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`} style={entry.status === 'sent' || entry.status === 'delivered' ? { backgroundColor: '#5864C620', color: '#5864C6' } : {}}>{entry.status}</span>
-                          <span className="text-xs text-slate-400">{new Date(entry.created_at).toLocaleDateString()}</span>
+                          <span className="text-xs text-slate-400">{new Date(entry.sent_at || entry.created_at).toLocaleString()}</span>
                         </div>
                       </div>
                     ))}
