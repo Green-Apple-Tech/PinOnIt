@@ -164,8 +164,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshProfile = useCallback(async () => {
-    if (user) await fetchProfile(user.id);
-  }, [user, fetchProfile]);
+    if (!user) return;
+    await Promise.all([fetchProfile(user.id), fetchSubscription(user.id)]);
+  }, [user, fetchProfile, fetchSubscription]);
 
   return (
     <AuthContext.Provider value={{ user, profile, subscription, subscriptionLoaded, loading, signUp, signIn, signInWithGoogle, signInWithMicrosoft, signOut, resetPassword, refreshProfile }}>

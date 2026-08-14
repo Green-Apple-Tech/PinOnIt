@@ -5,6 +5,8 @@ import { OnboardingWizard, wizardIsActive, wizardSavedStep, onboardingIsComplete
 import { clearStaleOnboardingLocalState, markOnboardingCompletedLocal } from '../lib/onboardingState';
 import { useTheme } from '../hooks/useTheme';
 import { supabase } from '../lib/supabase';
+import { syncStripeSubscription } from '../lib/stripe';
+import { effectivePlan } from '../lib/plan';
 import type { Booking, Service } from '../lib/types';
 import { CalendarDays, Settings, LogOut, Users, X, Check, Sun, Moon, Copy, Share2, Mail, Link2, ExternalLink, PenLine, Video, Phone, MapPin, ChevronRight, Loader2, CalendarCheck, Plus, ChevronLeft, LayoutGrid, Menu, AlertCircle, Sparkles, Search, ShoppingBag, Wrench as Tool, QrCode, MessageSquare, ChevronDown } from 'lucide-react';
 import { QRModal } from '../components/QRModal';
@@ -859,7 +861,7 @@ export function Dashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const planName = subscription?.plan ?? profile?.plan ?? 'free';
+  const planName = effectivePlan(subscription, profile);
   const [checklistDismissed, setChecklistDismissed] = useState(() => localStorage.getItem('onboarding_checklist_dismissed') === '1');
   const [liveSlug, setLiveSlug] = useState<string | null>(null);
 
@@ -917,7 +919,7 @@ export function Dashboard() {
     if (profile?.slug) setLiveSlug(profile.slug);
   }, [profile?.slug]);
 
-  // Handle ?checkout=success return from Stripe — show toast, resume wizard at the right step
+  // Handle ?checkout=success return from Stripe — sync plan, show toast, resume wizard
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('checkout') !== 'success') return;
@@ -925,33 +927,42 @@ export function Dashboard() {
     const stepParam = params.get('wizard_step');
     const trialDays = params.get('trial_days');
 
-    // Build toast message
-    const firstChargeDate = (() => {
-      const days = trialDays ? Number(trialDays) : 14;
-      const d = new Date();
-      d.setDate(d.getDate() + days);
-      return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    void (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        await syncStripeSubscription(session.access_token);
+      }
+      await refreshProfile();
     })();
-    const message = trialDays === '60'
-      ? `🎉 60-day Pro trial active — no charge until ${firstChargeDate}. Running it alongside Calendly? Take your time.`
-      : `🎉 Pro trial active — ${trialDays ?? 14} days free, no charge until ${firstChargeDate}.`;
-    setTrialToast({ message });
+
+    if (trialDays) {
+      const firstChargeDate = (() => {
+        const days = Number(trialDays);
+        const d = new Date();
+        d.setDate(d.getDate() + days);
+        return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      })();
+      const message = trialDays === '60'
+        ? `🎉 60-day Pro trial active — no charge until ${firstChargeDate}. Running it alongside Calendly? Take your time.`
+        : `🎉 Pro trial active — ${trialDays} days free, no charge until ${firstChargeDate}.`;
+      setTrialToast({ message });
+    } else {
+      setTrialToast({ message: 'You\'re on Pro — $6/mo, cancel anytime in Billing.' });
+    }
     setTimeout(() => setTrialToast(null), 8000);
 
-    // Resume wizard at the encoded step
     if (stepParam !== null) {
       const stepIndex = Number(stepParam);
       setWizardInitialStep(stepIndex);
       setShowWizard(true);
     }
 
-    // Clean all checkout params from URL
     const url = new URL(window.location.href);
     url.searchParams.delete('checkout');
     url.searchParams.delete('wizard_step');
     url.searchParams.delete('trial_days');
     window.history.replaceState({}, '', url.toString());
-  }, []);
+  }, [refreshProfile]);
 
   // Calendly OAuth return: reopen wizard when appropriate, always strip URL params
   useEffect(() => {

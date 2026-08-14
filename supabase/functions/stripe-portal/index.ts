@@ -42,7 +42,8 @@ Deno.serve(async (req: Request) => {
       .eq('user_id', user.id)
       .maybeSingle();
 
-    if (!subscription?.stripe_customer_id) {
+    const customerId = subscription?.stripe_customer_id;
+    if (!customerId || !customerId.startsWith('cus_')) {
       return new Response(JSON.stringify({ error: 'No Stripe customer found' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -52,7 +53,7 @@ Deno.serve(async (req: Request) => {
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!);
 
     const session = await stripe.billingPortal.sessions.create({
-      customer: subscription.stripe_customer_id,
+      customer: customerId,
       return_url: 'https://pinonit.com/billing',
     });
 

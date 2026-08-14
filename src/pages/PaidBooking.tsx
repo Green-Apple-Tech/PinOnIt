@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
+import { effectivePlan } from '../lib/plan';
 import type { Service, PaidBookingSettings } from '../lib/types';
 import QRCode from 'qrcode';
 import {
@@ -654,7 +655,7 @@ function PaidBookingShareActions({
 
 export function PaidBookingPage() {
   const { user, profile, subscription, refreshProfile } = useAuth();
-  const plan = subscription?.plan ?? profile?.plan ?? 'free';
+  const plan = effectivePlan(subscription, profile);
 
   const [theme, setTheme] = useState<Theme>('clean');
   const [settings, setSettings] = useState<PaidBookingSettings>({});

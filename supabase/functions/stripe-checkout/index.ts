@@ -1,5 +1,6 @@
 import Stripe from 'npm:stripe@17.7.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
+import { isRealStripeCustomerId } from '../_shared/stripeSubscription.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -47,7 +48,6 @@ Deno.serve(async (req: Request) => {
 
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!);
 
-    // Resolve price ID — if it's a placeholder (not starting with 'price_'), look up the first active price
     let resolvedPriceId = price_id;
     if (!price_id.startsWith('price_')) {
       const prices = await stripe.prices.list({ active: true, limit: 10, expand: ['data.product'] });
@@ -57,19 +57,19 @@ Deno.serve(async (req: Request) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      // Pick the first recurring price
       const recurring = prices.data.find((p) => p.recurring != null);
       resolvedPriceId = (recurring ?? prices.data[0]).id;
     }
 
-    // Check if customer exists
-    const { data: subscription } = await supabase
+    const { data: existingSub } = await supabase
       .from('subscriptions')
-      .select('stripe_customer_id')
+      .select('stripe_customer_id, plan, status')
       .eq('user_id', user.id)
       .maybeSingle();
 
-    let customerId = subscription?.stripe_customer_id;
+    let customerId = isRealStripeCustomerId(existingSub?.stripe_customer_id)
+      ? existingSub!.stripe_customer_id
+      : null;
 
     if (!customerId) {
       const customer = await stripe.customers.create({
@@ -77,13 +77,22 @@ Deno.serve(async (req: Request) => {
         metadata: { supabase_user_id: user.id },
       });
       customerId = customer.id;
+    } else {
+      await stripe.customers.update(customerId, {
+        metadata: { supabase_user_id: user.id },
+      });
+    }
 
-      await supabase.from('subscriptions').upsert({
-        user_id: user.id,
-        stripe_customer_id: customerId,
-        plan: 'free',
-        status: 'active',
-      }, { onConflict: 'user_id' });
+    const { error: upsertError } = await supabase.from('subscriptions').upsert({
+      user_id: user.id,
+      stripe_customer_id: customerId,
+    }, { onConflict: 'user_id' });
+    if (upsertError) {
+      console.error('stripe-checkout: failed to persist customer', upsertError);
+      return new Response(JSON.stringify({ error: 'Could not save billing customer. Please try again.' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const trialDays = trial_period_days ? Number(trial_period_days) : 0;
@@ -92,15 +101,23 @@ Deno.serve(async (req: Request) => {
 
     const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
       customer: customerId,
+      client_reference_id: user.id,
+      metadata: { supabase_user_id: user.id },
       mode: 'subscription',
       line_items: [{ price: resolvedPriceId, quantity: 1 }],
-      success_url: `${origin}/dashboard?checkout=success${stepParam}${trialParam}`,
-      cancel_url: `${origin}/dashboard/billing?checkout=cancelled`,
+      success_url: wizard_step
+        ? `${origin}/dashboard?checkout=success${stepParam}${trialParam}`
+        : `${origin}/dashboard/settings?tab=billing&checkout=success${trialParam}`,
+      cancel_url: `${origin}/dashboard/settings?tab=billing&checkout=cancelled`,
       payment_method_collection: 'always',
+      subscription_data: {
+        metadata: { supabase_user_id: user.id },
+      },
     };
 
     if (trialDays > 0) {
       sessionParams.subscription_data = {
+        ...sessionParams.subscription_data,
         trial_period_days: trialDays,
       };
     }
@@ -111,7 +128,8 @@ Deno.serve(async (req: Request) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    const message = err instanceof Error ? err.message : String(err);
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

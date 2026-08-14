@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
+import { effectivePlan } from '../lib/plan';
 import type { Service, BookingQuestion, MeetingType, RecurrenceFrequency } from '../lib/types';
 import { getRecurrenceEndType, type RecurrenceEndType } from '../lib/recurring';
 import { resolveDefaultReminderChannel } from '../lib/reminderChannels';
@@ -324,7 +325,7 @@ function PaymentTab({
 
 export function ServicesPage() {
   const { profile, subscription } = useAuth();
-  const isPro = (subscription?.plan ?? profile?.plan ?? 'free') === 'pro';
+  const isPro = effectivePlan(subscription, profile) === 'pro';
   const [searchParams, setSearchParams] = useSearchParams();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);

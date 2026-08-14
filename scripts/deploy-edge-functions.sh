@@ -19,6 +19,10 @@ for fn in google-calendar-callback outlook-calendar-callback calendly-callback z
   deploy "$fn" --no-verify-jwt
 done
 
+deploy stripe-checkout
+deploy stripe-portal
+deploy stripe-sync-subscription
+
 # OAuth starters — calendly-auth uses verify_jwt=false (browser ?token= redirects); auth checked in function
 deploy calendly-auth --no-verify-jwt
 for fn in google-calendar-auth outlook-calendar-auth zoom-auth; do

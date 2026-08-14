@@ -24,6 +24,8 @@ import {
   Upload,
   RefreshCw,
   Repeat,
+  Mail,
+  MessageSquare,
 } from 'lucide-react';
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -37,6 +39,71 @@ interface CalendarEvent {
   end_at: string;
   all_day: boolean;
   provider: string;
+}
+
+type ReminderChannel = 'email' | 'sms' | 'whatsapp';
+
+const REMINDER_OFFSETS = [
+  { value: -15, label: '15 min before' },
+  { value: -30, label: '30 min before' },
+  { value: -60, label: '1 hour before' },
+  { value: -120, label: '2 hours before' },
+  { value: -240, label: '4 hours before' },
+  { value: -1440, label: '1 day before' },
+] as const;
+
+function ExtraReminderFields({
+  channels,
+  onToggleChannel,
+  offset,
+  onOffset,
+}: {
+  channels: ReminderChannel[];
+  onToggleChannel: (ch: ReminderChannel) => void;
+  offset: number;
+  onOffset: (n: number) => void;
+}) {
+  const opts: { id: ReminderChannel; label: string; icon: typeof Mail }[] = [
+    { id: 'email', label: 'Email', icon: Mail },
+    { id: 'sms', label: 'SMS', icon: Phone },
+    { id: 'whatsapp', label: 'WhatsApp', icon: MessageSquare },
+  ];
+  return (
+    <div className="space-y-3">
+      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Extra reminder</p>
+      <div className="flex flex-wrap gap-2">
+        {opts.map(({ id, label, icon: Icon }) => {
+          const on = channels.includes(id);
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => onToggleChannel(id)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                on
+                  ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300'
+                  : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+            </button>
+          );
+        })}
+      </div>
+      {channels.length > 0 && (
+        <select
+          value={offset}
+          onChange={(e) => onOffset(Number(e.target.value))}
+          className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600"
+        >
+          {REMINDER_OFFSETS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+      )}
+    </div>
+  );
 }
 
 // ── Add Event Modal ────────────────────────────────────────────────────────────
@@ -57,6 +124,12 @@ function AddEventModal({ services, defaultDate, onClose, onSaved }: AddEventModa
   const [time, setTime] = useState('09:00');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [extraChannels, setExtraChannels] = useState<ReminderChannel[]>([]);
+  const [extraOffset, setExtraOffset] = useState(-60);
+
+  const toggleExtra = (ch: ReminderChannel) => {
+    setExtraChannels((prev) => prev.includes(ch) ? prev.filter((c) => c !== ch) : [...prev, ch]);
+  };
 
   const handleSave = async () => {
     if (!guestName.trim() || !date || !time || !serviceId || !profile) return;
@@ -82,17 +155,28 @@ function AddEventModal({ services, defaultDate, onClose, onSaved }: AddEventModa
       return;
     }
 
-    const { error: err } = await supabase.from('bookings').insert({
+    const { data: created, error: err } = await supabase.from('bookings').insert({
       host_id: profile.id,
       service_id: serviceId || null,
       guest_name: guestName.trim(),
-      guest_email: guestEmail.trim(),
+      guest_email: guestEmail.trim() || null,
       start_time: startDt.toISOString(),
       end_time: endDt.toISOString(),
       status: 'confirmed',
-    });
+    }).select('id').maybeSingle();
     setSaving(false);
     if (err) { setError(err.message); return; }
+    if (created?.id && extraChannels.length > 0) {
+      await supabase.from('event_reminder_overrides').insert(
+        extraChannels.map((channel) => ({
+          booking_id: created.id,
+          host_id: profile.id,
+          channel,
+          offset_minutes: extraOffset,
+          message: '',
+        })),
+      );
+    }
     onSaved();
     onClose();
   };
@@ -161,6 +245,12 @@ function AddEventModal({ services, defaultDate, onClose, onSaved }: AddEventModa
               />
             </div>
           </div>
+          <ExtraReminderFields
+            channels={extraChannels}
+            onToggleChannel={toggleExtra}
+            offset={extraOffset}
+            onOffset={setExtraOffset}
+          />
           <button
             onClick={handleSave}
             disabled={saving || !guestName.trim() || !serviceId}
@@ -209,13 +299,15 @@ function bookingEventTitle(b: Booking) {
   return `${svc?.name ?? 'Appointment'} with ${b.guest_name}`;
 }
 
-function MonthBookingCard({ booking }: { booking: Booking }) {
+function MonthBookingCard({ booking, onOpen, onContext }: { booking: Booking; onOpen: () => void; onContext: (e: React.MouseEvent) => void }) {
   const svc = (booking as Booking & { services?: { name?: string; color?: string } }).services;
   const title = svc?.name ?? 'Appointment';
   return (
     <div
-      title={bookingEventTitle(booking)}
-      className="text-sm px-2 py-1.5 rounded-md shadow-sm bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 hover:shadow-md transition-shadow cursor-default"
+      title={`${bookingEventTitle(booking)} — click or right-click for extra reminder`}
+      onClick={(e) => { e.stopPropagation(); onOpen(); }}
+      onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onContext(e); }}
+      className="text-sm px-2 py-1.5 rounded-md shadow-sm bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 hover:shadow-md transition-shadow cursor-pointer"
     >
       <div className="flex items-start gap-1.5">
         <span className="h-2 w-2 rounded-full shrink-0 mt-1" style={{ backgroundColor: svc?.color ?? '#5864C6' }} />
@@ -229,12 +321,14 @@ function MonthBookingCard({ booking }: { booking: Booking }) {
   );
 }
 
-function WeekBookingCard({ booking }: { booking: Booking }) {
+function WeekBookingCard({ booking, onOpen, onContext }: { booking: Booking; onOpen: () => void; onContext: (e: React.MouseEvent) => void }) {
   const svc = (booking as Booking & { services?: { name?: string; color?: string } }).services;
   return (
     <div
-      title={bookingEventTitle(booking)}
-      className="text-sm p-2 rounded-md shadow-sm border border-slate-100 dark:border-slate-700 mb-1.5"
+      title={`${bookingEventTitle(booking)} — click or right-click for extra reminder`}
+      onClick={(e) => { e.stopPropagation(); onOpen(); }}
+      onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onContext(e); }}
+      className="text-sm p-2 rounded-md shadow-sm border border-slate-100 dark:border-slate-700 mb-1.5 cursor-pointer"
       style={{ backgroundColor: `${svc?.color ?? '#5864C6'}18`, borderLeftColor: svc?.color ?? '#5864C6', borderLeftWidth: 3 }}
     >
       <p className="font-semibold text-slate-800 dark:text-slate-100 leading-snug">{svc?.name ?? 'Appointment'}</p>
@@ -264,10 +358,21 @@ type ViewMode = 'agenda' | 'month' | 'week' | 'day';
 
 interface ReminderOverride {
   id: string;
-  booking_id: string;
-  channel: 'email' | 'sms' | 'whatsapp';
+  booking_id: string | null;
+  calendar_event_id?: string | null;
+  channel: ReminderChannel;
   offset_minutes: number;
   message: string;
+}
+
+type ReminderTarget =
+  | { kind: 'booking'; booking: Booking }
+  | { kind: 'external'; event: CalendarEvent };
+
+interface EventMenuState {
+  x: number;
+  y: number;
+  target: ReminderTarget;
 }
 
 export function AppointmentsPage() {
@@ -283,13 +388,14 @@ export function AppointmentsPage() {
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState('');
   // Reminder override panel
-  const [reminderBooking, setReminderBooking] = useState<Booking | null>(null);
+  const [reminderTarget, setReminderTarget] = useState<ReminderTarget | null>(null);
   const [reminderOverrides, setReminderOverrides] = useState<ReminderOverride[]>([]);
   const [loadingOverrides, setLoadingOverrides] = useState(false);
-  const [newReminderChannel, setNewReminderChannel] = useState<'email' | 'sms' | 'whatsapp'>('email');
+  const [newReminderChannel, setNewReminderChannel] = useState<ReminderChannel>('email');
   const [newReminderOffset, setNewReminderOffset] = useState(-60);
   const [newReminderMsg, setNewReminderMsg] = useState('');
   const [savingOverride, setSavingOverride] = useState(false);
+  const [eventMenu, setEventMenu] = useState<EventMenuState | null>(null);
   const [detailBooking, setDetailBooking] = useState<Booking | null>(null);
   const [cancelMsg, setCancelMsg] = useState('');
   const icsInputRef = useRef<HTMLInputElement>(null);
@@ -330,6 +436,13 @@ export function AppointmentsPage() {
   };
 
   useEffect(() => { loadData(); }, [profile]);
+
+  useEffect(() => {
+    if (!eventMenu) return;
+    const close = () => setEventMenu(null);
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
+  }, [eventMenu]);
 
   // Handle OAuth callback params from calendar connect redirect
   useEffect(() => {
@@ -466,31 +579,56 @@ export function AppointmentsPage() {
     if (icsInputRef.current) icsInputRef.current.value = '';
   };
 
-  const openReminderPanel = async (booking: Booking) => {
-    setReminderBooking(booking);
+  const openReminderPanel = async (target: ReminderTarget, channel?: ReminderChannel) => {
+    setEventMenu(null);
+    setReminderTarget(target);
+    if (channel) setNewReminderChannel(channel);
     setLoadingOverrides(true);
-    const { data } = await supabase
-      .from('event_reminder_overrides')
-      .select('*')
-      .eq('booking_id', booking.id)
-      .order('offset_minutes');
+    const q = supabase.from('event_reminder_overrides').select('*');
+    const { data } = target.kind === 'booking'
+      ? await q.eq('booking_id', target.booking.id).order('offset_minutes')
+      : await q.eq('calendar_event_id', target.event.id).order('offset_minutes');
     setReminderOverrides((data ?? []) as ReminderOverride[]);
     setLoadingOverrides(false);
   };
 
+  const openEventMenu = (e: React.MouseEvent, target: ReminderTarget) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEventMenu({ x: e.clientX, y: e.clientY, target });
+  };
+
   const handleAddOverride = async () => {
-    if (!profile || !reminderBooking) return;
+    if (!profile || !reminderTarget) return;
     setSavingOverride(true);
-    const { data } = await supabase.from('event_reminder_overrides').insert({
-      booking_id: reminderBooking.id,
+    const row = {
       host_id: profile.id,
       channel: newReminderChannel,
       offset_minutes: newReminderOffset,
       message: newReminderMsg.trim(),
-    }).select().maybeSingle();
+      booking_id: reminderTarget.kind === 'booking' ? reminderTarget.booking.id : null,
+      calendar_event_id: reminderTarget.kind === 'external' ? reminderTarget.event.id : null,
+    };
+    const { data } = await supabase.from('event_reminder_overrides').insert(row).select().maybeSingle();
     if (data) setReminderOverrides(prev => [...prev, data as ReminderOverride]);
     setNewReminderMsg('');
     setSavingOverride(false);
+  };
+
+  const quickAddReminder = async (target: ReminderTarget, channel: ReminderChannel) => {
+    if (!profile) return;
+    setEventMenu(null);
+    await supabase.from('event_reminder_overrides').insert({
+      host_id: profile.id,
+      channel,
+      offset_minutes: -60,
+      message: '',
+      booking_id: target.kind === 'booking' ? target.booking.id : null,
+      calendar_event_id: target.kind === 'external' ? target.event.id : null,
+    });
+    const label = channel === 'sms' ? 'SMS' : channel === 'whatsapp' ? 'WhatsApp' : 'Email';
+    setSyncMsg(`${label} reminder set for 1 hour before`);
+    setTimeout(() => setSyncMsg(''), 4000);
   };
 
   const handleDeleteOverride = async (id: string) => {
@@ -759,13 +897,24 @@ export function AppointmentsPage() {
                       <span className={`text-sm font-semibold inline-flex h-6 w-6 items-center justify-center rounded-full ${isToday ? 'bg-[#5864C6] text-white' : 'text-slate-700 dark:text-slate-300'}`}>{d}</span>
                       <div className="mt-1.5 space-y-1">
                         {externalToShow.map(e => (
-                          <div key={e.id} title={e.title} className="text-sm px-2 py-1 rounded-md truncate flex items-center gap-1.5 bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 shadow-sm">
+                          <div
+                            key={e.id}
+                            title={`${e.title} — click or right-click for extra reminder`}
+                            onClick={(ev) => { ev.stopPropagation(); void openReminderPanel({ kind: 'external', event: e }); }}
+                            onContextMenu={(ev) => openEventMenu(ev, { kind: 'external', event: e })}
+                            className="text-sm px-2 py-1 rounded-md truncate flex items-center gap-1.5 bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 shadow-sm cursor-pointer"
+                          >
                             <span className={`h-2 w-2 rounded-full shrink-0 ${e.provider === 'google' ? 'bg-red-400' : e.provider === 'outlook' ? 'bg-blue-400' : 'bg-slate-400'}`} />
                             <span className="truncate">{e.all_day ? e.title : `${formatTime(e.start_at)} ${e.title}`}</span>
                           </div>
                         ))}
                         {bookingsToShow.map(b => (
-                          <MonthBookingCard key={b.id} booking={b} />
+                          <MonthBookingCard
+                            key={b.id}
+                            booking={b}
+                            onOpen={() => { void openReminderPanel({ kind: 'booking', booking: b }); }}
+                            onContext={(ev) => openEventMenu(ev, { kind: 'booking', booking: b })}
+                          />
                         ))}
                         {overflow > 0 && <div className="text-xs font-medium text-slate-500 dark:text-slate-400 pl-1">+{overflow} more</div>}
                       </div>
@@ -825,13 +974,25 @@ export function AppointmentsPage() {
                           ))}
                           <div className="absolute inset-x-1 top-0 space-y-1 p-1 pointer-events-none">
                             {dayExternal.map(e => (
-                              <div key={e.id} title={e.title} className="text-sm p-2 rounded-md shadow-sm bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 pointer-events-auto">
+                              <div
+                                key={e.id}
+                                title={`${e.title} — click or right-click for extra reminder`}
+                                onClick={(ev) => { ev.stopPropagation(); void openReminderPanel({ kind: 'external', event: e }); }}
+                                onContextMenu={(ev) => openEventMenu(ev, { kind: 'external', event: e })}
+                                className="text-sm p-2 rounded-md shadow-sm bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 pointer-events-auto cursor-pointer"
+                              >
                                 <p className="font-semibold truncate">{e.title}</p>
                                 <p className="text-xs mt-0.5">{e.all_day ? 'All day' : formatTime(e.start_at)}</p>
                               </div>
                             ))}
                             {dayBookings.map(b => (
-                              <div key={b.id} className="pointer-events-auto"><WeekBookingCard booking={b} /></div>
+                              <div key={b.id} className="pointer-events-auto">
+                                <WeekBookingCard
+                                  booking={b}
+                                  onOpen={() => { void openReminderPanel({ kind: 'booking', booking: b }); }}
+                                  onContext={(ev) => openEventMenu(ev, { kind: 'booking', booking: b })}
+                                />
+                              </div>
                             ))}
                           </div>
                           {isToday && <CurrentTimeLine />}
@@ -893,13 +1054,25 @@ export function AppointmentsPage() {
                             <div className="w-16 lg:w-20 shrink-0 text-sm text-slate-500 dark:text-slate-400 pr-3 pt-2 text-right border-r border-slate-100 dark:border-slate-800/60">{formatHourLabel(h)}</div>
                             <div className="flex-1 p-2 space-y-2">
                               {allDayExternal.map(e => (
-                                <div key={e.id} title={e.title} className="text-sm p-2 rounded-lg shadow-sm bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                <div
+                                  key={e.id}
+                                  title={`${e.title} — click or right-click for extra reminder`}
+                                  onClick={() => { void openReminderPanel({ kind: 'external', event: e }); }}
+                                  onContextMenu={(ev) => openEventMenu(ev, { kind: 'external', event: e })}
+                                  className="text-sm p-2 rounded-lg shadow-sm bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 cursor-pointer"
+                                >
                                   <p className="font-semibold">{e.title}</p>
                                   <p className="text-xs mt-0.5">All day</p>
                                 </div>
                               ))}
                               {hourExternal.map(e => (
-                                <div key={e.id} title={e.title} className="text-sm p-2 rounded-lg shadow-sm bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                <div
+                                  key={e.id}
+                                  title={`${e.title} — click or right-click for extra reminder`}
+                                  onClick={() => { void openReminderPanel({ kind: 'external', event: e }); }}
+                                  onContextMenu={(ev) => openEventMenu(ev, { kind: 'external', event: e })}
+                                  className="text-sm p-2 rounded-lg shadow-sm bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 cursor-pointer"
+                                >
                                   <p className="font-semibold">{e.title}</p>
                                   <p className="text-xs text-slate-500 mt-0.5">{formatTime(e.start_at)} – {formatTime(e.end_at)}</p>
                                 </div>
@@ -908,7 +1081,14 @@ export function AppointmentsPage() {
                                 const svc = (b as Booking & { services?: { name?: string; color?: string; location?: string; location_type?: string } }).services;
                                 const LocIcon = getLocationIcon(svc?.location_type);
                                 return (
-                                  <div key={b.id} title={bookingEventTitle(b)} className="rounded-lg shadow-sm p-3 border border-slate-100 dark:border-slate-700 min-h-[56px]" style={{ backgroundColor: `${svc?.color ?? '#5864C6'}12`, borderLeftColor: svc?.color ?? '#5864C6', borderLeftWidth: 4 }}>
+                                  <div
+                                    key={b.id}
+                                    title={`${bookingEventTitle(b)} — click or right-click for extra reminder`}
+                                    onClick={() => { void openReminderPanel({ kind: 'booking', booking: b }); }}
+                                    onContextMenu={(ev) => openEventMenu(ev, { kind: 'booking', booking: b })}
+                                    className="rounded-lg shadow-sm p-3 border border-slate-100 dark:border-slate-700 min-h-[56px] cursor-pointer"
+                                    style={{ backgroundColor: `${svc?.color ?? '#5864C6'}12`, borderLeftColor: svc?.color ?? '#5864C6', borderLeftWidth: 4 }}
+                                  >
                                     <div className="flex items-center gap-2">
                                       <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: svc?.color ?? '#5864C6' }} />
                                       <p className="text-base font-semibold text-slate-800 dark:text-slate-100">{svc?.name ?? 'Appointment'}</p>
@@ -978,7 +1158,12 @@ export function AppointmentsPage() {
                     <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
                       {/* External calendar busy blocks */}
                       {dayExternal.map(e => (
-                        <div key={e.id} className="flex items-center gap-4 px-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/20">
+                        <div
+                          key={e.id}
+                          onClick={() => { void openReminderPanel({ kind: 'external', event: e }); }}
+                          onContextMenu={(ev) => openEventMenu(ev, { kind: 'external', event: e })}
+                          className="flex items-center gap-4 px-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/20 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/40"
+                        >
                           <div className="pt-0.5 shrink-0">
                             <Lock className="h-3.5 w-3.5 text-slate-300 dark:text-slate-600" />
                           </div>
@@ -1010,8 +1195,10 @@ export function AppointmentsPage() {
                         const isPendingApproval = b.status === 'pending_approval';
                         const isInactive = isCanceled || isCompleted;
                         return (
-                          <div key={b.id} onClick={() => b.is_recurring && setDetailBooking(b)}
-                            className={`flex items-start gap-4 px-4 py-3 bg-white dark:bg-slate-900/30 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors ${isInactive ? 'opacity-55' : ''} ${b.is_recurring ? 'cursor-pointer' : ''}`}>
+                          <div key={b.id}
+                            onClick={() => { void openReminderPanel({ kind: 'booking', booking: b }); }}
+                            onContextMenu={(ev) => openEventMenu(ev, { kind: 'booking', booking: b })}
+                            className={`flex items-start gap-4 px-4 py-3 bg-white dark:bg-slate-900/30 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer ${isInactive ? 'opacity-55' : ''}`}>
                             <div className="pt-0.5 shrink-0">
                               <div className={`h-4 w-4 rounded border-2 flex items-center justify-center transition-all ${
                                 isCompleted ? 'bg-indigo-600 border-indigo-600' :
@@ -1058,15 +1245,15 @@ export function AppointmentsPage() {
                             </div>
 
                             <button
-                              onClick={() => openReminderPanel(b)}
+                              onClick={(e) => { e.stopPropagation(); void openReminderPanel({ kind: 'booking', booking: b }); }}
                               className="shrink-0 flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 hover:text-amber-600 dark:hover:text-amber-400 transition-colors rounded-lg px-1.5 py-1 hover:bg-amber-50 dark:hover:bg-amber-950/20"
-                              title="Reminders for this event"
+                              title="Extra reminder — SMS, WhatsApp, or email"
                             >
                               <Bell className="h-3.5 w-3.5" />
                             </button>
 
                             <button
-                              onClick={() => handleToggleCritical(b)}
+                              onClick={(e) => { e.stopPropagation(); handleToggleCritical(b); }}
                               className={`shrink-0 p-1.5 rounded transition-colors ${b.is_critical ? 'text-red-500 bg-red-50 dark:bg-red-900/20' : 'text-slate-300 dark:text-slate-600 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10'}`}
                               title={b.is_critical ? 'Remove critical alert' : 'Mark as critical — sends SMS to you 5 and 1 min before'}
                             >
@@ -1074,7 +1261,7 @@ export function AppointmentsPage() {
                             </button>
 
                             {!isInactive && (
-                              <div className="shrink-0 flex items-center gap-1">
+                              <div className="shrink-0 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                                 {(isTentative || isPendingApproval) && (
                                   <button onClick={() => handleApproveBooking(b.id)} className="p-1.5 text-slate-300 dark:text-slate-600 hover:text-indigo-600 transition-colors rounded" title="Approve — confirm this booking">
                                     <Check className="h-3.5 w-3.5" />
@@ -1133,8 +1320,8 @@ export function AppointmentsPage() {
       )}
 
       {/* Reminder override panel */}
-      {reminderBooking && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm" onClick={() => setReminderBooking(null)}>
+      {reminderTarget && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm" onClick={() => setReminderTarget(null)}>
           <div
             className="bg-white dark:bg-slate-900 w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto"
             onClick={e => e.stopPropagation()}
@@ -1142,12 +1329,14 @@ export function AppointmentsPage() {
             {/* Header */}
             <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-base font-bold text-slate-900 dark:text-white">Reminders for this event</h2>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">Extra reminder</h2>
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                  {(reminderBooking as any).services?.name ?? 'Meeting'} · {reminderBooking.guest_name} · {formatTime(reminderBooking.start_time)}
+                  {reminderTarget.kind === 'booking'
+                    ? `${(reminderTarget.booking as Booking & { services?: { name?: string } }).services?.name ?? 'Meeting'} · ${reminderTarget.booking.guest_name} · ${formatTime(reminderTarget.booking.start_time)}`
+                    : `${reminderTarget.event.title} · ${reminderTarget.event.all_day ? 'All day' : formatTime(reminderTarget.event.start_at)}`}
                 </p>
               </div>
-              <button onClick={() => setReminderBooking(null)} className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg transition-colors shrink-0">
+              <button onClick={() => setReminderTarget(null)} className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg transition-colors shrink-0">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -1155,7 +1344,7 @@ export function AppointmentsPage() {
             <div className="p-5 space-y-4">
               {/* Info */}
               <div className="text-xs text-slate-500 dark:text-slate-400 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-xl px-3 py-2.5">
-                These reminders are specific to this event only and override the default reminder settings.
+                Extra reminders for this event only — email, SMS, or WhatsApp. Guest SMS/WhatsApp is sent only if they opted in; otherwise it goes to you.
               </div>
 
               {/* Existing overrides */}
@@ -1195,7 +1384,7 @@ export function AppointmentsPage() {
                     <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Channel</label>
                     <select
                       value={newReminderChannel}
-                      onChange={e => setNewReminderChannel(e.target.value as 'email' | 'sms' | 'whatsapp')}
+                      onChange={e => setNewReminderChannel(e.target.value as ReminderChannel)}
                       className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
                     >
                       <option value="email">Email</option>
@@ -1277,6 +1466,57 @@ export function AppointmentsPage() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {eventMenu && (
+        <div
+          className="fixed z-[60] min-w-[200px] py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl text-sm"
+          style={{ left: Math.min(eventMenu.x, window.innerWidth - 220), top: Math.min(eventMenu.y, window.innerHeight - 220) }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <p className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Extra reminder · 1h before</p>
+          <button
+            type="button"
+            className="w-full flex items-center gap-2 px-3 py-2 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+            onClick={() => { void quickAddReminder(eventMenu.target, 'email'); }}
+          >
+            <Mail className="h-4 w-4 text-slate-400" /> Email
+          </button>
+          <button
+            type="button"
+            className="w-full flex items-center gap-2 px-3 py-2 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+            onClick={() => { void quickAddReminder(eventMenu.target, 'sms'); }}
+          >
+            <Phone className="h-4 w-4 text-slate-400" /> SMS
+          </button>
+          <button
+            type="button"
+            className="w-full flex items-center gap-2 px-3 py-2 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+            onClick={() => { void quickAddReminder(eventMenu.target, 'whatsapp'); }}
+          >
+            <MessageSquare className="h-4 w-4 text-slate-400" /> WhatsApp
+          </button>
+          <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+          <button
+            type="button"
+            className="w-full flex items-center gap-2 px-3 py-2 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+            onClick={() => { void openReminderPanel(eventMenu.target); }}
+          >
+            <Bell className="h-4 w-4 text-slate-400" /> Customize…
+          </button>
+          {eventMenu.target.kind === 'booking' && eventMenu.target.booking.is_recurring && (
+            <button
+              type="button"
+              className="w-full flex items-center gap-2 px-3 py-2 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+              onClick={() => {
+                if (eventMenu.target.kind === 'booking') setDetailBooking(eventMenu.target.booking);
+                setEventMenu(null);
+              }}
+            >
+              <Repeat className="h-4 w-4 text-slate-400" /> Recurring options
+            </button>
+          )}
         </div>
       )}
     </main>

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
+import { effectivePlan } from '../lib/plan';
 import { PageChecklist } from '../components/PageChecklist';
 import type { MessageTemplate, ReminderRule, MessageLogEntry, Service } from '../lib/types';
 import { SUPPORTED_LANGUAGES, TEMPLATE_VARIABLES } from '../lib/types';
@@ -157,7 +158,7 @@ export function RemindersPage({
 } = {}) {
   const navigate = useNavigate();
   const { user, profile, subscription, refreshProfile } = useAuth();
-  const isPro = (subscription?.plan ?? profile?.plan ?? 'free') === 'pro';
+  const isPro = effectivePlan(subscription, profile) === 'pro';
 
   const goToProfileSettings = useCallback(() => {
     onOpenProfileTab?.();

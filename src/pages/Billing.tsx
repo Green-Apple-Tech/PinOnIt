@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { SUPPORT_EMAIL } from '../lib/contactEmail';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
+import { syncStripeSubscription } from '../lib/stripe';
+import { effectivePlan } from '../lib/plan';
 import {
   Check, Zap, Loader2, AlertCircle, ArrowRight,
   DollarSign, TrendingUp, Copy, Users, ChevronDown,
@@ -36,7 +38,7 @@ function GuaranteeBadge() {
 
 export function BillingPage({ embedded }: { embedded?: boolean }) {
   const { profile, subscription, refreshProfile } = useAuth();
-  const currentPlan = subscription?.plan ?? profile?.plan ?? 'free';
+  const currentPlan = effectivePlan(subscription, profile);
   const isPro = currentPlan === 'pro';
   const isTrialing = subscription?.status === 'trialing';
 
@@ -54,15 +56,27 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
     ? `${window.location.origin}/ref/${profile.referral_code}`
     : '';
 
-  // Show success banner if returning from checkout
+  // Heal plan from Stripe (webhook can lag or miss) and show success after checkout
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('checkout') === 'success') {
-      setSuccessBanner(true);
-      refreshProfile?.();
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-  }, []);
+    let cancelled = false;
+    (async () => {
+      const params = new URLSearchParams(window.location.search);
+      const fromCheckout = params.get('checkout') === 'success';
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        await syncStripeSubscription(session.access_token);
+      }
+      if (cancelled) return;
+      await refreshProfile?.();
+      if (fromCheckout) {
+        setSuccessBanner(true);
+        const url = new URL(window.location.href);
+        url.searchParams.delete('checkout');
+        window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [refreshProfile]);
 
   useEffect(() => {
     if (!profile?.id) return;
@@ -264,14 +278,14 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
             )}
 
             <button
-              onClick={() => handleUpgrade(14)}
+              onClick={() => handleUpgrade()}
               disabled={checkoutLoading}
               className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-all inline-flex items-center justify-center gap-2 shadow-sm disabled:opacity-60 hover:opacity-90" style={{ backgroundColor: '#5864C6' }}
             >
               {checkoutLoading
                 ? <Loader2 className="h-4 w-4 animate-spin" />
                 : <ArrowRight className="h-4 w-4" />}
-              Keep Pro after trial — ${PRO_PRICE}/mo
+              Upgrade to Pro — ${PRO_PRICE}/mo
             </button>
 
             <p className="mt-2 text-xs text-center text-gray-400">

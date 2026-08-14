@@ -335,6 +335,117 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ success: true, to });
     }
 
+    // ── Extra event reminders (click-to-remind overrides) ────────────────────
+    if (body.dispatch_event_overrides) {
+      const now = Date.now();
+      const windowMs = 15 * 60 * 1000;
+      const { data: overrides } = await supabase
+        .from('event_reminder_overrides')
+        .select('id, channel, offset_minutes, message, booking_id, calendar_event_id, host_id')
+        .is('sent_at', null)
+        .limit(250);
+
+      let sent = 0;
+      for (const ov of overrides ?? []) {
+        const offsetMs = (ov.offset_minutes ?? -60) * 60 * 1000;
+        let startIso: string | null = null;
+        let title = 'Meeting';
+        let guestName = '';
+        let guestEmail: string | null = null;
+        let guestPhone: string | null = null;
+        let notifyVia: unknown = null;
+        let hostEmail: string | null = null;
+        let hostPhone: string | null = null;
+        let hostWhatsapp: string | null = null;
+        let hostName = 'PinOnIt';
+        let meetLink: string | null = null;
+
+        if (ov.booking_id) {
+          const { data: booking } = await supabase
+            .from('bookings')
+            .select('guest_name, guest_email, guest_phone, notify_via, start_time, status, meet_link, services(name), profiles(full_name, email, notification_email, phone, whatsapp_number)')
+            .eq('id', ov.booking_id)
+            .maybeSingle();
+          if (!booking || booking.status === 'canceled' || booking.status === 'completed') continue;
+          startIso = booking.start_time;
+          const svc = booking.services as { name?: string } | null;
+          title = svc?.name ?? 'Appointment';
+          guestName = booking.guest_name ?? '';
+          guestEmail = booking.guest_email;
+          guestPhone = booking.guest_phone ?? null;
+          notifyVia = booking.notify_via;
+          meetLink = booking.meet_link ?? null;
+          const hp = booking.profiles as Record<string, unknown> | null;
+          hostName = (hp?.full_name as string) || hostName;
+          hostEmail = ((hp?.notification_email as string) || (hp?.email as string) || null);
+          hostPhone = (hp?.phone as string) || null;
+          hostWhatsapp = (hp?.whatsapp_number as string) || hostPhone;
+        } else if (ov.calendar_event_id) {
+          const { data: ev } = await supabase
+            .from('calendar_events')
+            .select('title, start_at, host_id')
+            .eq('id', ov.calendar_event_id)
+            .maybeSingle();
+          if (!ev) continue;
+          startIso = ev.start_at;
+          title = ev.title || 'Calendar event';
+          const { data: hp } = await supabase
+            .from('profiles')
+            .select('full_name, email, notification_email, phone, whatsapp_number')
+            .eq('id', ov.host_id)
+            .maybeSingle();
+          hostName = hp?.full_name || hostName;
+          hostEmail = hp?.notification_email || hp?.email || null;
+          hostPhone = hp?.phone || null;
+          hostWhatsapp = hp?.whatsapp_number || hostPhone;
+          guestName = hostName;
+        }
+
+        if (!startIso) continue;
+        const fireAt = new Date(startIso).getTime() + offsetMs;
+        if (fireAt > now || now - fireAt > windowMs) continue;
+
+        const when = new Date(startIso);
+        const dateStr = when.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+        const timeStr = when.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        const msg = (ov.message as string)?.trim() ||
+          `Reminder: ${title}${guestName ? ` with ${guestName}` : ''} on ${dateStr} at ${timeStr}.`;
+        const withLink = meetLink ? `${msg}\nJoin: ${meetLink}` : msg;
+
+        if (ov.channel === 'email') {
+          const resendKey = Deno.env.get('RESEND_API_KEY');
+          const to = guestEmail || hostEmail;
+          if (resendKey && to) {
+            await sendResendEmail([to], `Reminder: ${title}`, withLink, resendKey);
+            sent++;
+          }
+        } else if (ov.channel === 'sms') {
+          const to = bookingAllowsGuestSms({ guest_phone: guestPhone, notify_via: notifyVia })
+            ? guestPhone
+            : hostPhone;
+          if (to) {
+            const result = await sendTwilioSms(to, withLink);
+            if (result.ok) sent++;
+          }
+        } else if (ov.channel === 'whatsapp') {
+          const to = bookingAllowsGuestWhatsapp({ guest_phone: guestPhone, notify_via: notifyVia })
+            ? guestPhone
+            : hostWhatsapp;
+          if (to) {
+            const result = await sendTwilioWhatsapp(to, withLink);
+            if (result.ok) sent++;
+          }
+        }
+
+        await supabase
+          .from('event_reminder_overrides')
+          .update({ sent_at: new Date().toISOString() })
+          .eq('id', ov.id);
+      }
+
+      return jsonResponse({ success: true, sent });
+    }
+
     // ── Normal reminder mode ─────────────────────────────────────────────────
     const { booking_id, template_id, channel } = body;
     if (!booking_id || !template_id) {
