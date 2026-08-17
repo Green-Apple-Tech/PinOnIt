@@ -862,7 +862,9 @@ export function SettingsPage() {
       {section === 'availability' && <AvailabilityPage embedded />}
 
       {/* Reminders & Messages section */}
-      {section === 'reminders' && <RemindersPage embedded onOpenProfileTab={openProfileTab} />}
+      {section === 'reminders' && RemindersPage && (
+        <RemindersPage embedded onOpenProfileTab={openProfileTab} />
+      )}
 
       {/* Analytics section */}
       {section === 'analytics' && <AnalyticsPage embedded />}

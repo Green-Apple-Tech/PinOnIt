@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type CSSProperties, type ElementType } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
@@ -122,12 +122,31 @@ const TIMING_OPTIONS = [
   { label: '48 hours before', slotKey: 'reminder_48h', offset: -2880 },
 ];
 
-const CHANNEL_INFO: { key: Channel; label: string; icon: React.ElementType; color: string; bg: string }[] = [
-  { key: 'email',    label: 'Email',      icon: Mail,          color: 'text-blue-600 dark:text-blue-400',    bg: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' },
-  { key: 'sms',     label: 'SMS',        icon: Smartphone,    color: 'text-amber-600 dark:text-amber-400',  bg: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800' },
-  { key: 'whatsapp',label: 'WhatsApp',   icon: MessageSquare, color: 'text-[#5864C6] dark:text-[#8891e8]', bg: 'bg-[#5864C6]/5 dark:bg-[#5864C6]/10 border-[#5864C6]/20 dark:border-[#5864C6]/30' },
-  { key: 'voice',   label: 'Voice Call', icon: PhoneCall,     color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800' },
+const CHANNEL_INFO: { key: Channel; label: string; color: string; bg: string }[] = [
+  { key: 'email',    label: 'Email',      color: 'text-blue-600 dark:text-blue-400',    bg: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' },
+  { key: 'sms',     label: 'SMS',        color: 'text-amber-600 dark:text-amber-400',  bg: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800' },
+  { key: 'whatsapp',label: 'WhatsApp',   color: 'text-[#5864C6] dark:text-[#8891e8]', bg: 'bg-[#5864C6]/5 dark:bg-[#5864C6]/10 border-[#5864C6]/20 dark:border-[#5864C6]/30' },
+  { key: 'voice',   label: 'Voice Call', color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800' },
 ];
+
+/** Always returns a real lucide component — avoids React #130 from `<ch.icon />` when icon is undefined. */
+function ChannelIcon({
+  channel,
+  className,
+  style,
+}: {
+  channel: string;
+  className?: string;
+  style?: CSSProperties;
+}) {
+  const Icon: ElementType | undefined =
+    (channel === 'sms' ? Smartphone
+      : channel === 'whatsapp' ? MessageSquare
+      : channel === 'voice' ? PhoneCall
+      : Mail) || Mail;
+  if (!Icon) return <span className={className} style={style} aria-hidden />;
+  return <Icon className={className} style={style} />;
+}
 
 /** One grid for label + 4 channel columns (header and rows share tracks). */
 const REMINDER_MATRIX_GRID =
@@ -787,7 +806,11 @@ export function RemindersPage({
           {log.map((entry) => (
             <div key={entry.id} className="px-5 py-3 flex items-start justify-between gap-3">
               <div className="flex items-start gap-3 min-w-0">
-                {entry.channel === 'email' ? <Mail className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" /> : entry.channel === 'whatsapp' ? <MessageSquare className="h-4 w-4 shrink-0 mt-0.5" style={{ color: '#5864C6' }} /> : entry.channel === 'voice' ? <PhoneCall className="h-4 w-4 text-violet-400 shrink-0 mt-0.5" /> : <Smartphone className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />}
+                <ChannelIcon
+                  channel={entry.channel}
+                  className={`h-4 w-4 shrink-0 mt-0.5 ${entry.channel === 'email' ? 'text-blue-400' : entry.channel === 'voice' ? 'text-violet-400' : entry.channel === 'sms' ? 'text-amber-400' : ''}`}
+                  style={entry.channel === 'whatsapp' ? { color: '#5864C6' } : undefined}
+                />
                 <div className="min-w-0">
                   <p className="text-sm text-slate-900 dark:text-white truncate">{entry.recipient}</p>
                   <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{entry.subject || entry.body}</p>
@@ -860,6 +883,7 @@ export function RemindersPage({
               const alreadyApplied = qt.combos.every((c) => isSlotChannelActive(c.slotKey, c.channel));
               const requiresPro = qt.id === 'pro';
               const locked = requiresPro && !isPro;
+              const Icon = qt.icon || Mail;
               return (
                 <div
                   key={qt.id}
@@ -873,7 +897,7 @@ export function RemindersPage({
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${alreadyApplied ? 'bg-[#5864C6]/10 dark:bg-[#5864C6]/20' : 'bg-slate-100 dark:bg-slate-800'}`}>
-                      <qt.icon className={`h-5 w-5 ${alreadyApplied ? 'text-[#5864C6]' : qt.iconColor}`} />
+                      <Icon className={`h-5 w-5 ${alreadyApplied ? 'text-[#5864C6]' : qt.iconColor}`} />
                     </div>
                     <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${qt.badgeColor}`}>{qt.badge}</span>
                   </div>
@@ -1014,7 +1038,7 @@ export function RemindersPage({
                               {checked && <Check className="h-3 w-3 text-white" strokeWidth={3.5} />}
                             </div>
                           </div>
-                          <ch.icon className={`h-4 w-4 shrink-0 ${checked ? 'text-brand-600 dark:text-brand-400' : 'text-slate-400 dark:text-slate-500'}`} />
+                          <ChannelIcon channel={ch.key} className={`h-4 w-4 shrink-0 ${checked ? 'text-brand-600 dark:text-brand-400' : 'text-slate-400 dark:text-slate-500'}`} />
                           <span className={`text-sm font-medium ${checked ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}>{ch.label}</span>
                         </label>
                       );
@@ -1070,7 +1094,7 @@ export function RemindersPage({
                     {wizardChannels.size > 1 && (
                       <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
                         {Array.from(wizardChannels).map((ch) => {
-                          const info = CHANNEL_INFO.find((c) => c.key === ch)!;
+                          const info = CHANNEL_INFO.find((c) => c.key === ch);
                           return (
                             <button
                               key={ch}
@@ -1079,8 +1103,8 @@ export function RemindersPage({
                                 previewChannel === ch ? 'bg-white dark:bg-slate-900 shadow text-slate-900 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                               }`}
                             >
-                              <info.icon className="h-3.5 w-3.5" />
-                              {info.label}
+                              <ChannelIcon channel={ch} className="h-3.5 w-3.5" />
+                              {info?.label ?? ch}
                             </button>
                           );
                         })}
@@ -1143,8 +1167,8 @@ export function RemindersPage({
                       <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
                         {(() => {
                           const ch = previewChannel;
-                          const info = CHANNEL_INFO.find((c) => c.key === ch)!;
-                          return <><info.icon className={`h-4 w-4 ${info.color}`} /><span className="text-xs font-semibold text-slate-600 dark:text-slate-300">{info.label} preview</span></>;
+                          const info = CHANNEL_INFO.find((c) => c.key === ch);
+                          return <><ChannelIcon channel={ch} className={`h-4 w-4 ${info?.color ?? ''}`} /><span className="text-xs font-semibold text-slate-600 dark:text-slate-300">{info?.label ?? ch} preview</span></>;
                         })()}
                       </div>
                       <div className="p-4">
@@ -1198,7 +1222,7 @@ export function RemindersPage({
               <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">When</span>
               {CHANNEL_INFO.map((ch) => (
                 <div key={ch.key} className={`flex flex-col items-center justify-center gap-1 text-center ${ch.color}`}>
-                  <ch.icon className="h-5 w-5 shrink-0" />
+                  <ChannelIcon channel={ch.key} className="h-5 w-5 shrink-0" />
                   <span className="text-[10px] font-semibold uppercase tracking-wide leading-tight max-w-full">
                     {ch.label}
                   </span>
@@ -1287,10 +1311,10 @@ export function RemindersPage({
             {[
               { label: 'Phone (SMS)', icon: Smartphone, value: contactPhone, setter: setContactPhone, placeholder: PHONE_PLACEHOLDER, hint: PHONE_HINT },
               { label: 'WhatsApp number', icon: MessageSquare, value: contactWhatsapp, setter: setContactWhatsapp, placeholder: PHONE_PLACEHOLDER, hint: PHONE_HINT },
-            ].map(({ label, icon: Icon, value, setter, placeholder, hint }) => (
+            ].map(({ label, icon: Glyph, value, setter, placeholder, hint }) => (
               <div key={label} className="flex items-center gap-3">
                 <div className="w-8 flex justify-center shrink-0">
-                  <Icon className="h-4 w-4 text-slate-400" />
+                  {Glyph ? <Glyph className="h-4 w-4 text-slate-400" /> : null}
                 </div>
                 <div className="flex-1">
                   <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{label}</label>
@@ -1327,7 +1351,7 @@ export function RemindersPage({
             {[
               { label: 'SMS', icon: Smartphone, value: contactPhone, placeholder: 'Add phone to enable SMS' },
               { label: 'WhatsApp', icon: MessageSquare, value: contactWhatsapp || (effectiveWhatsapp && !contactWhatsapp ? blurFormatPhone(effectiveWhatsapp) : ''), placeholder: 'Add number to enable WhatsApp' },
-            ].map(({ label, icon: Icon, value, placeholder }) => (
+            ].map(({ label, icon: Glyph, value, placeholder }) => (
               <div
                 key={label}
                 role={!value ? 'button' : undefined}
@@ -1336,7 +1360,7 @@ export function RemindersPage({
                 onKeyDown={!value ? (e) => { if (e.key === 'Enter' || e.key === ' ') setEditingContact(true); } : undefined}
                 className={`flex items-center gap-3 px-5 py-3 ${!value ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors' : ''}`}
               >
-                <Icon className="h-4 w-4 text-slate-400 shrink-0" />
+                {Glyph ? <Glyph className="h-4 w-4 text-slate-400 shrink-0" /> : null}
                 <div className="flex-1 min-w-0">
                   <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</span>
                   <p className={`text-sm mt-0.5 ${value ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400 italic'}`}>{value || placeholder}</p>
@@ -1372,12 +1396,15 @@ export function RemindersPage({
                 { key: 'rules' as const, label: 'Rules', icon: Bell },
                 { key: 'log' as const, label: 'Message Log', icon: Eye },
                 { key: 'critical' as const, label: 'Critical Alerts', icon: BellRing },
-              ]).map((t) => (
+              ]).map((t) => {
+                const Icon = t.icon || Mail;
+                return (
                 <button key={t.key} onClick={() => setAdvancedTab(t.key)}
                   className={`flex items-center gap-1.5 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${advancedTab === t.key ? 'border-[#5864C6] text-[#5864C6] dark:text-[#8891e8] bg-white dark:bg-slate-900/50' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>
-                  <t.icon className={`h-3.5 w-3.5 ${t.key === 'critical' ? 'text-red-500' : ''}`} />{t.label}
+                  <Icon className={`h-3.5 w-3.5 ${t.key === 'critical' ? 'text-red-500' : ''}`} />{t.label}
                 </button>
-              ))}
+                );
+              })}
             </div>
 
             <div className="p-5">
@@ -1513,7 +1540,11 @@ export function RemindersPage({
                       <div key={tpl.id} className="p-3.5 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2.5 min-w-0">
-                            {tpl.channel === 'whatsapp' ? <MessageSquare className="h-4 w-4 shrink-0" style={{ color: '#5864C6' }} /> : tpl.channel === 'sms' ? <Smartphone className="h-4 w-4 text-amber-400 shrink-0" /> : tpl.channel === 'voice' ? <PhoneCall className="h-4 w-4 text-violet-400 shrink-0" /> : <Mail className="h-4 w-4 text-blue-400 shrink-0" />}
+                            <ChannelIcon
+                              channel={tpl.channel}
+                              className={`h-4 w-4 shrink-0 ${tpl.channel === 'sms' ? 'text-amber-400' : tpl.channel === 'voice' ? 'text-violet-400' : tpl.channel === 'email' || tpl.channel === 'both' ? 'text-blue-400' : ''}`}
+                              style={tpl.channel === 'whatsapp' ? { color: '#5864C6' } : undefined}
+                            />
                             <span className="font-medium text-sm truncate">{tpl.name}</span>
                             <span className="text-xs px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-full shrink-0 capitalize">{tpl.type.replace('_', ' ')}</span>
                             <span className={`text-xs px-2 py-0.5 rounded-full font-semibold shrink-0 ${checkboxActive ? 'text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'}`} style={checkboxActive ? { backgroundColor: '#5864C6' } : {}}>
@@ -1662,7 +1693,11 @@ export function RemindersPage({
                     {log.map((entry) => (
                       <div key={entry.id} className="p-3 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0">
-                          {entry.channel === 'email' ? <Mail className="h-4 w-4 text-blue-400 shrink-0" /> : entry.channel === 'whatsapp' ? <MessageSquare className="h-4 w-4 shrink-0" style={{ color: '#5864C6' }} /> : entry.channel === 'voice' ? <PhoneCall className="h-4 w-4 text-violet-400 shrink-0" /> : <Smartphone className="h-4 w-4 text-amber-400 shrink-0" />}
+                          <ChannelIcon
+                            channel={entry.channel}
+                            className={`h-4 w-4 shrink-0 ${entry.channel === 'email' ? 'text-blue-400' : entry.channel === 'voice' ? 'text-violet-400' : entry.channel === 'sms' ? 'text-amber-400' : ''}`}
+                            style={entry.channel === 'whatsapp' ? { color: '#5864C6' } : undefined}
+                          />
                           <div className="min-w-0">
                             <p className="text-sm truncate">{entry.recipient}</p>
                             {entry.subject && <p className="text-xs text-slate-400 truncate">{entry.subject}</p>}
@@ -1762,3 +1797,5 @@ export function RemindersPage({
     </Wrapper>
   );
 }
+
+export default RemindersPage;
