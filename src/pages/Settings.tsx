@@ -28,18 +28,10 @@ import { BillingPage } from './Billing';
 import { AvailabilityPage } from './Availability';
 import { RemindersPage } from './Reminders';
 import { SmsBookingConsent } from '../components/SmsConsentText';
+import { SESSION_TIMEOUT_OPTIONS, sessionTimeoutOptionValue } from '../lib/sessionTimeout';
 
 type SettingsSection = 'general' | 'availability' | 'reminders' | 'analytics' | 'billing';
 type SettingsTab = 'profile' | 'booking_page' | 'branding' | 'embed' | 'referrals' | 'integrations';
-
-const SESSION_TIMEOUT_OPTIONS: { label: string; minutes: number | null }[] = [
-  { label: 'Never', minutes: null },
-  { label: '30 min', minutes: 30 },
-  { label: '1 hour', minutes: 60 },
-  { label: '4 hours', minutes: 240 },
-  { label: '8 hours', minutes: 480 },
-  { label: '1 day', minutes: 1440 },
-];
 
 const REMINDER_CHANNEL_OPTIONS: { value: ReminderChannelPreference; label: string; icon: typeof Mail }[] = [
   { value: 'email', label: 'Email', icon: Mail },
@@ -407,7 +399,9 @@ export function SettingsPage() {
   const [logoUrl, setLogoUrl] = useState(profile?.avatar_url ?? '');
 
   const [showWizardButton, setShowWizardButton] = useState(profile?.show_wizard_button !== false);
-  const [sessionTimeoutMinutes, setSessionTimeoutMinutes] = useState<number | null>(profile?.session_timeout_minutes ?? null);
+  const [sessionTimeoutMinutes, setSessionTimeoutMinutes] = useState(
+    sessionTimeoutOptionValue(profile?.session_timeout_minutes),
+  );
 
   // Notifications (profile phone + default reminder channel)
   const [notificationPhone, setNotificationPhone] = useState('');
@@ -508,7 +502,7 @@ export function SettingsPage() {
   // Sync notification/session fields when profile loads or after save refreshes profile
   useEffect(() => {
     if (profile) {
-      setSessionTimeoutMinutes(profile.session_timeout_minutes ?? null);
+      setSessionTimeoutMinutes(sessionTimeoutOptionValue(profile.session_timeout_minutes));
       const storedPhone = profile.phone ?? '';
       setNotificationPhone(storedPhone ? blurFormatPhone(storedPhone) : '');
       const storedWhatsapp = profile.whatsapp_number ?? '';
@@ -1100,7 +1094,7 @@ export function SettingsPage() {
                 Auto sign-out after inactivity
               </p>
               <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 leading-relaxed">
-                For shared or clinic computers, set a shorter timeout. For personal devices, keep it long.
+                Default is 15 minutes of inactivity — the usual HIPAA workstation and bank-style timeout. Choose Never only on a private personal device.
               </p>
               <div className="flex flex-wrap gap-2">
                 {SESSION_TIMEOUT_OPTIONS.map(opt => {
@@ -1123,7 +1117,7 @@ export function SettingsPage() {
                 })}
               </div>
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-3 leading-relaxed">
-                💡 HIPAA guidelines recommend 15 minutes for shared clinical workstations.
+                HIPAA guidelines recommend 15 minutes for shared clinical workstations.
               </p>
             </div>
           </div>

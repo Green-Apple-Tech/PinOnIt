@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
+import { resolveSessionTimeoutMinutes } from '../lib/sessionTimeout';
 
 const LAST_ACTIVITY_KEY = 'pinonit_last_activity';
 
@@ -16,7 +17,7 @@ function touchActivity() {
 
 export function SessionManager() {
   const { user, profile, loading } = useAuth();
-  const timeoutMinutes = profile?.session_timeout_minutes ?? null;
+  const timeoutMinutes = resolveSessionTimeoutMinutes(profile?.session_timeout_minutes);
   const signingOut = useRef(false);
 
   const signOutForInactivity = useCallback(async () => {
@@ -44,7 +45,7 @@ export function SessionManager() {
 
     checkInactivity();
 
-    const events = ['mousemove', 'keydown', 'click', 'touchstart'] as const;
+    const events = ['mousemove', 'keydown', 'click', 'touchstart', 'scroll'] as const;
     let lastTouchWrite = 0;
 
     const onActivity = () => {
@@ -58,12 +59,18 @@ export function SessionManager() {
       window.addEventListener(evt, onActivity, { passive: true });
     }
 
-    const interval = window.setInterval(checkInactivity, 60_000);
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') checkInactivity();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    const interval = window.setInterval(checkInactivity, 15_000);
 
     return () => {
       for (const evt of events) {
         window.removeEventListener(evt, onActivity);
       }
+      document.removeEventListener('visibilitychange', onVisibility);
       window.clearInterval(interval);
     };
   }, [user, loading, checkInactivity]);
