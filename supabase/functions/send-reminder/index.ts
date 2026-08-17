@@ -2,11 +2,12 @@ import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { appendSmsOptOut } from '../_shared/sms-opt-out.ts';
 import { NOREPLY_FROM, SUPPORT_EMAIL } from '../_shared/contact-email.ts';
 import { bookingAllowsGuestSms, bookingAllowsGuestWhatsapp, hostAllowsSms, hostAllowsWhatsapp } from '../_shared/sms-compliance.ts';
+import { isServiceRoleRequest, jsonAuthError } from '../_shared/callerAuth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey, X-Cron-Secret',
 };
 
 interface TemplateData {
@@ -185,17 +186,138 @@ async function sendTwilioSms(to: string, body: string): Promise<{ ok: boolean; e
   }
 }
 
-async function sendTwilioWhatsapp(to: string, body: string): Promise<{ ok: boolean; error?: string }> {
+type WhatsAppVars = {
+  guest_name?: string;
+  host_name?: string;
+  service_name?: string;
+  date?: string;
+  time?: string;
+  duration?: string;
+};
+
+const WHATSAPP_TEMPLATE_MISSING =
+  'WhatsApp is not configured for first-contact messages. In Twilio, create a Utility Content template with variables {{1}} guest name, {{2}} host name, {{3}} date, {{4}} time, submit it for WhatsApp approval, then set the TWILIO_WHATSAPP_CONTENT_SID secret (starts with HX). Freeform WhatsApp only works if the recipient messaged your business number in the last 24 hours (error 63016).';
+
+function whatsappFromNumber(): string | null {
+  const raw = (Deno.env.get('TWILIO_WHATSAPP_NUMBER') || Deno.env.get('TWILIO_WHATSAPP_FROM') || '').trim();
+  if (!raw) return null;
+  return raw.startsWith('whatsapp:') ? raw : `whatsapp:${raw}`;
+}
+
+function whatsappContentSid(): string | null {
+  const sid = (Deno.env.get('TWILIO_WHATSAPP_CONTENT_SID') || '').trim();
+  return sid || null;
+}
+
+function buildWhatsappContentVariables(vars: WhatsAppVars): string {
+  return JSON.stringify({
+    '1': vars.guest_name || 'Guest',
+    '2': vars.host_name || 'your host',
+    '3': vars.date || 'your scheduled date',
+    '4': vars.time || 'your scheduled time',
+  });
+}
+
+function whatsappVarsFromBooking(
+  booking: Record<string, unknown>,
+  hostProfile: Record<string, unknown> | null,
+): WhatsAppVars {
+  const service = booking.services as Record<string, unknown> | null;
+  const start = booking.start_time ? new Date(String(booking.start_time)) : null;
+  const startOk = start !== null && !Number.isNaN(start.getTime());
+  return {
+    guest_name: (booking.guest_name as string) || 'Guest',
+    host_name: (hostProfile?.full_name as string) || 'your host',
+    service_name: (service?.name as string) || 'meeting',
+    date: startOk
+      ? start.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+      : 'your scheduled date',
+    time: startOk
+      ? start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      : 'your scheduled time',
+    duration: `${service?.duration_minutes ?? 30} min`,
+  };
+}
+
+function humanizeTwilioWhatsappError(raw: string, errorCode?: number | null): string {
+  let code = errorCode ?? null;
+  let message = raw;
+  try {
+    const parsed = JSON.parse(raw) as {
+      code?: number;
+      message?: string;
+      error_code?: number;
+      error_message?: string;
+    };
+    code = code ?? parsed.code ?? parsed.error_code ?? null;
+    message = parsed.message || parsed.error_message || raw;
+  } catch {
+    /* not JSON */
+  }
+  if (code === 63016 || /63016/.test(raw) || /outside the allowed window/i.test(raw)) {
+    return 'WhatsApp did not deliver (error 63016): outside the 24-hour window. Approve a Utility template in Twilio and set TWILIO_WHATSAPP_CONTENT_SID, or have the recipient message your WhatsApp business number first, then retry within 24 hours.';
+  }
+  if (code === 63007) {
+    return 'WhatsApp sender is not a WhatsApp-enabled Twilio number (error 63007). Set TWILIO_WHATSAPP_NUMBER to your WhatsApp sender.';
+  }
+  if (typeof code === 'number') return `WhatsApp send failed (error ${code}): ${message}`;
+  return message || 'WhatsApp send failed.';
+}
+
+async function waitForTwilioMessageOutcome(
+  twilioSid: string,
+  twilioToken: string,
+  messageSid: string,
+  timeoutMs = 5000,
+): Promise<{ status: string; error_code: number | null; error_message: string | null }> {
+  const url = `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages/${messageSid}.json`;
+  const auth = 'Basic ' + btoa(`${twilioSid}:${twilioToken}`);
+  const started = Date.now();
+  let last = { status: 'queued', error_code: null as number | null, error_message: null as string | null };
+  while (Date.now() - started < timeoutMs) {
+    const res = await fetch(url, { headers: { Authorization: auth } });
+    if (res.ok) {
+      const data = await res.json() as {
+        status?: string;
+        error_code?: number | null;
+        error_message?: string | null;
+      };
+      last = {
+        status: data.status ?? last.status,
+        error_code: data.error_code ?? null,
+        error_message: data.error_message ?? null,
+      };
+      if (['delivered', 'sent', 'read', 'failed', 'undelivered', 'canceled'].includes(last.status)) {
+        return last;
+      }
+    }
+    await new Promise((r) => setTimeout(r, 400));
+  }
+  return last;
+}
+
+async function sendTwilioWhatsapp(
+  to: string,
+  vars: WhatsAppVars,
+  options?: { waitForStatus?: boolean },
+): Promise<{ ok: boolean; error?: string; sid?: string }> {
   const twilioSid = Deno.env.get('TWILIO_ACCOUNT_SID');
   const twilioToken = Deno.env.get('TWILIO_AUTH_TOKEN');
-  const whatsappFrom = Deno.env.get('TWILIO_WHATSAPP_NUMBER');
+  const waFrom = whatsappFromNumber();
+  const contentSid = whatsappContentSid();
 
-  if (!twilioSid || !twilioToken || !whatsappFrom) {
-    console.warn('Twilio WhatsApp credentials not configured — skipping WhatsApp send');
-    return { ok: false, error: 'Twilio WhatsApp credentials not configured' };
+  if (!twilioSid || !twilioToken || !waFrom) {
+    console.warn('Twilio WhatsApp sender not configured — skipping WhatsApp send');
+    return {
+      ok: false,
+      error: 'Twilio WhatsApp sender is not configured. Set TWILIO_WHATSAPP_NUMBER to your WhatsApp-enabled Twilio number.',
+    };
+  }
+  if (!contentSid) {
+    console.warn('TWILIO_WHATSAPP_CONTENT_SID missing — refusing freeform WhatsApp send');
+    return { ok: false, error: WHATSAPP_TEMPLATE_MISSING };
   }
 
-  const waFrom = whatsappFrom.startsWith('whatsapp:') ? whatsappFrom : `whatsapp:${whatsappFrom}`;
   const waTo = to.startsWith('whatsapp:') ? to : `whatsapp:${to}`;
 
   try {
@@ -207,15 +329,48 @@ async function sendTwilioWhatsapp(to: string, body: string): Promise<{ ok: boole
           'Authorization': 'Basic ' + btoa(`${twilioSid}:${twilioToken}`),
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: new URLSearchParams({ From: waFrom, To: waTo, Body: appendSmsOptOut(body) }),
+        body: new URLSearchParams({
+          From: waFrom,
+          To: waTo,
+          ContentSid: contentSid,
+          ContentVariables: buildWhatsappContentVariables(vars),
+        }),
       }
     );
-    if (!res.ok) {
-      const err = await res.text();
-      console.error('Twilio WhatsApp error:', err);
-      return { ok: false, error: err };
+    const raw = await res.text();
+    let parsed: {
+      sid?: string;
+      status?: string;
+      error_code?: number;
+      error_message?: string;
+      message?: string;
+      code?: number;
+    } = {};
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      /* ignore */
     }
-    return { ok: true };
+
+    if (!res.ok) {
+      const err = humanizeTwilioWhatsappError(raw, parsed.code ?? parsed.error_code);
+      console.error('Twilio WhatsApp error:', err);
+      return { ok: false, error: err, sid: parsed.sid };
+    }
+
+    const sid = parsed.sid;
+    if (options?.waitForStatus && sid) {
+      const outcome = await waitForTwilioMessageOutcome(twilioSid, twilioToken, sid);
+      if (outcome.status === 'failed' || outcome.status === 'undelivered') {
+        return {
+          ok: false,
+          error: humanizeTwilioWhatsappError(outcome.error_message || raw, outcome.error_code),
+          sid,
+        };
+      }
+    }
+
+    return { ok: true, sid };
   } catch (e) {
     console.error('Twilio WhatsApp send error:', e);
     return { ok: false, error: String(e) };
@@ -505,7 +660,7 @@ async function deliverChannel(opts: {
   emailSubject: string;
   meetLink: string | null;
 }): Promise<{ ok: boolean; to: string | null; error?: string }> {
-  const { channel, booking, hostPhone, hostWhatsapp, msgBody, emailSubject } = opts;
+  const { channel, booking, hostProfile, msgBody, emailSubject } = opts;
   if (channel === 'email') {
     const resendKey = Deno.env.get('RESEND_API_KEY');
     const to = (booking.guest_email as string) || null;
@@ -520,7 +675,7 @@ async function deliverChannel(opts: {
       notify_via: booking.notify_via,
     })
       ? (booking.guest_phone as string)
-      : hostPhone;
+      : null;
     if (!to) return { ok: false, to: null, error: 'no SMS recipient' };
     const result = await sendTwilioSms(to, msgBody);
     return { ok: result.ok, to, error: result.error };
@@ -531,9 +686,9 @@ async function deliverChannel(opts: {
       notify_via: booking.notify_via,
     })
       ? (booking.guest_phone as string)
-      : hostWhatsapp;
+      : null;
     if (!to) return { ok: false, to: null, error: 'no WhatsApp recipient' };
-    const result = await sendTwilioWhatsapp(to, msgBody);
+    const result = await sendTwilioWhatsapp(to, whatsappVarsFromBooking(booking, hostProfile));
     return { ok: result.ok, to, error: result.error };
   }
   return { ok: false, to: null, error: `unsupported channel ${channel}` };
@@ -554,13 +709,20 @@ Deno.serve(async (req: Request) => {
 
     // ── Recurring cancellation notice ─────────────────────────────────────
     if (body.notify_cancellation && body.booking_id && body.message) {
+      const actorId = await hostIdFromJwt(req, supabase);
+      if (!actorId && !isServiceRoleRequest(req)) {
+        return jsonAuthError(corsHeaders);
+      }
       const { data: booking } = await supabase
         .from('bookings')
-        .select('guest_email, guest_name')
+        .select('guest_email, guest_name, host_id')
         .eq('id', body.booking_id)
         .maybeSingle();
       if (!booking?.guest_email) {
         return jsonResponse({ error: 'Booking or guest email not found' }, 404);
+      }
+      if (actorId && actorId !== booking.host_id) {
+        return jsonAuthError(corsHeaders, 'Not your booking');
       }
       const resendKey = Deno.env.get('RESEND_API_KEY');
       if (resendKey) {
@@ -585,6 +747,7 @@ Deno.serve(async (req: Request) => {
       if (!to) return jsonResponse({ error: 'Missing to phone number' }, 400);
       const channel = body.test_voice ? 'voice' : body.test_whatsapp ? 'whatsapp' : 'sms';
       const hostId = await hostIdFromJwt(req, supabase);
+      if (!hostId) return jsonAuthError(corsHeaders, 'Sign in to send a test message');
 
       const twilioSid = Deno.env.get('TWILIO_ACCOUNT_SID');
       if (!twilioSid) {
@@ -599,7 +762,14 @@ Deno.serve(async (req: Request) => {
 
       const voiceLine = `This is a PinOnIt test reminder. You have a test meeting with ${host_name ?? 'your host'}. This is only a test.`;
       const result = channel === 'whatsapp'
-        ? await sendTwilioWhatsapp(to, msg)
+        ? await sendTwilioWhatsapp(to, {
+            guest_name: guest_name ?? 'Test Guest',
+            host_name: host_name ?? 'your host',
+            service_name: 'test meeting',
+            date: date ?? 'your scheduled date',
+            time: time ?? 'your scheduled time',
+            duration: duration ? `${duration} min` : '30 min',
+          }, { waitForStatus: true })
         : channel === 'voice'
           ? await sendTwilioVoice(to, buildCustomVoiceTwiml(voiceLine))
           : await sendTwilioSms(to, msg);
@@ -621,6 +791,9 @@ Deno.serve(async (req: Request) => {
 
     // ── Extra event reminders (click-to-remind overrides) ────────────────────
     if (body.dispatch_event_overrides) {
+      if (!isServiceRoleRequest(req)) {
+        return jsonAuthError(corsHeaders, 'Dispatcher requires a service role token');
+      }
       const now = Date.now();
       const windowMs = 30 * 60 * 1000;
       const { data: overrides } = await supabase
@@ -720,21 +893,33 @@ Deno.serve(async (req: Request) => {
         } else if (ov.channel === 'sms') {
           recipient = bookingAllowsGuestSms({ guest_phone: guestPhone, notify_via: notifyVia })
             ? guestPhone
-            : (hostPhone || null);
+            : null;
           if (recipient) {
             const result = await sendTwilioSms(recipient, withLink);
             status = result.ok ? 'sent' : 'failed';
             errorText = result.error ?? '';
             if (result.ok) sent++;
           } else {
-            errorText = 'no SMS recipient (guest did not opt in and host has no phone)';
+            errorText = 'no SMS recipient (guest did not opt in)';
           }
         } else if (ov.channel === 'whatsapp') {
           recipient = bookingAllowsGuestWhatsapp({ guest_phone: guestPhone, notify_via: notifyVia })
             ? guestPhone
-            : (hostWhatsapp || null);
+            : null;
           if (recipient) {
-            const result = await sendTwilioWhatsapp(recipient, withLink);
+            const start = startIso ? new Date(startIso) : null;
+            const startOk = start !== null && !Number.isNaN(start.getTime());
+            const result = await sendTwilioWhatsapp(recipient, {
+              guest_name: guestName || 'Guest',
+              host_name: hostName,
+              service_name: title,
+              date: startOk
+                ? start.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+                : 'your scheduled date',
+              time: startOk
+                ? start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+                : 'your scheduled time',
+            });
             status = result.ok ? 'sent' : 'failed';
             errorText = result.error ?? '';
             if (result.ok) sent++;
@@ -770,15 +955,21 @@ Deno.serve(async (req: Request) => {
     }
 
     if (body.dispatch_scheduled) {
+      if (!isServiceRoleRequest(req)) {
+        return jsonAuthError(corsHeaders, 'Dispatcher requires a service role token');
+      }
       const sent = await dispatchScheduledReminders(supabase);
       return jsonResponse({ success: true, sent });
     }
 
     // ── Normal reminder mode ─────────────────────────────────────────────────
-    const { booking_id, template_id, channel } = body;
+    const { booking_id, template_id, channel, action_token } = body;
     if (!booking_id || !template_id) {
       return jsonResponse({ error: 'Missing booking_id or template_id' }, 400);
     }
+
+    const privileged = isServiceRoleRequest(req);
+    const actorId = privileged ? null : await hostIdFromJwt(req, supabase);
 
     const { data: booking } = await supabase
       .from('bookings')
@@ -788,6 +979,14 @@ Deno.serve(async (req: Request) => {
 
     if (!booking) {
       return jsonResponse({ error: 'Booking not found' }, 404);
+    }
+
+    if (!privileged) {
+      const tokenOk = typeof action_token === 'string' && action_token.length > 0 && action_token === booking.action_token;
+      const hostOk = actorId === booking.host_id;
+      if (!tokenOk && !hostOk) {
+        return jsonAuthError(corsHeaders, 'Invalid booking token');
+      }
     }
 
     const { data: template } = await supabase
@@ -802,7 +1001,7 @@ Deno.serve(async (req: Request) => {
 
     const hostProfile = booking.profiles as Record<string, unknown>;
     const service = booking.services as Record<string, unknown>;
-    const baseUrl = Deno.env.get('SUPABASE_URL')!.replace('/v1', '').replace('supabase.co', 'pinonit.app');
+    const baseUrl = 'https://pinonit.com';
 
     const templateData: TemplateData = {
       guest_name: booking.guest_name,
@@ -892,7 +1091,7 @@ Deno.serve(async (req: Request) => {
     if (sendChannel === 'sms') {
       const smsTo = bookingAllowsGuestSms(booking)
         ? booking.guest_phone
-        : ((hostProfile?.phone as string) || null);
+        : null;
       if (!smsTo) {
         console.warn('No SMS recipient (guest opt-in/phone or host phone), booking:', booking_id);
         deliveryStatus = 'failed';
@@ -915,18 +1114,19 @@ Deno.serve(async (req: Request) => {
     if (sendChannel === 'whatsapp') {
       const waTo = bookingAllowsGuestWhatsapp(booking)
         ? booking.guest_phone
-        : ((hostProfile?.whatsapp_number as string) || (hostProfile?.phone as string) || null);
+        : null;
       if (!waTo) {
         console.warn('No WhatsApp recipient, booking:', booking_id);
         deliveryStatus = 'failed';
       } else {
-        const waBody = msgBody || [
-          `Hi ${templateData.guest_name}, reminder: you have a ${templateData.duration} meeting with ${templateData.host_name} on ${templateData.date} at ${templateData.time}.`,
-          booking.meet_link ? `Join: ${booking.meet_link}` : '',
-          '— PinOnIt',
-        ].filter(Boolean).join(' ');
-
-        const result = await sendTwilioWhatsapp(waTo, waBody);
+        const result = await sendTwilioWhatsapp(waTo, {
+          guest_name: templateData.guest_name,
+          host_name: templateData.host_name,
+          service_name: templateData.service_name,
+          date: templateData.date,
+          time: templateData.time,
+          duration: templateData.duration,
+        });
         if (!result.ok) {
           console.warn('WhatsApp delivery failed:', result.error);
           deliveryStatus = 'failed';

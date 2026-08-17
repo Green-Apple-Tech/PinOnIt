@@ -15,3 +15,9 @@ export async function hasStripeBilling(userId: string): Promise<boolean> {
       (row.plan !== 'free' && row.status === 'active'),
   );
 }
+
+/** Server-side 14-day Pro trial. Does not let the client set profiles.plan. */
+export async function startLocalTrial(): Promise<{ error: string | null }> {
+  const { error } = await supabase.rpc('start_local_trial');
+  return { error: error?.message ?? null };
+}

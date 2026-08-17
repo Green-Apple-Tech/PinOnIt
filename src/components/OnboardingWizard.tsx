@@ -467,21 +467,12 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
 
   const activateCalendlyTrial = useCallback(async () => {
     if (trialActivated || !user) return;
-    const { hasStripeBilling } = await import('../lib/localTrial');
+    const { hasStripeBilling, startLocalTrial } = await import('../lib/localTrial');
     if (await hasStripeBilling(user.id)) {
       setTrialActivated(true);
       return;
     }
-    const trialEnd = new Date();
-    trialEnd.setDate(trialEnd.getDate() + 14);
-    await supabase.from('subscriptions').upsert({
-      user_id: user.id,
-      stripe_customer_id: `trial_${user.id}`,
-      plan: 'pro', status: 'trialing',
-      trial_ends_at: trialEnd.toISOString(),
-      trial_source: 'calendly_migration',
-    }, { onConflict: 'user_id' });
-    await supabase.from('profiles').update({ plan: 'pro' }).eq('id', user.id);
+    await startLocalTrial();
     setTrialActivated(true);
   }, [trialActivated, user]);
 
@@ -735,7 +726,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
     setUsernameAvailable(null);
     const t = setTimeout(async () => {
       const { count } = await supabase
-        .from('profiles')
+        .from('public_host_profiles')
         .select('id', { count: 'exact', head: true })
         .eq('slug', trimmed)
         .neq('id', user?.id ?? '');
@@ -814,19 +805,10 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
     setTrialCheckoutError('');
     setTrialCheckoutLoading(true);
     try {
-      const trialEnd = new Date();
-      trialEnd.setDate(trialEnd.getDate() + 14);
-      const isoEnd = trialEnd.toISOString();
-      const { hasStripeBilling } = await import('../lib/localTrial');
+      const { hasStripeBilling, startLocalTrial } = await import('../lib/localTrial');
       if (!(await hasStripeBilling(user.id))) {
-        await supabase.from('profiles').update({ plan: 'pro', trial_ends_at: isoEnd }).eq('id', user.id);
-        await supabase.from('subscriptions').upsert({
-          user_id: user.id,
-          plan: 'pro',
-          status: 'trialing',
-          trial_ends_at: isoEnd,
-          trial_source: 'free_trial',
-        }, { onConflict: 'user_id' });
+        const { error } = await startLocalTrial();
+        if (error) throw new Error(error);
       }
       await refreshProfile();
       await saveStep(STEPS.indexOf('welcome') + 1);

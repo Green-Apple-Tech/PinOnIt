@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { loadAuthorizedBooking } from "../_shared/bookingCaller.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,6 +11,7 @@ const corsHeaders = {
 interface RequestBody {
   booking_id: string;
   host_id: string;
+  action_token?: string;
   start_time: string;
   end_time: string;
   summary: string;
@@ -61,14 +63,24 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, serviceKey);
     const body: RequestBody = await req.json();
-    const { booking_id, host_id, start_time, end_time, summary } = body;
+    const { booking_id, host_id, action_token, summary } = body;
 
-    if (!booking_id || !host_id || !start_time || !end_time) {
+    if (!booking_id || !host_id) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const authorized = await loadAuthorizedBooking(supabase, booking_id, host_id, action_token);
+    if ("error" in authorized) {
+      return new Response(
+        JSON.stringify({ error: authorized.error }),
+        { status: authorized.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const start_time = authorized.booking.start_time;
+    const end_time = authorized.booking.end_time;
 
     const { data: calendar, error: calErr } = await supabase
       .from("connected_calendars")

@@ -1,12 +1,32 @@
 import Stripe from 'npm:stripe@17.7.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
-import { isRealStripeCustomerId } from '../_shared/stripeSubscription.ts';
+import { isAllowedCheckoutPriceId, isRealStripeCustomerId } from '../_shared/stripeSubscription.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
 };
+
+const ALLOWED_CHECKOUT_ORIGINS = new Set([
+  'https://pinonit.com',
+  'https://www.pinonit.com',
+  'http://localhost:5173',
+  'http://localhost:4173',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:4173',
+]);
+
+function resolveCheckoutOrigin(appUrl: unknown): string {
+  if (typeof appUrl !== 'string' || !appUrl) return 'https://pinonit.com';
+  try {
+    const origin = new URL(appUrl).origin;
+    if (ALLOWED_CHECKOUT_ORIGINS.has(origin)) return origin;
+  } catch {
+    /* ignore */
+  }
+  return 'https://pinonit.com';
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -38,28 +58,16 @@ Deno.serve(async (req: Request) => {
     }
 
     const { price_id, app_url, trial_period_days, wizard_step } = await req.json();
-    if (!price_id) {
-      return new Response(JSON.stringify({ error: 'Missing price_id' }), {
+    if (!price_id || typeof price_id !== 'string' || !isAllowedCheckoutPriceId(price_id)) {
+      return new Response(JSON.stringify({ error: 'Invalid price_id' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    const origin = app_url ?? 'https://pinonit.com';
+    const origin = resolveCheckoutOrigin(app_url);
+    const resolvedPriceId = price_id;
 
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!);
-
-    let resolvedPriceId = price_id;
-    if (!price_id.startsWith('price_')) {
-      const prices = await stripe.prices.list({ active: true, limit: 10, expand: ['data.product'] });
-      if (prices.data.length === 0) {
-        return new Response(JSON.stringify({ error: 'No active prices found in Stripe. Please create a price in your Stripe dashboard.' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      const recurring = prices.data.find((p) => p.recurring != null);
-      resolvedPriceId = (recurring ?? prices.data[0]).id;
-    }
 
     const { data: existingRows } = await supabase
       .from('subscriptions')
@@ -98,7 +106,8 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const trialDays = trial_period_days ? Number(trial_period_days) : 0;
+    const requestedTrial = trial_period_days ? Number(trial_period_days) : 0;
+    const trialDays = Number.isFinite(requestedTrial) ? Math.min(Math.max(0, Math.floor(requestedTrial)), 14) : 0;
     const stepParam = wizard_step ? `&wizard_step=${wizard_step}` : '';
     const trialParam = trialDays > 0 ? `&trial_days=${trialDays}` : '';
 

@@ -472,7 +472,7 @@ export function SettingsPage() {
     if (trimmed.length < 3) { setSlugStatus('invalid'); return; }
     setSlugStatus('checking');
     const t = setTimeout(async () => {
-      const { data } = await supabase.from('profiles').select('id').eq('slug', trimmed).maybeSingle();
+      const { data } = await supabase.from('public_host_profiles').select('id').eq('slug', trimmed).maybeSingle();
       if (data && data.id !== profile?.id) {
         setSlugStatus('taken');
       } else {
@@ -815,7 +815,7 @@ export function SettingsPage() {
     : '';
 
   const popupCode = slug
-    ? `<!-- Add to your <head> -->\n<script src="https://pinonit.app/embed.js" data-slug="${slug}" defer></script>\n<!-- Add anywhere in your page -->\n<button data-pinonit="${slug}">Book a meeting</button>`
+    ? `<!-- Add to your <head> -->\n<script src="https://pinonit.com/embed.js" data-slug="${slug}" defer></script>\n<!-- Add anywhere in your page -->\n<button data-pinonit="${slug}">Book a meeting</button>`
     : '';
 
   const tabs: { key: SettingsTab; label: string }[] = [

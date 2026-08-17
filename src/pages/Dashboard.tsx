@@ -411,7 +411,7 @@ function SlugEditor({ currentSlug, userId, onSaved }: { currentSlug: string; use
 
     setStatus('checking');
     const { data } = await supabase
-      .from('profiles')
+      .from('public_host_profiles')
       .select('id')
       .eq('slug', slug)
       .neq('id', userId)

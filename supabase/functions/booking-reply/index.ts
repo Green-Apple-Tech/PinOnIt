@@ -77,7 +77,7 @@ Deno.serve(async (req: Request) => {
     if (action === 'reschedule') {
       const hostProfile = booking.profiles as Record<string, unknown>;
       const slug = hostProfile?.slug as string | null;
-      const baseUrl = Deno.env.get('SUPABASE_URL')!.replace('/v1', '').replace('supabase.co', 'pinonit.app');
+      const baseUrl = 'https://pinonit.com';
 
       return jsonResponse({
         success: true,

@@ -16,7 +16,7 @@ const SUGGESTED_PROMPTS = [
 ];
 
 const KNOWLEDGE_BASE: Record<string, string> = {
-  'booking page': 'To set up your booking page, go to Settings and set your URL slug (e.g. pinonit.app/your-name). Then add services and set your availability. Your booking page will be live immediately.',
+  'booking page': 'To set up your booking page, go to Settings and set your URL slug (e.g. pinonit.com/your-name). Then add services and set your availability. Your booking page will be live immediately.',
   'migrate': 'Switching from Calendly or another scheduler? Go through our onboarding wizard which helps you recreate your event types, set your availability, and configure automated reminders. You can also manually add services and availability from the dashboard.',
   'calendly': 'Pin on It gives you everything Calendly does plus automated reminders, AI-translated messages, and paid bookings -- at half the price. Our onboarding wizard helps you migrate your event types and schedule in minutes.',
   'reminder': 'Automated reminders are sent based on your reminder rules. Go to Reminders in the dashboard to create message templates and set timing rules (e.g. 24 hours before, at booking time, 1 day after). Guests can confirm or cancel with one tap.',
@@ -29,7 +29,7 @@ const KNOWLEDGE_BASE: Record<string, string> = {
   'cancel': 'Guests can cancel bookings via the one-tap cancel link in their confirmation/reminder emails. Hosts can also cancel or mark bookings as complete from the dashboard.',
   'confirm': 'Confirmation links are included in every automated message. Guests tap to confirm their appointment, which updates the booking status instantly.',
   'reschedule': 'Guests can reschedule by clicking the reschedule link in their messages. This redirects them to your booking page to pick a new time.',
-  'slug': 'Your booking page URL slug is set in Settings. It becomes pinonit.app/your-slug. Choose something memorable and professional.',
+  'slug': 'Your booking page URL slug is set in Settings. It becomes pinonit.com/your-slug. Choose something memorable and professional.',
   'price': 'Pin on It Pro is $8/month -- half the price of Calendly Standard ($16/month). You get automated reminders, AI translation, paid bookings, QR booking codes, and more included. No extra charges for features that should be standard.',
 };
 

@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { isServiceRoleRequest, jsonAuthError } from "../_shared/callerAuth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,6 +19,10 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    if (!isServiceRoleRequest(req)) {
+      return jsonAuthError(corsHeaders);
+    }
+
     const { response, timeframe } = await req.json() as {
       response: string;
       timeframe: { start: string; end: string };
@@ -57,7 +62,7 @@ Return ONLY valid JSON matching this schema: {"slots": [{"date": "YYYY-MM-DD", "
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-opus-4-5",
+        model: "claude-haiku-4-5",
         max_tokens: 1024,
         system: systemPrompt,
         messages: [{ role: "user", content: response }],

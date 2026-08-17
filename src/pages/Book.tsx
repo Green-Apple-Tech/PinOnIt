@@ -72,7 +72,7 @@ function reminderTimeLabel(id: string): string {
   return REMINDER_TIMES.find((t) => t.id === id)?.label ?? id;
 }
 
-type BookPaymentMethod = 'stripe' | 'venmo' | 'paypal' | 'cashapp' | 'zelle' | 'skip';
+type BookPaymentMethod = 'stripe' | 'venmo' | 'paypal' | 'cashapp' | 'zelle';
 
 interface BookPaymentOption {
   id: BookPaymentMethod;
@@ -171,14 +171,6 @@ function buildPaymentOptions(svc: Service, stripeAvailable: boolean): BookPaymen
       panelText: 'text-purple-700 dark:text-purple-300',
     });
   }
-
-  opts.push({
-    id: 'skip',
-    label: 'Skip',
-    subtitle: 'Pay later — arrange with your host',
-    panelBg: 'bg-slate-50 dark:bg-slate-800/50',
-    panelText: 'text-slate-600 dark:text-slate-400',
-  });
 
   return opts;
 }
@@ -618,7 +610,7 @@ export function BookPage() {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [fetchingSecret, setFetchingSecret] = useState(false);
   const [stripePaymentId, setStripePaymentId] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<BookPaymentMethod>('skip');
+  const [paymentMethod, setPaymentMethod] = useState<BookPaymentMethod>('stripe');
   const [recurringAcknowledged, setRecurringAcknowledged] = useState(false);
 
   const timeRef = useRef<HTMLDivElement>(null);
@@ -695,12 +687,8 @@ export function BookPage() {
       let loadedProfile: Profile | null = null;
 
       if (token) {
-        // Single-use link flow: look up by token
-        const { data: link } = await supabase
-          .from('single_use_links')
-          .select('*')
-          .eq('token', token)
-          .maybeSingle();
+        const { data: linkRows } = await supabase.rpc('get_single_use_link', { p_token: token });
+        const link = Array.isArray(linkRows) ? linkRows[0] : linkRows;
 
         if (!link) { setSingleUseLinkInvalid(true); setLoading(false); return; }
 
@@ -715,12 +703,12 @@ export function BookPage() {
         hostId = linkRecord.host_id;
         serviceId = linkRecord.service_id;
 
-        const { data: profile } = await supabase.from('profiles').select('*').eq('id', hostId).maybeSingle();
+        const { data: profile } = await supabase.from('public_host_profiles').select('*').eq('id', hostId).maybeSingle();
         if (!profile) { setLoading(false); return; }
         loadedProfile = profile as Profile;
         setHost(loadedProfile);
       } else {
-        const { data: profile } = await supabase.from('profiles').select('*').eq('slug', slug!).maybeSingle();
+        const { data: profile } = await supabase.from('public_host_profiles').select('*').eq('slug', slug!).maybeSingle();
         if (!profile) { setLoading(false); return; }
         loadedProfile = profile as Profile;
         setHost(loadedProfile);
@@ -732,7 +720,7 @@ export function BookPage() {
           ? supabase.from('services').select(SERVICE_SELECT).eq('id', serviceId).eq('is_active', true)
           : supabase.from('services').select(SERVICE_SELECT).eq('host_id', hostId).eq('is_active', true),
         supabase.from('availability').select('*').eq('host_id', hostId).eq('is_active', true),
-        supabase.from('bookings').select('*').eq('host_id', hostId).in('status', ['confirmed']),
+        supabase.from('bookings').select('start_time,end_time,status').eq('host_id', hostId).in('status', ['confirmed']),
         supabase.from('date_overrides').select('*').eq('host_id', hostId),
         supabase.from('calendar_events').select('start_at,end_at,all_day,show_status,transparency,attendee_self_status,is_birthday_cal,is_holiday_cal,title').eq('host_id', hostId),
       ]);
@@ -833,7 +821,7 @@ export function BookPage() {
     setClientSecret(null);
     setFetchingSecret(false);
     setStripePaymentId(null);
-    setPaymentMethod('skip');
+    setPaymentMethod('stripe');
     const { data } = await supabase.from('booking_questions').select('*').eq('service_id', svc.id).order('sort_order');
     setQuestions((data as BookingQuestion[]) ?? []);
     setStep('datetime');
@@ -929,34 +917,12 @@ export function BookPage() {
         });
       }
 
-      // Create Google Meet link if host has Google Calendar connected
-      try {
-        const meetPayload = {
-          booking_id: data.id,
-          host_id: host.id,
-          start_time: startTime.toISOString(),
-          end_time: endTime.toISOString(),
-          summary: `${selectedService.name} with ${guestName}`,
-          description: `Booked via PinOnIt\nGuest: ${guestName}${email ? ` (${email})` : ''}${phoneVal ? ` (${phoneVal})` : ''}${guestNotes ? `\nNotes: ${guestNotes}` : ''}`,
-          guest_email: email || undefined,
-          guest_name: guestName,
-        };
-        const meetRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-google-meet`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
-          body: JSON.stringify(meetPayload),
-        });
-        if (meetRes.ok) {
-          const meetData = await meetRes.json();
-          if (meetData.meet_link) (data as Booking).meet_link = meetData.meet_link;
-        }
-      } catch { /* non-blocking */ }
-
       // Create Teams meeting link if host has Outlook Calendar connected
       try {
         const teamsPayload = {
           booking_id: data.id,
           host_id: host.id,
+          action_token: (data as Booking).action_token,
           start_time: startTime.toISOString(),
           end_time: endTime.toISOString(),
           summary: `${selectedService.name} with ${guestName}`,
@@ -985,6 +951,7 @@ export function BookPage() {
             body: JSON.stringify({
               booking_id: data.id,
               host_id: host.id,
+              action_token: (data as Booking).action_token,
               start_time: startTime.toISOString(),
               end_time: endTime.toISOString(),
               summary: `${selectedService.name} with ${guestName}`,
@@ -1034,7 +1001,11 @@ export function BookPage() {
             fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-reminder`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
-              body: JSON.stringify({ booking_id: data.id, template_id: rule.template_id }),
+              body: JSON.stringify({
+                booking_id: data.id,
+                template_id: rule.template_id,
+                action_token: (data as Booking).action_token,
+              }),
             }).catch(() => {});
           }
         }
@@ -1060,7 +1031,6 @@ export function BookPage() {
         const { data: { session } } = await supabase.auth.getSession();
         const { data, error } = await supabase.functions.invoke('create-payment-intent', {
           body: {
-            amount: selectedService.price_cents,
             currency: 'usd',
             service_id: selectedService.id,
             host_id: selectedService.host_id,
@@ -1227,7 +1197,7 @@ export function BookPage() {
   const hasRequiredQuestions = questions.some((q) => q.required && !answers[q.id]?.trim());
   const requiresNda = !!selectedService?.require_nda;
   const requiresRecurringAck = isRecurringService && !recurringAcknowledged;
-  const requiresPayment = showPaidBookingPayment && paymentMethod !== 'skip' && !paymentConfirmed;
+  const requiresPayment = showPaidBookingPayment && !paymentConfirmed;
   const isValid =
     guestName.trim() !== '' &&
     guestEmail.trim() !== '' &&
@@ -1791,7 +1761,7 @@ export function BookPage() {
                             type="button"
                             onClick={() => {
                               setPaymentMethod(opt.id);
-                              setPaymentConfirmed(opt.id === 'skip');
+                              setPaymentConfirmed(false);
                               setPaymentError('');
                             }}
                             className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
@@ -1846,7 +1816,7 @@ export function BookPage() {
                             </div>
                           ) : !stripePromise ? (
                             <p className="text-sm text-amber-600 dark:text-amber-400">
-                              Card payments are not configured. Choose another payment method or Skip.
+                              Card payments are not configured. Choose another payment method.
                             </p>
                           ) : (
                             <StripeBookingCheckout
@@ -1900,7 +1870,8 @@ export function BookPage() {
                         </div>
                       )}
 
-                      {paymentMethod !== 'stripe' && paymentMethod !== 'skip' && selectedPaymentOption && (
+                      {paymentMethod !== 'stripe' && selectedPaymentOption && (
+                        <div className={`p-3 rounded-lg ${selectedPaymentOption.panelBg}`}>
                         <div className={`p-3 rounded-lg ${selectedPaymentOption.panelBg}`}>
                           <div className="flex items-center justify-between gap-2 mb-2">
                             <span className={`text-sm font-semibold ${selectedPaymentOption.panelText}`}>
@@ -1934,12 +1905,6 @@ export function BookPage() {
                             </span>
                           </label>
                         </div>
-                      )}
-
-                      {paymentMethod === 'skip' && (
-                        <p className="text-sm text-slate-600 dark:text-slate-400">
-                          No payment required to book now. You can arrange payment with your host before the appointment.
-                        </p>
                       )}
                     </div>
                   )}

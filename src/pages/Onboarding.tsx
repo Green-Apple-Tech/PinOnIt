@@ -144,7 +144,7 @@ function SlugField({
     setStatus('checking');
     onStatusChange('checking');
     const { data } = await supabase
-      .from('profiles')
+      .from('public_host_profiles')
       .select('id')
       .eq('slug', slug)
       .neq('id', userId)
@@ -281,22 +281,12 @@ export function Onboarding() {
 
   const activateTrial = useCallback(async () => {
     if (!user || trialActivated) return;
-    const { hasStripeBilling } = await import('../lib/localTrial');
+    const { hasStripeBilling, startLocalTrial } = await import('../lib/localTrial');
     if (await hasStripeBilling(user.id)) {
       setTrialActivated(true);
       return;
     }
-    const trialEnd = new Date();
-    trialEnd.setDate(trialEnd.getDate() + 14);
-    await supabase.from('subscriptions').upsert({
-      user_id: user.id,
-      stripe_customer_id: `trial_${user.id}`,
-      plan: 'pro',
-      status: 'trialing',
-      trial_ends_at: trialEnd.toISOString(),
-      trial_source: 'calendly_migration',
-    }, { onConflict: 'user_id' });
-    await supabase.from('profiles').update({ plan: 'pro' }).eq('id', user.id);
+    await startLocalTrial();
     setTrialActivated(true);
   }, [user, trialActivated]);
 

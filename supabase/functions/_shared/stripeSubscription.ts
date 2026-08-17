@@ -3,11 +3,17 @@ import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 
 export type AdminClient = ReturnType<typeof createClient>;
 
-const PLAN_MAP: Record<string, 'pro' | 'enterprise'> = {
+export const PLAN_MAP: Record<string, 'pro' | 'enterprise'> = {
   price_1TZHhhIVv38UYFOXMXT2EV8v: 'pro',
   price_pro_monthly: 'pro',
   price_enterprise_monthly: 'enterprise',
 };
+
+export function isAllowedCheckoutPriceId(priceId: string): boolean {
+  if (PLAN_MAP[priceId]) return true;
+  const envPrice = Deno.env.get('STRIPE_PRICE_ID') ?? '';
+  return Boolean(envPrice) && priceId === envPrice;
+}
 
 export function isRealStripeCustomerId(id: string | null | undefined): boolean {
   return typeof id === 'string' && id.startsWith('cus_');

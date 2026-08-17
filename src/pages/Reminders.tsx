@@ -6,7 +6,7 @@ import { effectivePlan } from '../lib/plan';
 import { PageChecklist } from '../components/PageChecklist';
 import type { MessageTemplate, ReminderRule, MessageLogEntry, Service } from '../lib/types';
 import { SUPPORTED_LANGUAGES, TEMPLATE_VARIABLES } from '../lib/types';
-import { formatErrorMessage } from '../lib/errors';
+import { formatErrorMessage, formatFunctionError } from '../lib/errors';
 import { toast } from '../components/Toast';
 import {
   Bell, Plus, Trash2, X, Check, Loader2, Mail, MessageSquare,
@@ -493,7 +493,7 @@ export function RemindersPage({
       .replace(/\{\{timezone\}\}/g, profile?.timezone ?? 'America/New_York')
       .replace(/\{\{duration\}\}/g, '60 min')
       .replace(/\{\{location\}\}/g, 'Zoom: https://zoom.us/j/123')
-      .replace(/\{\{booking_link\}\}/g, 'https://pinonit.app/jane')
+      .replace(/\{\{booking_link\}\}/g, 'https://pinonit.com/jane')
       .replace(/\{\{cancel_link\}\}/g, '[Cancel]')
       .replace(/\{\{reschedule_link\}\}/g, '[Reschedule]')
       .replace(/\{\{confirm_link\}\}/g, '[Confirm]');
@@ -607,16 +607,20 @@ export function RemindersPage({
           }),
         }
       );
-      const json = await res.json();
+      const json = await res.json().catch(() => ({})) as { success?: boolean; error?: unknown };
       const label = channel === 'whatsapp' ? 'WhatsApp' : channel === 'voice' ? 'voicemail' : 'SMS';
-      if (!res.ok || json.error) {
-        setTestSmsResult({ ok: false, message: json.error ?? `Failed to send ${label}. Check Twilio credentials.` });
+      const sent = res.ok && json.success === true && !json.error;
+      if (!sent) {
+        setTestSmsResult({
+          ok: false,
+          message: formatFunctionError(json, `Failed to send ${label}. Check Twilio WhatsApp template / credentials.`),
+        });
       } else {
         setTestSmsResult({
           ok: true,
           message: channel === 'voice'
             ? `Test call started to ${to}. Answer to hear the reminder voicemail.`
-            : `Test ${label} sent to ${to}`,
+            : `Test ${label} queued to ${to}. Check your phone — “queued” is not the same as delivered.`,
         });
         const { data: latest } = await supabase
           .from('message_log')
@@ -714,7 +718,7 @@ export function RemindersPage({
           {showTestSms && (
             <div className="border-t border-slate-200 dark:border-slate-800 px-5 py-4 space-y-3">
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Send a sample to this number now. SMS and WhatsApp send a text; voicemail places a Twilio call that plays a short reminder. Results show in Activity log.
+                Send a sample to this number now. SMS sends a text; voicemail places a Twilio call. WhatsApp uses an approved Twilio Utility template (not a freeform chat). If that template is missing, you will see an error instead of a false “sent”. Results show in Activity log.
               </p>
               <input
                 type="tel"
@@ -762,7 +766,7 @@ export function RemindersPage({
                     : 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300'
                 }`}>
                   {testSmsResult.ok ? <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" /> : <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />}
-                  <span>{testSmsResult.message}</span>
+                  <span className="whitespace-pre-wrap">{testSmsResult.message}</span>
                 </div>
               )}
             </div>

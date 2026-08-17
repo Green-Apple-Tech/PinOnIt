@@ -17,7 +17,7 @@ export async function allocateUniqueSlug(base: string, userId?: string): Promise
 
   for (let attempt = 0; attempt < 100; attempt++) {
     const slug = attempt === 0 ? normalized : `${normalized}${attempt}`;
-    const { data } = await supabase.from('profiles').select('id').eq('slug', slug).maybeSingle();
+    const { data } = await supabase.from('public_host_profiles').select('id').eq('slug', slug).maybeSingle();
     if (!data || (userId && data.id === userId)) return slug;
   }
 

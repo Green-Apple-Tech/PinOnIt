@@ -152,6 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     clearClientOnboardingState();
     clearProfileCache();
+    localStorage.removeItem('pinonit_last_activity');
     await supabase.auth.signOut();
     window.location.href = '/login';
   };
