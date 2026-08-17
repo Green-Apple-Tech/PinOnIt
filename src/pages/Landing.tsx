@@ -413,13 +413,15 @@ export function Landing() {
       </nav>
 
       {/* ── App pill bar ── */}
-      <div className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 py-2.5 px-6 overflow-x-auto">
-        <div className="flex items-center justify-center gap-2 min-w-max mx-auto">
+      <div className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 py-3 px-6 overflow-x-auto">
+        <div className="flex flex-col items-center gap-1.5 min-w-max mx-auto">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Everything included in one subscription:</p>
+          <div className="flex items-center justify-center gap-2 min-w-max mx-auto">
           {[
-            { num: '1', label: 'Calendar Scheduler App' },
-            { num: '2', label: 'QR Scheduler App' },
-            { num: '3', label: 'Signature Creator App' },
-            { num: '4', label: 'Reminder App' },
+            { num: '1', label: 'Calendar Scheduler' },
+            { num: '2', label: 'QR Scheduler' },
+            { num: '3', label: 'Signature Creator' },
+            { num: '4', label: 'Reminder' },
             { num: '5', label: 'WhatsApp & SMS Notifier' },
           ].map(({ num, label }) => (
             <div key={num} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full shadow-sm">
@@ -427,6 +429,7 @@ export function Landing() {
               <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">{label}</span>
             </div>
           ))}
+          </div>
         </div>
       </div>
 
@@ -437,10 +440,14 @@ export function Landing() {
         </div>
 
         <div className="relative max-w-4xl mx-auto">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[1.08] text-slate-900 dark:text-white mb-10 max-w-4xl mx-auto">
-            A more powerful calendar scheduler —{' '}
-            <span className="text-brand-500">at half the price.</span>
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[1.08] text-slate-900 dark:text-white mb-6 max-w-4xl mx-auto">
+            One App. Five Tools.{' '}
+            <span className="text-brand-500">Half the Price of Calendly.</span>
           </h1>
+
+          <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto mb-10 leading-relaxed">
+            Pin On It replaces Calendly and 4 other tools — scheduling, SMS &amp; WhatsApp reminders, QR code booking, and email signatures, all in one place.
+          </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6">
             <Link to="/signup" className="w-full sm:w-auto px-8 py-4 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-full text-base transition-all shadow-lg shadow-brand-200/60 dark:shadow-none inline-flex items-center justify-center gap-2">
