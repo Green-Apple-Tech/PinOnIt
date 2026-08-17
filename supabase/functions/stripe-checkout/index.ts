@@ -107,7 +107,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const requestedTrial = trial_period_days ? Number(trial_period_days) : 0;
-    const trialDays = Number.isFinite(requestedTrial) ? Math.min(Math.max(0, Math.floor(requestedTrial)), 14) : 0;
+    const trialDays = Number.isFinite(requestedTrial) ? Math.min(Math.max(0, Math.floor(requestedTrial)), 60) : 0;
     const stepParam = wizard_step ? `&wizard_step=${wizard_step}` : '';
     const trialParam = trialDays > 0 ? `&trial_days=${trialDays}` : '';
 
