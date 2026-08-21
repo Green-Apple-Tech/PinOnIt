@@ -1186,6 +1186,7 @@ export function Dashboard() {
     { to: '/dashboard/contacts', icon: Users, label: 'Contacts' },
     { to: '/dashboard/group-scheduling', icon: Users, label: 'Group Scheduling' },
     { to: '/dashboard/more-tools', icon: Tool, label: 'More Tools' },
+    { to: '/dashboard/quotes', icon: FileText, label: 'Quote/Invoice Text' },
     { to: '/dashboard/paid-booking', icon: ShoppingBag, label: 'Paid Booking' },
     { to: '/dashboard/settings', icon: Settings, label: 'Settings' },
   ];
@@ -1199,8 +1200,10 @@ export function Dashboard() {
       return location.pathname === '/dashboard/more-tools'
         || location.pathname === '/dashboard/qr-code'
         || location.pathname === '/dashboard/qr'
-        || location.pathname === '/dashboard/signature'
-        || location.pathname === '/dashboard/quotes';
+        || location.pathname === '/dashboard/signature';
+    }
+    if (path === '/dashboard/quotes') {
+      return location.pathname === '/dashboard/quotes';
     }
     return location.pathname === path;
   };
