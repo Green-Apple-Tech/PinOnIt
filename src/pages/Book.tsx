@@ -1872,7 +1872,6 @@ export function BookPage() {
 
                       {paymentMethod !== 'stripe' && selectedPaymentOption && (
                         <div className={`p-3 rounded-lg ${selectedPaymentOption.panelBg}`}>
-                        <div className={`p-3 rounded-lg ${selectedPaymentOption.panelBg}`}>
                           <div className="flex items-center justify-between gap-2 mb-2">
                             <span className={`text-sm font-semibold ${selectedPaymentOption.panelText}`}>
                               {selectedPaymentOption.label}
