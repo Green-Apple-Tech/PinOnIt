@@ -38,8 +38,19 @@ function kindTitle(kind: string) {
   return 'Quote';
 }
 
-function lineTotal(items: LineItem[]) {
-  return items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+function quoteTotals(items: LineItem[], taxPercent: number) {
+  const subtotal = lineTotal(items);
+  const subtotalCents = Math.round(subtotal * 100);
+  const taxCents = Math.round(subtotalCents * (Number(taxPercent) || 0) / 100);
+  return {
+    subtotal,
+    taxAmount: taxCents / 100,
+    total: (subtotalCents + taxCents) / 100,
+  };
+}
+
+function phoneDigits(phone: string) {
+  return phone.replace(/\D/g, '');
 }
 
 function htmlEscape(s: string) {
@@ -128,8 +139,9 @@ Deno.serve(async (req: Request) => {
     const via = Array.isArray(body.via) ? body.via.map(String) : [];
     const sendEmail = via.includes('email');
     const sendSms = via.includes('sms');
-    if (!quoteId || (!sendEmail && !sendSms)) {
-      return jsonResponse({ error: 'Choose email and/or text, then send.' }, 400);
+    const sendWhatsapp = via.includes('whatsapp');
+    if (!quoteId || (!sendEmail && !sendSms && !sendWhatsapp)) {
+      return jsonResponse({ error: 'Choose email, SMS, and/or WhatsApp, then send.' }, 400);
     }
 
     const { data: quote, error: quoteErr } = await supabase
@@ -150,8 +162,12 @@ Deno.serve(async (req: Request) => {
 
     const hostName = (profile?.full_name || profile?.email || 'Your host').trim();
     const items = Array.isArray(quote.line_items) ? (quote.line_items as LineItem[]) : [];
-    const total = lineTotal(items);
-    const money = formatMoney(total, quote.currency || 'USD');
+    const { subtotal, taxAmount, total } = quoteTotals(items, Number(quote.tax_percent) || 0);
+    const currency = quote.currency || 'USD';
+    const money = formatMoney(total, currency);
+    const subtotalMoney = formatMoney(subtotal, currency);
+    const taxMoney = formatMoney(taxAmount, currency);
+    const taxPercent = Number(quote.tax_percent) || 0;
     const appUrl = (Deno.env.get('APP_URL') || 'https://pinonit.com').replace(/\/$/, '');
     const viewUrl = `${appUrl}/q/${quote.token}`;
     const kind = kindLabel(quote.kind);
@@ -174,7 +190,7 @@ Deno.serve(async (req: Request) => {
             .filter((i) => (i.description || '').trim() || Number(i.amount))
             .map(
               (i) =>
-                `<tr><td style="padding:8px 0;border-bottom:1px solid #e5e7eb;">${htmlEscape((i.description || '').trim() || 'Item')}</td><td style="padding:8px 0;border-bottom:1px solid #e5e7eb;text-align:right;">${htmlEscape(formatMoney(Number(i.amount) || 0, quote.currency || 'USD'))}</td></tr>`,
+                `<tr><td style="padding:8px 0;border-bottom:1px solid #e5e7eb;">${htmlEscape((i.description || '').trim() || 'Item')}</td><td style="padding:8px 0;border-bottom:1px solid #e5e7eb;text-align:right;">${htmlEscape(formatMoney(Number(i.amount) || 0, currency))}</td></tr>`,
             )
             .join('');
           const payLine = quote.pay_elsewhere_url
@@ -187,6 +203,8 @@ Deno.serve(async (req: Request) => {
               <p>Hi ${htmlEscape(clientName)},</p>
               <p>Here is your ${htmlEscape(kind)} for <strong>${htmlEscape(money)}</strong>.</p>
               <table style="width:100%;border-collapse:collapse;margin:16px 0;">${itemRows}
+                <tr><td style="padding-top:12px;">Subtotal</td><td style="padding-top:12px;text-align:right;">${htmlEscape(subtotalMoney)}</td></tr>
+                ${taxPercent > 0 ? `<tr><td style="padding-top:6px;">Tax (${htmlEscape(String(taxPercent))}%)</td><td style="padding-top:6px;text-align:right;">${htmlEscape(taxMoney)}</td></tr>` : ''}
                 <tr><td style="padding-top:12px;font-weight:700;">Total</td><td style="padding-top:12px;text-align:right;font-weight:700;">${htmlEscape(money)}</td></tr>
               </table>
               ${quote.notes ? `<p style="white-space:pre-wrap;">${htmlEscape(quote.notes)}</p>` : ''}
@@ -224,6 +242,24 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    let whatsappUrl: string | null = null;
+    if (sendWhatsapp) {
+      const to = (quote.client_phone as string | null)?.trim();
+      if (!to) {
+        errors.push('Add a client phone to send by WhatsApp.');
+      } else {
+        const digits = phoneDigits(to);
+        if (digits.length < 10) {
+          errors.push('Enter a valid phone number for WhatsApp.');
+        } else {
+          const payBit = quote.pay_elsewhere_url ? ` Pay: ${quote.pay_elsewhere_url}` : '';
+          const msg = `${hostName} sent you a ${kind} for ${money}.${payBit} View: ${viewUrl}`;
+          whatsappUrl = `https://wa.me/${digits}?text=${encodeURIComponent(msg)}`;
+          if (!sentVia.includes('whatsapp')) sentVia.push('whatsapp');
+        }
+      }
+    }
+
     if (sentVia.length > 0) {
       await supabase
         .from('host_quotes')
@@ -239,6 +275,7 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({
       success: true,
       view_url: viewUrl,
+      whatsapp_url: whatsappUrl,
       sent_via: sentVia,
       warnings: errors,
     });

@@ -11,6 +11,7 @@ type PublicQuote = {
   pay_elsewhere_url: string | null;
   pay_elsewhere_label: string | null;
   currency: string;
+  tax_percent?: number;
   created_at: string;
   host_name: string;
 };
@@ -56,7 +57,12 @@ export function QuoteViewPage() {
   }
 
   const items = Array.isArray(quote.line_items) ? quote.line_items : [];
-  const total = items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+  const subtotal = items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+  const taxPercent = Number(quote.tax_percent) || 0;
+  const subtotalCents = Math.round(subtotal * 100);
+  const taxCents = Math.round(subtotalCents * taxPercent / 100);
+  const taxAmount = taxCents / 100;
+  const total = (subtotalCents + taxCents) / 100;
   const title = quote.kind === 'invoice' ? 'Invoice' : quote.kind === 'receipt' ? 'Receipt' : 'Quote';
 
   return (
@@ -80,6 +86,16 @@ export function QuoteViewPage() {
                   <td className="py-3 text-right whitespace-nowrap">{money(item.amount, quote.currency)}</td>
                 </tr>
               ))}
+              <tr>
+                <td className="pt-4">Subtotal</td>
+                <td className="pt-4 text-right">{money(subtotal, quote.currency)}</td>
+              </tr>
+              {taxPercent > 0 && (
+                <tr>
+                  <td className="pt-2">Tax ({taxPercent}%)</td>
+                  <td className="pt-2 text-right">{money(taxAmount, quote.currency)}</td>
+                </tr>
+              )}
               <tr>
                 <td className="pt-4 font-semibold">Total</td>
                 <td className="pt-4 text-right font-semibold">{money(total, quote.currency)}</td>

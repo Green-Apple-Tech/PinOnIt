@@ -400,6 +400,7 @@ export interface HostQuote {
   pay_elsewhere_url: string | null;
   pay_elsewhere_label: string | null;
   currency: string;
+  tax_percent: number;
   status: 'draft' | 'sent';
   sent_via: string[];
   created_at: string;
