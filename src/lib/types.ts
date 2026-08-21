@@ -50,6 +50,11 @@ export interface Profile {
   critical_alert_phone: string | null;
   voice_reminder_enabled: boolean;
   voice_message_template: string | null;
+  personal_reminder_defaults?: {
+    day_before?: string[];
+    hour_before?: string[];
+    ten_min?: string[];
+  } | null;
   paid_booking_intro_seen: boolean;
   paid_booking_settings: PaidBookingSettings;
   paid_booking_theme: 'clean' | 'bold' | 'warm';

@@ -387,7 +387,9 @@ export function AppointmentsPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [externalEvents, setExternalEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<ViewMode>('month');
+  const [view, setView] = useState<ViewMode>(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches ? 'agenda' : 'month',
+  );
   const [search, setSearch] = useState('');
   const [showAddEvent, setShowAddEvent] = useState(false);
   const [showCalendarConnect, setShowCalendarConnect] = useState(false);
@@ -736,7 +738,7 @@ export function AppointmentsPage() {
             View and manage all your scheduled meetings.
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
           {syncMsg && (
             <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">{syncMsg}</span>
           )}
@@ -1155,7 +1157,7 @@ export function AppointmentsPage() {
                 return (
                   <div key={dk}>
                     {/* Date header */}
-                    <div className={`flex items-center justify-between px-4 py-2 sticky top-0 z-10 ${
+                    <div className={`flex items-center justify-between px-4 py-2 sticky top-14 md:top-0 z-10 ${
                       isToday
                         ? 'bg-indigo-50 dark:bg-indigo-950/30 border-y border-indigo-100 dark:border-indigo-900/40'
                         : 'bg-slate-100 dark:bg-slate-800/60 border-y border-slate-200 dark:border-slate-700/50'

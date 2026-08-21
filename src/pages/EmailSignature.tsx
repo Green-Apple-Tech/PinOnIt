@@ -436,7 +436,7 @@ export function EmailSignaturePage() {
     const a=document.createElement('a'); a.href=url; a.download='email-signature.html'; a.click(); URL.revokeObjectURL(url);
   };
 
-  const inputCls='w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 transition';
+  const inputCls='w-full px-3 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-base focus:outline-none focus:ring-2 transition';
 
   return (
     <main className="p-4 md:p-8 max-w-6xl">

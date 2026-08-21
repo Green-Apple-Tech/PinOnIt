@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import { resolveDefaultReminderChannel, getWhatsappNumber } from '../lib/reminderChannels';
-import { SmsBookingConsent } from '../components/SmsConsentText';
+import { VoicePersonalReminder, PersonalReminderDefaultsEditor } from '../components/VoicePersonalReminder';
 import { SMS_OPT_OUT_FOOTER } from '../lib/smsOptOut';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -152,7 +152,7 @@ function ChannelIcon({
 const REMINDER_MATRIX_GRID =
   'grid grid-cols-[minmax(0,1fr)_repeat(4,minmax(3.25rem,5rem))] gap-x-3 sm:gap-x-4';
 
-const inputCls = 'w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#5864C6] transition';
+const inputCls = 'w-full px-3 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-base focus:outline-none focus:ring-2 focus:ring-[#5864C6] transition';
 const selectCls = inputCls;
 
 function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
@@ -278,7 +278,7 @@ export function RemindersPage({
 
   // Advanced section
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [advancedTab, setAdvancedTab] = useState<'templates' | 'rules' | 'log' | 'critical'>('templates');
+  const [advancedTab, setAdvancedTab] = useState<'templates' | 'rules' | 'log' | 'critical' | 'voice'>('templates');
 
   // Template form (advanced)
   const [showTemplateForm, setShowTemplateForm] = useState(false);
@@ -704,7 +704,7 @@ export function RemindersPage({
         </div>
       )}
 
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Reminders &amp; Messages</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
@@ -714,12 +714,14 @@ export function RemindersPage({
         {hasAnyReminders && (
           <button
             onClick={() => { setWizardChannels(getDefaultWizardChannels()); setPreviewChannel(defaultWizardChannel); setShowAddForm(true); setWizardStep(1); }}
-            className="shrink-0 inline-flex items-center gap-2 px-4 py-2 text-white text-sm font-semibold rounded-xl transition-all hover:opacity-90" style={{ backgroundColor: '#5864C6' }}
+            className="shrink-0 inline-flex items-center justify-center gap-2 min-h-11 px-4 py-2 text-white text-sm font-semibold rounded-xl transition-all hover:opacity-90" style={{ backgroundColor: '#5864C6' }}
           >
             <Plus className="h-4 w-4" /> Add Reminder
           </button>
         )}
       </div>
+
+      <VoicePersonalReminder />
 
       {isPro && (
         <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
@@ -1214,7 +1216,8 @@ export function RemindersPage({
             </p>
           </div>
 
-          <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+          <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="min-w-[540px] bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
             {/* Column headers — 5-column grid: When + 4 channels */}
             <div
               className={`${REMINDER_MATRIX_GRID} items-center px-5 py-3 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800`}
@@ -1253,7 +1256,7 @@ export function RemindersPage({
                           ) : (
                             <button
                               onClick={() => handleToggleSlotChannel(slot.key, ch.key)}
-                              className={`h-6 w-6 rounded-lg flex items-center justify-center border-2 transition-all ${
+                              className={`min-h-11 min-w-11 rounded-lg flex items-center justify-center border-2 transition-all ${
                                 checked
                                   ? 'border-transparent'
                                   : 'border-slate-300 dark:border-slate-600 hover:border-[#5864C6]/50'
@@ -1383,7 +1386,7 @@ export function RemindersPage({
         >
           <span className="flex items-center gap-2">
             <Settings2 className="h-4 w-4 text-slate-400" />
-            Message Templates &amp; Logs
+            Message Templates, Logs &amp; Voice defaults
           </span>
           {showAdvanced ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
         </button>
@@ -1392,6 +1395,7 @@ export function RemindersPage({
           <div className="border-t border-slate-200 dark:border-slate-800">
             <div className="flex gap-0 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/30 overflow-x-auto">
               {([
+                { key: 'voice' as const, label: 'Voice defaults', icon: PhoneCall },
                 { key: 'templates' as const, label: 'Templates', icon: Mail },
                 { key: 'rules' as const, label: 'Rules', icon: Bell },
                 { key: 'log' as const, label: 'Message Log', icon: Eye },
@@ -1408,6 +1412,8 @@ export function RemindersPage({
             </div>
 
             <div className="p-5">
+              {advancedTab === 'voice' && <PersonalReminderDefaultsEditor />}
+
               {/* Templates tab */}
               {advancedTab === 'templates' && (
                 <div>

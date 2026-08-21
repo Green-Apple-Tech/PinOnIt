@@ -836,7 +836,7 @@ export function SettingsPage() {
       </div>
 
       {/* Top-level section tabs */}
-      <div className="flex gap-0.5 mb-6 border-b border-slate-200 dark:border-slate-800 overflow-x-auto">
+      <div className="flex gap-0.5 mb-6 border-b border-slate-200 dark:border-slate-800 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
         {([
           { key: 'general', label: 'General' },
           { key: 'availability', label: 'Availability' },
@@ -847,7 +847,7 @@ export function SettingsPage() {
           <button
             key={s.key}
             onClick={() => openSettingsSection(s.key, tab)}
-            className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap ${
+            className={`min-h-11 px-4 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap ${
               section === s.key
                 ? 'border-[#5864C6] text-[#5864C6]'
                 : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -877,7 +877,7 @@ export function SettingsPage() {
         <>
 
       {/* Sub-tabs for general settings */}
-      <div className="flex gap-0.5 mb-6 border-b border-slate-200 dark:border-slate-800 overflow-x-auto">
+      <div className="flex gap-0.5 mb-6 border-b border-slate-200 dark:border-slate-800 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
         {tabs.map((t) => (
           <button
             key={t.key}

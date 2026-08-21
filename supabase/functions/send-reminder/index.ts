@@ -440,6 +440,96 @@ async function alreadyLogged(
   return Boolean(data);
 }
 
+async function dispatchPersonalReminders(supabase: SupabaseClient): Promise<number> {
+  const now = Date.now();
+  const fromIso = new Date(now - 25 * 60 * 1000).toISOString();
+  const toIso = new Date(now + 2 * 60 * 1000).toISOString();
+  const { data: jobs, error } = await supabase
+    .from('personal_reminder_jobs')
+    .select('id, host_id, fire_at, channel, reminder_id, personal_reminders(title, due_at, status)')
+    .is('sent_at', null)
+    .gte('fire_at', fromIso)
+    .lte('fire_at', toIso);
+  if (error) {
+    console.error('personal reminder jobs query failed:', error.message);
+    return 0;
+  }
+  let sent = 0;
+  for (const job of jobs ?? []) {
+    const reminder = job.personal_reminders as { title?: string; due_at?: string; status?: string } | null;
+    if (!reminder || reminder.status !== 'active') continue;
+    const { data: hostProfile } = await supabase
+      .from('profiles')
+      .select('full_name, email, notification_email, phone, whatsapp_number')
+      .eq('id', job.host_id)
+      .maybeSingle();
+    const title = (reminder.title || 'your reminder').trim();
+    const when = reminder.due_at
+      ? new Date(reminder.due_at).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+      : '';
+    const msg = `Reminder: ${title}${when ? ` — ${when}` : ''}`;
+    let ok = false;
+    let recipient = '(none)';
+    let err: string | undefined;
+    if (job.channel === 'email') {
+      const resendKey = Deno.env.get('RESEND_API_KEY');
+      const to = (hostProfile?.notification_email || hostProfile?.email || '').trim();
+      recipient = to || '(none)';
+      if (!resendKey || !to) err = 'no email';
+      else ok = await sendResendEmail([to], `Reminder: ${title}`, msg, resendKey);
+    } else if (job.channel === 'sms') {
+      const to = (hostProfile?.phone || '').trim();
+      recipient = to || '(none)';
+      if (!to) err = 'no phone';
+      else {
+        const result = await sendTwilioSms(to, msg);
+        ok = result.ok;
+        err = result.error;
+      }
+    } else if (job.channel === 'whatsapp') {
+      const to = (hostProfile?.whatsapp_number || hostProfile?.phone || '').trim();
+      recipient = to || '(none)';
+      if (!to) err = 'no phone';
+      else {
+        const result = await sendTwilioWhatsapp(to, {
+          guest_name: hostProfile?.full_name || 'there',
+          host_name: 'PinOnIt',
+          service_name: title,
+          date: when || 'your scheduled time',
+          time: when || '',
+          duration: '',
+        });
+        ok = result.ok;
+        err = result.error;
+      }
+    } else if (job.channel === 'voice') {
+      const to = (hostProfile?.phone || '').trim();
+      recipient = to || '(none)';
+      if (!to) err = 'no phone';
+      else {
+        const twiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="Polly.Joanna">This is a PinOnIt reminder. ${title.replace(/[<>&]/g, ' ')}. ${when ? `Scheduled for ${when}.` : ''}</Say></Response>`;
+        const result = await sendTwilioVoice(to, twiml);
+        ok = result.ok;
+        err = result.error;
+      }
+    }
+    await supabase
+      .from('personal_reminder_jobs')
+      .update({ sent_at: new Date().toISOString(), error: ok ? null : (err || 'send failed') })
+      .eq('id', job.id);
+    await insertMessageLog(supabase, {
+      host_id: job.host_id,
+      channel: job.channel,
+      status: ok ? 'sent' : 'failed',
+      recipient,
+      subject: `personal:${job.id}`,
+      body: err ? `${msg}\n\n${err}` : msg,
+    });
+    if (ok) sent++;
+  }
+  return sent;
+}
+
 async function hostIdFromJwt(req: Request, supabase: SupabaseClient): Promise<string | null> {
   const header = req.headers.get('Authorization') ?? '';
   const token = header.replace(/^Bearer\s+/i, '').trim();
@@ -948,7 +1038,8 @@ Deno.serve(async (req: Request) => {
 
       if (body.dispatch_scheduled) {
         const scheduled = await dispatchScheduledReminders(supabase);
-        sent += scheduled;
+        const personal = await dispatchPersonalReminders(supabase);
+        sent += scheduled + personal;
       }
 
       return jsonResponse({ success: true, sent });
@@ -959,7 +1050,8 @@ Deno.serve(async (req: Request) => {
         return jsonAuthError(corsHeaders, 'Dispatcher requires a service role token');
       }
       const sent = await dispatchScheduledReminders(supabase);
-      return jsonResponse({ success: true, sent });
+      const personal = await dispatchPersonalReminders(supabase);
+      return jsonResponse({ success: true, sent: sent + personal });
     }
 
     // ── Normal reminder mode ─────────────────────────────────────────────────

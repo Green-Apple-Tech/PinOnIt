@@ -1244,10 +1244,10 @@ export function Dashboard() {
         </>
       )}
       <div className="flex items-center gap-0.5">
-        <button onClick={toggleTheme} className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors rounded-lg" title="Toggle theme">
+        <button onClick={toggleTheme} className="min-h-11 min-w-11 inline-flex items-center justify-center text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors rounded-lg" title="Toggle theme">
           {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </button>
-        <button onClick={() => setShowLogoutConfirm(true)} className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors rounded-lg" title="Sign out">
+        <button onClick={() => setShowLogoutConfirm(true)} className="min-h-11 min-w-11 inline-flex items-center justify-center text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors rounded-lg" title="Sign out">
           <LogOut className="h-4 w-4" />
         </button>
       </div>
@@ -1331,7 +1331,7 @@ export function Dashboard() {
 
         {/* Mobile top bar */}
         <header className="md:hidden border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-950 sticky top-0 z-40 px-4 h-14 flex items-center justify-between">
-          <button onClick={() => setMobileMenuOpen(true)} className="p-2 text-gray-500 hover:text-gray-900 dark:text-slate-400 dark:hover:text-white transition-colors">
+          <button onClick={() => setMobileMenuOpen(true)} className="min-h-11 min-w-11 inline-flex items-center justify-center text-gray-500 hover:text-gray-900 dark:text-slate-400 dark:hover:text-white transition-colors">
             <Menu className="h-5 w-5" />
           </button>
           <a href="https://pinonit.com" target="_blank" rel="noopener noreferrer">
@@ -1589,7 +1589,11 @@ export function Dashboard() {
           </main>
         )}
 
-        {!isActive('/dashboard') && <Outlet />}
+        {!isActive('/dashboard') && (
+          <div className="flex-1 min-w-0 w-full pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <Outlet />
+          </div>
+        )}
 
         <footer className="mt-auto border-t border-gray-200 dark:border-slate-800 py-4 px-6 bg-white dark:bg-slate-950">
           <div className="flex flex-col items-center justify-center gap-2 text-center text-xs text-gray-400 dark:text-slate-500">
