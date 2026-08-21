@@ -1,0 +1,4 @@
+# One domain or URL per line (seedlist discover source)
+# Example:
+# acmephotography.com
+# https://www.examplecoach.com

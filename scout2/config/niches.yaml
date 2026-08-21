@@ -1,0 +1,24 @@
+# Google Places query niches (appended with metro name at runtime)
+niches:
+  - real estate agent
+  - realtor
+  - photographer
+  - wedding photographer
+  - life coach
+  - business coach
+  - consultant
+  - therapist
+  - counselor
+  - chiropractor
+  - dentist
+  - personal trainer
+  - yoga instructor
+  - hair salon
+  - spa
+  - attorney
+  - lawyer
+  - accountant
+  - financial advisor
+  - tutor
+  - music teacher
+  - interior designer
