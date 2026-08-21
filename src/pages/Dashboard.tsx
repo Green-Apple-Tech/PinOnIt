@@ -1401,6 +1401,14 @@ export function Dashboard() {
             </div>
             <nav className="flex-1 px-2 pb-4 space-y-0.5 overflow-y-auto">
               {mainNavItems.map((item) => renderNavItem(item, { onNavigate: () => setMobileMenuOpen(false) }))}
+              <Link
+                to="/why-pinonit"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3 px-3 py-2.5 mt-2 rounded-lg text-sm font-semibold text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-500/10"
+              >
+                Why we beat Calendly
+                <ChevronRight className="h-4 w-4 ml-auto" />
+              </Link>
             </nav>
           </aside>
         </div>
@@ -1410,7 +1418,13 @@ export function Dashboard() {
       <div className="flex-1 min-w-0 flex flex-col">
 
         {/* Desktop account bar — upper right */}
-        <header className="hidden md:flex sticky top-0 z-40 border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-2.5 items-center justify-end shrink-0">
+        <header className="hidden md:flex sticky top-0 z-40 border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-2.5 items-center justify-between gap-3 shrink-0">
+          <Link
+            to="/why-pinonit"
+            className="inline-flex items-center gap-1 text-sm font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors"
+          >
+            Why we beat Calendly <ChevronRight className="h-4 w-4" />
+          </Link>
           {renderAccountBar()}
         </header>
 

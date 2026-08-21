@@ -22,6 +22,7 @@ import {
 import { QRModal } from '../components/QRModal';
 import { ColorSwatchRow } from '../components/ColorSwatchRow';
 import { toast } from '../components/Toast';
+import { SlackWebhookCard } from '../components/SlackWebhookCard';
 import { readProfileCache, writeProfileCache } from '../lib/profileCache';
 import { AnalyticsPage } from './Analytics';
 import { BillingPage } from './Billing';
@@ -353,6 +354,14 @@ function IntegrationsTab({ userId }: { userId: string | undefined }) {
           />
         </div>
       </div>
+
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <MessageSquare className="h-4 w-4 text-slate-400" />
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Notifications</h3>
+        </div>
+        <SlackWebhookCard />
+      </div>
     </div>
   );
 }
@@ -490,14 +499,28 @@ export function SettingsPage() {
   }, [user]);
 
   useEffect(() => {
-    const p = new URLSearchParams(location.search).get('tab');
+    const params = new URLSearchParams(location.search);
+    const p = params.get('tab');
     if (p && GENERAL_TABS.includes(p as SettingsTab)) {
       setSection('general');
       setTab(p as SettingsTab);
     } else if (p === 'analytics' || p === 'billing' || p === 'availability' || p === 'reminders') {
       setSection(p);
     }
-  }, [location.search]);
+
+    if (params.get('slack_connected')) {
+      toast.success('Slack connected. Booking alerts will post to your channel.');
+      void refreshProfile();
+      params.delete('slack_connected');
+      const qs = params.toString();
+      navigate(`/dashboard/settings${qs ? `?${qs}` : '?tab=integrations'}`, { replace: true });
+    } else if (params.get('slack_error')) {
+      toast.error(`Slack Connect failed: ${params.get('slack_error')}`);
+      params.delete('slack_error');
+      const qs = params.toString();
+      navigate(`/dashboard/settings${qs ? `?${qs}` : '?tab=integrations'}`, { replace: true });
+    }
+  }, [location.search, navigate, refreshProfile]);
 
   // Sync notification/session fields when profile loads or after save refreshes profile
   useEffect(() => {

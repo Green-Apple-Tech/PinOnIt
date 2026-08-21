@@ -143,6 +143,7 @@ const DEFAULT_BREAKS: ScheduleBreak[] = [
 ];
 
 const BUFFER_OPTIONS = [0, 5, 10, 15, 20, 30, 45, 60];
+const CUTOFF_OPTIONS = [0, 1, 2, 4, 8, 12, 24, 48];
 
 function defaultDayConfig(enabled: boolean): DayConfig {
   return { enabled, start: DEFAULT_START, end: DEFAULT_MID_END, split: false, start2: DEFAULT_MID_START, end2: DEFAULT_END };
@@ -167,6 +168,7 @@ export function AvailabilityPage({ embedded }: { embedded?: boolean } = {}) {
   const [breaks, setBreaks] = useState<ScheduleBreak[]>(DEFAULT_BREAKS);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [bufferMinutes, setBufferMinutes] = useState(0);
+  const [cutoffHours, setCutoffHours] = useState(4);
   const [conflictSettings, setConflictSettings] = useState<CalendarConflictSettings>(DEFAULT_CALENDAR_CONFLICT_SETTINGS);
   const [savingConflict, setSavingConflict] = useState(false);
 
@@ -196,6 +198,9 @@ export function AvailabilityPage({ embedded }: { embedded?: boolean } = {}) {
     }
     if (profile.meeting_buffer_minutes != null) {
       setBufferMinutes(profile.meeting_buffer_minutes);
+    }
+    if (profile.reschedule_cutoff_hours != null) {
+      setCutoffHours(profile.reschedule_cutoff_hours);
     }
     if (profile.calendar_conflict_settings) {
       setConflictSettings({ ...DEFAULT_CALENDAR_CONFLICT_SETTINGS, ...profile.calendar_conflict_settings });
@@ -298,6 +303,7 @@ export function AvailabilityPage({ embedded }: { embedded?: boolean } = {}) {
     await supabase.from('profiles').update({
       schedule_breaks: breaks,
       meeting_buffer_minutes: bufferMinutes,
+      reschedule_cutoff_hours: cutoffHours,
     }).eq('id', profile.id);
     setSaving(false);
   };
@@ -777,6 +783,11 @@ export function AvailabilityPage({ embedded }: { embedded?: boolean } = {}) {
                         {bufferMinutes}min buffer
                       </span>
                     )}
+                    {cutoffHours !== 4 && (
+                      <span className="ml-1 px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-semibold rounded-full">
+                        {cutoffHours === 0 ? 'reschedule anytime' : `${cutoffHours}h cutoff`}
+                      </span>
+                    )}
                   </div>
                   {showAdvanced
                     ? <ChevronUp className="h-4 w-4 text-slate-400" />
@@ -803,6 +814,28 @@ export function AvailabilityPage({ embedded }: { embedded?: boolean } = {}) {
                           }`}
                         >
                           {opt === 0 ? 'None' : `${opt} min`}
+                        </button>
+                      ))}
+                    </div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 mt-5">
+                      Guest reschedule cutoff
+                    </label>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+                      Invitees cannot change the time themselves inside this window before the appointment. Default is 4 hours.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {CUTOFF_OPTIONS.map((opt) => (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => setCutoffHours(opt)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                            cutoffHours === opt
+                              ? 'bg-brand-600 border-brand-600 text-white'
+                              : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-brand-400 hover:text-brand-600 dark:hover:text-brand-400'
+                          }`}
+                        >
+                          {opt === 0 ? 'Until start' : `${opt} hr`}
                         </button>
                       ))}
                     </div>

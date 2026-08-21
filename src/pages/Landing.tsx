@@ -382,7 +382,6 @@ export function Landing() {
           <div className="hidden lg:flex items-center gap-1 text-sm font-medium text-slate-600 dark:text-slate-300">
             <a href="#features" className="px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Features</a>
             <a href="#reminders" className="px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Reminders</a>
-            <a href="#compare" className="px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">vs. Calendly</a>
             <a href="#pricing" className="px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Pricing</a>
             <a href="#earn" className="px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Referral Program</a>
           </div>
@@ -391,6 +390,12 @@ export function Landing() {
             <button onClick={toggleTheme} className="p-2 rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" aria-label="Toggle theme">
               {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
+            <Link
+              to="/why-pinonit"
+              className="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 text-sm font-semibold text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-500/30 rounded-full hover:bg-brand-50 dark:hover:bg-brand-500/10 transition-colors"
+            >
+              Why we beat Calendly <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
             {user ? (
               <Link to="/dashboard" className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold rounded-full transition-colors">Dashboard</Link>
             ) : (
@@ -409,7 +414,7 @@ export function Landing() {
           <div className="lg:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-4 flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
             <a href="#features" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-brand-500 transition-colors">Features</a>
             <a href="#reminders" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-brand-500 transition-colors">Reminders</a>
-            <a href="#compare" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-brand-500 transition-colors">vs. Calendly</a>
+            <Link to="/why-pinonit" onClick={() => setMobileMenuOpen(false)} className="py-2 font-semibold text-brand-600 dark:text-brand-400">Why we beat Calendly →</Link>
             <a href="#pricing" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-brand-500 transition-colors">Pricing</a>
             <a href="#earn" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-brand-500 transition-colors">Referral Program</a>
           </div>

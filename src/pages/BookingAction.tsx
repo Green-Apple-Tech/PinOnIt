@@ -11,6 +11,7 @@ export function BookingActionPage() {
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<'confirmed' | 'canceled' | 'reschedule' | 'error' | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [rescheduleHref, setRescheduleHref] = useState<string | null>(null);
 
   useEffect(() => {
     if (!bookingId || !actionToken) return;
@@ -51,6 +52,15 @@ export function BookingActionPage() {
       } else if (action === 'cancel') {
         setResult('canceled');
       } else if (action === 'reschedule') {
+        const raw = typeof data.reschedule_url === 'string' ? data.reschedule_url : data.booking_link;
+        if (typeof raw === 'string' && raw.includes('/r/')) {
+          try {
+            const path = new URL(raw, 'https://pinonit.com').pathname;
+            setRescheduleHref(path);
+          } catch {
+            setRescheduleHref(raw);
+          }
+        }
         setResult('reschedule');
       }
     } catch {
@@ -224,15 +234,15 @@ export function BookingActionPage() {
           </div>
         )}
 
-        {result === 'reschedule' && hostProfile?.slug && (
+        {result === 'reschedule' && (rescheduleHref || hostProfile?.slug) && (
           <div className="text-center py-12">
             <div className="h-16 w-16 bg-brand-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
               <CalendarDays className="h-8 w-8 text-brand-400" />
             </div>
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Pick a new time</h2>
-            <p className="text-slate-500 dark:text-slate-400 mb-4">Visit the booking page to schedule a new appointment.</p>
+            <p className="text-slate-500 dark:text-slate-400 mb-4">Choose a new slot. Your name and contact stay the same.</p>
             <Link
-              to={`/${hostProfile.slug}`}
+              to={rescheduleHref || `/${hostProfile.slug}`}
               className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium rounded-lg transition-colors"
             >
               Book new time <ArrowRight className="h-4 w-4" />

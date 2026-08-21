@@ -75,14 +75,17 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === 'reschedule') {
-      const hostProfile = booking.profiles as Record<string, unknown>;
-      const slug = hostProfile?.slug as string | null;
-      const baseUrl = 'https://pinonit.com';
+      const { data: token } = await supabase.rpc('ensure_reschedule_token', {
+        p_booking_id: booking_id,
+      });
+      const baseUrl = (Deno.env.get('APP_URL') || 'https://pinonit.com').replace(/\/$/, '');
+      const rescheduleUrl = token ? `${baseUrl}/r/${token}` : null;
 
       return jsonResponse({
         success: true,
         message: 'Please book a new time',
-        booking_link: slug ? `${baseUrl}/${slug}` : null,
+        booking_link: rescheduleUrl,
+        reschedule_url: rescheduleUrl,
         old_booking_canceled: false,
       });
     }

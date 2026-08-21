@@ -63,6 +63,7 @@ export interface Profile {
     channels?: string[];
   }> | null;
   slack_webhook_url?: string | null;
+  reschedule_cutoff_hours?: number;
   paid_booking_intro_seen: boolean;
   paid_booking_settings: PaidBookingSettings;
   paid_booking_theme: 'clean' | 'bold' | 'warm';
@@ -261,6 +262,7 @@ export interface Booking {
   paypal_order_id: string | null;
   payment_provider: string | null;
   notes: string;
+  cancel_reason?: string | null;
   action_token?: string;
   reminder_channels?: string[];
   reminder_times?: string[];

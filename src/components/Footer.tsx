@@ -6,6 +6,10 @@ export function Footer() {
     <footer className="border-t border-slate-200 dark:border-slate-800 py-6 px-6 bg-white dark:bg-slate-950">
       <div className="max-w-7xl mx-auto flex flex-col items-center justify-center gap-3 text-center text-xs text-slate-400 dark:text-slate-500">
         <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
+          <Link to="/why-pinonit" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+            Why PinOnIt
+          </Link>
+          <span className="hidden sm:inline">|</span>
           <Link to="/terms" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
             Terms of Service
           </Link>

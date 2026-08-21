@@ -22,7 +22,10 @@ interface TemplateData {
   booking_link: string;
   cancel_link: string;
   confirm_link: string;
+  reschedule_link: string;
 }
+
+const APP_PUBLIC_URL = (Deno.env.get('APP_URL') || 'https://pinonit.com').replace(/\/$/, '');
 
 function fillTemplate(template: string, data: TemplateData): string {
   return template
@@ -35,7 +38,27 @@ function fillTemplate(template: string, data: TemplateData): string {
     .replace(/\{\{duration\}\}/g, data.duration)
     .replace(/\{\{booking_link\}\}/g, data.booking_link)
     .replace(/\{\{cancel_link\}\}/g, data.cancel_link)
-    .replace(/\{\{confirm_link\}\}/g, data.confirm_link);
+    .replace(/\{\{confirm_link\}\}/g, data.confirm_link)
+    .replace(/\{\{reschedule_link\}\}/g, data.reschedule_link);
+}
+
+function withChangeThisLink(body: string, link: string): string {
+  if (!link) return body;
+  if (body.includes(link) || /need to change this/i.test(body)) return body;
+  return `${body.trim()}\nNeed to change this? ${link}`;
+}
+
+async function ensureRescheduleLink(
+  supabase: { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown }> },
+  bookingId: string,
+): Promise<string> {
+  try {
+    const { data } = await supabase.rpc('ensure_reschedule_token', { p_booking_id: bookingId });
+    const token = typeof data === 'string' ? data : '';
+    return token ? `${APP_PUBLIC_URL}/r/${token}` : '';
+  } catch {
+    return '';
+  }
 }
 
 const TRANSLATION_SYSTEM_PROMPT = `You are a professional translator for appointment scheduling messages. Preserve all formatting, URLs, and template placeholders exactly as they are (e.g. {{guest_name}}, {{cancel_link}}). Only return the translated text, nothing else.`;
@@ -773,6 +796,13 @@ async function dispatchScheduledReminders(supabase: SupabaseClient): Promise<num
     const hostPhone = (hostProfile?.phone as string) || null;
     const hostWhatsapp = (hostProfile?.whatsapp_number as string) || hostPhone;
     const alsoPeople = parseAlsoPeople(hostProfile?.reminder_also);
+    const rescheduleLink = await ensureRescheduleLink(supabase, booking.id);
+    const actionLinks = {
+      booking_link: hostProfile?.slug ? `${APP_PUBLIC_URL}/${hostProfile.slug}` : '',
+      cancel_link: booking.action_token ? `${APP_PUBLIC_URL}/booking/${booking.id}/cancel/${booking.action_token}` : '',
+      confirm_link: booking.action_token ? `${APP_PUBLIC_URL}/booking/${booking.id}/confirm/${booking.action_token}` : '',
+      reschedule_link: rescheduleLink,
+    };
 
     if (!hostRulesCache.has(booking.host_id)) {
       const { data: rules } = await supabase
@@ -812,11 +842,9 @@ async function dispatchScheduledReminders(supabase: SupabaseClient): Promise<num
         time: timeStr,
         timezone: booking.guest_timezone ?? (hostProfile?.timezone as string) ?? 'UTC',
         duration,
-        booking_link: '',
-        cancel_link: '',
-        confirm_link: '',
+        ...actionLinks,
       };
-      const msgBody = fillTemplate(tpl.body, templateData);
+      const msgBody = withChangeThisLink(fillTemplate(tpl.body, templateData), rescheduleLink);
       const subject = tpl.subject ? fillTemplate(tpl.subject, templateData) : dedupe;
       const delivered = await deliverChannel({
         supabase,
@@ -870,7 +898,10 @@ async function dispatchScheduledReminders(supabase: SupabaseClient): Promise<num
       for (const channel of channels.filter((c) => c === 'sms' || c === 'whatsapp' || c === 'email')) {
         const dedupe = `guest:${timeId}:${channel}`;
         if (await alreadyLogged(supabase, booking.id, channel, dedupe)) continue;
-        const msgBody = `Hi ${booking.guest_name}, reminder: you have a ${duration} ${serviceName} with ${hostName} on ${dateStr} at ${timeStr}.${meetLink ? ` Join: ${meetLink}` : ''} — PinOnIt`;
+        const msgBody = withChangeThisLink(
+          `Hi ${booking.guest_name}, reminder: you have a ${duration} ${serviceName} with ${hostName} on ${dateStr} at ${timeStr}.${meetLink ? ` Join: ${meetLink}` : ''} — PinOnIt`,
+          rescheduleLink,
+        );
         const delivered = await deliverChannel({
           supabase,
           channel,
@@ -1171,7 +1202,11 @@ Deno.serve(async (req: Request) => {
         const timeStr = when.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
         const msg = (ov.message as string)?.trim() ||
           `Reminder: ${title}${guestName ? ` with ${guestName}` : ''} on ${dateStr} at ${timeStr}.`;
-        const withLink = meetLink ? `${msg}\nJoin: ${meetLink}` : msg;
+        const rescheduleLink = ov.booking_id ? await ensureRescheduleLink(supabase, ov.booking_id) : '';
+        const withLink = withChangeThisLink(
+          meetLink ? `${msg}\nJoin: ${meetLink}` : msg,
+          rescheduleLink,
+        );
 
         let recipient: string | null = null;
         let status: 'sent' | 'failed' | 'skipped' = 'skipped';
@@ -1321,7 +1356,8 @@ Deno.serve(async (req: Request) => {
 
     const hostProfile = booking.profiles as Record<string, unknown>;
     const service = booking.services as Record<string, unknown>;
-    const baseUrl = 'https://pinonit.com';
+    const baseUrl = APP_PUBLIC_URL;
+    const rescheduleLink = await ensureRescheduleLink(supabase, booking.id);
 
     const templateData: TemplateData = {
       guest_name: booking.guest_name,
@@ -1334,10 +1370,11 @@ Deno.serve(async (req: Request) => {
       booking_link: `${baseUrl}/${hostProfile?.slug ?? ''}`,
       cancel_link: `${baseUrl}/booking/${booking.id}/cancel/${booking.action_token}`,
       confirm_link: `${baseUrl}/booking/${booking.id}/confirm/${booking.action_token}`,
+      reschedule_link: rescheduleLink,
     };
 
     let subject = template.subject ? fillTemplate(template.subject, templateData) : null;
-    let msgBody = fillTemplate(template.body, templateData);
+    let msgBody = withChangeThisLink(fillTemplate(template.body, templateData), rescheduleLink);
 
     // AI translation if enabled
     let sentLanguage = template.language;

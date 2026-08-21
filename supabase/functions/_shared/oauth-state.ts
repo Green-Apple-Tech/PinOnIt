@@ -31,6 +31,9 @@ export function oauthRedirectBase(source: string): string {
   if (source === "wizard") {
     return `${OAUTH_APP_URL}/dashboard`;
   }
+  if (source === "integrations" || source === "slack") {
+    return `${OAUTH_APP_URL}/dashboard/settings?tab=integrations`;
+  }
   return `${OAUTH_APP_URL}/dashboard/appointments`;
 }
 

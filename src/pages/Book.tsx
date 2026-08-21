@@ -23,6 +23,7 @@ import {
 import { resolveTermsText } from '../lib/terms';
 import { stripePromise } from '../lib/stripe';
 import { StripeBookingCheckout } from '../components/StripeBookingCheckout';
+import type { RescheduleSession } from '../lib/reschedule';
 import {
   Calendar,
   Clock,
@@ -559,11 +560,12 @@ interface SingleUseLinkRecord {
   expires_at: string | null;
 }
 
-export function BookPage() {
+export function BookPage({ rescheduleSession }: { rescheduleSession?: RescheduleSession } = {}) {
   const { slug, token } = useParams<{ slug?: string; token?: string }>();
   const { user } = useAuth();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  const isReschedule = !!rescheduleSession;
   const isPaidBookingPage = Boolean(
     slug && !token && location.pathname.replace(/\/$/, '').endsWith('/services'),
   );
@@ -668,6 +670,54 @@ export function BookPage() {
   }, [phone]);
 
   useEffect(() => {
+    if (!rescheduleSession) return;
+    const hostId = rescheduleSession.host.id;
+    const originalId = rescheduleSession.bookingId;
+    setHost(rescheduleSession.host);
+    setServices([rescheduleSession.service]);
+    setSelectedService(rescheduleSession.service);
+    setGuestName(rescheduleSession.guestName);
+    setGuestEmail(rescheduleSession.guestEmail);
+    setPhone(rescheduleSession.guestPhone);
+    if (rescheduleSession.guestTimezone) setGuestTimezone(rescheduleSession.guestTimezone);
+    setQuestions([]);
+    setStep('datetime');
+    setLoading(true);
+    (async () => {
+      const [availRes, bookRes, ovRes, calEvtRes] = await Promise.all([
+        supabase.from('availability').select('*').eq('host_id', hostId).eq('is_active', true),
+        supabase.from('bookings').select('id,start_time,end_time,status').eq('host_id', hostId).in('status', ['confirmed']),
+        supabase.from('date_overrides').select('*').eq('host_id', hostId),
+        supabase.from('calendar_events').select('start_at,end_at,all_day,show_status,transparency,attendee_self_status,is_birthday_cal,is_holiday_cal,title').eq('host_id', hostId),
+      ]);
+      setAvailability(availRes.data ?? []);
+      setBookings(((bookRes.data ?? []) as Booking[]).filter((b) => b.id !== originalId));
+      setDateOverrides((ovRes.data as DateOverride[]) ?? []);
+      const conflictSettings: CalendarConflictSettings = {
+        ...DEFAULT_CALENDAR_CONFLICT_SETTINGS,
+        ...(rescheduleSession.host.calendar_conflict_settings ?? {}),
+      };
+      const rawEvents = (calEvtRes.data ?? []) as CalendarEvent[];
+      const busyPeriods: BusyPeriod[] = [];
+      for (const e of rawEvents) {
+        if (!shouldBlockCalendarEvent(e, conflictSettings)) continue;
+        if (e.all_day) {
+          const startDay = new Date(e.start_at);
+          startDay.setUTCHours(0, 0, 0, 0);
+          const endDay = new Date(e.end_at);
+          endDay.setUTCHours(23, 59, 59, 999);
+          busyPeriods.push({ start: startDay, end: endDay });
+        } else {
+          busyPeriods.push({ start: new Date(e.start_at), end: new Date(e.end_at) });
+        }
+      }
+      setCalendarBusyTimes(busyPeriods);
+      setLoading(false);
+    })();
+  }, [rescheduleSession]);
+
+  useEffect(() => {
+    if (rescheduleSession) return;
     if (!slug && !token) return;
 
     // Check expiry param before loading anything
@@ -720,7 +770,7 @@ export function BookPage() {
           ? supabase.from('services').select(SERVICE_SELECT).eq('id', serviceId).eq('is_active', true)
           : supabase.from('services').select(SERVICE_SELECT).eq('host_id', hostId).eq('is_active', true),
         supabase.from('availability').select('*').eq('host_id', hostId).eq('is_active', true),
-        supabase.from('bookings').select('start_time,end_time,status').eq('host_id', hostId).in('status', ['confirmed']),
+        supabase.from('bookings').select('id,start_time,end_time,status').eq('host_id', hostId).in('status', ['confirmed']),
         supabase.from('date_overrides').select('*').eq('host_id', hostId),
         supabase.from('calendar_events').select('start_at,end_at,all_day,show_status,transparency,attendee_self_status,is_birthday_cal,is_holiday_cal,title').eq('host_id', hostId),
       ]);
@@ -829,8 +879,7 @@ export function BookPage() {
 
   const handleBook = async () => {
     if (!selectedService) return;
-    const email = guestEmail.trim();
-    if (!email) {
+    if (!isReschedule && !guestEmail.trim()) {
       setDetailsError('Email address is required');
       return;
     }
@@ -842,7 +891,7 @@ export function BookPage() {
       if (booking.reminder_channels?.length) setSelectedChannels(booking.reminder_channels);
       if (booking.reminder_times?.length) setSelectedTimes(booking.reminder_times);
       setStep('confirmed');
-      if (selectedService.confirmation_redirect_url) {
+      if (!isReschedule && selectedService.confirmation_redirect_url) {
         try {
           const redirectUrl = new URL(selectedService.confirmation_redirect_url);
           if (redirectUrl.protocol === 'https:') window.location.href = redirectUrl.href;
@@ -858,6 +907,27 @@ export function BookPage() {
     const [sh, sm] = selectedSlot.split(':').map(Number);
     const startTime = new Date(y, m - 1, d, sh, sm);
     const endTime = new Date(startTime.getTime() + selectedService.duration_minutes * 60000);
+    if (rescheduleSession) {
+      const { data, error } = await supabase.functions.invoke('complete-reschedule', {
+        body: {
+          token: rescheduleSession.token,
+          start_time: startTime.toISOString(),
+          end_time: endTime.toISOString(),
+          guest_timezone: guestTimezone,
+        },
+      });
+      if (error || data?.error) {
+        const code = String(data?.error || error?.message || '');
+        setDetailsError(
+          code === 'slot_taken' ? 'That time was just taken. Please pick another slot.'
+            : code === 'cutoff' || code === 'expired' || code === 'used'
+              ? 'This reschedule link is no longer valid. Contact the host.'
+              : 'Could not reschedule. Please try another time.',
+        );
+        return null;
+      }
+      return (data?.booking as Booking) ?? null;
+    }
     const isRecurring = !!(selectedService.is_recurring && selectedService.recurrence_frequency);
     const email = guestEmail.trim();
     const { guestPhone: phoneVal, smsConsentGranted, whatsappConsentGranted } =
@@ -1012,7 +1082,7 @@ export function BookPage() {
       } catch { /* non-blocking */ }
     }
     return data as Booking | null;
-  }, [selectedService, selectedDate, selectedSlot, host, guestName, guestEmail, phone, smsOptIn, whatsappOptIn, guestTimezone, guestNotes, questions, answers, singleUseLink, selectedChannels, selectedTimes, stripePaymentId]);
+  }, [selectedService, selectedDate, selectedSlot, host, guestName, guestEmail, phone, smsOptIn, whatsappOptIn, guestTimezone, guestNotes, questions, answers, singleUseLink, selectedChannels, selectedTimes, stripePaymentId, rescheduleSession]);
 
   useEffect(() => {
     setClientSecret(null);
@@ -1023,6 +1093,7 @@ export function BookPage() {
     if (paymentMethod !== 'stripe') return;
     if (clientSecret || fetchingSecret) return;
     if (step !== 'details' || !selectedService || selectedService.price_cents <= 0) return;
+    if (rescheduleSession) return;
 
     const fetchSecret = async () => {
       setFetchingSecret(true);
@@ -1056,7 +1127,7 @@ export function BookPage() {
     };
 
     void fetchSecret();
-  }, [paymentMethod, selectedService?.id, selectedService?.price_cents, selectedService?.host_id, step, clientSecret, fetchingSecret]);
+  }, [paymentMethod, selectedService?.id, selectedService?.price_cents, selectedService?.host_id, step, clientSecret, fetchingSecret, rescheduleSession]);
 
   const handleSaveReminders = async () => {
     if (!confirmedBooking) return;
@@ -1187,7 +1258,7 @@ export function BookPage() {
   const showP2PHandles = paymentHandles ? hasAnyPaymentHandle(paymentHandles) : false;
   const isHostViewer = !!(user?.id && host?.id && user.id === host.id);
   const selectedPaymentOption = paymentOptions.find((o) => o.id === paymentMethod);
-  const showPaidBookingPayment = isPaidService && !(isRecurringService && (selectedService?.price_cents ?? 0) > 0);
+  const showPaidBookingPayment = isPaidService && !(isRecurringService && (selectedService?.price_cents ?? 0) > 0) && !isReschedule;
   const termsDisplayText = resolveTermsText(host?.global_terms_text);
   const requiresTerms = !!(host?.global_require_terms && selectedService?.require_terms);
   const showTermsAgreement = requiresTerms;
@@ -1200,7 +1271,7 @@ export function BookPage() {
   const requiresPayment = showPaidBookingPayment && !paymentConfirmed;
   const isValid =
     guestName.trim() !== '' &&
-    guestEmail.trim() !== '' &&
+    (isReschedule || guestEmail.trim() !== '') &&
     (!requiresTerms || termsAgreed);
   const canSubmitDetails =
     isValid &&
@@ -1423,9 +1494,11 @@ export function BookPage() {
             {step === 'datetime' && selectedService && (
               <div>
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className={`font-bold ${calendlyStyle ? 'text-xl text-slate-800' : 'text-xl'}`} style={calendlyStyle ? undefined : { color: pageTextColor }}>Select date & time</h2>
-                  <button onClick={() => { setStep('service'); setSelectedService(null); setSelectedDate(null); setSelectedSlot(null); }}
-                    className={`text-sm transition-colors ${calendlyStyle ? 'text-slate-500 hover:text-slate-800' : ''}`} style={calendlyStyle ? undefined : { color: pageMutedColor }}>Change service</button>
+                  <h2 className={`font-bold ${calendlyStyle ? 'text-xl text-slate-800' : 'text-xl'}`} style={calendlyStyle ? undefined : { color: pageTextColor }}>{isReschedule ? 'Pick a new time' : 'Select date & time'}</h2>
+                  {!isReschedule && (
+                    <button onClick={() => { setStep('service'); setSelectedService(null); setSelectedDate(null); setSelectedSlot(null); }}
+                      className={`text-sm transition-colors ${calendlyStyle ? 'text-slate-500 hover:text-slate-800' : ''}`} style={calendlyStyle ? undefined : { color: pageMutedColor }}>Change service</button>
+                  )}
                 </div>
               <div className="flex flex-col gap-6">
                   {!selectedDate ? (
@@ -1622,7 +1695,8 @@ export function BookPage() {
                       <div className="relative">
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500" />
                         <input type="text" placeholder="Jane Smith" value={guestName} onChange={(e) => setGuestName(e.target.value)} required
-                          className={`w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition ${!guestName ? 'border-slate-300 dark:border-slate-700' : 'border-indigo-500 dark:border-indigo-600'}`} />
+                          readOnly={isReschedule}
+                          className={`w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition ${isReschedule ? 'bg-slate-50 dark:bg-slate-800 cursor-not-allowed' : ''} ${!guestName ? 'border-slate-300 dark:border-slate-700' : 'border-indigo-500 dark:border-indigo-600'}`} />
                       </div>
                     </div>
                     <div>
@@ -1632,7 +1706,8 @@ export function BookPage() {
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500" />
                         <input type="email" placeholder="jane@example.com" value={guestEmail} onChange={(e) => { setGuestEmail(e.target.value); setDetailsError(''); }}
-                          className={`w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition ${guestEmail ? 'border-indigo-500 dark:border-indigo-600' : 'border-slate-300 dark:border-slate-700'}`} />
+                          readOnly={isReschedule}
+                          className={`w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition ${isReschedule ? 'bg-slate-50 dark:bg-slate-800 cursor-not-allowed' : ''} ${guestEmail ? 'border-indigo-500 dark:border-indigo-600' : 'border-slate-300 dark:border-slate-700'}`} />
                       </div>
                     </div>
                   </div>
@@ -1645,6 +1720,7 @@ export function BookPage() {
                       <input
                         type="tel"
                         value={phone}
+                        readOnly={isReschedule}
                         onChange={(e) => {
                           setPhone(e.target.value);
                           setDetailsError('');
@@ -1655,9 +1731,11 @@ export function BookPage() {
                         }}
                         onBlur={(e) => { if (e.target.value.trim()) setPhone(blurFormatPhone(e.target.value)); }}
                         placeholder={PHONE_PLACEHOLDER}
-                        className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
+                        className={`w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition ${isReschedule ? 'bg-slate-50 dark:bg-slate-800 cursor-not-allowed' : ''}`}
                       />
                     </div>
+                    {!isReschedule && (
+                      <>
                     <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{PHONE_HINT}</p>
                     <SmsBookingConsentCheckbox
                       checked={smsOptIn}
@@ -1677,6 +1755,8 @@ export function BookPage() {
                         I agree to receive WhatsApp appointment reminders at the phone number I provided.
                       </span>
                     </label>
+                      </>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Your timezone</label>
@@ -1931,7 +2011,7 @@ export function BookPage() {
                       <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                       {detailsError
                         || (!guestName.trim() ? 'Full name is required.'
-                          : !guestEmail.trim() ? 'Email address is required.'
+                          : !isReschedule && !guestEmail.trim() ? 'Email address is required.'
                           : requiresTerms && !termsAgreed ? 'Please agree to the terms above.'
                           : hasRequiredQuestions ? 'Please answer all required questions.'
                           : requiresNda && !ndaAgreed ? 'Please agree to the NDA above.'
@@ -1946,7 +2026,7 @@ export function BookPage() {
                     className="w-full py-3 text-white font-semibold rounded-lg transition-all disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
                     style={{ backgroundColor: !canSubmitDetails ? '#9ca3af' : accentColor }}>
                     {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                    Confirm meeting
+                    {isReschedule ? 'Confirm new time' : 'Confirm meeting'}
                   </button>
                 </div>
               </div>
@@ -1959,11 +2039,11 @@ export function BookPage() {
                   <div className="h-14 w-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: accentColor + '22' }}>
                     <Check className="h-7 w-7" style={{ color: accentColor }} />
                   </div>
-                  <h2 className="text-2xl font-bold mb-1">You're booked!</h2>
+                  <h2 className="text-2xl font-bold mb-1">{isReschedule ? "You're rescheduled!" : "You're booked!"}</h2>
                   <p className="text-slate-500 dark:text-slate-400 text-sm">
                     Confirmation sent to{' '}
                     <span className="font-medium text-slate-700 dark:text-slate-300">
-                      {guestEmail.trim()}
+                      {guestEmail.trim() || phone || 'you'}
                     </span>
                   </p>
                 </div>

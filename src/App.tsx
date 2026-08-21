@@ -8,7 +8,9 @@ import { AuthCallback } from './components/AuthCallback';
 import { AIChat } from './components/AIChat';
 import { ToastContainer } from './components/Toast';
 import { Landing } from './pages/Landing';
+import { WhyPinOnItPage } from './pages/WhyPinOnIt';
 import { BookPage } from './pages/Book';
+import { ReschedulePage } from './pages/Reschedule';
 import { BookingActionPage } from './pages/BookingAction';
 import { Onboarding } from './pages/Onboarding';
 import { TermsPage } from './pages/Terms';
@@ -86,6 +88,7 @@ function App() {
           <Routes>
             {/* Fixed paths must come before the /:slug wildcard */}
             <Route path="/" element={<Landing />} />
+            <Route path="/why-pinonit" element={<WhyPinOnItPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/sms-consent" element={<SmsConsentPage />} />
@@ -98,6 +101,7 @@ function App() {
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
             <Route path="/booking/:bookingId/:action/:actionToken" element={<BookingActionPage />} />
+            <Route path="/r/:token" element={<ReschedulePage />} />
             <Route
               path="/dashboard"
               element={
