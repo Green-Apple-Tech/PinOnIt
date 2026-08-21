@@ -8,7 +8,7 @@ import { supabase } from '../lib/supabase';
 import { syncStripeSubscription } from '../lib/stripe';
 import { effectivePlan } from '../lib/plan';
 import type { Booking, Service } from '../lib/types';
-import { CalendarDays, Settings, LogOut, Users, X, Check, Sun, Moon, Copy, Share2, Mail, Link2, ExternalLink, PenLine, Video, Phone, MapPin, ChevronRight, Loader2, CalendarCheck, Plus, ChevronLeft, LayoutGrid, Menu, AlertCircle, Sparkles, Search, ShoppingBag, Wrench as Tool, QrCode, MessageSquare, ChevronDown } from 'lucide-react';
+import { CalendarDays, Settings, LogOut, Users, X, Check, Sun, Moon, Copy, Share2, Mail, Link2, ExternalLink, PenLine, Video, Phone, MapPin, ChevronRight, Loader2, CalendarCheck, Plus, ChevronLeft, LayoutGrid, Menu, AlertCircle, Sparkles, Search, ShoppingBag, Wrench as Tool, QrCode, MessageSquare, ChevronDown, FileText } from 'lucide-react';
 import { QRModal } from '../components/QRModal';
 import {
   buildAvailabilityEmailInvite,
