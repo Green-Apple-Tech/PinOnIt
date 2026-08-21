@@ -708,7 +708,7 @@ export function RemindersPage({
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Reminders &amp; Messages</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Automatically notify your guests before meetings — via Email, SMS, WhatsApp, or Voice Call.
+            Remind yourself and your guests about anything — not just meetings. Set multiple reminders for a flight, a prescription refill, a kid's pickup, or any calendar event, via Email, SMS, WhatsApp, or Voice Call.
           </p>
         </div>
         {hasAnyReminders && (
@@ -839,10 +839,10 @@ export function RemindersPage({
             <Bell className="h-8 w-8" style={{ color: '#5864C6' }} />
           </div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
-            Never let a guest forget their meeting
+            Never miss anything — not just meetings
           </h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm mb-8 max-w-md mx-auto">
-            Set up automated reminders in 3 simple steps. Your guests will receive them automatically — no extra work needed.
+            Set up reminders for anything you don't want to miss — a flight, a prescription refill, a kid's pickup, or a meeting. Stack multiple reminders across email, SMS, WhatsApp, and voice. Set it up in 3 simple steps.
           </p>
 
           {/* 3-step visual */}
