@@ -8,7 +8,14 @@ import { supabase } from '../lib/supabase';
 import { syncStripeSubscription } from '../lib/stripe';
 import { effectivePlan } from '../lib/plan';
 import type { Booking, Service } from '../lib/types';
-import { CalendarDays, Settings, LogOut, Users, X, Check, Sun, Moon, Copy, Share2, Mail, Link2, ExternalLink, PenLine, Video, Phone, MapPin, ChevronRight, Loader2, CalendarCheck, Plus, ChevronLeft, LayoutGrid, Menu, AlertCircle, Sparkles, Search, ShoppingBag, Wrench as Tool, QrCode, MessageSquare, ChevronDown, FileText } from 'lucide-react';
+import { CalendarDays, Settings, LogOut, Users, X, Check, Sun, Moon, Copy, Share2, Mail, Link2, ExternalLink, PenLine, Video, Phone, MapPin, ChevronRight, Loader2, CalendarCheck, Plus, ChevronLeft, LayoutGrid, Menu, AlertCircle, Sparkles, Search, Wrench as Tool, QrCode, MessageSquare, ChevronDown } from 'lucide-react';
+import {
+  MORE_TOOLS_HUB_PATH,
+  MORE_TOOLS_NAV,
+  isMoreToolsNavActive,
+  readMoreToolsOpen,
+  writeMoreToolsOpen,
+} from '../lib/dashboardNav';
 import { QRModal } from '../components/QRModal';
 import {
   buildAvailabilityEmailInvite,
@@ -25,7 +32,7 @@ import {
   type LinkExpiryValue,
 } from '../lib/singleUseLinks';
 
-type NavItem = { to: string; icon: typeof LayoutGrid; label: string; children?: NavItem[] };
+type NavItem = { to: string; icon: typeof LayoutGrid; label: string; badge?: string; children?: NavItem[] };
 
 // ── Quick-create booking link modal ──────────────────────────────────────────
 
@@ -859,11 +866,16 @@ export function Dashboard() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createdUrl, setCreatedUrl] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [moreToolsOpen, setMoreToolsOpen] = useState(readMoreToolsOpen);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const planName = effectivePlan(subscription, profile);
   const [checklistDismissed, setChecklistDismissed] = useState(() => localStorage.getItem('onboarding_checklist_dismissed') === '1');
   const [liveSlug, setLiveSlug] = useState<string | null>(null);
+
+  useEffect(() => {
+    writeMoreToolsOpen(moreToolsOpen);
+  }, [moreToolsOpen]);
 
   const isCalendlyOAuthSuccessReturn = () => {
     const params = new URLSearchParams(window.location.search);
@@ -1180,32 +1192,25 @@ export function Dashboard() {
     { to: '/dashboard/appointments', icon: CalendarCheck, label: 'Calendar' },
     { to: '/dashboard/contacts', icon: Users, label: 'Contacts' },
     {
-      to: '/dashboard/more-tools',
+      to: MORE_TOOLS_HUB_PATH,
       icon: Tool,
       label: 'More Tools',
-      children: [
-        { to: '/dashboard/group-scheduling', icon: Users, label: 'Group Scheduling' },
-        { to: '/dashboard/quotes', icon: FileText, label: 'Quote/Invoice' },
-        { to: '/dashboard/paid-booking', icon: ShoppingBag, label: 'Paid Booking' },
-      ],
+      children: MORE_TOOLS_NAV.map((item) => ({
+        to: item.path,
+        icon: item.icon,
+        label: item.label,
+        badge: item.badge,
+      })),
     },
     { to: '/dashboard/settings', icon: Settings, label: 'Settings' },
   ];
 
   const isActive = (path: string) => {
-    if (path === '/dashboard/group-scheduling') {
-      return location.pathname.startsWith('/dashboard/group-scheduling')
-        || location.pathname === '/dashboard/coordinate';
+    if (path === MORE_TOOLS_HUB_PATH) {
+      return location.pathname === MORE_TOOLS_HUB_PATH;
     }
-    if (path === '/dashboard/more-tools') {
-      return location.pathname === '/dashboard/more-tools'
-        || location.pathname === '/dashboard/qr-code'
-        || location.pathname === '/dashboard/qr'
-        || location.pathname === '/dashboard/signature';
-    }
-    if (path === '/dashboard/quotes') {
-      return location.pathname === '/dashboard/quotes';
-    }
+    const tool = MORE_TOOLS_NAV.find((item) => item.path === path);
+    if (tool) return isMoreToolsNavActive(tool, location.pathname);
     return location.pathname === path;
   };
   const initials = (displayName?.[0] ?? displayEmail?.[0] ?? '?').toUpperCase();
@@ -1234,22 +1239,77 @@ export function Dashboard() {
       }`}
     >
       {item.icon ? <item.icon className="h-[18px] w-[18px] shrink-0" /> : null}
-      {!opts?.collapsed && item.label}
+      {!opts?.collapsed && (
+        <>
+          <span className={opts?.nested ? 'truncate' : undefined}>{item.label}</span>
+          {item.badge ? (
+            <span className="ml-auto shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400">
+              {item.badge}
+            </span>
+          ) : null}
+        </>
+      )}
     </Link>
   );
 
-  const renderNavItem = (item: NavItem, opts?: { collapsed?: boolean; onNavigate?: () => void }) => {
-    if (!item.children?.length || opts?.collapsed) {
-      return renderNavLink(item, opts);
-    }
+  const renderMoreToolsGroup = (
+    item: NavItem,
+    opts?: { onNavigate?: () => void },
+  ) => {
+    const parentActive = isActive(item.to);
+    const parentPadding = parentActive ? 'pl-[calc(0.75rem-3px)] pr-1' : 'pl-3 pr-1';
+    const childCount = item.children?.length ?? 0;
     return (
       <div key={item.to} className="space-y-0.5">
-        {renderNavLink(item, opts)}
-        <div className="ml-3 pl-2 border-l border-gray-200 dark:border-slate-800 space-y-0.5">
-          {item.children.map((child) => renderNavLink(child, { ...opts, nested: true }))}
+        <div
+          className={`flex items-center rounded-lg text-sm transition-colors ${parentPadding} ${
+            parentActive
+              ? 'bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400 font-semibold border-l-[3px] border-brand-600 dark:border-brand-500 rounded-l-none'
+              : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-900'
+          }`}
+        >
+          <Link
+            to={item.to}
+            onClick={opts?.onNavigate}
+            className="flex flex-1 items-center gap-3 py-2.5 min-w-0"
+          >
+            {item.icon ? <item.icon className="h-[18px] w-[18px] shrink-0" /> : null}
+            <span className="truncate">{item.label}</span>
+          </Link>
+          <button
+            type="button"
+            aria-expanded={moreToolsOpen}
+            aria-label={moreToolsOpen ? 'Collapse More Tools' : 'Expand More Tools'}
+            onClick={() => setMoreToolsOpen((open) => !open)}
+            className="shrink-0 p-2 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors"
+          >
+            <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${moreToolsOpen ? '' : '-rotate-90'}`} />
+          </button>
+        </div>
+        <div
+          className={`grid transition-[grid-template-rows] duration-200 ease-out ${
+            moreToolsOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+          }`}
+        >
+          <div className="overflow-hidden min-h-0">
+            <div
+              className={`ml-3 pl-2 border-l border-gray-200 dark:border-slate-800 space-y-0.5 ${
+                childCount > 8 ? 'max-h-72 overflow-y-auto' : ''
+              }`}
+            >
+              {item.children?.map((child) => renderNavLink(child, { ...opts, nested: true }))}
+            </div>
+          </div>
         </div>
       </div>
     );
+  };
+
+  const renderNavItem = (item: NavItem, opts?: { collapsed?: boolean; onNavigate?: () => void }) => {
+    if (item.children?.length && !opts?.collapsed) {
+      return renderMoreToolsGroup(item, opts);
+    }
+    return renderNavLink(item, opts);
   };
 
   const renderAccountBar = (opts?: { compact?: boolean }) => (
