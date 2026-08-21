@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FileText, Plus, Trash2, Send, Copy, Check, Loader2, Mail, MessageSquare } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import type { HostQuote, HostQuoteKind, HostQuoteLineItem } from '../lib/types';
@@ -447,7 +448,10 @@ export function QuoteInvoicePage() {
 
         <aside>
           <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Saved</h2>
-          <p className="text-xs text-gray-500 dark:text-slate-500 mb-3">Tap one to reopen it.</p>
+          <p className="text-xs text-gray-500 dark:text-slate-500 mb-3">
+            Tap one to reopen it. Send history also lives in{' '}
+            <Link to="/dashboard/settings?tab=activity" className="font-semibold underline">Settings → Activity</Link>.
+          </p>
           <div className="space-y-2 max-h-80 lg:max-h-none overflow-auto">
             {quotes.length === 0 && (
               <p className="text-sm text-gray-500 dark:text-slate-500">Nothing sent yet.</p>

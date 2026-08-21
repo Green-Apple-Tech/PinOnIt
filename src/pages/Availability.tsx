@@ -821,7 +821,7 @@ export function AvailabilityPage({ embedded }: { embedded?: boolean } = {}) {
                       Guest reschedule cutoff
                     </label>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-                      Invitees cannot change the time themselves inside this window before the appointment. Default is 4 hours.
+                      Guests can text <span className="font-semibold">2</span> or <span className="font-semibold">reschedule</span> to get a link and pick a new time — until this cutoff. Default is 4 hours.
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {CUTOFF_OPTIONS.map((opt) => (

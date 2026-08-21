@@ -28,10 +28,11 @@ import { AnalyticsPage } from './Analytics';
 import { BillingPage } from './Billing';
 import { AvailabilityPage } from './Availability';
 import { RemindersPage } from './Reminders';
+import { ActivityPage } from './Activity';
 import { SmsBookingConsent } from '../components/SmsConsentText';
 import { SESSION_TIMEOUT_OPTIONS, sessionTimeoutOptionValue } from '../lib/sessionTimeout';
 
-type SettingsSection = 'general' | 'availability' | 'reminders' | 'analytics' | 'billing';
+type SettingsSection = 'general' | 'availability' | 'reminders' | 'activity' | 'analytics' | 'billing';
 type SettingsTab = 'profile' | 'booking_page' | 'branding' | 'embed' | 'referrals' | 'integrations';
 
 const REMINDER_CHANNEL_OPTIONS: { value: ReminderChannelPreference; label: string; icon: typeof Mail }[] = [
@@ -377,7 +378,7 @@ export function SettingsPage() {
   const initialSection = (): SettingsSection => {
     const p = new URLSearchParams(location.search).get('tab');
     if (p && GENERAL_TABS.includes(p as SettingsTab)) return 'general';
-    if (p === 'analytics' || p === 'billing' || p === 'availability' || p === 'reminders') return p;
+    if (p === 'analytics' || p === 'billing' || p === 'availability' || p === 'reminders' || p === 'activity') return p;
     return 'general';
   };
 
@@ -504,7 +505,7 @@ export function SettingsPage() {
     if (p && GENERAL_TABS.includes(p as SettingsTab)) {
       setSection('general');
       setTab(p as SettingsTab);
-    } else if (p === 'analytics' || p === 'billing' || p === 'availability' || p === 'reminders') {
+    } else if (p === 'analytics' || p === 'billing' || p === 'availability' || p === 'reminders' || p === 'activity') {
       setSection(p);
     }
 
@@ -855,7 +856,7 @@ export function SettingsPage() {
 
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Manage your profile, booking page, branding, analytics, and billing.</p>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Manage your profile, booking page, reminders, activity, analytics, and billing.</p>
       </div>
 
       {/* Top-level section tabs */}
@@ -864,6 +865,7 @@ export function SettingsPage() {
           { key: 'general', label: 'General' },
           { key: 'availability', label: 'Availability' },
           { key: 'reminders', label: 'Reminders & Messages' },
+          { key: 'activity', label: 'Activity' },
           { key: 'analytics', label: 'Analytics' },
           { key: 'billing', label: 'Billing' },
         ] as { key: SettingsSection; label: string }[]).map((s) => (
@@ -888,6 +890,8 @@ export function SettingsPage() {
       {section === 'reminders' && RemindersPage && (
         <RemindersPage embedded onOpenProfileTab={openProfileTab} />
       )}
+
+      {section === 'activity' && <ActivityPage />}
 
       {/* Analytics section */}
       {section === 'analytics' && <AnalyticsPage embedded />}

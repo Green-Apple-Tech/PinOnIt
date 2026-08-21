@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { effectivePlan } from '../lib/plan';
 import { PageChecklist } from '../components/PageChecklist';
-import type { MessageTemplate, ReminderRule, MessageLogEntry, Service } from '../lib/types';
+import type { MessageTemplate, ReminderRule, Service } from '../lib/types';
 import { SUPPORTED_LANGUAGES, TEMPLATE_VARIABLES } from '../lib/types';
 import { formatErrorMessage, formatFunctionError } from '../lib/errors';
 import { toast } from '../components/Toast';
@@ -255,7 +255,6 @@ export function RemindersPage({
   };
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
   const [rules, setRules] = useState<(ReminderRule & { template?: MessageTemplate; service?: Service })[]>([]);
-  const [log, setLog] = useState<MessageLogEntry[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingSlot, setSavingSlot] = useState<string | null>(null);
@@ -281,7 +280,7 @@ export function RemindersPage({
 
   // Advanced section
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [advancedTab, setAdvancedTab] = useState<'templates' | 'rules' | 'log' | 'critical' | 'voice'>('templates');
+  const [advancedTab, setAdvancedTab] = useState<'templates' | 'rules' | 'critical' | 'voice'>('templates');
 
   // Template form (advanced)
   const [showTemplateForm, setShowTemplateForm] = useState(false);
@@ -320,10 +319,9 @@ export function RemindersPage({
   useEffect(() => {
     if (!profile) return;
     (async () => {
-      const [tplRes, ruleRes, logRes, svcRes] = await Promise.all([
+      const [tplRes, ruleRes, svcRes] = await Promise.all([
         supabase.from('message_templates').select('*').eq('host_id', profile.id).order('created_at'),
         supabase.from('reminder_rules').select('*, message_templates(*), services(*)').eq('host_id', profile.id).order('timing_offset_minutes'),
-        supabase.from('message_log').select('*').eq('host_id', profile.id).order('created_at', { ascending: false }).limit(200),
         supabase.from('services').select('*').eq('host_id', profile.id),
       ]);
       const storedPhone = (profile as { phone?: string }).phone ?? '';
@@ -343,7 +341,6 @@ export function RemindersPage({
           service: services ?? undefined,
         };
       }));
-      setLog(logRes.data ?? []);
       setServices(svcRes.data ?? []);
       setLoading(false);
       if (!testSmsPhone) {
@@ -644,13 +641,6 @@ export function RemindersPage({
             ? `Test call started to ${to}. Answer to hear the reminder voicemail.`
             : `Test ${label} queued to ${to}. Check your phone — “queued” is not the same as delivered.`,
         });
-        const { data: latest } = await supabase
-          .from('message_log')
-          .select('*')
-          .eq('host_id', profile?.id)
-          .order('created_at', { ascending: false })
-          .limit(200);
-        if (latest) setLog(latest);
       }
     } catch (e) {
       setTestSmsResult({ ok: false, message: String(e) });
@@ -746,7 +736,8 @@ export function RemindersPage({
           {showTestSms && (
             <div className="border-t border-slate-200 dark:border-slate-800 px-5 py-4 space-y-3">
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Send a sample to this number now. SMS sends a text; voicemail places a Twilio call. WhatsApp uses an approved Twilio Utility template (not a freeform chat). If that template is missing, you will see an error instead of a false “sent”. Results show in Activity log.
+                Send a sample to this number now. SMS sends a text; voicemail places a Twilio call. WhatsApp uses an approved Twilio Utility template (not a freeform chat). If that template is missing, you will see an error instead of a false “sent”. Results show in{' '}
+                <Link to="/dashboard/settings?tab=activity" className="font-semibold underline">Settings → Activity</Link>.
               </p>
               <input
                 type="tel"
@@ -802,44 +793,13 @@ export function RemindersPage({
         </div>
       )}
 
-      <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Activity log</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Email, SMS, WhatsApp, and voice messages — including tests and extra reminders.
-            </p>
-          </div>
-        </div>
-        <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-[420px] overflow-y-auto">
-          {log.map((entry) => (
-            <div key={entry.id} className="px-5 py-3 flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3 min-w-0">
-                <ChannelIcon
-                  channel={entry.channel}
-                  className={`h-4 w-4 shrink-0 mt-0.5 ${entry.channel === 'email' ? 'text-blue-400' : entry.channel === 'voice' ? 'text-violet-400' : entry.channel === 'sms' ? 'text-amber-400' : ''}`}
-                  style={entry.channel === 'whatsapp' ? { color: '#5864C6' } : undefined}
-                />
-                <div className="min-w-0">
-                  <p className="text-sm text-slate-900 dark:text-white truncate">{entry.recipient}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{entry.subject || entry.body}</p>
-                </div>
-              </div>
-              <div className="flex flex-col items-end gap-1 shrink-0">
-                <span className={`text-xs px-2 py-0.5 rounded-full ${entry.status === 'sent' || entry.status === 'delivered' ? '' : entry.status === 'failed' ? 'bg-red-500/10 text-red-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`} style={entry.status === 'sent' || entry.status === 'delivered' ? { backgroundColor: '#5864C620', color: '#5864C6' } : {}}>
-                  {entry.status}
-                </span>
-                <span className="text-[11px] text-slate-400">
-                  {new Date(entry.sent_at || entry.created_at).toLocaleString()}
-                </span>
-              </div>
-            </div>
-          ))}
-          {log.length === 0 && (
-            <p className="px-5 py-8 text-center text-slate-400 text-sm">No messages sent yet. Use the test section above to send a sample SMS, WhatsApp, or voicemail.</p>
-          )}
-        </div>
-      </div>
+      <Link
+        to="/dashboard/settings?tab=activity"
+        className="flex items-center justify-between gap-3 px-5 py-4 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900/50"
+      >
+        <span>Message, test, and quote activity lives in Settings → Activity</span>
+        <ArrowRight className="h-4 w-4 text-slate-400 shrink-0" />
+      </Link>
 
       {/* ── FIRST-TIME SETUP GUIDE (shown when no reminders exist, not for Pro) ── */}
       {!hasAnyReminders && !showAddForm && !isPro && (
@@ -1394,7 +1354,7 @@ export function RemindersPage({
         >
           <span className="flex items-center gap-2">
             <Settings2 className="h-4 w-4 text-slate-400" />
-            Message Templates, Logs &amp; Voice defaults
+            Message Templates, Rules &amp; Voice defaults
           </span>
           {showAdvanced ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
         </button>
@@ -1406,7 +1366,6 @@ export function RemindersPage({
                 { key: 'voice' as const, label: 'Voice defaults', icon: PhoneCall },
                 { key: 'templates' as const, label: 'Templates', icon: Mail },
                 { key: 'rules' as const, label: 'Rules', icon: Bell },
-                { key: 'log' as const, label: 'Message Log', icon: Eye },
                 { key: 'critical' as const, label: 'Critical Alerts', icon: BellRing },
               ]).map((t) => {
                 const Icon = t.icon || Mail;
@@ -1696,36 +1655,6 @@ export function RemindersPage({
                   ) : !showRuleForm && (
                     <p className="text-center py-8 text-slate-400 text-sm">No custom rules yet.</p>
                   )}
-                </div>
-              )}
-
-              {/* Log tab */}
-              {advancedTab === 'log' && (
-                <div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Full history also appears in Activity log above.</p>
-                  <div className="space-y-2">
-                    {log.map((entry) => (
-                      <div key={entry.id} className="p-3 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <ChannelIcon
-                            channel={entry.channel}
-                            className={`h-4 w-4 shrink-0 ${entry.channel === 'email' ? 'text-blue-400' : entry.channel === 'voice' ? 'text-violet-400' : entry.channel === 'sms' ? 'text-amber-400' : ''}`}
-                            style={entry.channel === 'whatsapp' ? { color: '#5864C6' } : undefined}
-                          />
-                          <div className="min-w-0">
-                            <p className="text-sm truncate">{entry.recipient}</p>
-                            {entry.subject && <p className="text-xs text-slate-400 truncate">{entry.subject}</p>}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3 shrink-0">
-                          {entry.language !== 'en' && <span className="text-xs inline-flex items-center gap-0.5" style={{ color: '#5864C6' }}><Languages className="h-3 w-3" />{SUPPORTED_LANGUAGES[entry.language] ?? entry.language}</span>}
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${entry.status === 'sent' || entry.status === 'delivered' ? 'text-white' : entry.status === 'failed' ? 'bg-red-500/10 text-red-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`} style={entry.status === 'sent' || entry.status === 'delivered' ? { backgroundColor: '#5864C620', color: '#5864C6' } : {}}>{entry.status}</span>
-                          <span className="text-xs text-slate-400">{new Date(entry.sent_at || entry.created_at).toLocaleString()}</span>
-                        </div>
-                      </div>
-                    ))}
-                    {log.length === 0 && <p className="text-center py-8 text-slate-400 text-sm">No messages sent yet.</p>}
-                  </div>
                 </div>
               )}
 

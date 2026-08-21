@@ -115,6 +115,7 @@ function App() {
               <Route path="services" element={<ServicesPage />} />
               <Route path="availability" element={<Navigate to="/dashboard/settings?tab=availability" replace />} />
               <Route path="reminders" element={<Navigate to="/dashboard/settings?tab=reminders" replace />} />
+              <Route path="activity" element={<Navigate to="/dashboard/settings?tab=activity" replace />} />
               <Route path="appointments" element={<AppointmentsPage />} />
               <Route path="contacts" element={<ContactsPage />} />
               <Route path="messaging" element={<Navigate to="/dashboard/settings?tab=reminders" replace />} />
