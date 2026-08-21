@@ -885,13 +885,9 @@ export function Dashboard() {
     return !onboardingIsCompleted();
   };
 
-  // Resume wizard after OAuth redirect if wizard_active was set in localStorage
-  const [showWizard, setShowWizard] = useState(() => {
-    if (new URLSearchParams(window.location.search).get('onboarding') === '1') return true;
-    if (shouldReopenWizardForCalendly()) return true;
-    if (!onboardingIsCompleted() && wizardIsActive()) return true;
-    return false;
-  });
+  // Don't open from ?onboarding=1 until we know this isn't a returning host (avoids a first-time flash).
+  const [showWizard, setShowWizard] = useState(() => shouldReopenWizardForCalendly());
+  const [wizardUserRequested, setWizardUserRequested] = useState(false);
   const [wizardChecked, setWizardChecked] = useState(false);
   const [wizardInitialStep, setWizardInitialStep] = useState<number | undefined>(() => {
     if (shouldReopenWizardForCalendly()) return 0;
@@ -1014,44 +1010,43 @@ export function Dashboard() {
 
   // Auto-show wizard only for genuinely new users — runs once after ALL data has loaded
   useEffect(() => {
-    // Wait until profile, local data, AND subscription have all settled
     if (wizardChecked || !profile || loading || !subscriptionLoaded) return;
     setWizardChecked(true);
 
-    // Never show if already opened from checkout return, ?onboarding=1, or OAuth resume
-    if (showWizard) return;
+    const isActivePro = (
+      subscription?.plan === 'pro' && subscription?.status !== 'canceled'
+    ) || profile.plan === 'pro';
+    const established =
+      profile.onboarding_completed === true
+      || isActivePro
+      || (calendarCount > 0 && services.length > 0)
+      || (services.length > 0 && !!profile.slug);
 
-    // DB is source of truth — stale localStorage must not skip wizard after a wipe / fresh account
-    if (profile.onboarding_completed) return;
+    if (established) {
+      markOnboardingCompletedLocal();
+      if (!profile.onboarding_completed) {
+        void supabase.from('profiles').update({ onboarding_completed: true, wizard_active: false }).eq('id', profile.id);
+      }
+      // Close a leftover popup unless they clicked Wizard Setup or are mid calendar OAuth
+      if (showWizard && !wizardUserRequested && !profile.wizard_active) {
+        setShowWizard(false);
+      } else if (profile.wizard_active && !wizardUserRequested) {
+        setShowWizard(true);
+      }
+      return;
+    }
 
     if (!profile.wizard_active && onboardingIsCompleted()) {
       clearStaleOnboardingLocalState();
     }
 
-    // Active Pro/trialing subscription — mark completed and do not show
-    const isActivePro = (
-      subscription?.plan === 'pro' && subscription?.status !== 'canceled'
-    ) || profile.plan === 'pro';
-    if (isActivePro) {
-      supabase.from('profiles').update({ onboarding_completed: true }).eq('id', profile.id);
+    if (showWizard || profile.wizard_active) {
+      setShowWizard(true);
       return;
     }
 
-    // Has connected calendar AND event types — clearly past initial setup
-    if (calendarCount > 0 && services.length > 0) {
-      supabase.from('profiles').update({ onboarding_completed: true }).eq('id', profile.id);
-      return;
-    }
-
-    // Has a slug AND services — has completed setup manually
-    if (services.length > 0 && profile.slug) {
-      supabase.from('profiles').update({ onboarding_completed: true }).eq('id', profile.id);
-      return;
-    }
-
-    // Genuine new user — show the wizard
     setShowWizard(true);
-  }, [profile, subscription, subscriptionLoaded, loading, wizardChecked, showWizard, calendarCount, services]);
+  }, [profile, subscription, subscriptionLoaded, loading, wizardChecked, showWizard, wizardUserRequested, calendarCount, services]);
 
   // Hide setup checklist and mark onboarding complete when all steps are done
   useEffect(() => {
@@ -1359,7 +1354,10 @@ export function Dashboard() {
               <div className="flex items-center gap-2 shrink-0">
                 {profile?.show_wizard_button !== false && (
                   <button
-                    onClick={() => setShowWizard(true)}
+                    onClick={() => {
+                      setWizardUserRequested(true);
+                      setShowWizard(true);
+                    }}
                     className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                     title="Run setup wizard"
                   >

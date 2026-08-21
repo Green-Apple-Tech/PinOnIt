@@ -53,7 +53,7 @@ export function QuoteInvoicePage() {
       .select('*')
       .eq('host_id', user.id)
       .order('created_at', { ascending: false })
-      .limit(30);
+      .limit(500);
     setQuotes((data as HostQuote[]) ?? []);
   }, [user?.id]);
 
@@ -183,6 +183,7 @@ export function QuoteInvoicePage() {
         <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
           Send a quick quote, invoice, or cash receipt by email or text. PinOnIt does not take payment —
           add your PayPal, Venmo, or other link if they should pay somewhere else.
+          Every quote, invoice, and receipt you send is saved on this account.
         </p>
       </div>
 
@@ -371,7 +372,8 @@ export function QuoteInvoicePage() {
         </div>
 
         <aside>
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Recent</h2>
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Saved</h2>
+          <p className="text-xs text-gray-500 dark:text-slate-500 mb-3">Click one to reopen it.</p>
           <div className="space-y-2">
             {quotes.length === 0 && (
               <p className="text-sm text-gray-500 dark:text-slate-500">Nothing sent yet.</p>
@@ -392,7 +394,14 @@ export function QuoteInvoicePage() {
                   <span className="text-sm font-medium capitalize">{q.kind}</span>
                   <span className="ml-auto text-[11px] uppercase tracking-wide text-gray-400">{q.status}</span>
                 </div>
-                <p className="mt-1 text-xs text-gray-500 truncate">{q.client_name || q.client_email || 'No name'}</p>
+                <p className="mt-1 text-xs text-gray-500 truncate">
+                  {q.client_name || q.client_email || 'No name'}
+                  {' · '}
+                  {money((q.line_items ?? []).reduce((sum, item) => sum + (Number(item.amount) || 0), 0), q.currency)}
+                </p>
+                <p className="mt-0.5 text-[11px] text-gray-400">
+                  {new Date(q.created_at).toLocaleDateString()}
+                </p>
               </button>
             ))}
           </div>

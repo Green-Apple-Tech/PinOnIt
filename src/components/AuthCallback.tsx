@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { clearClientOnboardingState, clearStaleOnboardingLocalState } from '../lib/onboardingState';
+import { clearClientOnboardingState, clearStaleOnboardingLocalState, markOnboardingCompletedLocal, clearWizardLocal } from '../lib/onboardingState';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 const REDIRECT_KEY = 'auth_redirect';
@@ -62,6 +62,9 @@ export function AuthCallback() {
         }
         navigate('/dashboard?onboarding=1', { replace: true });
       } else {
+        // Returning hosts: don't let leftover wizard flags look like a first-time signup
+        markOnboardingCompletedLocal();
+        clearWizardLocal();
         navigate(redirect, { replace: true });
       }
     };
