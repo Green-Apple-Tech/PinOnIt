@@ -17,7 +17,10 @@ import {
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import { resolveDefaultReminderChannel, getWhatsappNumber } from '../lib/reminderChannels';
 import { VoicePersonalReminder, PersonalReminderDefaultsEditor } from '../components/VoicePersonalReminder';
+import { AlsoRemindPeople } from '../components/AlsoRemindPeople';
 import { SMS_OPT_OUT_FOOTER } from '../lib/smsOptOut';
+import { isValidSlackWebhookUrl } from '../lib/slackWebhook';
+import { SmsBookingConsent } from '../components/SmsConsentText';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -211,7 +214,8 @@ export function RemindersPage({
     setPreviewChannel(ch);
     const storedPhone = profile?.phone ?? '';
     setContactPhone(storedPhone ? blurFormatPhone(storedPhone) : '');
-  }, [profile?.default_reminder_channel, profile?.phone]);
+    setSlackWebhookUrl(profile?.slack_webhook_url ?? '');
+  }, [profile?.default_reminder_channel, profile?.phone, profile?.slack_webhook_url]);
 
   const handleSaveCriticalAlerts = async () => {
     if (!user) return;
@@ -276,9 +280,14 @@ export function RemindersPage({
   const [testVoiceSending, setTestVoiceSending] = useState(false);
   const [testSmsResult, setTestSmsResult] = useState<{ ok: boolean; message: string } | null>(null);
 
+  const [slackWebhookUrl, setSlackWebhookUrl] = useState('');
+  const [savingSlack, setSavingSlack] = useState(false);
+  const [testingSlack, setTestingSlack] = useState(false);
+  const [slackMsg, setSlackMsg] = useState('');
+
   // Advanced section
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [advancedTab, setAdvancedTab] = useState<'templates' | 'rules' | 'log' | 'critical' | 'voice'>('templates');
+  const [advancedTab, setAdvancedTab] = useState<'templates' | 'rules' | 'log' | 'critical' | 'voice' | 'slack'>('templates');
 
   // Template form (advanced)
   const [showTemplateForm, setShowTemplateForm] = useState(false);
@@ -657,6 +666,67 @@ export function RemindersPage({
     setTestVoiceSending(false);
   };
 
+  const handleSaveSlackWebhook = async () => {
+    if (!profile?.id) return;
+    const trimmed = slackWebhookUrl.trim();
+    if (trimmed && !isValidSlackWebhookUrl(trimmed)) {
+      setSlackMsg('URL must start with https://hooks.slack.com/services/');
+      return;
+    }
+    setSavingSlack(true);
+    setSlackMsg('');
+    const { error } = await supabase
+      .from('profiles')
+      .update({ slack_webhook_url: trimmed || null })
+      .eq('id', profile.id);
+    setSavingSlack(false);
+    if (error) {
+      setSlackMsg(error.message);
+      return;
+    }
+    await refreshProfile();
+    setSlackMsg(trimmed ? 'Saved.' : 'Cleared.');
+    setTimeout(() => setSlackMsg(''), 2500);
+  };
+
+  const handleTestSlack = async () => {
+    const trimmed = slackWebhookUrl.trim();
+    if (!isValidSlackWebhookUrl(trimmed)) {
+      setSlackMsg('URL must start with https://hooks.slack.com/services/');
+      return;
+    }
+    setTestingSlack(true);
+    setSlackMsg('');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-reminder`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session?.access_token ?? ''}`,
+            Apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            test_slack: true,
+            slack_webhook_url: trimmed,
+            text: 'PinOnIt test: Slack notifications are working.',
+          }),
+        },
+      );
+      const json = await res.json().catch(() => ({})) as { success?: boolean; error?: unknown };
+      if (!res.ok || json.error) {
+        setSlackMsg(formatFunctionError(json, 'Slack test failed. Check the webhook URL.'));
+      } else {
+        setSlackMsg('Test sent. Check your Slack channel.');
+      }
+    } catch (e) {
+      setSlackMsg(String(e));
+    }
+    setTestingSlack(false);
+  };
+
   if (loading) {
     return (
       <main className="p-6 md:p-8 max-w-3xl">
@@ -708,7 +778,7 @@ export function RemindersPage({
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Reminders &amp; Messages</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Remind yourself and your guests about anything — not just meetings. Set multiple reminders for a flight, a prescription refill, a kid's pickup, or any calendar event, via Email, SMS, WhatsApp, or Voice Call.
+            Remind yourself, your guests, and extra people (coworkers or anyone else) — not just meetings. Email, SMS, WhatsApp, or Voice for you and guests; extra people get email, SMS, or WhatsApp (no voice).
           </p>
         </div>
         {hasAnyReminders && (
@@ -722,6 +792,8 @@ export function RemindersPage({
       </div>
 
       <VoicePersonalReminder />
+
+      <AlsoRemindPeople />
 
       {isPro && (
         <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
@@ -1274,6 +1346,7 @@ export function RemindersPage({
               })}
             </div>
           </div>
+          </div>
         </div>
       )}
 
@@ -1396,6 +1469,7 @@ export function RemindersPage({
             <div className="flex gap-0 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/30 overflow-x-auto">
               {([
                 { key: 'voice' as const, label: 'Voice defaults', icon: PhoneCall },
+                { key: 'slack' as const, label: 'Slack', icon: MessageSquare },
                 { key: 'templates' as const, label: 'Templates', icon: Mail },
                 { key: 'rules' as const, label: 'Rules', icon: Bell },
                 { key: 'log' as const, label: 'Message Log', icon: Eye },
@@ -1413,6 +1487,50 @@ export function RemindersPage({
 
             <div className="p-5">
               {advancedTab === 'voice' && <PersonalReminderDefaultsEditor />}
+
+              {advancedTab === 'slack' && (
+                <div className="space-y-3 max-w-xl">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    Optional Incoming Webhook. After a booking confirmation or reminder is emailed or texted, PinOnIt posts the same copy to this Slack channel. Failures are logged and never block the booking.
+                  </p>
+                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400">
+                    Slack webhook URL
+                  </label>
+                  <input
+                    type="url"
+                    value={slackWebhookUrl}
+                    onChange={(e) => { setSlackWebhookUrl(e.target.value); setSlackMsg(''); }}
+                    placeholder="https://hooks.slack.com/services/…"
+                    className="w-full min-h-11 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-base text-slate-900 dark:text-white"
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void handleSaveSlackWebhook()}
+                      disabled={savingSlack}
+                      className="min-h-11 px-4 rounded-xl text-white text-sm font-semibold disabled:opacity-50 inline-flex items-center gap-2"
+                      style={{ backgroundColor: '#5864C6' }}
+                    >
+                      {savingSlack ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleTestSlack()}
+                      disabled={testingSlack || !slackWebhookUrl.trim()}
+                      className="min-h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-200 disabled:opacity-50 inline-flex items-center gap-2"
+                    >
+                      {testingSlack ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
+                      Send test message
+                    </button>
+                  </div>
+                  {slackMsg && (
+                    <p className={`text-sm ${slackMsg.startsWith('URL') || slackMsg.toLowerCase().includes('fail') || slackMsg.toLowerCase().includes('error') ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-300'}`}>
+                      {slackMsg}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Templates tab */}
               {advancedTab === 'templates' && (

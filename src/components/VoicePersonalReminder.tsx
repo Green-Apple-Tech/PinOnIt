@@ -240,7 +240,7 @@ export function VoicePersonalReminder() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {CHANNELS.map((ch) => {
                     const on = plan[timing].includes(ch.id);
-                    const Icon = ch.icon;
+                    const Icon = ch.icon || Mail;
                     return (
                       <button
                         key={ch.id}

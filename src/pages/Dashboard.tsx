@@ -25,7 +25,7 @@ import {
   type LinkExpiryValue,
 } from '../lib/singleUseLinks';
 
-type NavItem = { to: string; icon: typeof LayoutGrid; label: string };
+type NavItem = { to: string; icon: typeof LayoutGrid; label: string; children?: NavItem[] };
 
 // ── Quick-create booking link modal ──────────────────────────────────────────
 
@@ -208,7 +208,7 @@ function CreateLinkModal({ profile, onClose, onCreated }: CreateLinkModalProps) 
                       : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                   }`}
                 >
-                  <opt.icon className="h-4 w-4 shrink-0" />
+                  {opt.icon ? <opt.icon className="h-4 w-4 shrink-0" /> : null}
                   {opt.label}
                 </button>
               ))}
@@ -1179,10 +1179,16 @@ export function Dashboard() {
     { to: '/dashboard', icon: LayoutGrid, label: 'Send your Availability' },
     { to: '/dashboard/appointments', icon: CalendarCheck, label: 'Calendar' },
     { to: '/dashboard/contacts', icon: Users, label: 'Contacts' },
-    { to: '/dashboard/group-scheduling', icon: Users, label: 'Group Scheduling' },
-    { to: '/dashboard/more-tools', icon: Tool, label: 'More Tools' },
-    { to: '/dashboard/quotes', icon: FileText, label: 'Quote/Invoice Text' },
-    { to: '/dashboard/paid-booking', icon: ShoppingBag, label: 'Paid Booking' },
+    {
+      to: '/dashboard/more-tools',
+      icon: Tool,
+      label: 'More Tools',
+      children: [
+        { to: '/dashboard/group-scheduling', icon: Users, label: 'Group Scheduling' },
+        { to: '/dashboard/quotes', icon: FileText, label: 'Quote/Invoice' },
+        { to: '/dashboard/paid-booking', icon: ShoppingBag, label: 'Paid Booking' },
+      ],
+    },
     { to: '/dashboard/settings', icon: Settings, label: 'Settings' },
   ];
 
@@ -1214,18 +1220,37 @@ export function Dashboard() {
     }`;
   };
 
-  const renderNavLink = (item: NavItem, opts?: { collapsed?: boolean; onNavigate?: () => void }) => (
+  const renderNavLink = (
+    item: NavItem,
+    opts?: { collapsed?: boolean; onNavigate?: () => void; nested?: boolean },
+  ) => (
     <Link
       key={item.to}
       to={item.to}
       title={opts?.collapsed ? item.label : undefined}
       onClick={opts?.onNavigate}
-      className={`${navLinkClass(item.to)} ${opts?.collapsed ? 'justify-center px-3' : ''}`}
+      className={`${navLinkClass(item.to)} ${opts?.collapsed ? 'justify-center px-3' : ''} ${
+        opts?.nested ? 'text-[13px] py-2' : ''
+      }`}
     >
-      <item.icon className="h-[18px] w-[18px] shrink-0" />
+      {item.icon ? <item.icon className="h-[18px] w-[18px] shrink-0" /> : null}
       {!opts?.collapsed && item.label}
     </Link>
   );
+
+  const renderNavItem = (item: NavItem, opts?: { collapsed?: boolean; onNavigate?: () => void }) => {
+    if (!item.children?.length || opts?.collapsed) {
+      return renderNavLink(item, opts);
+    }
+    return (
+      <div key={item.to} className="space-y-0.5">
+        {renderNavLink(item, opts)}
+        <div className="ml-3 pl-2 border-l border-gray-200 dark:border-slate-800 space-y-0.5">
+          {item.children.map((child) => renderNavLink(child, { ...opts, nested: true }))}
+        </div>
+      </div>
+    );
+  };
 
   const renderAccountBar = (opts?: { compact?: boolean }) => (
     <div className={`flex items-center gap-2 ${opts?.compact ? '' : 'gap-2.5'}`}>
@@ -1288,7 +1313,7 @@ export function Dashboard() {
 
         {/* Nav */}
         <nav className="flex-1 px-2 pb-4 space-y-0.5 overflow-y-auto">
-          {mainNavItems.map((item) => renderNavLink(item, { collapsed: sidebarCollapsed }))}
+          {mainNavItems.map((item) => renderNavItem(item, { collapsed: sidebarCollapsed }))}
         </nav>
       </aside>
 
@@ -1315,7 +1340,7 @@ export function Dashboard() {
               </button>
             </div>
             <nav className="flex-1 px-2 pb-4 space-y-0.5 overflow-y-auto">
-              {mainNavItems.map((item) => renderNavLink(item, { onNavigate: () => setMobileMenuOpen(false) }))}
+              {mainNavItems.map((item) => renderNavItem(item, { onNavigate: () => setMobileMenuOpen(false) }))}
             </nav>
           </aside>
         </div>

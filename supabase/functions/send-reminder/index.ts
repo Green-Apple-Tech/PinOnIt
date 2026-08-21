@@ -3,6 +3,7 @@ import { appendSmsOptOut } from '../_shared/sms-opt-out.ts';
 import { NOREPLY_FROM, SUPPORT_EMAIL } from '../_shared/contact-email.ts';
 import { bookingAllowsGuestSms, bookingAllowsGuestWhatsapp, hostAllowsSms, hostAllowsWhatsapp } from '../_shared/sms-compliance.ts';
 import { isServiceRoleRequest, jsonAuthError } from '../_shared/callerAuth.ts';
+import { isValidSlackWebhookUrl, notifySlackWebhook } from '../_shared/slack-webhook.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -460,7 +461,7 @@ async function dispatchPersonalReminders(supabase: SupabaseClient): Promise<numb
     if (!reminder || reminder.status !== 'active') continue;
     const { data: hostProfile } = await supabase
       .from('profiles')
-      .select('full_name, email, notification_email, phone, whatsapp_number')
+      .select('full_name, email, notification_email, phone, whatsapp_number, reminder_also')
       .eq('id', job.host_id)
       .maybeSingle();
     const title = (reminder.title || 'your reminder').trim();
@@ -526,6 +527,26 @@ async function dispatchPersonalReminders(supabase: SupabaseClient): Promise<numb
       body: err ? `${msg}\n\n${err}` : msg,
     });
     if (ok) sent++;
+    if (job.channel !== 'voice') {
+      const due = reminder.due_at ? new Date(reminder.due_at) : null;
+      sent += await sendAlsoCopies({
+        supabase,
+        hostId: job.host_id,
+        channel: job.channel,
+        people: parseAlsoPeople(hostProfile?.reminder_also),
+        dedupeKey: `personal:${job.id}`,
+        emailSubject: `Copy: Reminder: ${title}`,
+        hostName: hostProfile?.full_name || 'PinOnIt',
+        serviceName: title,
+        guestName: hostProfile?.full_name || '',
+        date: due
+          ? due.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+          : when,
+        time: due
+          ? due.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+          : '',
+      });
+    }
   }
   return sent;
 }
@@ -583,6 +604,126 @@ async function sendResendEmail(
   }
 }
 
+type AlsoPerson = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  channels: string[];
+};
+
+function parseAlsoPeople(raw: unknown): AlsoPerson[] {
+  if (!Array.isArray(raw)) return [];
+  const out: AlsoPerson[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as Record<string, unknown>;
+    const channels = Array.isArray(row.channels)
+      ? (row.channels as string[]).filter((c) => c === 'email' || c === 'sms' || c === 'whatsapp')
+      : [];
+    out.push({
+      id: typeof row.id === 'string' && row.id ? row.id : `p${out.length}`,
+      name: String(row.name || '').trim() || 'there',
+      email: String(row.email || '').trim(),
+      phone: String(row.phone || '').trim(),
+      channels,
+    });
+  }
+  return out;
+}
+
+function alsoCopyBody(opts: {
+  personName: string;
+  hostName: string;
+  title: string;
+  guestName?: string;
+  when: string;
+  meetLink?: string | null;
+}): string {
+  const who = opts.guestName ? ` with ${opts.guestName}` : '';
+  const join = opts.meetLink ? `\nJoin: ${opts.meetLink}` : '';
+  return `Hi ${opts.personName}, ${opts.hostName} wanted you reminded: ${opts.title}${who} — ${opts.when}.${join}\n— PinOnIt`;
+}
+
+async function sendAlsoCopies(opts: {
+  supabase: SupabaseClient;
+  hostId: string;
+  bookingId?: string | null;
+  channel: string;
+  people: AlsoPerson[];
+  dedupeKey: string;
+  emailSubject: string;
+  hostName: string;
+  serviceName: string;
+  guestName: string;
+  date: string;
+  time: string;
+  meetLink?: string | null;
+}): Promise<number> {
+  const { channel, people } = opts;
+  if (channel === 'voice') return 0;
+  const when = `${opts.date} at ${opts.time}`;
+  let sent = 0;
+  for (const person of people) {
+    if (!person.channels.includes(channel)) continue;
+    const dedupe = `also:${opts.dedupeKey}:${person.id}:${channel}`;
+    if (opts.bookingId && await alreadyLogged(opts.supabase, opts.bookingId, channel, dedupe)) {
+      continue;
+    }
+    const body = alsoCopyBody({
+      personName: person.name,
+      hostName: opts.hostName,
+      title: opts.serviceName,
+      guestName: opts.guestName,
+      when,
+      meetLink: opts.meetLink,
+    });
+    let ok = false;
+    let recipient = '(none)';
+    let err: string | undefined;
+    if (channel === 'email') {
+      const resendKey = Deno.env.get('RESEND_API_KEY');
+      recipient = person.email || '(none)';
+      if (!resendKey || !person.email) err = 'no email';
+      else ok = await sendResendEmail([person.email], opts.emailSubject, body, resendKey);
+    } else if (channel === 'sms') {
+      recipient = person.phone || '(none)';
+      if (!person.phone) err = 'no phone';
+      else {
+        const result = await sendTwilioSms(person.phone, body);
+        ok = result.ok;
+        err = result.error;
+      }
+    } else if (channel === 'whatsapp') {
+      recipient = person.phone || '(none)';
+      if (!person.phone) err = 'no phone';
+      else {
+        const result = await sendTwilioWhatsapp(person.phone, {
+          guest_name: person.name,
+          host_name: opts.hostName,
+          service_name: opts.serviceName,
+          date: opts.date,
+          time: opts.time,
+          duration: '',
+        });
+        ok = result.ok;
+        err = result.error;
+      }
+    }
+    await insertMessageLog(opts.supabase, {
+      booking_id: opts.bookingId ?? null,
+      host_id: opts.hostId,
+      channel,
+      status: ok ? 'sent' : 'failed',
+      recipient,
+      subject: dedupe,
+      body: err ? `${body}\n\n${err}` : body,
+    });
+    if (ok) sent++;
+  }
+  return sent;
+}
+
 async function dispatchScheduledReminders(supabase: SupabaseClient): Promise<number> {
   const now = Date.now();
   const lateWindowMs = 25 * 60 * 1000;
@@ -592,7 +733,7 @@ async function dispatchScheduledReminders(supabase: SupabaseClient): Promise<num
 
   const { data: bookings, error } = await supabase
     .from('bookings')
-    .select('id, host_id, service_id, guest_name, guest_email, guest_phone, notify_via, reminder_times, reminder_channels, start_time, status, meet_link, guest_timezone, action_token, services(name, duration_minutes), profiles(full_name, slug, timezone, email, notification_email, phone, whatsapp_number, sms_opt_in, whatsapp_opt_in, default_reminder_channel)')
+    .select('id, host_id, service_id, guest_name, guest_email, guest_phone, notify_via, reminder_times, reminder_channels, start_time, status, meet_link, guest_timezone, action_token, services(name, duration_minutes), profiles(full_name, slug, timezone, email, notification_email, phone, whatsapp_number, sms_opt_in, whatsapp_opt_in, default_reminder_channel, reminder_also, slack_webhook_url)')
     .in('status', ['confirmed', 'pending', 'pending_approval'])
     .gte('start_time', fromIso)
     .lte('start_time', toIso)
@@ -631,6 +772,7 @@ async function dispatchScheduledReminders(supabase: SupabaseClient): Promise<num
     const meetLink = booking.meet_link as string | null;
     const hostPhone = (hostProfile?.phone as string) || null;
     const hostWhatsapp = (hostProfile?.whatsapp_number as string) || hostPhone;
+    const alsoPeople = parseAlsoPeople(hostProfile?.reminder_also);
 
     if (!hostRulesCache.has(booking.host_id)) {
       const { data: rules } = await supabase
@@ -698,6 +840,24 @@ async function dispatchScheduledReminders(supabase: SupabaseClient): Promise<num
         subject: dedupe,
         body: delivered.error ? `${msgBody}\n\n${delivered.error}` : msgBody,
       });
+      if (channel === 'email' || channel === 'sms') {
+        await notifySlackWebhook(hostProfile?.slack_webhook_url, msgBody);
+      }
+      sent += await sendAlsoCopies({
+        supabase,
+        hostId: booking.host_id,
+        bookingId: booking.id,
+        channel,
+        people: alsoPeople,
+        dedupeKey: dedupe,
+        emailSubject: `Copy: ${subject}`,
+        hostName,
+        serviceName,
+        guestName: booking.guest_name,
+        date: dateStr,
+        time: timeStr,
+        meetLink,
+      });
     }
 
     const times = Array.isArray(booking.reminder_times) ? booking.reminder_times as string[] : [];
@@ -731,6 +891,24 @@ async function dispatchScheduledReminders(supabase: SupabaseClient): Promise<num
           recipient: delivered.to || '(none)',
           subject: dedupe,
           body: delivered.error ? `${msgBody}\n\n${delivered.error}` : msgBody,
+        });
+        if (channel === 'email' || channel === 'sms') {
+          await notifySlackWebhook(hostProfile?.slack_webhook_url, msgBody);
+        }
+        sent += await sendAlsoCopies({
+          supabase,
+          hostId: booking.host_id,
+          bookingId: booking.id,
+          channel,
+          people: alsoPeople,
+          dedupeKey: dedupe,
+          emailSubject: `Copy: Reminder: ${serviceName}`,
+          hostName,
+          serviceName,
+          guestName: booking.guest_name,
+          date: dateStr,
+          time: timeStr,
+          meetLink,
         });
       }
     }
@@ -831,6 +1009,30 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ success: true });
     }
 
+    // ── Test Slack incoming webhook ──────────────────────────────────────────
+    if (body.test_slack) {
+      const hostId = await hostIdFromJwt(req, supabase);
+      if (!hostId) return jsonAuthError(corsHeaders, 'Sign in to send a Slack test');
+      const raw = typeof body.slack_webhook_url === 'string' ? body.slack_webhook_url.trim() : '';
+      let url = raw;
+      if (!url) {
+        const { data: hp } = await supabase
+          .from('profiles')
+          .select('slack_webhook_url')
+          .eq('id', hostId)
+          .maybeSingle();
+        url = (hp?.slack_webhook_url || '').trim();
+      }
+      if (!isValidSlackWebhookUrl(url)) {
+        return jsonResponse({ error: 'Slack webhook must look like https://hooks.slack.com/services/…' }, 400);
+      }
+      const text = typeof body.text === 'string' && body.text.trim()
+        ? body.text.trim()
+        : 'PinOnIt test: Slack notifications are working.';
+      await notifySlackWebhook(url, text);
+      return jsonResponse({ success: true });
+    }
+
     // ── Test SMS / WhatsApp ──────────────────────────────────────────────────
     if (body.test_sms || body.test_whatsapp || body.test_voice) {
       const { to, guest_name, host_name, duration, date, time, meeting_link } = body;
@@ -908,11 +1110,13 @@ Deno.serve(async (req: Request) => {
         let hostWhatsappConsent = false;
         let hostName = 'PinOnIt';
         let meetLink: string | null = null;
+        let alsoPeople: AlsoPerson[] = [];
+        let slackWebhook: string | null = null;
 
         if (ov.booking_id) {
           const { data: booking } = await supabase
             .from('bookings')
-            .select('guest_name, guest_email, guest_phone, notify_via, start_time, status, meet_link, services(name), profiles(full_name, email, notification_email, phone, whatsapp_number, sms_opt_in, whatsapp_opt_in, default_reminder_channel)')
+            .select('guest_name, guest_email, guest_phone, notify_via, start_time, status, meet_link, services(name), profiles(full_name, email, notification_email, phone, whatsapp_number, sms_opt_in, whatsapp_opt_in, default_reminder_channel, reminder_also, slack_webhook_url)')
             .eq('id', ov.booking_id)
             .maybeSingle();
           if (!booking || booking.status === 'canceled' || booking.status === 'completed') continue;
@@ -931,6 +1135,8 @@ Deno.serve(async (req: Request) => {
           hostWhatsapp = (hp?.whatsapp_number as string) || hostPhone;
           hostSmsConsent = hostAllowsSms(hp);
           hostWhatsappConsent = hostAllowsWhatsapp(hp);
+          alsoPeople = parseAlsoPeople(hp?.reminder_also);
+          slackWebhook = (hp?.slack_webhook_url as string) || null;
         } else if (ov.calendar_event_id) {
           const { data: ev } = await supabase
             .from('calendar_events')
@@ -942,7 +1148,7 @@ Deno.serve(async (req: Request) => {
           title = ev.title || 'Calendar event';
           const { data: hp } = await supabase
             .from('profiles')
-            .select('full_name, email, notification_email, phone, whatsapp_number, sms_opt_in, whatsapp_opt_in, default_reminder_channel')
+            .select('full_name, email, notification_email, phone, whatsapp_number, sms_opt_in, whatsapp_opt_in, default_reminder_channel, reminder_also, slack_webhook_url')
             .eq('id', ov.host_id)
             .maybeSingle();
           hostName = hp?.full_name || hostName;
@@ -952,6 +1158,8 @@ Deno.serve(async (req: Request) => {
           hostSmsConsent = hostAllowsSms(hp);
           hostWhatsappConsent = hostAllowsWhatsapp(hp);
           guestName = hostName;
+          alsoPeople = parseAlsoPeople(hp?.reminder_also);
+          slackWebhook = hp?.slack_webhook_url || null;
         }
 
         if (!startIso) continue;
@@ -1030,6 +1238,26 @@ Deno.serve(async (req: Request) => {
           });
         }
 
+        if (ov.channel === 'email' || ov.channel === 'sms') {
+          await notifySlackWebhook(slackWebhook, withLink);
+        }
+
+        sent += await sendAlsoCopies({
+          supabase,
+          hostId: ov.host_id,
+          bookingId: ov.booking_id,
+          channel: ov.channel,
+          people: alsoPeople,
+          dedupeKey: `extra:${ov.id}`,
+          emailSubject: `Copy: Reminder: ${title}`,
+          hostName,
+          serviceName: title,
+          guestName,
+          date: dateStr,
+          time: timeStr,
+          meetLink,
+        });
+
         await supabase
           .from('event_reminder_overrides')
           .update({ sent_at: new Date().toISOString() })
@@ -1065,7 +1293,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: booking } = await supabase
       .from('bookings')
-      .select('*, services(name, duration_minutes), profiles(full_name, slug, timezone, email, notification_email, phone, whatsapp_number, sms_opt_in, whatsapp_opt_in, default_reminder_channel, voice_message_template)')
+      .select('*, services(name, duration_minutes), profiles(full_name, slug, timezone, email, notification_email, phone, whatsapp_number, sms_opt_in, whatsapp_opt_in, default_reminder_channel, voice_message_template, slack_webhook_url)')
       .eq('id', booking_id)
       .maybeSingle();
 
@@ -1200,6 +1428,10 @@ Deno.serve(async (req: Request) => {
           deliveryStatus = 'failed';
         }
       }
+    }
+
+    if (sendChannel === 'email' || sendChannel === 'sms') {
+      await notifySlackWebhook(hostProfile?.slack_webhook_url, msgBody);
     }
 
     // ── WhatsApp via Twilio ──────────────────────────────────────────────────

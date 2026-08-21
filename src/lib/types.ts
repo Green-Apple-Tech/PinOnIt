@@ -55,6 +55,14 @@ export interface Profile {
     hour_before?: string[];
     ten_min?: string[];
   } | null;
+  reminder_also?: Array<{
+    id: string;
+    name: string;
+    email?: string;
+    phone?: string;
+    channels?: string[];
+  }> | null;
+  slack_webhook_url?: string | null;
   paid_booking_intro_seen: boolean;
   paid_booking_settings: PaidBookingSettings;
   paid_booking_theme: 'clean' | 'bold' | 'warm';
