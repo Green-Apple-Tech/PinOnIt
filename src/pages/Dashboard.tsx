@@ -1398,6 +1398,18 @@ export function Dashboard() {
                         {`Get started — ${completedCount} of ${steps.length} done`}
                       </span>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setChecklistDismissed(true);
+                        localStorage.setItem('onboarding_checklist_dismissed', '1');
+                      }}
+                      className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded"
+                      title="Don't show this again"
+                      aria-label="Dismiss checklist"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
                   </div>
                   <div className="divide-y divide-slate-50 dark:divide-slate-800/50">
                     {steps.map((step, i) => (

@@ -155,11 +155,9 @@ export function ContactsPage() {
   const [checklistDismissed, setChecklistDismissed] = useState(
     () => localStorage.getItem('contacts_checklist_dismissed') === 'true',
   );
-
-  const handleDismissChecklist = () => {
-    localStorage.setItem('contacts_checklist_dismissed', 'true');
-    setChecklistDismissed(true);
-  };
+  const [importCardDismissed, setImportCardDismissed] = useState(
+    () => localStorage.getItem('contacts_import_card_dismissed') === '1',
+  );
 
   const showToast = (msg: string, type: 'success' | 'error') => {
     setToast({ msg, type });
@@ -1183,12 +1181,26 @@ export function ContactsPage() {
         </div>
       )}
 
-      {/* Always-visible import card — never dismissible */}
-      {(!gmailConnected || !outlookConnected) && (
+      {/* Import card — dismiss if you don't want to connect Gmail/Outlook */}
+      {(!gmailConnected || !outlookConnected) && !importCardDismissed && (
         <div className="mb-5 rounded-2xl border-2 border-indigo-200 dark:border-indigo-800 bg-indigo-50/70 dark:bg-indigo-950/30 p-5">
-          <h2 className="text-base font-bold text-slate-900 dark:text-white mb-1">
-            Import contacts
-          </h2>
+          <div className="flex items-start justify-between gap-3 mb-1">
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">
+              Import contacts
+            </h2>
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.setItem('contacts_import_card_dismissed', '1');
+                setImportCardDismissed(true);
+              }}
+              className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded"
+              title="Don't show this again"
+              aria-label="Dismiss import prompt"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
           <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
             Pull contacts from Gmail or Outlook. Works even if a provider account is empty — you can connect now and sync again later.
           </p>
@@ -1246,17 +1258,6 @@ export function ContactsPage() {
             storageKey="contacts_checklist"
             items={contactsChecklistItems}
           />
-          {allDone && (
-            <button
-              type="button"
-              onClick={handleDismissChecklist}
-              className="absolute top-3 right-10 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded transition-colors"
-              title="Dismiss checklist"
-              aria-label="Dismiss checklist"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
         </div>
       )}
 

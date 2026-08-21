@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState, type MouseEvent } from 'react';
+import { Check, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export interface ChecklistItem {
@@ -20,16 +20,23 @@ interface PageChecklistProps {
 export function PageChecklist({ items, title = 'Get Started', storageKey }: PageChecklistProps) {
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(storageKey + '_open') === '0');
+  const [dismissed, setDismissed] = useState(() => localStorage.getItem(storageKey + '_dismissed') === '1');
 
   const allDone = items.every(i => i.done);
   const doneCount = items.filter(i => i.done).length;
 
-  if (localStorage.getItem(storageKey + '_dismissed') === '1') return null;
+  if (dismissed) return null;
 
   const handleToggleCollapse = () => {
     const next = !collapsed;
     setCollapsed(next);
     localStorage.setItem(storageKey + '_open', next ? '0' : '1');
+  };
+
+  const handleDismiss = (e: MouseEvent) => {
+    e.stopPropagation();
+    localStorage.setItem(storageKey + '_dismissed', '1');
+    setDismissed(true);
   };
 
   return (
@@ -38,11 +45,12 @@ export function PageChecklist({ items, title = 'Get Started', storageKey }: Page
         ? 'border-indigo-200 dark:border-indigo-800/50 bg-indigo-50 dark:bg-indigo-950/20'
         : 'border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/10'
     }`}>
-      <button
-        onClick={handleToggleCollapse}
-        className="w-full flex items-center justify-between px-4 py-3 text-left"
-      >
-        <div className="flex items-center gap-2.5">
+      <div className="w-full flex items-center justify-between px-4 py-3">
+        <button
+          type="button"
+          onClick={handleToggleCollapse}
+          className="flex items-center gap-2.5 min-w-0 text-left flex-1"
+        >
           {allDone ? (
             <span className="flex items-center justify-center h-5 w-5 rounded-full bg-emerald-500 shrink-0">
               <Check className="h-3 w-3 text-white" />
@@ -57,15 +65,31 @@ export function PageChecklist({ items, title = 'Get Started', storageKey }: Page
           <span className={`text-sm font-semibold ${allDone ? 'text-indigo-700 dark:text-indigo-500' : 'text-amber-800 dark:text-amber-300'}`}>
             {allDone ? `${title} — all done!` : `${title} — ${doneCount} of ${items.length} done`}
           </span>
+        </button>
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={handleDismiss}
+            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded"
+            title="Don't show this again"
+            aria-label="Dismiss checklist"
+          >
+            <X className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={handleToggleCollapse}
+            className="p-1 text-slate-400"
+            aria-label={collapsed ? 'Expand checklist' : 'Collapse checklist'}
+          >
+            {collapsed ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronUp className="h-4 w-4" />
+            )}
+          </button>
         </div>
-        <div className="flex items-center gap-2">
-          {collapsed ? (
-            <ChevronDown className="h-4 w-4 text-slate-400" />
-          ) : (
-            <ChevronUp className="h-4 w-4 text-slate-400" />
-          )}
-        </div>
-      </button>
+      </div>
 
       {!collapsed && (
         <div className={`border-t divide-y ${
