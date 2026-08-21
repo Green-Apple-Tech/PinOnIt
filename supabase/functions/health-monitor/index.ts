@@ -21,6 +21,7 @@ const SERVICES = [
   { name: "Dashboard", url: `${APP_URL}/login` },
   { name: "Database", url: `${SUPABASE_URL}/rest/v1/`, checkFn: "db" },
   { name: "Email/SMS Reminders", url: `${SUPABASE_URL}/functions/v1/send-reminder`, checkFn: "reminder" },
+  { name: "Stripe Webhook", url: `${SUPABASE_URL}/functions/v1/stripe-webhook`, checkFn: "stripe_webhook" },
 ];
 
 async function checkService(svc: typeof SERVICES[0]): Promise<{ status: "ok" | "degraded" | "down"; response_time_ms: number; error_message: string | null }> {
@@ -41,6 +42,47 @@ async function checkService(svc: typeof SERVICES[0]): Promise<{ status: "ok" | "
         method: "OPTIONS",
         signal: AbortSignal.timeout(8000),
       });
+    } else if (svc.checkFn === "stripe_webhook") {
+      // Stripe never sends a JWT. Healthy endpoint: reachable without auth, rejects missing signature.
+      // Gateway JWT re-enabled → usually 401 "Missing authorization header".
+      // Sync constructEvent bug → 400 SubtleCryptoProvider.
+      res = await fetch(svc.url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+        signal: AbortSignal.timeout(8000),
+      });
+      const ms = Date.now() - start;
+      const text = await res.text().catch(() => "");
+      if (/Missing authorization header/i.test(text) || (res.status === 401 && /authorization/i.test(text))) {
+        return {
+          status: "down",
+          response_time_ms: ms,
+          error_message: "JWT gate on — redeploy stripe-webhook with --no-verify-jwt",
+        };
+      }
+      if (/SubtleCryptoProvider|constructEventAsync/i.test(text)) {
+        return {
+          status: "down",
+          response_time_ms: ms,
+          error_message: "constructEvent sync bug — use constructEventAsync",
+        };
+      }
+      if (res.status === 401 && /stripe-signature/i.test(text)) {
+        return { status: "ok", response_time_ms: ms, error_message: null };
+      }
+      if (res.status >= 500) {
+        return { status: "down", response_time_ms: ms, error_message: `HTTP ${res.status}: ${text.slice(0, 120)}` };
+      }
+      if (ms > 5000) {
+        return { status: "degraded", response_time_ms: ms, error_message: "Slow response (>5s)" };
+      }
+      // Unexpected shape — treat as degraded so we notice, not silent OK
+      return {
+        status: "degraded",
+        response_time_ms: ms,
+        error_message: `Unexpected webhook probe HTTP ${res.status}: ${text.slice(0, 120)}`,
+      };
     } else {
       res = await fetch(svc.url, {
         signal: AbortSignal.timeout(8000),

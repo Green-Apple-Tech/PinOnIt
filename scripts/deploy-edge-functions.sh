@@ -15,6 +15,8 @@ deploy() {
 }
 
 # OAuth / webhook callbacks — never require JWT at the gateway
+# Stripe webhooks have NO Authorization header; deploying without --no-verify-jwt
+# causes 401 "Missing authorization header" and Stripe will disable the endpoint.
 for fn in google-calendar-callback outlook-calendar-callback calendly-callback zoom-callback stripe-webhook; do
   deploy "$fn" --no-verify-jwt
 done

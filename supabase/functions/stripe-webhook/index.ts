@@ -26,7 +26,15 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.text();
     const signature = req.headers.get('stripe-signature');
-    const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET')!;
+    const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
+
+    if (!webhookSecret) {
+      console.error('stripe-webhook: STRIPE_WEBHOOK_SECRET is not set');
+      return new Response(JSON.stringify({ error: 'Webhook secret not configured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     if (!signature) {
       return new Response(JSON.stringify({ error: 'Missing stripe-signature header' }), {
@@ -35,7 +43,8 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    // Deno/Web Crypto requires the async verifier (sync constructEvent always 400s).
+    const event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret);
 
     const syncFromSubscription = async (
       subscription: Stripe.Subscription,
@@ -176,8 +185,13 @@ Deno.serve(async (req: Request) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error('stripe-webhook error', message);
-    return new Response(JSON.stringify({ error: message }), {
-      status: 400,
+    // Signature / payload verification failures → 400 (Stripe should not retry forever with bad secret).
+    // Unexpected processing bugs after a valid event → 200 so Stripe does not disable the endpoint.
+    const isVerifyFailure =
+      /signature|No signatures|Invalid signature|Webhook payload|constructEvent|SubtleCrypto/i.test(message);
+    const status = isVerifyFailure ? 400 : 200;
+    return new Response(JSON.stringify({ error: message, received: !isVerifyFailure }), {
+      status,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
