@@ -8,6 +8,7 @@ import {
   Sun, Moon, Menu, Zap, X, Link2,
   DollarSign, Users,
   ChevronRight, Pause, Play,
+  Calendar, Bell, Mail, MessageCircle, MessagesSquare, Phone,
 } from 'lucide-react';
 import { OnboardingBot } from '../components/OnboardingBot';
 
@@ -63,6 +64,7 @@ const COMP_ROWS: CompRow[] = [
   { feature: 'Email reminders',   pinonit: 'Pro', calendly: 'All plans', acuity: 'All plans' },
   { feature: 'SMS reminders',     pinonit: 'Pro', calendly: 'Standard+', acuity: 'Emerging+' },
   { feature: 'WhatsApp reminders',pinonit: 'Pro', calendly: false,       acuity: false },
+  { feature: 'Voice call reminders', pinonit: 'Pro', calendly: false, acuity: false },
   { feature: 'Reminders for ANY calendar event', pinonit: true, calendly: false, acuity: false },
   { section: 'Calendar Sync' },
   { feature: 'Google Calendar',   pinonit: true,  calendly: true,  acuity: true },
@@ -143,20 +145,20 @@ const SCREENSHOTS = [
     image: '/screenshots/booking-page.png',
   },
   {
+    title: 'Super Reminders',
+    emoji: '🔔',
+    desc: 'Email, SMS, WhatsApp, and voice — for PinOnIt bookings and events already on your calendar.',
+    tag: 'Never miss a meeting',
+    color: 'from-violet-500 to-violet-700',
+    image: '/screenshots/reminders.png',
+  },
+  {
     title: 'Send Your Availability',
     emoji: '🔗',
     desc: 'Share your booking link via copy, QR code, email, or text in one click.',
     tag: 'Dashboard',
     color: 'from-indigo-500 to-indigo-700',
     image: '/screenshots/dashboard.png',
-  },
-  {
-    title: 'Smart Reminder System',
-    emoji: '🔔',
-    desc: 'Set reminders via Email, SMS, WhatsApp, or Voice Call — for every booking, automatically.',
-    tag: 'Reminders & Messages',
-    color: 'from-violet-500 to-violet-700',
-    image: '/screenshots/reminders.png',
   },
   {
     title: 'Email Signature Creator',
@@ -227,10 +229,10 @@ function ScreenshotShowcase() {
             See It In Action
           </span>
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3">
-            Everything you need, beautifully built
+            Everything you need to schedule — and actually show up
           </h2>
           <p className="text-gray-500 dark:text-slate-400 text-lg max-w-xl mx-auto">
-            Built for professionals who want to look great and save time.
+            Calendar, reminders, booking pages, and extras — in one subscription.
           </p>
         </div>
 
@@ -379,6 +381,7 @@ export function Landing() {
 
           <div className="hidden lg:flex items-center gap-1 text-sm font-medium text-slate-600 dark:text-slate-300">
             <a href="#features" className="px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Features</a>
+            <a href="#reminders" className="px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Reminders</a>
             <a href="#compare" className="px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">vs. Calendly</a>
             <a href="#pricing" className="px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Pricing</a>
             <a href="#earn" className="px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Referral Program</a>
@@ -405,6 +408,7 @@ export function Landing() {
         {mobileMenuOpen && (
           <div className="lg:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-4 flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
             <a href="#features" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-brand-500 transition-colors">Features</a>
+            <a href="#reminders" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-brand-500 transition-colors">Reminders</a>
             <a href="#compare" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-brand-500 transition-colors">vs. Calendly</a>
             <a href="#pricing" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-brand-500 transition-colors">Pricing</a>
             <a href="#earn" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-brand-500 transition-colors">Referral Program</a>
@@ -415,14 +419,14 @@ export function Landing() {
       {/* ── App pill bar ── */}
       <div className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 py-3 px-6 overflow-x-auto">
         <div className="flex flex-col items-center gap-1.5 min-w-max mx-auto">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Everything included in one subscription:</p>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Calendar scheduler + super reminders — other tools included:</p>
           <div className="flex items-center justify-center gap-2 min-w-max mx-auto">
           {[
             { num: '1', label: 'Calendar Scheduler' },
-            { num: '2', label: 'QR Scheduler' },
-            { num: '3', label: 'Signature Creator' },
-            { num: '4', label: 'Reminder' },
-            { num: '5', label: 'WhatsApp & SMS Notifier' },
+            { num: '2', label: 'Super Reminders' },
+            { num: '3', label: 'Email · SMS · WhatsApp · Voice' },
+            { num: '4', label: 'QR Booking' },
+            { num: '5', label: 'Email Signatures' },
           ].map(({ num, label }) => (
             <div key={num} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full shadow-sm">
               <span className="h-4.5 w-4.5 h-[18px] w-[18px] rounded-full bg-brand-500 text-white text-[10px] font-black flex items-center justify-center shrink-0">{num}</span>
@@ -440,14 +444,38 @@ export function Landing() {
         </div>
 
         <div className="relative max-w-4xl mx-auto">
+          <p className="inline-flex items-center gap-2 px-3 py-1.5 mb-6 rounded-full bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-300 text-xs font-bold uppercase tracking-widest">
+            <Calendar className="h-3.5 w-3.5" />
+            Calendar scheduler
+            <span className="text-slate-300 dark:text-slate-600">·</span>
+            <Bell className="h-3.5 w-3.5" />
+            Super reminder app
+          </p>
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[1.08] text-slate-900 dark:text-white mb-6 max-w-4xl mx-auto">
-            One App. Five Tools.{' '}
-            <span className="text-brand-500">Half the Price of Calendly.</span>
+            Never miss a meeting{' '}
+            <span className="text-brand-500">again.</span>
           </h1>
 
-          <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto mb-10 leading-relaxed">
-            Pin On It replaces Calendly and 4 other tools — scheduling, SMS &amp; WhatsApp reminders, QR code booking, and email signatures, all in one place.
+          <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto mb-8 leading-relaxed">
+            PinOnIt is mainly a calendar scheduler and a super reminder app — email, SMS, WhatsApp, and voice — so you and your guests actually show up. Booking links, QR codes, and email signatures come with it.
           </p>
+
+          <div className="flex flex-wrap items-center justify-center gap-2 mb-10">
+            {[
+              { icon: Mail, label: 'Email' },
+              { icon: MessageCircle, label: 'SMS' },
+              { icon: MessagesSquare, label: 'WhatsApp' },
+              { icon: Phone, label: 'Voice' },
+            ].map(({ icon: Icon, label }) => (
+              <span
+                key={label}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-200 shadow-sm"
+              >
+                <Icon className="h-3.5 w-3.5 text-brand-500" />
+                {label}
+              </span>
+            ))}
+          </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6">
             <Link to="/signup" className="w-full sm:w-auto px-8 py-4 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-full text-base transition-all shadow-lg shadow-brand-200/60 dark:shadow-none inline-flex items-center justify-center gap-2">
@@ -460,6 +488,42 @@ export function Landing() {
 
           <p className="text-sm text-slate-400 dark:text-slate-500">
             No charge until day 61 · Cancel anytime · No contracts
+          </p>
+        </div>
+      </section>
+
+      {/* ── Super reminders ── */}
+      <section id="reminders" className="py-20 px-6 bg-slate-50 dark:bg-slate-900/40 scroll-mt-16">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 text-xs font-semibold rounded-full uppercase tracking-widest mb-4">
+              <Bell className="h-3.5 w-3.5" /> Super reminder app
+            </span>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3">
+              Four ways to make sure the meeting happens
+            </h2>
+            <p className="text-gray-500 dark:text-slate-400 text-lg max-w-2xl mx-auto">
+              Remind yourself and your guests on the channel they actually answer. Works for PinOnIt bookings and events already on Google, Outlook, or Apple calendars.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { icon: Mail, title: 'Email', desc: 'Confirmations and timed follow-ups in the inbox they already check.' },
+              { icon: MessageCircle, title: 'SMS', desc: 'A text before the appointment. Harder to ignore than another email.' },
+              { icon: MessagesSquare, title: 'WhatsApp', desc: 'Reach clients where they already chat — especially outside the US.' },
+              { icon: Phone, title: 'Voice', desc: 'An actual call so you don’t bury a meeting under a silent phone.' },
+            ].map(({ icon: Icon, title, desc }) => (
+              <div key={title} className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6">
+                <div className="h-10 w-10 rounded-xl bg-brand-50 dark:bg-brand-500/10 flex items-center justify-center mb-4">
+                  <Icon className="h-5 w-5 text-brand-600 dark:text-brand-400" />
+                </div>
+                <h3 className="font-bold text-slate-900 dark:text-white mb-2">{title}</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
+            Also included: shareable booking pages, QR codes, email signatures, quotes and invoices, group scheduling, and paid bookings.
           </p>
         </div>
       </section>
@@ -693,7 +757,7 @@ export function Landing() {
               <ul className="space-y-2.5 flex-1 mb-6">
                 {[
                   'Unlimited event types',
-                  'SMS + WhatsApp + Email reminders',
+                  'SMS + WhatsApp + Email + Voice reminders',
                   'Calendar sync (Google, Outlook, Apple)',
                   'PayPal payments at booking',
                   'Email signature creator',
@@ -905,10 +969,10 @@ export function Landing() {
       <section className="py-24 px-6 bg-brand-500">
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-3xl md:text-5xl font-black text-white leading-tight mb-4">
-            Start free. Share your link.<br />Get paid forever.
+            Never miss a meeting again.
           </h2>
           <p className="text-brand-100 text-lg mb-10 max-w-lg mx-auto">
-            Set up in 2 minutes. No credit card required. Start earning from referrals on day one.
+            Calendar scheduling plus super reminders over email, SMS, WhatsApp, and voice. Set up in minutes. No credit card required.
           </p>
           <Link
             to="/signup"
@@ -926,6 +990,7 @@ export function Landing() {
           <img src="/pinonit_logo.png" alt="Pin on It" className="h-7 w-auto" />
           <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-slate-500 dark:text-slate-400">
             <a href="#features" className="hover:text-slate-900 dark:hover:text-white transition-colors">Features</a>
+            <a href="#reminders" className="hover:text-slate-900 dark:hover:text-white transition-colors">Reminders</a>
             <a href="#compare" className="hover:text-slate-900 dark:hover:text-white transition-colors">vs. Calendly</a>
             <a href="#pricing" className="hover:text-slate-900 dark:hover:text-white transition-colors">Pricing</a>
             <a href="#earn" className="hover:text-slate-900 dark:hover:text-white transition-colors">Referral Program</a>

@@ -32,6 +32,7 @@ for fn in google-calendar-auth outlook-calendar-auth zoom-auth; do
 done
 
 deploy scrape-calendly
+deploy send-quote
 
 echo ""
 echo "Done. OAuth callbacks deployed with --no-verify-jwt (Google + Microsoft + Calendly + Zoom + Stripe webhook)."

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { QrCode, Mail, ArrowRight } from 'lucide-react';
+import { QrCode, Mail, FileText, ArrowRight } from 'lucide-react';
 
 function ToolCard({
   icon: Icon,
@@ -38,7 +38,7 @@ export function MoreToolsPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">More Tools</h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
-          Extra ways to share your booking link and grow bookings.
+          Extra ways to share your booking link, send a quote, and grow bookings.
         </p>
       </div>
 
@@ -56,6 +56,13 @@ export function MoreToolsPage() {
           description="Create a professional email signature with your booking link built in."
           buttonLabel="Open Signature Builder"
           to="/dashboard/signature"
+        />
+        <ToolCard
+          icon={FileText}
+          title="Quote / Invoice"
+          description="Send a quote, invoice, or cash receipt by email or text. Add a PayPal or Venmo link if they should pay somewhere else — PinOnIt does not collect payment."
+          buttonLabel="Open Quote / Invoice"
+          to="/dashboard/quotes"
         />
       </div>
     </main>

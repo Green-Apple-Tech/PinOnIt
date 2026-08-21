@@ -1199,7 +1199,8 @@ export function Dashboard() {
       return location.pathname === '/dashboard/more-tools'
         || location.pathname === '/dashboard/qr-code'
         || location.pathname === '/dashboard/qr'
-        || location.pathname === '/dashboard/signature';
+        || location.pathname === '/dashboard/signature'
+        || location.pathname === '/dashboard/quotes';
     }
     return location.pathname === path;
   };

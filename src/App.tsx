@@ -45,6 +45,12 @@ const MeetingPollsPage = lazy(() =>
 const QRCreatorPage = lazy(() =>
   import('./pages/QRCreator').then((m) => ({ default: m.QRCreatorPage })),
 );
+const QuoteInvoicePage = lazy(() =>
+  import('./pages/QuoteInvoice').then((m) => ({ default: m.QuoteInvoicePage })),
+);
+const QuoteViewPage = lazy(() =>
+  import('./pages/QuoteView').then((m) => ({ default: m.QuoteViewPage })),
+);
 const MoreToolsPage = lazy(() =>
   import('./pages/MoreTools').then((m) => ({ default: m.MoreToolsPage })),
 );
@@ -121,9 +127,19 @@ function App() {
               <Route path="coordinate" element={<CoordinateMeetingsPage />} />
               <Route path="qr-code" element={<QRCreatorPage />} />
               <Route path="qr" element={<Navigate to="/dashboard/qr-code" replace />} />
+              <Route path="quotes" element={<QuoteInvoicePage />} />
             </Route>
             {/* Single-use booking links */}
             <Route path="/s/:token" element={<BookPage />} />
+            {/* Public quote / invoice / receipt */}
+            <Route
+              path="/q/:token"
+              element={
+                <Suspense fallback={<DashboardFallback />}>
+                  <QuoteViewPage />
+                </Suspense>
+              }
+            />
             {/* Poll voting */}
             <Route path="/poll/:pollId" element={<PollVotePage />} />
             {/* Public booking pages — must be after all fixed routes */}

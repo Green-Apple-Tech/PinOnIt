@@ -380,6 +380,32 @@ export const TEMPLATE_VARIABLES = [
   { key: '{{reschedule_link}}', label: 'Reschedule link' },
 ] as const;
 
+export type HostQuoteKind = 'quote' | 'invoice' | 'receipt';
+
+export interface HostQuoteLineItem {
+  description: string;
+  amount: number;
+}
+
+export interface HostQuote {
+  id: string;
+  host_id: string;
+  token: string;
+  kind: HostQuoteKind;
+  client_name: string | null;
+  client_email: string | null;
+  client_phone: string | null;
+  line_items: HostQuoteLineItem[];
+  notes: string | null;
+  pay_elsewhere_url: string | null;
+  pay_elsewhere_label: string | null;
+  currency: string;
+  status: 'draft' | 'sent';
+  sent_via: string[];
+  created_at: string;
+  updated_at: string;
+}
+
 export const LOCATION_TYPES: Record<string, string> = {
   video: 'Video call',
   in_person: 'In-person',
