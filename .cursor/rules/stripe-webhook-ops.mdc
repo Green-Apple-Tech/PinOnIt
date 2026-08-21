@@ -1,0 +1,42 @@
+---
+description: Stripe webhook deploy, secrets, and monitoring rules (never break billing)
+alwaysApply: true
+---
+
+# Stripe webhook ops (PinOnIt)
+
+Endpoint (live): `https://adlusgtlwgcfyxgeoias.supabase.co/functions/v1/stripe-webhook`  
+Preferred destination name in Stripe: **`engaging-sensation`** (keep **one** active destination only).
+
+## Deploy (required)
+
+Stripe sends **no** `Authorization` header. Always:
+
+```bash
+supabase functions deploy stripe-webhook --no-verify-jwt --project-ref adlusgtlwgcfyxgeoias
+```
+
+Or run `./scripts/deploy-edge-functions.sh` (includes `--no-verify-jwt` for stripe-webhook).
+
+Never deploy `stripe-webhook` without `--no-verify-jwt`. Gateway JWT → `Missing authorization header` → Stripe disables the endpoint.
+
+## Signature verify (Deno)
+
+Use `await stripe.webhooks.constructEventAsync(...)` — never sync `constructEvent` (SubtleCrypto 400s every event).
+
+## Secret hygiene
+
+- Supabase Edge secret name: **`STRIPE_WEBHOOK_SECRET`** (`whsec_…`).
+- Each Stripe destination has its **own** signing secret.
+- After creating, rotating, or switching destinations: immediately update `STRIPE_WEBHOOK_SECRET` to match that destination. No redeploy needed after secret change.
+- Do **not** keep two destinations to the same URL (two secrets → signature mismatches).
+
+## Monitoring
+
+- `health-monitor` probes Stripe Webhook (JWT gate / SubtleCrypto / missing-signature OK).
+- Set `HEALTH_ALERT_PHONE` in Supabase for SMS when health checks fail.
+- Remind the user to enable Stripe webhook failure emails and keep a single Active destination.
+
+## After webhook outages
+
+Remind: Resend failed Stripe events; open Billing (calls `syncStripeSubscription`) to heal plan badges.

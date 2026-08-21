@@ -25,16 +25,22 @@ alwaysApply: true
 
 ## Supabase (only when edge functions / DB change)
 
+Prefer:
+
 ```bash
+./scripts/deploy-edge-functions.sh
+```
+
+Or deploy individually. **Stripe webhook + calendar OAuth callbacks** must use `--no-verify-jwt` or Stripe/Google/Microsoft break (`Missing authorization header`).
+
+```bash
+supabase functions deploy stripe-webhook --no-verify-jwt --project-ref adlusgtlwgcfyxgeoias
+supabase functions deploy google-calendar-callback --no-verify-jwt --project-ref adlusgtlwgcfyxgeoias
+supabase functions deploy outlook-calendar-callback --no-verify-jwt --project-ref adlusgtlwgcfyxgeoias
 supabase functions deploy coordinate-sms --project-ref adlusgtlwgcfyxgeoias
 ```
 
-**Calendar OAuth callbacks** — always deploy with `--no-verify-jwt` or run `./scripts/deploy-edge-functions.sh`. Without this, Google/Microsoft connect breaks with `Missing authorization header`.
-
-```bash
-supabase functions deploy google-calendar-callback --no-verify-jwt --project-ref adlusgtlwgcfyxgeoias
-supabase functions deploy outlook-calendar-callback --no-verify-jwt --project-ref adlusgtlwgcfyxgeoias
-```
+See also `.cursor/rules/stripe-webhook-ops.mdc`.
 
 ## Quick verify before Publish
 
