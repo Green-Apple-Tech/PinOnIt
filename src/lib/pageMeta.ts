@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 const DEFAULTS = {
   title: 'PinOnIt — Calendar scheduling & super reminders. Never miss a meeting again.',
   description:
-    'PinOnIt is a calendar scheduler and super reminder app. Email, SMS, WhatsApp, and voice so you never miss a meeting — plus booking links, QR codes, and email signatures.',
+    'PinOnIt is a Calendly alternative for small business: WhatsApp and voice reminders, two-way SMS to cancel or reschedule, quotes, a paid storefront, QR codes, and SMS group scheduling.',
   url: 'https://pinonit.com',
   image: 'https://pinonit.com/pinonit_logo.png',
 };
@@ -39,7 +39,7 @@ export function usePageMeta(opts: {
     upsertMeta('meta[name="description"]', { name: 'description', content: opts.description });
     upsertMeta('meta[name="keywords"]', {
       name: 'keywords',
-      content: 'Calendly alternative for small business, PinOnIt vs Calendly, SMS reminders, WhatsApp booking reminders',
+      content: 'Calendly alternative for small business, WhatsApp reminders, two-way SMS reschedule, voice alerts, quotes, paid booking storefront, PinOnIt vs Calendly',
     });
     upsertMeta('meta[property="og:title"]', { property: 'og:title', content: opts.title });
     upsertMeta('meta[property="og:description"]', { property: 'og:description', content: opts.description });

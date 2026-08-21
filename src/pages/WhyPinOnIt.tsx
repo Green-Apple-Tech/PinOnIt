@@ -3,7 +3,7 @@ import { ArrowRight, Check, X, DollarSign, Sun, Moon } from 'lucide-react';
 import { Footer } from '../components/Footer';
 import { useTheme } from '../hooks/useTheme';
 import { usePageMeta } from '../lib/pageMeta';
-import { WHY_PINONIT, type CompareValue } from '../lib/whyPinonit';
+import { WHY_PINONIT, CALENDLY_EXCLUSIVES, type CompareValue } from '../lib/whyPinonit';
 
 function CellValue({ value, emphasize }: { value: CompareValue; emphasize?: boolean }) {
   if (value === true) {
@@ -78,6 +78,34 @@ export function WhyPinOnItPage() {
               {WHY_PINONIT.trialCta} <ArrowRight className="h-4 w-4" />
             </Link>
             <p className="text-sm text-slate-500 dark:text-slate-400">{WHY_PINONIT.priceLine}</p>
+          </div>
+        </section>
+
+        <section className="px-6 pb-16" aria-labelledby="exclusive-heading">
+          <div className="max-w-6xl mx-auto">
+            <h2 id="exclusive-heading" className="text-2xl font-bold mb-2 text-center">
+              {WHY_PINONIT.exclusiveHeadline}
+            </h2>
+            <p className="text-center text-slate-500 dark:text-slate-400 mb-8 max-w-2xl mx-auto">
+              {WHY_PINONIT.exclusiveSubhead}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {CALENDLY_EXCLUSIVES.map((item) => (
+                <article
+                  key={item.id}
+                  className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5"
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <span className="text-2xl" aria-hidden>{item.icon}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400">
+                      {item.tag}
+                    </span>
+                  </div>
+                  <h3 className="font-semibold text-slate-900 dark:text-white mb-1.5">{item.title}</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{item.desc}</p>
+                </article>
+              ))}
+            </div>
           </div>
         </section>
 

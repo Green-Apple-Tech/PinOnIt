@@ -15,30 +15,139 @@ export type WhyScenario = {
   handle: string;
 };
 
+export type ExclusiveFeature = {
+  id: string;
+  icon: string;
+  title: string;
+  desc: string;
+  tag: string;
+};
+
+/** Things Calendly genuinely does not do. Source of truth for homepage + /why-pinonit. */
+export const CALENDLY_EXCLUSIVES: ExclusiveFeature[] = [
+  {
+    id: 'whatsapp',
+    icon: '💬',
+    title: 'WhatsApp reminders',
+    desc: 'Calendly has none, period. Reach clients in the chat they already live in — not another ignored email.',
+    tag: 'Not on Calendly',
+  },
+  {
+    id: 'voice',
+    icon: '📞',
+    title: 'Voice reminders & critical alerts',
+    desc: 'An actual call before the meeting. Critical alerts ring you minutes out. Nobody else in this category does this.',
+    tag: 'Not on Calendly',
+  },
+  {
+    id: 'personal',
+    icon: '🗣️',
+    title: 'Host “remind me to…”',
+    desc: 'Tell PinOnIt to call or text you about a pickup, a refill, or a flight — not just bookings on your public page.',
+    tag: 'Not on Calendly',
+  },
+  {
+    id: 'coworkers',
+    icon: '👥',
+    title: 'Remind coworkers / an assistant',
+    desc: 'Copy extra people on a booking — a tech, a spouse, a front desk. Calendly notifies invitees and hosts, not arbitrary third parties.',
+    tag: 'Not on Calendly',
+  },
+  {
+    id: 'twoway',
+    icon: '↩️',
+    title: 'Two-way SMS: text back to cancel or reschedule',
+    desc: 'Guests text 2 or reschedule and get a link to pick a new time. Calendly SMS is one-way only.',
+    tag: 'Not on Calendly',
+  },
+  {
+    id: 'quotes',
+    icon: '🧾',
+    title: 'Quotes, invoices, receipts',
+    desc: 'Send a quote, invoice, or receipt by email, SMS, or WhatsApp. Completely outside Calendly’s product.',
+    tag: 'Not on Calendly',
+  },
+  {
+    id: 'storefront',
+    icon: '🛍️',
+    title: 'Paid Booking storefront',
+    desc: 'A real service menu with themes, categories, and photos. Calendly has no storefront concept.',
+    tag: 'Not on Calendly',
+  },
+  {
+    id: 'qr',
+    icon: '📲',
+    title: 'QR code generator',
+    desc: 'Print a booking QR on a card, flyer, or shop door. Scan to book — no app, no account.',
+    tag: 'Not on Calendly',
+  },
+  {
+    id: 'signature',
+    icon: '✍️',
+    title: 'Email signature generator',
+    desc: 'A professional signature with your booking link built in. Copy, paste, done.',
+    tag: 'Not on Calendly',
+  },
+  {
+    id: 'smsalign',
+    icon: '🤝',
+    title: 'Align & book over SMS',
+    desc: 'Collect availability by text and find the overlap. Calendly Meeting Polls are web-only.',
+    tag: 'Not on Calendly',
+  },
+  {
+    id: 'preenter',
+    icon: '📝',
+    title: 'Pre-enter someone’s availability',
+    desc: 'Fill in a coworker’s or client’s times on their behalf so they don’t even need to reply.',
+    tag: 'Not on Calendly',
+  },
+  {
+    id: 'import',
+    icon: '⬇️',
+    title: 'Calendly import',
+    desc: 'Bring over your event types and keep your old Calendly link working while you switch.',
+    tag: 'Not on Calendly',
+  },
+  {
+    id: 'referral',
+    icon: '💵',
+    title: 'Referral program: $1/mo credit',
+    desc: 'Refer 6 people and Pro is free. Refer more and PinOnIt pays you $1/month per person.',
+    tag: 'Not on Calendly',
+  },
+];
+
 export const WHY_PINONIT = {
   seoTitle: 'Calendly alternative for small business | PinOnIt',
   seoDescription:
-    'PinOnIt is the Calendly alternative for small business: SMS and WhatsApp reminders, reply-to-reschedule, deposits, quotes, QR codes, and group scheduling — from $6/mo.',
+    'PinOnIt is the Calendly alternative for small business: WhatsApp and voice reminders, two-way SMS to cancel or reschedule, quotes, a paid storefront, QR codes, and SMS group scheduling — from $6/mo.',
   ogImage: 'https://pinonit.com/og-why-pinonit.png',
   canonical: 'https://pinonit.com/why-pinonit',
   heroHeadline: 'Calendly books meetings. PinOnIt runs your business.',
   heroSubhead:
-    'The Calendly alternative for small business: reminders people actually get, two-way SMS to cancel or reschedule, deposits, quotes, and QR codes — without a $16+/mo tax.',
+    'WhatsApp reminders, two-way SMS to cancel or reschedule, voice alerts, quotes, a paid storefront, and group scheduling by text — things Calendly does not do. $6/mo after trial.',
+  exclusiveHeadline: 'What Calendly genuinely doesn’t do',
+  exclusiveSubhead: 'These are not “Calendly charges extra.” These are missing.',
   priceLine: '$6/mo after trial · cancel anytime',
   trialCta: 'Start free trial',
   features: [
-    { id: 'sms', label: 'SMS reminders', pinonit: true, calendly: '$16+/mo' },
     { id: 'whatsapp', label: 'WhatsApp reminders', pinonit: true, calendly: false },
-    { id: 'reply', label: 'Reply to cancel/reschedule', pinonit: true, calendly: false },
-    { id: 'deposits', label: 'Deposits & paid booking', pinonit: true, calendly: '$16+/mo' },
-    { id: 'quotes', label: 'Quotes/invoices/receipts', pinonit: true, calendly: false },
-    { id: 'qr', label: 'QR booking codes', pinonit: true, calendly: false },
-    { id: 'group', label: 'Group scheduling & polls', pinonit: true, calendly: '$16+/mo' },
-    { id: 'weather', label: 'Weather alerts for outdoor jobs', pinonit: true, calendly: false },
-    { id: 'team', label: 'Notify your team/assistant', pinonit: true, calendly: false },
-    { id: 'slack', label: 'Slack booking alerts', pinonit: true, calendly: false },
+    { id: 'voice', label: 'Voice reminders & critical alerts', pinonit: true, calendly: false },
+    { id: 'personal', label: 'Host “remind me to…”', pinonit: true, calendly: false },
+    { id: 'coworkers', label: 'Remind coworkers / assistant', pinonit: true, calendly: false },
+    { id: 'twoway', label: 'Two-way SMS cancel/reschedule', pinonit: true, calendly: false },
+    { id: 'sms', label: 'SMS reminders', pinonit: true, calendly: 'One-way, $16+/mo' },
+    { id: 'quotes', label: 'Quotes / invoices / receipts', pinonit: true, calendly: false },
+    { id: 'storefront', label: 'Paid Booking storefront', pinonit: true, calendly: false },
+    { id: 'qr', label: 'QR code generator', pinonit: true, calendly: false },
+    { id: 'signature', label: 'Email signature generator', pinonit: true, calendly: false },
+    { id: 'smsalign', label: 'Align & book over SMS', pinonit: true, calendly: false },
+    { id: 'preenter', label: 'Pre-enter someone’s availability', pinonit: true, calendly: false },
+    { id: 'import', label: 'Calendly import', pinonit: true, calendly: false },
+    { id: 'referral', label: 'Referral credit', pinonit: '$1/mo', calendly: false },
+    { id: 'deposits', label: 'Deposits at booking', pinonit: true, calendly: '$16+/mo' },
     { id: 'types', label: 'Unlimited event types', pinonit: true, calendly: '$16+/mo' },
-    { id: 'brand', label: 'Your branding on booking page', pinonit: true, calendly: '$16+/mo' },
     { id: 'price', label: 'Monthly price', pinonit: '$6', calendly: '$16+' },
   ] satisfies WhyFeature[],
   scenarios: [

@@ -11,6 +11,7 @@ import {
   Calendar, Bell, Mail, MessageCircle, MessagesSquare, Phone,
 } from 'lucide-react';
 import { OnboardingBot } from '../components/OnboardingBot';
+import { CALENDLY_EXCLUSIVES } from '../lib/whyPinonit';
 
 // ── Animated counter hook ────────────────────────────────────────────────────
 function useCounter(target: number, duration = 1800, start = false) {
@@ -57,15 +58,22 @@ const COMP_ROWS: CompRow[] = [
   { feature: 'Starting price',    pinonit: 'Free',        calendly: 'Free',         acuity: '$16/mo' },
   { feature: 'Pro / Paid plan',   pinonit: '$6/mo',       calendly: '$16/mo',       acuity: '$20/mo' },
   { feature: 'Referral earnings', pinonit: '$1/mo/user',  calendly: false,          acuity: false },
-  { section: 'Event Types' },
-  { feature: 'Unlimited event types', pinonit: 'Pro', calendly: 'Standard+', acuity: 'Emerging+' },
-  { feature: 'One-tap confirm/cancel', pinonit: true, calendly: false, acuity: false },
+  { section: 'Calendly does not do this' },
+  { feature: 'WhatsApp reminders', pinonit: true, calendly: false, acuity: false },
+  { feature: 'Voice reminders & critical alerts', pinonit: true, calendly: false, acuity: false },
+  { feature: 'Host “remind me to…”', pinonit: true, calendly: false, acuity: false },
+  { feature: 'Remind coworkers / assistant', pinonit: true, calendly: false, acuity: false },
+  { feature: 'Two-way SMS cancel/reschedule', pinonit: true, calendly: false, acuity: false },
+  { feature: 'Quotes / invoices / receipts', pinonit: true, calendly: false, acuity: false },
+  { feature: 'Paid Booking storefront', pinonit: true, calendly: false, acuity: false },
+  { feature: 'QR code generator', pinonit: true, calendly: false, acuity: false },
+  { feature: 'Email signature generator', pinonit: true, calendly: false, acuity: false },
+  { feature: 'Align & book over SMS', pinonit: true, calendly: false, acuity: false },
+  { feature: 'Pre-enter someone’s availability', pinonit: true, calendly: false, acuity: false },
+  { feature: 'Calendly import', pinonit: true, calendly: false, acuity: false },
   { section: 'Reminders' },
   { feature: 'Email reminders',   pinonit: 'Pro', calendly: 'All plans', acuity: 'All plans' },
-  { feature: 'SMS reminders',     pinonit: 'Pro', calendly: 'Standard+', acuity: 'Emerging+' },
-  { feature: 'WhatsApp reminders',pinonit: 'Pro', calendly: false,       acuity: false },
-  { feature: 'Voice call reminders', pinonit: 'Pro', calendly: false, acuity: false },
-  { feature: 'Reminders for ANY calendar event', pinonit: true, calendly: false, acuity: false },
+  { feature: 'SMS reminders',     pinonit: 'Pro', calendly: 'One-way, $16+', acuity: 'Emerging+' },
   { section: 'Calendar Sync' },
   { feature: 'Google Calendar',   pinonit: true,  calendly: true,  acuity: true },
   { feature: 'Outlook / Office 365', pinonit: true, calendly: true, acuity: true },
@@ -73,67 +81,7 @@ const COMP_ROWS: CompRow[] = [
   { section: 'Payments' },
   { feature: 'Stripe payments',   pinonit: 'Pro', calendly: 'Standard+', acuity: 'Emerging+' },
   { feature: 'PayPal payments',   pinonit: 'Pro', calendly: false, acuity: false },
-  { section: 'Extras' },
-  { feature: 'Email signature creator', pinonit: true, calendly: false, acuity: false },
-  { feature: 'QR code booking',   pinonit: true, calendly: false, acuity: false },
 ];
-
-const CALENDLY_EDGE_FEATURES = [
-  {
-    icon: '💬',
-    title: 'SMS Reminders',
-    desc: 'Automatically text guests before every booking. Reduce no-shows by up to 80%.',
-    tag: 'Not on Calendly',
-  },
-  {
-    icon: '📱',
-    title: 'WhatsApp Reminders',
-    desc: 'Reach clients where they actually are. Send booking confirmations via WhatsApp.',
-    tag: 'Not on Calendly',
-  },
-  {
-    icon: '📧',
-    title: 'Schedule via Email & SMS',
-    desc: 'Clients can book directly from a text or email — no app, no account needed.',
-    tag: 'Not on Calendly',
-  },
-  {
-    icon: '📲',
-    title: 'QR Code Bookings',
-    desc: 'Print your booking QR on a business card, flyer, or sign. Scan to book instantly.',
-    tag: 'Not on Calendly',
-  },
-  {
-    icon: '📞',
-    title: 'Voice Call Reminders',
-    desc: 'Auto-call yourself before meetings start. Never miss an appointment again.',
-    tag: 'Not on Calendly',
-  },
-  {
-    icon: '✍️',
-    title: 'Email Signature Creator',
-    desc: 'Generate a professional email signature with your booking link built right in.',
-    tag: 'Not on Calendly',
-  },
-  {
-    icon: '🔳',
-    title: 'QR Code Creator',
-    desc: 'Create custom QR codes for any link — not just your booking page.',
-    tag: 'Not on Calendly',
-  },
-  {
-    icon: '🔔',
-    title: 'Universal Reminder App',
-    desc: 'Set reminders for ANY calendar event — not just bookings made through PinOnIt.',
-    tag: 'Not on Calendly',
-  },
-  {
-    icon: '💳',
-    title: 'Built-in Paid Bookings',
-    desc: 'Accept card, Venmo, Cash App, Zelle & PayPal. No third-party plugins needed.',
-    tag: 'Calendly charges extra',
-  },
-] as const;
 
 const SCREENSHOTS = [
   {
@@ -528,7 +476,7 @@ export function Landing() {
             ))}
           </div>
           <p className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
-            Also included: shareable booking pages, QR codes, email signatures, quotes and invoices, group scheduling, and paid bookings.
+            Guests can text 2 to reschedule. You can remind a coworker, call yourself, and send quotes — none of that is on Calendly.
           </p>
         </div>
       </section>
@@ -548,12 +496,12 @@ export function Landing() {
               <span className="text-indigo-400">Plus What Calendly Doesn&apos;t.</span>
             </h2>
             <p className="text-indigo-200 text-lg max-w-2xl mx-auto">
-              Calendly charges $20+/month and still can&apos;t do this. PinOnIt starts at $6/month.
+              Not “Calendly charges extra.” These are missing. PinOnIt starts at $6/month.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-12">
-            {CALENDLY_EDGE_FEATURES.map(({ icon, title, desc, tag }) => (
+            {CALENDLY_EXCLUSIVES.map(({ icon, title, desc, tag }) => (
               <div
                 key={title}
                 className="relative bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/10 hover:border-indigo-400/40 transition-all group"
@@ -568,6 +516,15 @@ export function Landing() {
                 <p className="text-indigo-200/80 text-sm leading-relaxed">{desc}</p>
               </div>
             ))}
+          </div>
+
+          <div className="text-center">
+            <Link
+              to="/why-pinonit"
+              className="inline-flex items-center gap-2 text-indigo-300 hover:text-white text-sm font-semibold mb-8"
+            >
+              See the full PinOnIt vs Calendly list <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
 
           <div className="text-center">
@@ -761,13 +718,13 @@ export function Landing() {
               <div className="border-t border-white/20 mb-5" />
               <ul className="space-y-2.5 flex-1 mb-6">
                 {[
-                  'Unlimited event types',
-                  'SMS + WhatsApp + Email + Voice reminders',
-                  'Calendar sync (Google, Outlook, Apple)',
-                  'PayPal payments at booking',
-                  'Email signature creator',
-                  'Remove PinOnIt branding',
-                  'Priority support',
+                  'WhatsApp + two-way SMS (text 2 to reschedule)',
+                  'Voice reminders & critical call alerts',
+                  'Remind coworkers / an assistant',
+                  'Quotes, invoices, receipts',
+                  'Paid Booking storefront + QR + signatures',
+                  'Align & book over SMS',
+                  'Calendly import + $1/mo referral credit',
                 ].map((f) => (
                   <li key={f} className="flex items-start gap-2.5">
                     <div className="h-4 w-4 rounded-full bg-white/25 flex items-center justify-center shrink-0 mt-0.5">
