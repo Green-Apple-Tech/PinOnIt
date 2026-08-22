@@ -372,7 +372,7 @@ export function Landing() {
       {/* ── App pill bar ── */}
       <div className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 py-3 px-6 overflow-x-auto">
         <div className="flex flex-col items-center gap-1.5 min-w-max mx-auto">
-          <p className="text-sm font-black uppercase tracking-[0.22em] text-brand-500">5 apps in 1</p>
+          <p className="text-xl sm:text-2xl font-black uppercase tracking-[0.16em] text-brand-400 animate-apps-in-1-blink">5 apps in 1</p>
           <div className="flex items-center justify-center gap-2 min-w-max mx-auto">
           {[
             { num: '1', label: 'Calendar Scheduler' },
@@ -397,7 +397,7 @@ export function Landing() {
         </div>
 
         <div className="relative max-w-4xl mx-auto">
-          <p className="inline-flex items-center gap-2 px-3 py-1.5 mb-6 rounded-full bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-300 text-xs font-bold uppercase tracking-widest">
+          <p className="inline-flex items-center gap-2 px-3 py-1.5 mb-6 rounded-full bg-brand-100 dark:bg-brand-500/20 text-brand-600 dark:text-brand-200 text-xs font-bold uppercase tracking-widest">
             <Calendar className="h-3.5 w-3.5" />
             Calendar scheduler
             <span className="text-slate-300 dark:text-slate-600">·</span>
@@ -405,8 +405,9 @@ export function Landing() {
             Super reminder app
           </p>
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[1.08] text-slate-900 dark:text-white mb-6 max-w-4xl mx-auto">
-            Never miss a meeting{' '}
-            <span className="text-brand-500">again.</span>
+            Schedule & never miss a meeting
+            <br />
+            with super <span className="text-brand-500">reminders.</span>
           </h1>
 
           <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto mb-8 leading-relaxed">

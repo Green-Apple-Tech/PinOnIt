@@ -70,13 +70,32 @@
   }
 }
 
+@keyframes apps-in-1-blink {
+  0%, 100% {
+    color: #7c86e0;
+    text-shadow: 0 0 10px rgb(124 134 224 / 0.45);
+  }
+  50% {
+    color: #c4c8ff;
+    text-shadow: 0 0 22px rgb(165 173 255 / 0.85);
+  }
+}
+
 @layer utilities {
   .animate-cta-blink {
     animation: cta-blink 1.4s ease-in-out infinite;
   }
+  .animate-apps-in-1-blink {
+    animation: apps-in-1-blink 1.2s ease-in-out infinite;
+  }
   @media (prefers-reduced-motion: reduce) {
     .animate-cta-blink {
       animation: none;
+    }
+    .animate-apps-in-1-blink {
+      animation: none;
+      color: #9aa3f5;
+      text-shadow: 0 0 12px rgb(124 134 224 / 0.55);
     }
   }
 }
