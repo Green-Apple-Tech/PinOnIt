@@ -340,7 +340,7 @@ export function Landing() {
             </button>
             <Link
               to="/why-pinonit"
-              className="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 text-sm font-semibold text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-500/30 rounded-full hover:bg-brand-50 dark:hover:bg-brand-500/10 transition-colors"
+              className="hidden sm:inline-flex items-center gap-1 px-3.5 py-1.5 text-sm font-bold text-white rounded-full animate-cta-blink hover:brightness-110"
             >
               Why we beat Calendly <ArrowRight className="h-3.5 w-3.5" />
             </Link>
@@ -372,7 +372,7 @@ export function Landing() {
       {/* ── App pill bar ── */}
       <div className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 py-3 px-6 overflow-x-auto">
         <div className="flex flex-col items-center gap-1.5 min-w-max mx-auto">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Calendar scheduler + super reminders — other tools included:</p>
+          <p className="text-sm font-black uppercase tracking-[0.22em] text-brand-500">5 apps in 1</p>
           <div className="flex items-center justify-center gap-2 min-w-max mx-auto">
           {[
             { num: '1', label: 'Calendar Scheduler' },
