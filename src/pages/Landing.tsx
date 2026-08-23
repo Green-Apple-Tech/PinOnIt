@@ -405,9 +405,8 @@ export function Landing() {
             Super reminder app
           </p>
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[1.08] text-slate-900 dark:text-white mb-6 max-w-4xl mx-auto">
-            Schedule & never miss a meeting
-            <br />
-            with super <span className="text-brand-500">reminders.</span>
+            Let clients book your time easily—with{' '}
+            <span className="text-brand-500">smart reminders.</span>
           </h1>
 
           <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto mb-8 leading-relaxed">
