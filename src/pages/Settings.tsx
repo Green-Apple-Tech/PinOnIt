@@ -309,8 +309,8 @@ function IntegrationsTab({ userId }: { userId: string | undefined }) {
           />
           <IntegrationCard
             provider="apple"
-            name="Apple iCloud / CalDAV"
-            description="Connect an Apple iCloud calendar or any CalDAV-compatible calendar via URL."
+            name="Apple Calendar"
+            description="Paste the private link from your iPhone Calendar app. No Apple password needed."
             connected={!!appleCal}
             connectedEmail={appleCal?.provider_account_email ?? appleCal?.calendar_name}
             onConnect={() => handleConnect('apple')}

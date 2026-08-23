@@ -1773,7 +1773,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
             </div>
 
             <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl px-4 py-3 text-xs text-slate-500 dark:text-slate-400">
-              You can also connect Apple iCloud or an iCal URL from the <strong>Availability</strong> page later.
+              You can also connect Apple Calendar from the <strong>Availability</strong> page later — paste the private link from your iPhone.
             </div>
 
             <NavButtons

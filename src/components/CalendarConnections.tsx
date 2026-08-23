@@ -268,30 +268,69 @@ function AppleCalDAVForm({ onClose, onConnected }: { onClose: () => void; onConn
 
 // ── iCal URL Form ─────────────────────────────────────────────────────────────
 
-function ICalUrlForm({ hostId, onClose, onConnected }: { hostId: string; onClose: () => void; onConnected: () => void }) {
+async function triggerCalendarSync(): Promise<{ error?: string; synced: number }> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token ?? '';
+  const res = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/calendar-sync`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({}),
+    }
+  );
+  const json = await res.json();
+  if (json.error) return { error: json.error, synced: 0 };
+  const synced = Object.values(json.results ?? {}).reduce((acc: number, r: unknown) => acc + ((r as { synced?: number }).synced ?? 0), 0);
+  const firstErr = Object.values(json.results ?? {}).find((r) => (r as { error?: string }).error) as { error?: string } | undefined;
+  return { error: firstErr?.error, synced };
+}
+
+function ICalUrlForm({
+  hostId,
+  onClose,
+  onConnected,
+  variant = 'ical',
+}: {
+  hostId: string;
+  onClose: () => void;
+  onConnected: () => void;
+  variant?: 'apple' | 'ical';
+}) {
   const [url, setUrl] = useState('');
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const isApple = variant === 'apple';
 
   const handleAdd = async () => {
     const trimmed = url.trim();
-    if (!trimmed) { setError('Please enter a URL.'); return; }
+    if (!trimmed) { setError('Please paste the calendar link.'); return; }
     const normalised = trimmed.replace(/^webcal:\/\//i, 'https://');
     if (!normalised.startsWith('http')) { setError('Please enter a valid http or webcal URL.'); return; }
     setSaving(true);
     setError('');
     const { error: insertErr } = await supabase.from('connected_calendars').insert({
       host_id: hostId,
-      provider: 'ical',
+      provider: isApple ? 'apple' : 'ical',
       provider_account_email: '',
-      calendar_name: name.trim() || 'iCal subscription',
+      calendar_name: name.trim() || (isApple ? 'Apple Calendar' : 'iCal subscription'),
       sync_enabled: true,
       use_for_scheduling: true,
       use_for_reminders: true,
       calendar_id: normalised,
     });
     if (insertErr) { setError(insertErr.message); setSaving(false); return; }
+    const sync = await triggerCalendarSync();
+    if (sync.error && sync.synced === 0) {
+      setError(sync.error);
+      setSaving(false);
+      return;
+    }
     onConnected();
   };
 
@@ -307,12 +346,31 @@ function ICalUrlForm({ hostId, onClose, onConnected }: { hostId: string; onClose
       )}
 
       <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center gap-2.5">
-        <span className="text-indigo-600 dark:text-indigo-500"><ICalIcon /></span>
+        <span className={isApple ? 'text-slate-700 dark:text-slate-300' : 'text-indigo-600 dark:text-indigo-500'}>
+          {isApple ? <AppleIcon /> : <ICalIcon />}
+        </span>
         <div>
-          <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">iCal / webcal URL subscription</p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">Paste any .ics or webcal:// link for conflict checking</p>
+          <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+            {isApple ? 'Apple Calendar' : 'iCal / webcal URL'}
+          </p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {isApple ? 'Paste the private link from your iPhone calendar' : 'Paste any .ics or webcal:// link for conflict checking'}
+          </p>
         </div>
       </div>
+
+      {isApple && (
+        <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-lg text-xs text-amber-800 dark:text-amber-300 space-y-1.5">
+          <p className="font-semibold">On iPhone (about 30 seconds):</p>
+          <ol className="list-decimal list-inside space-y-0.5 text-amber-700 dark:text-amber-400">
+            <li>Open the <strong>Calendar</strong> app</li>
+            <li>Tap <strong>Calendars</strong> at the bottom, then the <strong>i</strong> next to your calendar</li>
+            <li>Tap <strong>Share Calendar</strong> or <strong>Add Person</strong> → turn on <strong>Public Calendar</strong> if you see it</li>
+            <li>Copy the <strong>calendar link</strong> (starts with webcal:// or https://) and paste it below</li>
+          </ol>
+          <p className="text-amber-700 dark:text-amber-400">On Mac: Calendar → the calendar → Share → copy the private URL.</p>
+        </div>
+      )}
 
       <div>
         <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">Calendar URL</label>
@@ -325,7 +383,11 @@ function ICalUrlForm({ hostId, onClose, onConnected }: { hostId: string; onClose
           autoFocus
           onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
         />
-        <p className="text-xs text-slate-400 mt-1">Works with Google Calendar, Outlook, Apple Calendar, Airbnb, sports calendars, and any .ics feed.</p>
+        <p className="text-xs text-slate-400 mt-1">
+          {isApple
+            ? 'PinOnIt reads this link to hide times you are already busy.'
+            : 'Works with Google, Outlook, Apple, Airbnb, and any .ics feed.'}
+        </p>
       </div>
 
       <div>
@@ -346,7 +408,7 @@ function ICalUrlForm({ hostId, onClose, onConnected }: { hostId: string; onClose
           className="flex items-center gap-1.5 px-4 py-2.5 bg-brand-600 hover:bg-brand-500 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
         >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
-          {saving ? 'Adding…' : 'Add calendar'}
+          {saving ? 'Connecting…' : isApple ? 'Connect Apple Calendar' : 'Add calendar'}
         </button>
         <button onClick={onClose} className="px-3 py-2.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors">
           Cancel
@@ -404,7 +466,7 @@ function ConnectWizard({ hostId, onClose, onConnected }: { hostId: string; onClo
   };
   const stepSubs: Record<WizardStep, string> = {
     pick: 'Choose your calendar provider.',
-    apple: 'Sign in with an app-specific password.',
+    apple: 'Paste the private link from your iPhone.',
     ical: 'Paste any .ics or webcal link.',
   };
 
@@ -460,8 +522,8 @@ function ConnectWizard({ hostId, onClose, onConnected }: { hostId: string; onClo
               >
                 <div className="shrink-0 text-slate-700 dark:text-slate-300"><AppleIcon /></div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Apple iCloud Calendar</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Connect with an app-specific password</p>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Apple Calendar</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Paste a link from your iPhone — no password</p>
                 </div>
                 <ChevronRight className="h-5 w-5 text-slate-300 dark:text-slate-600 shrink-0" />
               </button>
@@ -482,7 +544,7 @@ function ConnectWizard({ hostId, onClose, onConnected }: { hostId: string; onClo
           )}
 
           {step === 'apple' && (
-            <AppleCalDAVForm onClose={onClose} onConnected={() => { onConnected(); onClose(); }} />
+            <ICalUrlForm hostId={hostId} variant="apple" onClose={onClose} onConnected={() => { onConnected(); onClose(); }} />
           )}
 
           {step === 'ical' && (

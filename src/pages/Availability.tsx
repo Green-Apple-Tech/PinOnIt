@@ -452,7 +452,7 @@ export function AvailabilityPage({ embedded }: { embedded?: boolean } = {}) {
             <ul className="space-y-1.5 text-sm text-slate-600 dark:text-slate-400">
               <li className="flex items-start gap-2"><span className="mt-1.5 h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: '#5864C6' }} />When a guest picks a time, we check your connected calendars for conflicts.</li>
               <li className="flex items-start gap-2"><span className="mt-1.5 h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: '#5864C6' }} />Conflicting slots are hidden automatically — no double-bookings.</li>
-              <li className="flex items-start gap-2"><span className="mt-1.5 h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: '#5864C6' }} />Works with Google Calendar, Outlook, Apple iCloud, and any iCal feed.</li>
+              <li className="flex items-start gap-2"><span className="mt-1.5 h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: '#5864C6' }} />Works with Google Calendar, Outlook, Apple Calendar (iPhone link), and any iCal feed.</li>
             </ul>
           </div>
 

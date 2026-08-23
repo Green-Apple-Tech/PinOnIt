@@ -21,6 +21,7 @@ interface ConnectedCalendar {
   refresh_token: string;
   token_expires_at: string | null;
   sync_enabled: boolean;
+  calendar_id?: string | null;
 }
 
 // ── Google types ──────────────────────────────────────────────────────────────
@@ -453,6 +454,281 @@ async function syncOutlook(supabase: any, cal: ConnectedCalendar): Promise<{ syn
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// iCal / Apple public feed sync
+// ─────────────────────────────────────────────────────────────────────────────
+
+function unfoldIcs(text: string): string {
+  return text.replace(/\r\n[ \t]/g, "").replace(/\n[ \t]/g, "");
+}
+
+function icsUnescape(value: string): string {
+  return value
+    .replace(/\\n/gi, "\n")
+    .replace(/\\,/g, ",")
+    .replace(/\\;/g, ";")
+    .replace(/\\\\/g, "\\");
+}
+
+function parseIcsDate(rawValue: string, params: string): { iso: string; allDay: boolean } {
+  const value = rawValue.trim();
+  const isDate = /VALUE=DATE/i.test(params) || /^\d{8}$/.test(value);
+  if (isDate) {
+    const y = value.slice(0, 4);
+    const mo = value.slice(4, 6);
+    const d = value.slice(6, 8);
+    return { iso: `${y}-${mo}-${d}T00:00:00.000Z`, allDay: true };
+  }
+  const m = value.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(Z)?$/);
+  if (!m) return { iso: new Date().toISOString(), allDay: false };
+  const [, ys, mos, ds, hs, mis, ss, z] = m;
+  if (z === "Z") {
+    return {
+      iso: new Date(Date.UTC(+ys, +mos - 1, +ds, +hs, +mis, +ss)).toISOString(),
+      allDay: false,
+    };
+  }
+  const tz = params.match(/TZID=([^;:]+)/i)?.[1]?.replace(/^"|"$/g, "") || "UTC";
+  try {
+    const dt = Temporal.ZonedDateTime.from({
+      year: +ys,
+      month: +mos,
+      day: +ds,
+      hour: +hs,
+      minute: +mis,
+      second: +ss,
+      timeZone: tz,
+    });
+    return { iso: dt.toInstant().toString(), allDay: false };
+  } catch {
+    return {
+      iso: new Date(+ys, +mos - 1, +ds, +hs, +mis, +ss).toISOString(),
+      allDay: false,
+    };
+  }
+}
+
+function parseDurationMs(raw: string): number {
+  const m = raw.match(/^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?/);
+  if (!m) return 60 * 60 * 1000;
+  const days = +(m[1] || 0);
+  const hours = +(m[2] || 0);
+  const mins = +(m[3] || 0);
+  const secs = +(m[4] || 0);
+  return (((days * 24 + hours) * 60 + mins) * 60 + secs) * 1000;
+}
+
+function expandOccurrences(
+  start: Date,
+  end: Date,
+  rrule: string | null,
+  windowStart: Date,
+  windowEnd: Date,
+): Array<{ start: Date; end: Date }> {
+  const duration = end.getTime() - start.getTime();
+  if (!rrule) {
+    if (end < windowStart || start > windowEnd) return [];
+    return [{ start, end }];
+  }
+  const parts = Object.fromEntries(
+    rrule.replace(/^RRULE:/i, "").split(";").map((p) => {
+      const [k, v] = p.split("=");
+      return [k.toUpperCase(), v];
+    }),
+  );
+  const freq = (parts.FREQ || "").toUpperCase();
+  const interval = Math.max(1, +(parts.INTERVAL || 1));
+  const until = parts.UNTIL ? parseIcsDate(parts.UNTIL, "").iso : null;
+  const untilDate = until ? new Date(until) : windowEnd;
+  const count = parts.COUNT ? Math.min(+(parts.COUNT), 200) : 200;
+  let stepMs = 7 * 24 * 60 * 60 * 1000;
+  if (freq === "DAILY") stepMs = 24 * 60 * 60 * 1000;
+  else if (freq === "WEEKLY") stepMs = 7 * 24 * 60 * 60 * 1000;
+  else if (freq === "MONTHLY") {
+    const out: Array<{ start: Date; end: Date }> = [];
+    const cursor = new Date(start);
+    for (let i = 0; i < count && cursor <= untilDate && cursor <= windowEnd; i++) {
+      const s = new Date(cursor);
+      const e = new Date(s.getTime() + duration);
+      if (e >= windowStart && s <= windowEnd) out.push({ start: s, end: e });
+      cursor.setMonth(cursor.getMonth() + interval);
+    }
+    return out;
+  } else {
+    if (end < windowStart || start > windowEnd) return [];
+    return [{ start, end }];
+  }
+  const out: Array<{ start: Date; end: Date }> = [];
+  const cursor = new Date(start);
+  for (let i = 0; i < count && cursor <= untilDate && cursor <= windowEnd; i++) {
+    const s = new Date(cursor);
+    const e = new Date(s.getTime() + duration);
+    if (e >= windowStart && s <= windowEnd) out.push({ start: s, end: e });
+    cursor.setTime(cursor.getTime() + stepMs * interval);
+  }
+  return out;
+}
+
+function parseIcsEvents(
+  ics: string,
+  windowStart: Date,
+  windowEnd: Date,
+): Array<{
+  uid: string;
+  title: string;
+  start: Date;
+  end: Date;
+  allDay: boolean;
+  showStatus: string;
+  transparency: string;
+}> {
+  const unfolded = unfoldIcs(ics);
+  const blocks = unfolded.split(/BEGIN:VEVENT/i).slice(1);
+  const events: Array<{
+    uid: string;
+    title: string;
+    start: Date;
+    end: Date;
+    allDay: boolean;
+    showStatus: string;
+    transparency: string;
+  }> = [];
+
+  for (const block of blocks) {
+    const body = block.split(/END:VEVENT/i)[0];
+    const props: Record<string, { params: string; value: string }> = {};
+    for (const line of body.split(/\r?\n/)) {
+      if (!line.includes(":")) continue;
+      const colon = line.indexOf(":");
+      const left = line.slice(0, colon);
+      const value = line.slice(colon + 1);
+      const [name, ...paramParts] = left.split(";");
+      props[name.toUpperCase()] = { params: paramParts.join(";"), value };
+    }
+    if ((props.STATUS?.value || "").toUpperCase() === "CANCELLED") continue;
+    if (!props.DTSTART) continue;
+    const startParsed = parseIcsDate(props.DTSTART.value, props.DTSTART.params);
+    let endParsed = props.DTEND
+      ? parseIcsDate(props.DTEND.value, props.DTEND.params)
+      : null;
+    if (!endParsed && props.DURATION) {
+      const start = new Date(startParsed.iso);
+      endParsed = {
+        iso: new Date(start.getTime() + parseDurationMs(props.DURATION.value)).toISOString(),
+        allDay: startParsed.allDay,
+      };
+    }
+    if (!endParsed) {
+      const start = new Date(startParsed.iso);
+      endParsed = {
+        iso: new Date(start.getTime() + 60 * 60 * 1000).toISOString(),
+        allDay: startParsed.allDay,
+      };
+    }
+    const transp = (props.TRANSP?.value || "OPAQUE").toUpperCase();
+    const status = (props.STATUS?.value || "CONFIRMED").toUpperCase();
+    const showStatus = transp === "TRANSPARENT" ? "free" : status === "TENTATIVE" ? "tentative" : "busy";
+    const uid = (props.UID?.value || `${startParsed.iso}-${props.SUMMARY?.value || "busy"}`).trim();
+    const title = icsUnescape(props.SUMMARY?.value || "Busy");
+    const rrule = props.RRULE?.value || null;
+    const occurrences = expandOccurrences(
+      new Date(startParsed.iso),
+      new Date(endParsed.iso),
+      rrule,
+      windowStart,
+      windowEnd,
+    );
+    occurrences.forEach((occ, idx) => {
+      events.push({
+        uid: rrule ? `${uid}::${idx}` : uid,
+        title,
+        start: occ.start,
+        end: occ.end,
+        allDay: startParsed.allDay,
+        showStatus,
+        transparency: transp === "TRANSPARENT" ? "transparent" : "opaque",
+      });
+    });
+  }
+  return events;
+}
+
+// deno-lint-ignore no-explicit-any
+async function syncIcal(supabase: any, cal: ConnectedCalendar): Promise<{ synced: number; error?: string }> {
+  const rawUrl = (cal.calendar_id || "").trim();
+  if (!rawUrl) {
+    return {
+      synced: 0,
+      error: "No calendar link saved. Paste the private iPhone calendar link, then tap Sync.",
+    };
+  }
+  const url = rawUrl.replace(/^webcal:\/\//i, "https://");
+  if (!/^https?:\/\//i.test(url)) {
+    return { synced: 0, error: "Calendar link must start with https:// or webcal://" };
+  }
+
+  let text = "";
+  try {
+    const res = await fetch(url, {
+      headers: {
+        Accept: "text/calendar, text/plain, */*",
+        "User-Agent": "PinOnIt/1.0 (calendar sync)",
+      },
+      redirect: "follow",
+    });
+    if (!res.ok) {
+      return { synced: 0, error: `Could not read that calendar link (${res.status}). Check the URL and that the calendar is shared.` };
+    }
+    text = await res.text();
+  } catch (e) {
+    return { synced: 0, error: `Could not open that calendar link: ${(e as Error).message}` };
+  }
+
+  if (text.length > 2_000_000) text = text.slice(0, 2_000_000);
+  if (!/BEGIN:VCALENDAR/i.test(text)) {
+    return { synced: 0, error: "That link is not a calendar file. On iPhone: Calendar → the calendar → Share Calendar → copy the private link." };
+  }
+
+  const now = new Date();
+  const windowStart = new Date(now);
+  windowStart.setMonth(windowStart.getMonth() - 1);
+  const windowEnd = new Date(now);
+  windowEnd.setMonth(windowEnd.getMonth() + 3);
+  const parsed = parseIcsEvents(text, windowStart, windowEnd);
+
+  await supabase.from("calendar_events").delete().eq("calendar_id", cal.id);
+
+  const rows = parsed.map((e) => ({
+    calendar_id: cal.id,
+    host_id: cal.host_id,
+    provider_event_id: e.uid.slice(0, 500),
+    title: e.title.slice(0, 500),
+    start_at: e.start.toISOString(),
+    end_at: e.end.toISOString(),
+    all_day: e.allDay,
+    recurrence_rule: null,
+    raw_json: { source: "ical", uid: e.uid },
+    show_status: e.showStatus,
+    transparency: e.transparency,
+    attendee_self_status: null,
+    is_birthday_cal: isBirthdayCalendarName(e.title) || isBirthdayCalendarName(cal.provider),
+    is_holiday_cal: isHolidayCalendarName(e.title),
+  }));
+
+  let totalStored = 0;
+  for (let i = 0; i < rows.length; i += 100) {
+    const { error, count } = await supabase
+      .from("calendar_events")
+      .upsert(rows.slice(i, i + 100), { onConflict: "calendar_id,provider_event_id", count: "exact" });
+    if (error) return { synced: totalStored, error: error.message };
+    totalStored += count ?? rows.slice(i, i + 100).length;
+  }
+
+  await supabase.from("connected_calendars").update({ last_synced_at: new Date().toISOString() }).eq("id", cal.id);
+  console.log("[calendar-sync] Stored", totalStored, "iCal events for calendar:", cal.id);
+  return { synced: totalStored };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // HTTP handler
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -478,7 +754,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: calendars, error: fetchErr } = await supabase
       .from("connected_calendars")
-      .select("id,host_id,provider,access_token,refresh_token,token_expires_at,sync_enabled")
+      .select("id,host_id,provider,access_token,refresh_token,token_expires_at,sync_enabled,calendar_id")
       .eq("host_id", user.id)
       .eq("sync_enabled", true);
 
@@ -495,8 +771,9 @@ Deno.serve(async (req: Request) => {
         results[cal.id] = await syncGoogle(supabase, cal);
       } else if (cal.provider === "outlook") {
         results[cal.id] = await syncOutlook(supabase, cal);
+      } else if (cal.provider === "ical" || cal.provider === "apple") {
+        results[cal.id] = await syncIcal(supabase, cal);
       } else {
-        // apple/ical: events are parsed client-side via iCal feeds
         results[cal.id] = { synced: 0 };
       }
     }
