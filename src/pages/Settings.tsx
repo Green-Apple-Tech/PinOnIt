@@ -270,7 +270,7 @@ function IntegrationsTab({ userId }: { userId: string | undefined }) {
   const googleCal = getConnected('google');
   const outlookCal = getConnected('outlook');
   const zoomCal = getConnected('zoom');
-  const appleCal = getConnected('apple');
+  const appleCal = getConnected('apple') ?? getConnected('ical');
 
   return (
     <div className="space-y-6">
@@ -309,8 +309,8 @@ function IntegrationsTab({ userId }: { userId: string | undefined }) {
           />
           <IntegrationCard
             provider="apple"
-            name="Apple Calendar"
-            description="Paste the private link from your iPhone Calendar app. No Apple password needed."
+            name="Apple Calendar / iCal"
+            description="Paste a calendar link from iPhone or Mac. Hides busy times. Does not add PinOnIt bookings to Apple."
             connected={!!appleCal}
             connectedEmail={appleCal?.provider_account_email ?? appleCal?.calendar_name}
             onConnect={() => handleConnect('apple')}

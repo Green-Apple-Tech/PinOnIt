@@ -13,9 +13,6 @@ import {
   Wifi,
   WifiOff,
   Link2,
-  Eye,
-  EyeOff,
-  ExternalLink,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -140,131 +137,14 @@ function timeAgo(iso: string | null): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-// ── Apple CalDAV Form ─────────────────────────────────────────────────────────
+// ── Apple / iCal link wizard ─────────────────────────────────────────────────
 
-function AppleCalDAVForm({ onClose, onConnected }: { onClose: () => void; onConnected: () => void }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPw, setShowPw] = useState(false);
-  const [connecting, setConnecting] = useState(false);
-  const [error, setError] = useState('');
-
-  const handleConnect = async () => {
-    if (!email.trim() || !password.trim()) { setError('Email and app-specific password are required.'); return; }
-    setConnecting(true);
-    setError('');
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token ?? '';
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-caldav`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ email: email.trim(), password: password.trim() }),
-        }
-      );
-      const json = await res.json();
-      if (json.error) { setError(json.error); setConnecting(false); return; }
-      onConnected();
-    } catch (e) {
-      setError(String(e));
-      setConnecting(false);
-    }
-  };
-
-  const inputCls = 'w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition';
-
-  return (
-    <div className="space-y-4">
-      {error && (
-        <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 rounded-xl text-sm text-red-700 dark:text-red-400">
-          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center gap-2.5">
-        <span className="text-slate-700 dark:text-slate-300"><AppleIcon /></span>
-        <div>
-          <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Apple iCloud Calendar</p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">Connects via CalDAV — no OAuth needed</p>
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">iCloud email address</label>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@icloud.com"
-          className={inputCls}
-          autoFocus
-        />
-      </div>
-
-      <div>
-        <div className="flex items-center justify-between mb-1.5">
-          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">App-specific password</label>
-          <a
-            href="https://appleid.apple.com/account/manage"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-indigo-600 dark:text-indigo-500 hover:underline flex items-center gap-1"
-          >
-            Generate at Apple ID <ExternalLink className="h-3 w-3" />
-          </a>
-        </div>
-        <div className="relative">
-          <input
-            type={showPw ? 'text' : 'password'}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="xxxx-xxxx-xxxx-xxxx"
-            className={`${inputCls} pr-10`}
-            onKeyDown={(e) => e.key === 'Enter' && handleConnect()}
-          />
-          <button
-            type="button"
-            onClick={() => setShowPw((v) => !v)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
-          >
-            {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </button>
-        </div>
-
-        <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-lg text-xs text-amber-800 dark:text-amber-300 space-y-1.5">
-          <p className="font-semibold">How to generate an app-specific password:</p>
-          <ol className="list-decimal list-inside space-y-0.5 text-amber-700 dark:text-amber-400">
-            <li>Go to <strong>appleid.apple.com</strong> and sign in</li>
-            <li>Under <strong>Sign-In and Security</strong>, tap <strong>App-Specific Passwords</strong></li>
-            <li>Click <strong>+ Generate an app-specific password</strong></li>
-            <li>Name it "PinOnIt" and copy the password</li>
-          </ol>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-2 pt-1">
-        <button
-          onClick={handleConnect}
-          disabled={connecting || !email.trim() || !password.trim()}
-          className="flex items-center gap-1.5 px-4 py-2.5 bg-slate-900 hover:bg-slate-700 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
-        >
-          {connecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <AppleIcon className="h-4 w-4" />}
-          {connecting ? 'Connecting…' : 'Connect iCloud Calendar'}
-        </button>
-        <button onClick={onClose} className="px-3 py-2.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors">
-          Cancel
-        </button>
-      </div>
-    </div>
-  );
-}
+const ICAL_LIMITS = [
+  'PinOnIt hides times you are already busy. It does not add new bookings to Apple Calendar.',
+  'Use Google or Outlook if you want PinOnIt meetings to appear on your calendar automatically.',
+  'Anyone with a public calendar link can see event names. Prefer a private link when Apple shows one.',
+  'Tap Sync after you add events on your phone. Updates are not always instant.',
+];
 
 // ── iCal URL Form ─────────────────────────────────────────────────────────────
 
@@ -294,18 +174,16 @@ function ICalUrlForm({
   hostId,
   onClose,
   onConnected,
-  variant = 'ical',
 }: {
   hostId: string;
   onClose: () => void;
   onConnected: () => void;
-  variant?: 'apple' | 'ical';
 }) {
+  const [guide, setGuide] = useState<'iphone' | 'mac' | 'other'>('iphone');
   const [url, setUrl] = useState('');
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const isApple = variant === 'apple';
 
   const handleAdd = async () => {
     const trimmed = url.trim();
@@ -316,9 +194,9 @@ function ICalUrlForm({
     setError('');
     const { error: insertErr } = await supabase.from('connected_calendars').insert({
       host_id: hostId,
-      provider: isApple ? 'apple' : 'ical',
+      provider: guide === 'other' ? 'ical' : 'apple',
       provider_account_email: '',
-      calendar_name: name.trim() || (isApple ? 'Apple Calendar' : 'iCal subscription'),
+      calendar_name: name.trim() || (guide === 'other' ? 'iCal subscription' : 'Apple Calendar'),
       sync_enabled: true,
       use_for_scheduling: true,
       use_for_reminders: true,
@@ -345,32 +223,66 @@ function ICalUrlForm({
         </div>
       )}
 
-      <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center gap-2.5">
-        <span className={isApple ? 'text-slate-700 dark:text-slate-300' : 'text-indigo-600 dark:text-indigo-500'}>
-          {isApple ? <AppleIcon /> : <ICalIcon />}
-        </span>
-        <div>
-          <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-            {isApple ? 'Apple Calendar' : 'iCal / webcal URL'}
-          </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            {isApple ? 'Paste the private link from your iPhone calendar' : 'Paste any .ics or webcal:// link for conflict checking'}
-          </p>
-        </div>
+      <div className="grid grid-cols-3 gap-2">
+        {([
+          { id: 'iphone' as const, label: 'iPhone' },
+          { id: 'mac' as const, label: 'Mac' },
+          { id: 'other' as const, label: 'Other .ics' },
+        ]).map((opt) => (
+          <button
+            key={opt.id}
+            type="button"
+            onClick={() => setGuide(opt.id)}
+            className={`px-2 py-2 rounded-lg text-xs font-semibold border transition-colors ${
+              guide === opt.id
+                ? 'bg-brand-50 dark:bg-brand-500/10 border-brand-300 dark:border-brand-500/40 text-brand-700 dark:text-brand-300'
+                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
       </div>
 
-      {isApple && (
-        <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-lg text-xs text-amber-800 dark:text-amber-300 space-y-1.5">
-          <p className="font-semibold">On iPhone (about 30 seconds):</p>
-          <ol className="list-decimal list-inside space-y-0.5 text-amber-700 dark:text-amber-400">
-            <li>Open the <strong>Calendar</strong> app</li>
-            <li>Tap <strong>Calendars</strong> at the bottom, then the <strong>i</strong> next to your calendar</li>
-            <li>Tap <strong>Share Calendar</strong> or <strong>Add Person</strong> → turn on <strong>Public Calendar</strong> if you see it</li>
-            <li>Copy the <strong>calendar link</strong> (starts with webcal:// or https://) and paste it below</li>
-          </ol>
-          <p className="text-amber-700 dark:text-amber-400">On Mac: Calendar → the calendar → Share → copy the private URL.</p>
-        </div>
-      )}
+      <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-600 dark:text-slate-300 space-y-1.5">
+        {guide === 'iphone' && (
+          <>
+            <p className="font-semibold text-slate-800 dark:text-slate-200">On iPhone</p>
+            <ol className="list-decimal list-inside space-y-0.5">
+              <li>Open the <strong>Calendar</strong> app</li>
+              <li>Tap <strong>Calendars</strong> at the bottom, then the <strong>i</strong> next to your calendar</li>
+              <li>Tap <strong>Share Calendar</strong>. Turn on <strong>Public Calendar</strong> if you see it</li>
+              <li>Copy the link and paste it below</li>
+            </ol>
+          </>
+        )}
+        {guide === 'mac' && (
+          <>
+            <p className="font-semibold text-slate-800 dark:text-slate-200">On Mac</p>
+            <ol className="list-decimal list-inside space-y-0.5">
+              <li>Open the <strong>Calendar</strong> app</li>
+              <li>Control-click the calendar in the sidebar</li>
+              <li>Choose <strong>Share Calendar</strong> and copy the private URL</li>
+              <li>Paste it below</li>
+            </ol>
+          </>
+        )}
+        {guide === 'other' && (
+          <>
+            <p className="font-semibold text-slate-800 dark:text-slate-200">Any .ics / webcal link</p>
+            <p>Google, Outlook, Airbnb, sports, or team calendars that offer a secret or public .ics address work here.</p>
+          </>
+        )}
+      </div>
+
+      <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-lg text-xs text-amber-800 dark:text-amber-300 space-y-1">
+        <p className="font-semibold">What this cannot do</p>
+        <ul className="list-disc list-inside space-y-0.5 text-amber-700 dark:text-amber-400">
+          {ICAL_LIMITS.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      </div>
 
       <div>
         <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">Calendar URL</label>
@@ -383,11 +295,7 @@ function ICalUrlForm({
           autoFocus
           onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
         />
-        <p className="text-xs text-slate-400 mt-1">
-          {isApple
-            ? 'PinOnIt reads this link to hide times you are already busy.'
-            : 'Works with Google, Outlook, Apple, Airbnb, and any .ics feed.'}
-        </p>
+        <p className="text-xs text-slate-400 mt-1">Starts with https:// or webcal://</p>
       </div>
 
       <div>
@@ -408,7 +316,7 @@ function ICalUrlForm({
           className="flex items-center gap-1.5 px-4 py-2.5 bg-brand-600 hover:bg-brand-500 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
         >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
-          {saving ? 'Connecting…' : isApple ? 'Connect Apple Calendar' : 'Add calendar'}
+          {saving ? 'Connecting…' : 'Connect calendar link'}
         </button>
         <button onClick={onClose} className="px-3 py-2.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors">
           Cancel
@@ -420,7 +328,7 @@ function ICalUrlForm({
 
 // ── Connect Wizard Modal ───────────────────────────────────────────────────────
 
-type WizardStep = 'pick' | 'apple' | 'ical';
+type WizardStep = 'pick' | 'ical';
 
 function ConnectWizard({ hostId, onClose, onConnected }: { hostId: string; onClose: () => void; onConnected: () => void }) {
   const [step, setStep] = useState<WizardStep>('pick');
@@ -461,18 +369,16 @@ function ConnectWizard({ hostId, onClose, onConnected }: { hostId: string; onClo
 
   const stepTitles: Record<WizardStep, string> = {
     pick: 'Connect a Calendar',
-    apple: 'Apple iCloud Calendar',
-    ical: 'iCal URL Subscription',
+    ical: 'Apple / iCal link',
   };
   const stepSubs: Record<WizardStep, string> = {
     pick: 'Choose your calendar provider.',
-    apple: 'Paste the private link from your iPhone.',
-    ical: 'Paste any .ics or webcal link.',
+    ical: 'Follow the steps, then paste your calendar link.',
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="px-6 pt-6 pb-4 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2">
           {step !== 'pick' && (
             <button onClick={() => setStep('pick')} className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-lg transition-colors shrink-0">
@@ -516,35 +422,18 @@ function ConnectWizard({ hostId, onClose, onConnected }: { hostId: string; onClo
               ))}
 
               <button
-                onClick={() => setStep('apple')}
-                disabled={!!connecting}
-                className="w-full flex items-center gap-4 p-4 rounded-xl border-2 text-left transition-all hover:shadow-md disabled:opacity-60 hover:scale-[1.01] active:scale-100 bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700"
-              >
-                <div className="shrink-0 text-slate-700 dark:text-slate-300"><AppleIcon /></div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Apple Calendar</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Paste a link from your iPhone — no password</p>
-                </div>
-                <ChevronRight className="h-5 w-5 text-slate-300 dark:text-slate-600 shrink-0" />
-              </button>
-
-              <button
                 onClick={() => setStep('ical')}
                 disabled={!!connecting}
                 className="w-full flex items-center gap-4 p-4 rounded-xl border-2 text-left transition-all hover:shadow-md disabled:opacity-60 hover:scale-[1.01] active:scale-100 bg-indigo-50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800/40"
               >
-                <div className="shrink-0 text-indigo-600 dark:text-indigo-500"><ICalIcon /></div>
+                <div className="shrink-0 text-slate-700 dark:text-slate-300"><AppleIcon /></div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-indigo-700 dark:text-indigo-400">iCal / webcal URL</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Subscribe to any .ics calendar feed</p>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Apple Calendar or iCal link</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Guided setup — hides busy times, does not write back to Apple</p>
                 </div>
                 <ChevronRight className="h-5 w-5 text-slate-300 dark:text-slate-600 shrink-0" />
               </button>
             </>
-          )}
-
-          {step === 'apple' && (
-            <ICalUrlForm hostId={hostId} variant="apple" onClose={onClose} onConnected={() => { onConnected(); onClose(); }} />
           )}
 
           {step === 'ical' && (
@@ -741,15 +630,14 @@ export function CalendarConnections({ compact = false }: CalendarConnectionsProp
           <Calendar className="h-12 w-12 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
           <p className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">No calendars connected</p>
           <p className="text-xs text-slate-400 dark:text-slate-500 mb-5 max-w-xs mx-auto">
-            Connect Google, Outlook, Apple iCloud, or paste any iCal URL to block busy times and prevent double-bookings.
+            Connect Google or Outlook for two-way sync, or paste an Apple / iCal link to hide busy times.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-2">
             {[
               { label: 'Google', bgCls: 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800/50 text-red-600 dark:text-red-400', icon: <GoogleIcon /> },
               { label: 'Outlook', bgCls: 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800/50 text-blue-600 dark:text-blue-400', icon: <OutlookIcon /> },
               { label: 'Zoom', bgCls: 'bg-sky-50 dark:bg-sky-950/30 border-sky-200 dark:border-sky-800/50 text-sky-600 dark:text-sky-400', icon: <ZoomIcon /> },
-              { label: 'Apple', bgCls: 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300', icon: <span className="text-slate-700 dark:text-slate-300"><AppleIcon /></span> },
-              { label: 'iCal URL', bgCls: 'bg-indigo-50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800/40 text-indigo-600 dark:text-indigo-500', icon: <span className="text-indigo-600 dark:text-indigo-500"><ICalIcon /></span> },
+              { label: 'Apple / iCal', bgCls: 'bg-indigo-50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800/40 text-slate-700 dark:text-slate-300', icon: <span className="text-slate-700 dark:text-slate-300"><AppleIcon /></span> },
             ].map(({ label, bgCls, icon }) => (
               <button key={label} onClick={() => setShowWizard(true)} className={`flex items-center gap-2 px-4 py-2.5 border-2 rounded-xl text-sm font-semibold hover:shadow-md transition-all ${bgCls}`}>
                 {icon} {label}

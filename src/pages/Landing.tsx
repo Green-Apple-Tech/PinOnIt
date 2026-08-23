@@ -77,7 +77,7 @@ const COMP_ROWS: CompRow[] = [
   { section: 'Calendar Sync' },
   { feature: 'Google Calendar',   pinonit: true,  calendly: true,  acuity: true },
   { feature: 'Outlook / Office 365', pinonit: true, calendly: true, acuity: true },
-  { feature: 'Apple iCal (CalDAV)', pinonit: true, calendly: false, acuity: false },
+  { feature: 'Apple Calendar / iCal link', pinonit: true, calendly: false, acuity: false },
   { section: 'Payments' },
   { feature: 'Stripe payments',   pinonit: 'Pro', calendly: 'Standard+', acuity: 'Emerging+' },
   { feature: 'PayPal payments',   pinonit: 'Pro', calendly: false, acuity: false },
