@@ -62,11 +62,13 @@
 @keyframes cta-blink {
   0%, 100% {
     background-color: #5864C6;
-    box-shadow: 0 0 0 0 rgb(88 100 198 / 0.45);
+    box-shadow: 0 0 0 3px rgb(255 77 26 / 0.35);
   }
   50% {
     background-color: #7c86e0;
-    box-shadow: 0 0 18px 4px rgb(88 100 198 / 0.55);
+    box-shadow:
+      0 0 0 5px rgb(255 77 26 / 0.7),
+      0 0 28px 8px rgb(239 68 68 / 0.85);
   }
 }
 
