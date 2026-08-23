@@ -372,7 +372,7 @@ export function Landing() {
       {/* ── App pill bar ── */}
       <div className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 py-3 px-6 overflow-x-auto">
         <div className="flex flex-col items-center gap-1.5 min-w-max mx-auto">
-          <p className="text-xl sm:text-2xl font-black uppercase tracking-[0.16em] text-brand-400 animate-apps-in-1-blink">5 apps in 1</p>
+          <p className="text-xl sm:text-2xl font-black uppercase tracking-[0.16em] text-[#ff4d1a]">5 apps in 1</p>
           <div className="flex items-center justify-center gap-2 min-w-max mx-auto">
           {[
             { num: '1', label: 'Calendar Scheduler' },
