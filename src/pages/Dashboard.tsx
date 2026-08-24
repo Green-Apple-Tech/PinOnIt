@@ -31,6 +31,7 @@ import {
   resolveLinkExpiry,
   type LinkExpiryValue,
 } from '../lib/singleUseLinks';
+import { defaultSelectedServiceIds, withoutPinOnItDemoFeedback } from '../lib/eventTypes';
 
 type NavItem = { to: string; icon: typeof LayoutGrid; label: string; badge?: string; children?: NavItem[] };
 
@@ -910,6 +911,7 @@ export function Dashboard() {
   const [serviceSearch, setServiceSearch] = useState('');
   const [serviceQrModal, setServiceQrModal] = useState<{ url: string; title: string } | null>(null);
   const [selectedServiceIds, setSelectedServiceIds] = useState<Set<string>>(new Set());
+  const serviceSelectionInitialized = useRef(false);
 
   // Re-fetch profile on mount and when returning to dashboard (e.g. after saving slug in Settings)
   useEffect(() => {
@@ -1136,14 +1138,19 @@ export function Dashboard() {
   }, [profile]);
 
   useEffect(() => {
-    setSelectedServiceIds(new Set(services.map((s) => s.id)));
+    if (serviceSelectionInitialized.current) return;
+    if (services.length === 0) return;
+    serviceSelectionInitialized.current = true;
+    setSelectedServiceIds(defaultSelectedServiceIds(services));
   }, [services]);
 
+  const meetingServices = withoutPinOnItDemoFeedback(services);
   const effectiveSlug = (liveSlug || profile?.slug || '').trim();
   const bookingSlug = effectiveSlug;
-  const shareUrl = bookingSlug ? buildShareUrl(bookingSlug, services, selectedServiceIds) : '';
+  const shareUrl = bookingSlug ? buildShareUrl(bookingSlug, meetingServices, selectedServiceIds) : '';
 
   const toggleServiceSelection = (serviceId: string) => {
+    serviceSelectionInitialized.current = true;
     setSelectedServiceIds((prev) => {
       const next = new Set(prev);
       if (next.has(serviceId)) {
@@ -1578,7 +1585,7 @@ export function Dashboard() {
               </div>
 
               {/* Search */}
-              {services.length > 3 && (
+              {meetingServices.length > 3 && (
                 <div className="relative mb-4">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-slate-500 pointer-events-none" />
                   <input
@@ -1595,7 +1602,7 @@ export function Dashboard() {
                 <div className="text-center py-12 text-gray-400 dark:text-slate-500">
                   <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                 </div>
-              ) : services.length === 0 ? (
+              ) : meetingServices.length === 0 ? (
                 <div className="rounded-2xl border-2 border-dashed border-gray-200 dark:border-slate-700 p-12 text-center">
                   <div className="h-14 w-14 bg-brand-50 dark:bg-brand-950/40 rounded-2xl flex items-center justify-center mx-auto mb-4">
                     <CalendarDays className="h-7 w-7 text-brand-600 dark:text-brand-400" />
@@ -1623,7 +1630,7 @@ export function Dashboard() {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  {services
+                  {meetingServices
                     .filter((s) => !serviceSearch || s.name.toLowerCase().includes(serviceSearch.toLowerCase()))
                     .map((svc) => {
                       const eventTypeUrl = bookingSlug

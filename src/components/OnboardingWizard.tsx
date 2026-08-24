@@ -19,6 +19,7 @@ import {
   wizardIsActiveLocal,
   wizardSavedStepLocal,
 } from '../lib/onboardingState';
+import { withoutPinOnItDemoFeedback } from '../lib/eventTypes';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -462,7 +463,9 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
     if (data.profile?.timezone) setTimezone(data.profile.timezone);
     if (data.profile?.slug && !username) setUsername(data.profile.slug);
     if (data.username && !calendlyUrl) setCalendlyUrl(`https://calendly.com/${data.username}`);
-    setScrapedEvents((data.events ?? []).map(e => ({ ...e, selected: e.is_active !== false })));
+    setScrapedEvents(
+      withoutPinOnItDemoFeedback(data.events ?? []).map(e => ({ ...e, selected: e.is_active !== false })),
+    );
   }, [calendlyUrl, username]);
 
   const activateCalendlyTrial = useCallback(async () => {
@@ -503,9 +506,10 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
       }
     }
 
-    if (selected.length > 0) {
+    const toSave = withoutPinOnItDemoFeedback(selected);
+    if (toSave.length > 0) {
       await supabase.from('services').delete().eq('host_id', user.id);
-      for (const svc of selected) {
+      for (const svc of toSave) {
         await supabase.from('services').insert({
           host_id: user.id,
           name: svc.name,
@@ -1012,7 +1016,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
     // If user imported from Calendly, those services are already saved.
     // Delete any pre-existing default services and replace with the scraped ones.
     if (fromCalendly && scrapedEvents.length > 0) {
-      const selected = scrapedEvents.filter(e => e.selected);
+      const selected = withoutPinOnItDemoFeedback(scrapedEvents.filter(e => e.selected));
       if (selected.length > 0) {
         // Delete existing placeholder/default services for this host
         await supabase.from('services').delete().eq('host_id', user.id);

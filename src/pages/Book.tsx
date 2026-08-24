@@ -21,6 +21,7 @@ import {
   shouldRecordSmsOptIn,
 } from '../lib/bookingSmsConsent';
 import { resolveTermsText } from '../lib/terms';
+import { withoutPinOnItDemoFeedback } from '../lib/eventTypes';
 import { stripePromise } from '../lib/stripe';
 import { StripeBookingCheckout } from '../components/StripeBookingCheckout';
 import type { RescheduleSession } from '../lib/reschedule';
@@ -779,10 +780,13 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
       const publicServices = token
         ? allServices
         : allServices.filter((s) => s.meeting_type !== 'one_off');
+      const listedServices = token
+        ? publicServices
+        : withoutPinOnItDemoFeedback(publicServices);
       const typesParam = searchParams.get('types');
       const filteredServices = typesParam
-        ? publicServices.filter((s) => typesParam.split(',').includes(s.id))
-        : publicServices;
+        ? listedServices.filter((s) => typesParam.split(',').includes(s.id))
+        : listedServices;
       setServices(filteredServices);
 
       setAvailability(availRes.data ?? []);

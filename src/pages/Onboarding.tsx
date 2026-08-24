@@ -21,6 +21,7 @@ import {
   Gift,
 } from 'lucide-react';
 import { ColorSwatchRow } from '../components/ColorSwatchRow';
+import { withoutPinOnItDemoFeedback } from '../lib/eventTypes';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -377,7 +378,7 @@ export function Onboarding() {
       );
       const data = await resp.json() as { error?: string; events?: ScrapedEvent[] };
       if (data.error) { setScrapeError(data.error); setScraping(false); return; }
-      const events = (data.events ?? []).map((e) => ({ ...e, selected: true }));
+      const events = withoutPinOnItDemoFeedback(data.events ?? []).map((e) => ({ ...e, selected: true }));
       setScrapedEvents(events);
       await activateTrial();
       setCalendlyStep(1);
@@ -392,7 +393,7 @@ export function Onboarding() {
   };
 
   const handleCalendlyFinish = async () => {
-    const services = scrapedEvents.filter((e) => e.selected).map((e) => ({
+    const services = withoutPinOnItDemoFeedback(scrapedEvents.filter((e) => e.selected)).map((e) => ({
       name: e.name,
       duration_minutes: e.duration_minutes,
       description: e.description,

@@ -16,6 +16,15 @@ interface LegacyCalendlyEvent {
   color: string;
 }
 
+function isPinOnItDemoFeedback(name: string): boolean {
+  const n = name.toLowerCase().replace(/\s+/g, " ");
+  return /pi+n\s*on\s*it/.test(n) && /feedback/.test(n);
+}
+
+function withoutPinOnItDemoFeedback<T extends { name: string }>(events: T[]): T[] {
+  return events.filter((e) => !isPinOnItDemoFeedback(e.name));
+}
+
 function extractUsername(input: string): string | null {
   const cleaned = input.trim().replace(/^https?:\/\//i, "").replace(/^www\./i, "");
   const match = cleaned.match(/^calendly\.com\/([a-z0-9_-]+)/i);
@@ -215,7 +224,10 @@ Deno.serve(async (req: Request) => {
             clientSecret
           );
 
-          return new Response(JSON.stringify(imported), {
+          return new Response(JSON.stringify({
+            ...imported,
+            events: withoutPinOnItDemoFeedback(imported.events ?? []),
+          }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
@@ -239,7 +251,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const events = legacyToRich(await publicScrape(username));
+    const events = withoutPinOnItDemoFeedback(legacyToRich(await publicScrape(username)));
 
     return new Response(
       JSON.stringify({

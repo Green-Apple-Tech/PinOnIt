@@ -370,10 +370,11 @@ export function Landing() {
       </nav>
 
       {/* ── App pill bar ── */}
-      <div className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 py-3 px-6 overflow-x-auto">
-        <div className="flex flex-col items-center gap-1.5 min-w-max mx-auto">
-          <p className="text-xl sm:text-2xl font-black uppercase tracking-[0.16em] text-[#ff4d1a]">5 apps in 1</p>
-          <div className="flex items-center justify-center gap-2 min-w-max mx-auto">
+      <div className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 py-3">
+        <p className="text-center text-lg sm:text-2xl font-black uppercase tracking-wide sm:tracking-[0.16em] text-[#ff4d1a] px-4">
+          5 apps in 1
+        </p>
+        <div className="mt-1.5 flex flex-wrap items-center justify-center gap-2 px-4">
           {[
             { num: '1', label: 'Calendar Scheduler' },
             { num: '2', label: 'Super Reminders' },
@@ -382,11 +383,18 @@ export function Landing() {
             { num: '5', label: 'Email Signatures' },
           ].map(({ num, label }) => (
             <div key={num} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full shadow-sm">
-              <span className="h-4.5 w-4.5 h-[18px] w-[18px] rounded-full bg-brand-500 text-white text-[10px] font-black flex items-center justify-center shrink-0">{num}</span>
+              <span className="h-[18px] w-[18px] rounded-full bg-brand-500 text-white text-[10px] font-black flex items-center justify-center shrink-0">{num}</span>
               <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">{label}</span>
             </div>
           ))}
-          </div>
+        </div>
+        <div className="sm:hidden mt-2.5 flex justify-center px-4">
+          <Link
+            to="/why-pinonit"
+            className="inline-flex items-center gap-1 px-3.5 py-1.5 text-xs font-bold text-white rounded-full animate-cta-blink hover:brightness-110"
+          >
+            Why we beat Calendly <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
         </div>
       </div>
 
