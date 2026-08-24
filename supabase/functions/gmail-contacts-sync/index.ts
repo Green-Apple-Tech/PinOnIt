@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { dedupeContactRows } from "../_shared/dedupe-contacts.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -100,17 +101,18 @@ async function importGoogleContacts(
     })
     .filter((r) => r.email.includes("@"));
 
-  console.log("[gmail-contacts-sync] Contacts with email:", fullRows.length);
+  const uniqueRows = dedupeContactRows(fullRows);
+  console.log("[gmail-contacts-sync] Contacts with email:", fullRows.length, "unique:", uniqueRows.length);
 
-  if (!fullRows.length) return { imported: 0, fetched: 0 };
+  if (!uniqueRows.length) return { imported: 0, fetched: 0 };
 
   let totalImported = 0;
   let useFallback = false;
 
-  for (let i = 0; i < fullRows.length; i += 100) {
+  for (let i = 0; i < uniqueRows.length; i += 100) {
     const batch = useFallback
-      ? fullRows.slice(i, i + 100).map(({ host_id, email, full_name }) => ({ host_id, email, full_name, source: "gmail" }))
-      : fullRows.slice(i, i + 100);
+      ? uniqueRows.slice(i, i + 100).map(({ host_id, email, full_name }) => ({ host_id, email, full_name, source: "gmail" }))
+      : uniqueRows.slice(i, i + 100);
 
     const { error, count } = await supabase
       .from("contacts")
@@ -129,14 +131,14 @@ async function importGoogleContacts(
       }
 
       console.error("[gmail-contacts-sync] Upsert error:", JSON.stringify(error));
-      return { imported: totalImported, fetched: fullRows.length, error: error.message };
+      return { imported: totalImported, fetched: uniqueRows.length, error: error.message };
     }
 
     totalImported += count ?? batch.length;
   }
 
   console.log("[gmail-contacts-sync] Contacts upserted:", totalImported);
-  return { imported: totalImported, fetched: fullRows.length };
+  return { imported: totalImported, fetched: uniqueRows.length };
 }
 
 Deno.serve(async (req: Request) => {

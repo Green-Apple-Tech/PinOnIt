@@ -4,6 +4,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { parseOAuthContext, isValidOAuthUserId } from "../_shared/oauth-state.ts";
+import { dedupeContactRows } from "../_shared/dedupe-contacts.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -118,16 +119,17 @@ async function importOutlookContacts(supabase: any, hostId: string, accessToken:
       return emails.map((email) => ({ host_id: hostId, email: email!, full_name, phone, company, source: "outlook" }));
     });
 
-  console.log("[outlook-contacts] Contacts with email:", rows.length);
-  if (!rows.length) return { imported: 0, fetched: 0 };
+  const uniqueRows = dedupeContactRows(rows);
+  console.log("[outlook-contacts] Contacts with email:", rows.length, "unique:", uniqueRows.length);
+  if (!uniqueRows.length) return { imported: 0, fetched: 0 };
 
   let totalImported = 0;
   let useFallback = false;
 
-  for (let i = 0; i < rows.length; i += 100) {
+  for (let i = 0; i < uniqueRows.length; i += 100) {
     const batch = useFallback
-      ? rows.slice(i, i + 100).map(({ host_id, email, full_name }) => ({ host_id, email, full_name, source: "outlook" }))
-      : rows.slice(i, i + 100);
+      ? uniqueRows.slice(i, i + 100).map(({ host_id, email, full_name }) => ({ host_id, email, full_name, source: "outlook" }))
+      : uniqueRows.slice(i, i + 100);
 
     const { error, count } = await supabase
       .from("contacts")
@@ -142,14 +144,14 @@ async function importOutlookContacts(supabase: any, hostId: string, accessToken:
         continue;
       }
       console.error("[outlook-contacts] Upsert error:", JSON.stringify(error));
-      return { imported: totalImported, fetched: rows.length, error: error.message };
+      return { imported: totalImported, fetched: uniqueRows.length, error: error.message };
     }
 
     totalImported += count ?? batch.length;
   }
 
   console.log("[outlook-contacts] Contacts imported:", totalImported);
-  return { imported: totalImported, fetched: rows.length };
+  return { imported: totalImported, fetched: uniqueRows.length };
 }
 
 // deno-lint-ignore no-explicit-any

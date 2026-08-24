@@ -4,6 +4,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { parseOAuthContext, isValidOAuthUserId } from "../_shared/oauth-state.ts";
+import { dedupeContactRows } from "../_shared/dedupe-contacts.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -124,19 +125,20 @@ async function importGoogleContacts(supabase: any, hostId: string, accessToken: 
     })
     .filter((r) => r.email.includes("@"));
 
-  console.log("[contacts] Contacts with email:", fullRows.length);
+  const uniqueRows = dedupeContactRows(fullRows);
+  console.log("[contacts] Contacts with email:", fullRows.length, "unique:", uniqueRows.length);
 
-  if (!fullRows.length) return { imported: 0, fetched: 0 };
+  if (!uniqueRows.length) return { imported: 0, fetched: 0 };
 
   // Attempt upsert with all columns. If any batch fails due to missing columns,
   // fall back to a minimal row (only columns guaranteed to exist in the schema).
   let totalImported = 0;
   let useFallback = false;
 
-  for (let i = 0; i < fullRows.length; i += 100) {
+  for (let i = 0; i < uniqueRows.length; i += 100) {
     const batch = useFallback
-      ? fullRows.slice(i, i + 100).map(({ host_id, email, full_name }) => ({ host_id, email, full_name }))
-      : fullRows.slice(i, i + 100);
+      ? uniqueRows.slice(i, i + 100).map(({ host_id, email, full_name }) => ({ host_id, email, full_name }))
+      : uniqueRows.slice(i, i + 100);
 
     const { error, count } = await supabase
       .from("contacts")
@@ -157,14 +159,14 @@ async function importGoogleContacts(supabase: any, hostId: string, accessToken: 
       }
 
       console.error("[contacts] Upsert error:", JSON.stringify(error));
-      return { imported: totalImported, fetched: fullRows.length, error: error.message };
+      return { imported: totalImported, fetched: uniqueRows.length, error: error.message };
     }
 
     totalImported += count ?? batch.length;
   }
 
   console.log("[contacts] Contacts imported/updated:", totalImported, useFallback ? "(fallback mode)" : "");
-  return { imported: totalImported, fetched: fullRows.length };
+  return { imported: totalImported, fetched: uniqueRows.length };
 }
 
 Deno.serve(async (req: Request) => {

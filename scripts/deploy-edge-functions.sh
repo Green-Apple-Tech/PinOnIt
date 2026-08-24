@@ -32,6 +32,8 @@ for fn in google-calendar-auth outlook-calendar-auth zoom-auth slack-auth; do
 done
 
 deploy scrape-calendly
+deploy gmail-contacts-sync
+deploy outlook-contacts-sync
 deploy send-quote
 deploy send-reminder
 deploy booking-reply
