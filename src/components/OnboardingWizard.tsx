@@ -20,6 +20,7 @@ import {
   wizardSavedStepLocal,
 } from '../lib/onboardingState';
 import { withoutPinOnItDemoFeedback } from '../lib/eventTypes';
+import { BUSINESS_TYPE_OPTIONS, presetsForBusinessType, type BusinessType } from '../lib/progressiveDisclosure';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -102,6 +103,7 @@ interface WizardProps {
 
 const STEPS = [
   'welcome',
+  'business_type',
   'username',
   'phone',
   'timezone',
@@ -114,10 +116,11 @@ const STEPS = [
 ] as const;
 type Step = (typeof STEPS)[number];
 
-/** Map saved onboarding_step from the old 11-step wizard (included `profile` at index 7). */
+/** Map saved onboarding_step from older wizards that still had a `profile` step at index 8. */
 function normalizeLegacyOnboardingStep(saved: number): number {
-  if (saved >= 8) return Math.min(saved - 1, STEPS.length - 1);
-  return Math.min(saved, STEPS.length - 1);
+  let idx = saved;
+  if (idx >= 8) idx -= 1;
+  return Math.min(Math.max(idx, 0), STEPS.length - 1);
 }
 
 export const onboardingIsCompleted = onboardingIsCompletedLocal;
@@ -280,6 +283,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
   const [trialAgreed, setTrialAgreed] = useState(false);
   const [trialCheckoutLoading, setTrialCheckoutLoading] = useState(false);
   const [trialCheckoutError, setTrialCheckoutError] = useState('');
+  const [businessType, setBusinessType] = useState<BusinessType | null>(null);
 
   // Calendar step
   const [calendars, setCalendars] = useState<ConnectedCalendar[]>([]);
@@ -823,8 +827,8 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
     setTrialCheckoutLoading(false);
   };
 
-  // ── Stripe checkout (Calendly 60-day trial only) ─────────────────────────────
-  const handleTrialCheckout = async (trialDays: number, resumeStep = 1) => {
+  // ── Stripe checkout (60-day Pro trial with card on file, $0 today) ───────────
+  const handleTrialCheckout = async (trialDays: number, resumeStep = STEPS.indexOf('business_type')) => {
     setTrialCheckoutError('');
     setTrialCheckoutLoading(true);
     try {
@@ -980,12 +984,38 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
       payload.default_reminder_channel = 'sms';
     } else if (phoneE164 && hostWhatsappOptIn) {
       payload.default_reminder_channel = 'whatsapp';
-    } else if (!phoneE164) {
-      payload.default_reminder_channel = null;
     }
     await supabase.from('profiles').update(payload).eq('id', user.id);
     await refreshProfile();
     await saveStep(STEPS.indexOf('phone') + 1);
+    setSaving(false);
+    goNext();
+  };
+
+  const handleSaveBusinessType = async () => {
+    if (!user || !businessType) return;
+    setSaving(true);
+    const presets = presetsForBusinessType(businessType);
+    const revealed = [...new Set([...(profile?.revealed_tools ?? []), ...presets.revealed])];
+    await supabase.from('profiles').update({
+      business_type: businessType,
+      default_reminder_channel: presets.reminderChannel,
+      revealed_tools: revealed,
+    }).eq('id', user.id);
+    setEventName(presets.eventName);
+    const { data: svcs } = await supabase
+      .from('services')
+      .select('id, name, duration_minutes')
+      .eq('host_id', user.id);
+    const target = (svcs ?? []).find((s) => s.duration_minutes === 30) ?? (svcs ?? [])[0];
+    if (target) {
+      await supabase.from('services').update({
+        name: presets.eventName,
+        location_type: presets.locationType,
+      }).eq('id', target.id);
+    }
+    await refreshProfile();
+    await saveStep(STEPS.indexOf('business_type') + 1);
     setSaving(false);
     goNext();
   };
@@ -1206,7 +1236,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                 </div>
                 <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Start your free trial</h2>
                 <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm max-w-sm mx-auto">
-                  Full Pro access for 14 days — <strong className="text-slate-700 dark:text-slate-200">no credit card required</strong>. $6/mo after trial, cancel anytime.
+                  Full Pro for 14 days — <strong className="text-slate-700 dark:text-slate-200">no credit card</strong>. Want 60 days? Add a card below. $0 today; billing starts when the trial ends.
                 </p>
               </div>
 
@@ -1237,7 +1267,15 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                 className="w-full py-3 bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 text-sm"
               >
                 {trialCheckoutLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-                Start Free Trial — No Charge Today
+                Start 14-day trial — no card
+              </button>
+              <button
+                onClick={() => handleTrialCheckout(60, STEPS.indexOf('business_type'))}
+                disabled={trialCheckoutLoading}
+                className="w-full mt-2 py-3 border-2 border-brand-600 text-brand-700 dark:text-brand-300 hover:bg-brand-50 dark:hover:bg-brand-950/30 disabled:opacity-50 font-semibold rounded-xl transition-all flex items-center justify-center gap-2 text-sm"
+              >
+                {trialCheckoutLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gift className="h-4 w-4" />}
+                60 days with card — $0 today
               </button>
             </div>
           );
@@ -1260,8 +1298,8 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
             </p>
             <div className="grid grid-cols-2 gap-3 mb-6">
               {[
-                { val: true, label: 'Switching from Calendly?', icon: '📅', desc: 'Import your events and run both side by side. 60 days Pro free — no charge until day 61.' },
-                { val: false, label: 'Starting fresh', icon: '🚀', desc: 'Full Pro access for 14 days free. $6/mo after trial, cancel anytime.' },
+                { val: true, label: 'Switching from Calendly?', icon: '📅', desc: 'Import your events. 60 days Pro with a card on file — $0 today, billing starts after day 60.' },
+                { val: false, label: 'Starting fresh', icon: '🚀', desc: '14 days Pro with no credit card, or 60 days if you add a card ($0 today).' },
               ].map(opt => (
                 <button
                   key={String(opt.val)}
@@ -1496,6 +1534,40 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
           </div>
         );
       }
+
+      case 'business_type':
+        return (
+          <div>
+            <div className="mb-5">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">What kind of work do you do?</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">We’ll set up a matching meeting type and reminders. You can change this later.</p>
+            </div>
+            <div className="grid grid-cols-1 gap-3 mb-4">
+              {BUSINESS_TYPE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setBusinessType(opt.id)}
+                  className={`p-4 rounded-2xl border-2 text-left transition-all ${
+                    businessType === opt.id
+                      ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/20'
+                      : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300'
+                  }`}
+                >
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">{opt.label}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{opt.desc}</p>
+                </button>
+              ))}
+            </div>
+            <NavButtons
+              onBack={goBack}
+              onNext={() => void handleSaveBusinessType()}
+              nextDisabled={!businessType}
+              loading={saving}
+              nextLabel="Continue"
+            />
+          </div>
+        );
 
       // ── Step: Custom booking URL ─────────────────────────────────────────────
       case 'username':

@@ -3,6 +3,7 @@ import { FileText, Plus, Trash2, Send, Copy, Check, Loader2, Mail, MessageSquare
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
+import { revealTool } from '../lib/progressiveDisclosure';
 import type { HostQuote, HostQuoteKind, HostQuoteLineItem } from '../lib/types';
 
 const KINDS: { id: HostQuoteKind; label: string; hint: string }[] = [
@@ -38,7 +39,7 @@ function viewUrl(token: string) {
 }
 
 export function QuoteInvoicePage() {
-  const { user } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const [kind, setKind] = useState<HostQuoteKind>('quote');
   const [clientName, setClientName] = useState('');
   const [clientEmail, setClientEmail] = useState('');
@@ -188,6 +189,10 @@ export function QuoteInvoicePage() {
       setLastSentUrl(json.view_url as string);
       if (json.whatsapp_url) {
         window.open(json.whatsapp_url as string, '_blank');
+      }
+      if (user) {
+        await revealTool(user.id, 'quotes', profile?.revealed_tools);
+        await refreshProfile();
       }
       await loadQuotes();
     } catch (e) {
@@ -454,7 +459,9 @@ export function QuoteInvoicePage() {
           </p>
           <div className="space-y-2 max-h-80 lg:max-h-none overflow-auto">
             {quotes.length === 0 && (
-              <p className="text-sm text-gray-500 dark:text-slate-500">Nothing sent yet.</p>
+              <p className="text-sm text-gray-500 dark:text-slate-500">
+                No quotes yet. Fill in the form and tap Send — your client gets it by email or text.
+              </p>
             )}
             {quotes.map((q) => (
               <button

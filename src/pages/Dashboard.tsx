@@ -8,14 +8,15 @@ import { supabase } from '../lib/supabase';
 import { syncStripeSubscription } from '../lib/stripe';
 import { effectivePlan } from '../lib/plan';
 import type { Booking, Service } from '../lib/types';
-import { CalendarDays, Settings, LogOut, Users, X, Check, Sun, Moon, Copy, Share2, Mail, Link2, ExternalLink, PenLine, Video, Phone, MapPin, ChevronRight, Loader2, CalendarCheck, Plus, ChevronLeft, LayoutGrid, Menu, AlertCircle, Sparkles, Search, Wrench as Tool, QrCode, MessageSquare, ChevronDown } from 'lucide-react';
+import { CalendarDays, LogOut, X, Check, Sun, Moon, Copy, Share2, Mail, Link2, ExternalLink, PenLine, Video, Phone, MapPin, ChevronRight, Loader2, Plus, ChevronLeft, LayoutGrid, Menu, AlertCircle, Sparkles, Search, Wrench as Tool, QrCode, MessageSquare, ChevronDown, Navigation } from 'lucide-react';
 import {
   MORE_TOOLS_HUB_PATH,
-  MORE_TOOLS_NAV,
-  isMoreToolsNavActive,
+  buildSidebarNav,
+  navPathMatches,
   readMoreToolsOpen,
   writeMoreToolsOpen,
 } from '../lib/dashboardNav';
+import { parseRevealedTools, revealTool } from '../lib/progressiveDisclosure';
 import { QRModal } from '../components/QRModal';
 import {
   buildAvailabilityEmailInvite,
@@ -851,6 +852,99 @@ function SharePanel({
   );
 }
 
+function isTodayBooking(iso: string): boolean {
+  const d = new Date(iso);
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+}
+
+function MobileTodayBoard({
+  bookings,
+  shareUrl,
+  shareCopied,
+  onShare,
+}: {
+  bookings: Booking[];
+  shareUrl: string;
+  shareCopied: boolean;
+  onShare: () => void;
+}) {
+  const todays = bookings
+    .filter((b) => b.status === 'confirmed' && isTodayBooking(b.start_time))
+    .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+
+  return (
+    <div className="md:hidden mb-6 min-h-[calc(100dvh-8rem)] flex flex-col">
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Today</h1>
+      <p className="mt-1 text-sm text-gray-500 dark:text-slate-400 mb-4">
+        {todays.length > 0
+          ? `${todays.length} meeting${todays.length !== 1 ? 's' : ''} today`
+          : 'No meetings on the calendar yet.'}
+      </p>
+      {todays.length === 0 ? (
+        <div className="rounded-2xl border-2 border-dashed border-gray-200 dark:border-slate-700 p-6 text-center mb-4">
+          <p className="text-sm font-semibold text-gray-900 dark:text-white">Nothing booked today</p>
+          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
+            Tap Share my link so a client can pick a time — it will show up here.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3 mb-4">
+          {todays.map((b) => {
+            const time = new Date(b.start_time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+            const phone = (b.guest_phone || '').trim();
+            const place = b.services?.location || '';
+            const maps = place ? `https://maps.google.com/?q=${encodeURIComponent(place)}` : '';
+            return (
+              <div key={b.id} className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+                <p className="text-base font-bold text-gray-900 dark:text-white">{b.guest_name}</p>
+                <p className="text-sm text-gray-500 dark:text-slate-400 mt-0.5">
+                  {time}
+                  {b.services?.name ? ` · ${b.services.name}` : ''}
+                </p>
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  <a
+                    href={phone ? `tel:${phone}` : undefined}
+                    className={`min-h-11 inline-flex items-center justify-center gap-1 rounded-xl text-xs font-semibold ${phone ? 'bg-brand-50 text-brand-700' : 'bg-gray-100 text-gray-400 pointer-events-none'}`}
+                  >
+                    <Phone className="h-3.5 w-3.5" /> Call
+                  </a>
+                  <a
+                    href={phone ? `sms:${phone}` : undefined}
+                    className={`min-h-11 inline-flex items-center justify-center gap-1 rounded-xl text-xs font-semibold ${phone ? 'bg-brand-50 text-brand-700' : 'bg-gray-100 text-gray-400 pointer-events-none'}`}
+                  >
+                    <MessageSquare className="h-3.5 w-3.5" /> Text
+                  </a>
+                  <a
+                    href={b.meet_link || maps || undefined}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`min-h-11 inline-flex items-center justify-center gap-1 rounded-xl text-xs font-semibold ${b.meet_link || maps ? 'bg-brand-50 text-brand-700' : 'bg-gray-100 text-gray-400 pointer-events-none'}`}
+                  >
+                    {b.meet_link ? <Video className="h-3.5 w-3.5" /> : <Navigation className="h-3.5 w-3.5" />}
+                    {b.meet_link ? 'Join' : 'Map'}
+                  </a>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <div className="sticky bottom-4 z-30 mt-auto">
+        <button
+          type="button"
+          onClick={onShare}
+          disabled={!shareUrl}
+          className="w-full min-h-12 inline-flex items-center justify-center gap-2 rounded-full bg-brand-600 text-white text-sm font-bold shadow-lg disabled:opacity-50"
+        >
+          <Share2 className="h-4 w-4" />
+          {shareCopied ? 'Link copied' : 'Share my link'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function Dashboard() {
@@ -873,6 +967,7 @@ export function Dashboard() {
   const planName = effectivePlan(subscription, profile);
   const [checklistDismissed, setChecklistDismissed] = useState(() => localStorage.getItem('onboarding_checklist_dismissed') === '1');
   const [liveSlug, setLiveSlug] = useState<string | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
 
   useEffect(() => {
     writeMoreToolsOpen(moreToolsOpen);
@@ -1124,7 +1219,7 @@ export function Dashboard() {
       const [bookRes, svcRes, calRes] = await Promise.all([
         supabase
           .from('bookings')
-          .select('*, services(name, color, duration_minutes)')
+          .select('*, services(name, color, duration_minutes, location, location_type)')
           .eq('host_id', profile.id)
           .order('start_time', { ascending: true }),
         supabase.from('services').select('*').eq('host_id', profile.id),
@@ -1143,6 +1238,32 @@ export function Dashboard() {
     serviceSelectionInitialized.current = true;
     setSelectedServiceIds(defaultSelectedServiceIds(services));
   }, [services]);
+
+  useEffect(() => {
+    if (!profile?.id || loading) return;
+    const run = async () => {
+      let changed = false;
+      let current = profile.revealed_tools;
+      const bump = async (tool: 'paid-booking' | 'quotes' | 'group-scheduling' | 'analytics') => {
+        const before = parseRevealedTools(current);
+        if (before.includes(tool)) return;
+        current = await revealTool(profile.id, tool, current);
+        changed = true;
+      };
+      if (services.some((s) => (s.price_cents ?? 0) > 0)) await bump('paid-booking');
+      if (services.some((s) => s.meeting_type === 'group')) await bump('group-scheduling');
+      const bookingCount = bookings.filter((b) => b.status === 'confirmed' || b.status === 'completed').length;
+      if (bookingCount >= 10) await bump('analytics');
+      const [{ count: quoteCount }, { count: pollCount }] = await Promise.all([
+        supabase.from('host_quotes').select('id', { count: 'exact', head: true }).eq('host_id', profile.id),
+        supabase.from('meeting_polls').select('id', { count: 'exact', head: true }).eq('host_id', profile.id),
+      ]);
+      if ((quoteCount ?? 0) > 0) await bump('quotes');
+      if ((pollCount ?? 0) > 0) await bump('group-scheduling');
+      if (changed) await refreshProfile();
+    };
+    void run();
+  }, [profile?.id, profile?.revealed_tools, loading, services, bookings, refreshProfile]);
 
   const meetingServices = withoutPinOnItDemoFeedback(services);
   const effectiveSlug = (liveSlug || profile?.slug || '').trim();
@@ -1194,31 +1315,37 @@ export function Dashboard() {
     setCreatedUrl(bookingUrl);
   };
 
+  const uiMode = profile?.ui_mode === 'advanced' ? 'advanced' : 'simple';
+  const revealedTools = parseRevealedTools(profile?.revealed_tools);
+  const { primary: primaryNav, moreTools: moreToolsNav } = buildSidebarNav(uiMode, revealedTools);
   const mainNavItems: NavItem[] = [
-    { to: '/dashboard', icon: LayoutGrid, label: 'Send your Availability' },
-    { to: '/dashboard/appointments', icon: CalendarCheck, label: 'Calendar' },
-    { to: '/dashboard/contacts', icon: Users, label: 'Contacts' },
-    {
-      to: MORE_TOOLS_HUB_PATH,
-      icon: Tool,
-      label: 'More Tools',
-      children: MORE_TOOLS_NAV.map((item) => ({
-        to: item.path,
-        icon: item.icon,
-        label: item.label,
-        badge: item.badge,
-      })),
-    },
-    { to: '/dashboard/settings', icon: Settings, label: 'Settings' },
+    ...primaryNav.map((item) => ({
+      to: item.to,
+      icon: item.icon,
+      label: item.label,
+      badge: item.badge,
+    })),
+    ...(moreToolsNav.length
+      ? [{
+          to: MORE_TOOLS_HUB_PATH,
+          icon: Tool,
+          label: 'More Tools',
+          children: moreToolsNav.map((item) => ({
+            to: item.path,
+            icon: item.icon,
+            label: item.label,
+            badge: item.badge,
+          })),
+        } satisfies NavItem]
+      : []),
   ];
 
+  const isDashboardHome = location.pathname === '/dashboard';
   const isActive = (path: string) => {
     if (path === MORE_TOOLS_HUB_PATH) {
       return location.pathname === MORE_TOOLS_HUB_PATH;
     }
-    const tool = MORE_TOOLS_NAV.find((item) => item.path === path);
-    if (tool) return isMoreToolsNavActive(tool, location.pathname);
-    return location.pathname === path;
+    return navPathMatches(path, location.pathname, location.search, location.hash);
   };
   const initials = (displayName?.[0] ?? displayEmail?.[0] ?? '?').toUpperCase();
 
@@ -1447,11 +1574,23 @@ export function Dashboard() {
         </header>
 
         {/* Dashboard home */}
-        {isActive('/dashboard') && (
+        {isDashboardHome && (
           <main className="flex-1 p-6 md:p-8 max-w-4xl w-full">
 
+            <MobileTodayBoard
+              bookings={bookings}
+              shareUrl={shareUrl}
+              shareCopied={shareCopied}
+              onShare={() => {
+                if (!shareUrl) return;
+                void navigator.clipboard.writeText(shareUrl);
+                setShareCopied(true);
+                window.setTimeout(() => setShareCopied(false), 2000);
+              }}
+            />
+
             {/* Page heading */}
-            <div className="mb-6 flex items-start justify-between gap-4">
+            <div className="mb-6 hidden md:flex items-start justify-between gap-4">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Send your Availability</h1>
                 <p className="mt-1 text-gray-500 dark:text-slate-400 text-sm">
@@ -1478,6 +1617,7 @@ export function Dashboard() {
             </div>
 
             {/* Onboarding checklist — hidden automatically when all steps complete */}
+            <div className="hidden md:block">
             {!loading && !checklistDismissed && (() => {
               const hasCalendar = calendarCount > 0;
               const hasService = services.length > 0;
@@ -1540,10 +1680,12 @@ export function Dashboard() {
                 </div>
               );
             })()}
+            </div>
 
             {/* Share panel / link created banner */}
             {createdUrl && <LinkCreatedBanner bookingUrl={createdUrl} onDismiss={() => setCreatedUrl('')} />}
             {profile && effectiveSlug && !createdUrl && (
+              <div id="share" className="scroll-mt-20 hidden md:block">
               <SharePanel
                 slug={effectiveSlug}
                 userId={profile.id}
@@ -1554,11 +1696,15 @@ export function Dashboard() {
                 shareUrl={shareUrl || `https://pinonit.com/${effectiveSlug}`}
                 hostName={profile.full_name?.trim() || undefined}
               />
+              </div>
             )}
 
+            <div className="hidden md:block">
             <SingleUseLinksRow />
+            </div>
 
             {/* No slug nudge */}
+            <div className="hidden md:block">
             {!effectiveSlug && !createdUrl && (
               <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl flex items-center justify-between gap-3">
                 <div>
@@ -1570,9 +1716,10 @@ export function Dashboard() {
                 </Link>
               </div>
             )}
+            </div>
 
             {/* Types of Meetings section */}
-            <div>
+            <div className="hidden md:block">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">Meetings</h2>
                 <button
@@ -1695,13 +1842,13 @@ export function Dashboard() {
           </main>
         )}
 
-        {!isActive('/dashboard') && (
+        {!isDashboardHome && (
           <div className="flex-1 min-w-0 w-full pb-[max(1rem,env(safe-area-inset-bottom))]">
             <Outlet />
           </div>
         )}
 
-        <footer className="mt-auto border-t border-gray-200 dark:border-slate-800 py-4 px-6 bg-white dark:bg-slate-950">
+        <footer className={`mt-auto border-t border-gray-200 dark:border-slate-800 py-4 px-6 bg-white dark:bg-slate-950 ${isDashboardHome ? 'hidden md:block' : ''}`}>
           <div className="flex flex-col items-center justify-center gap-2 text-center text-xs text-gray-400 dark:text-slate-500">
             <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
               <Link to="/terms" className="hover:text-gray-600 dark:hover:text-slate-300 transition-colors">Terms of Service</Link>

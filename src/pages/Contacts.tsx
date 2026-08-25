@@ -1108,7 +1108,9 @@ export function ContactsPage() {
 
           <div className="divide-y divide-gray-50 dark:divide-slate-800/50">
             {pastBookings.length === 0 && futureBookings.length === 0 && (
-              <p className="px-4 py-6 text-sm text-gray-400 text-center">No meetings yet.</p>
+              <p className="px-4 py-6 text-sm text-gray-400 text-center">
+                No meetings with this person yet. Share your booking link and their next visit will show here.
+              </p>
             )}
             {pastBookings.map((b) => (
               <div key={b.id} className="flex items-center gap-3 px-4 py-3">

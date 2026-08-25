@@ -673,10 +673,10 @@ export function Landing() {
           <div className="text-center mb-12">
             <p className="text-xs font-bold text-brand-500 uppercase tracking-widest mb-3">Pricing</p>
             <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-3">
-              Try every Pro feature free for 60 days
+              14 days free with no card, or 60 days with a card on file
             </h2>
             <p className="text-slate-500 dark:text-slate-400 text-lg">
-              Switch from Calendly? Run both side by side — no pressure, no charge for 60 days.
+              60-day trials charge $0 today. Billing starts automatically after day 60 unless you cancel.
             </p>
           </div>
 

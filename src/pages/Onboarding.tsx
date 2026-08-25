@@ -228,7 +228,7 @@ function TrialBanner() {
     <div className="mb-6 flex items-start gap-3 p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/50 rounded-2xl success">
       <Gift className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
       <div>
-        <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">You're on a free 14-day Pro trial — no credit card needed.</p>
+        <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">You're on a free 14-day Pro trial — no credit card needed. Want 60 days? Add a card ($0 today); billing starts after day 60.</p>
         <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">After that it's just $6/mo, less than half of Calendly.</p>
       </div>
     </div>
@@ -588,7 +588,7 @@ export function Onboarding() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-base">Switching from Calendly</p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Import your event types automatically. Free 14-day Pro trial included.</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Import your event types. 60 days Pro with a card on file — $0 today.</p>
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       <span className="text-xs bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 px-2 py-0.5 rounded-full font-semibold">Free trial</span>

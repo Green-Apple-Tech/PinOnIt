@@ -1536,7 +1536,17 @@ export function RemindersPage({
                       );
                     })}
                     {templates.length === 0 && !showTemplateForm && (
-                      <p className="text-center py-8 text-slate-400 text-sm">No custom templates yet.</p>
+                      <div className="text-center py-8">
+                        <p className="text-slate-400 text-sm">No custom templates yet.</p>
+                        <button
+                          type="button"
+                          onClick={() => { resetTemplateForm(); setShowTemplateForm(true); }}
+                          className="mt-2 text-sm font-semibold hover:underline"
+                          style={{ color: '#5864C6' }}
+                        >
+                          Create your first template →
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1653,7 +1663,18 @@ export function RemindersPage({
                       ))}
                     </div>
                   ) : !showRuleForm && (
-                    <p className="text-center py-8 text-slate-400 text-sm">No custom rules yet.</p>
+                    <div className="text-center py-8">
+                      <p className="text-slate-400 text-sm">No custom rules yet.</p>
+                      <button
+                        type="button"
+                        onClick={() => setShowRuleForm(true)}
+                        disabled={templates.length === 0}
+                        className="mt-2 text-sm font-semibold hover:underline disabled:opacity-40"
+                        style={{ color: '#5864C6' }}
+                      >
+                        {templates.length === 0 ? 'Create a template first, then add a rule' : 'Add your first rule →'}
+                      </button>
+                    </div>
                   )}
                 </div>
               )}

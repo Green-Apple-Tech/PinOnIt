@@ -922,6 +922,28 @@ export function SettingsPage() {
       {tab === 'profile' && (
         <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-4">
           <h2 className="text-lg font-semibold">Profile</h2>
+          <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-1 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600"
+              checked={(profile?.ui_mode ?? 'simple') === 'advanced'}
+              onChange={async (e) => {
+                if (!profile) return;
+                const ui_mode = e.target.checked ? 'advanced' : 'simple';
+                const { error } = await supabase.from('profiles').update({ ui_mode }).eq('id', profile.id);
+                if (error) {
+                  toast.error('Could not update advanced mode.');
+                  return;
+                }
+                toast.success(ui_mode === 'advanced' ? 'Advanced mode on' : 'Simple mode on');
+                await refreshProfile();
+              }}
+            />
+            <span>
+              <span className="block text-sm font-semibold text-slate-900 dark:text-white">Advanced mode — show all tools</span>
+              <span className="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">Turn this on to see every feature. You can switch back anytime.</span>
+            </span>
+          </label>
           <div>
             <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">Email</label>
             <div className="flex gap-2">

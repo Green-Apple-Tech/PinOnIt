@@ -229,7 +229,7 @@ export function GroupSchedulingPage() {
           </div>
         ) : activePolls.length === 0 ? (
           <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 p-8 text-center">
-            <p className="text-sm text-slate-500 dark:text-slate-400">No active polls yet.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">No active polls yet. Create a poll so the group can vote on a time.</p>
             <button
               type="button"
               onClick={() => navigate(POLLS_CREATE_PATH)}
@@ -264,7 +264,7 @@ export function GroupSchedulingPage() {
           </div>
         ) : activeMeetings.length === 0 ? (
           <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 p-8 text-center">
-            <p className="text-sm text-slate-500 dark:text-slate-400">No active coordinations yet.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">No active coordinations yet. Start one to text a time to people who only have a phone.</p>
             <button
               type="button"
               onClick={() => navigate(COORDINATE_NEW_PATH)}

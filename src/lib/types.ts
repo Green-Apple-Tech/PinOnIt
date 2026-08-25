@@ -77,6 +77,9 @@ export interface Profile {
   calendar_conflict_settings: CalendarConflictSettings | null;
   global_require_terms: boolean;
   global_terms_text: string;
+  ui_mode?: 'simple' | 'advanced';
+  revealed_tools?: string[] | null;
+  business_type?: 'mobile_trade' | 'personal_services' | 'professional_services' | 'other' | null;
   created_at: string;
   updated_at: string;
 }

@@ -10,11 +10,12 @@ import { computeSingleUseExpiresAtForProfile, formatLinkExpiryHint, formatSingle
 import { LOCATION_TYPES, MEETING_TYPE_META } from '../lib/types';
 import {
   Plus, Trash2, X, Check, Loader2, MapPin, Clock, Settings2, MessageSquare,
-  DollarSign, Copy, Smartphone, Mail, Pencil, ExternalLink, Link2, AlertCircle,
+  Copy, Smartphone, Mail, Pencil, ExternalLink, Link2, AlertCircle,
   Search, CreditCard, QrCode, Zap, Bell, ChevronDown, Shield, HelpCircle, PhoneCall,
 } from 'lucide-react';
 import { QRModal } from '../components/QRModal';
 import { ColorSwatchRow } from '../components/ColorSwatchRow';
+import { revealTool } from '../lib/progressiveDisclosure';
 
 interface SingleUseLink {
   id: string; host_id: string; service_id: string; token: string;
@@ -324,7 +325,7 @@ function PaymentTab({
 }
 
 export function ServicesPage() {
-  const { profile, subscription } = useAuth();
+  const { profile, subscription, refreshProfile } = useAuth();
   const isPro = effectivePlan(subscription, profile) === 'pro';
   const [searchParams, setSearchParams] = useSearchParams();
   const [services, setServices] = useState<Service[]>([]);
@@ -597,6 +598,14 @@ export function ServicesPage() {
       } else if (editingId) {
         setServices((prev) => prev.map((s) => (s.id === editingId ? saved : s)));
       }
+      if (profile && saved.price_cents > 0) {
+        await revealTool(profile.id, 'paid-booking', profile.revealed_tools);
+        await refreshProfile();
+      }
+      if (profile && saved.meeting_type === 'group') {
+        await revealTool(profile.id, 'group-scheduling', profile.revealed_tools);
+        await refreshProfile();
+      }
     }
 
     closeForm();
@@ -849,7 +858,9 @@ export function ServicesPage() {
                       </button>
                     </div>
                     <div className="space-y-2">
-                      {(singleUseLinks[svc.id] ?? []).length === 0 && <p className="text-xs text-gray-400 text-center py-3">No links yet.</p>}
+                      {(singleUseLinks[svc.id] ?? []).length === 0 && (
+                        <p className="text-xs text-gray-400 text-center py-3">No one-time links yet. Generate one above to send a client a private booking URL.</p>
+                      )}
                       {(singleUseLinks[svc.id] ?? []).map((link) => {
                         const url = buildSingleUseUrl(link.token);
                         return (
@@ -1337,7 +1348,10 @@ export function ServicesPage() {
                         <div className="text-center py-10 border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-xl">
                           <Bell className="h-7 w-7 text-gray-300 dark:text-slate-600 mx-auto mb-2" />
                           <p className="text-base text-gray-400 dark:text-slate-500">No reminders yet</p>
-                          <p className="text-sm text-gray-400 dark:text-slate-600 mt-0.5">Add reminders to automatically notify guests before their meeting.</p>
+                          <p className="text-sm text-gray-400 dark:text-slate-600 mt-0.5 mb-3">Add a reminder so guests get a text or email before they show up.</p>
+                          <button type="button" onClick={() => setAddingReminder(true)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600">
+                            <Plus className="h-4 w-4" /> Add reminder
+                          </button>
                         </div>
                       )}
                       {reminders.map((r) => {
@@ -1498,7 +1512,15 @@ export function ServicesPage() {
                           </button>
                         </div>
                       ))}
-                      {questions.length === 0 && !addingQ && <p className="text-base text-gray-400 dark:text-slate-500 py-2">No questions yet.</p>}
+                      {questions.length === 0 && !addingQ && (
+                        <p className="text-base text-gray-400 dark:text-slate-500 py-2">
+                          No questions yet.{' '}
+                          <button type="button" onClick={() => setAddingQ(true)} className="font-semibold text-brand-600">
+                            Add one so guests tell you what they need
+                          </button>
+                          .
+                        </p>
+                      )}
                     </div>
                     {addingQ && (
                       <div className="p-4 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl space-y-4">

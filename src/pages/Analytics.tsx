@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import type { Booking, Service } from '../lib/types';
@@ -258,8 +259,9 @@ export function AnalyticsPage({ embedded }: { embedded?: boolean }) {
                 <div className="h-14 w-14 bg-brand-50 dark:bg-brand-950/40 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <BarChart2 className="h-7 w-7 text-brand-600 dark:text-brand-400" />
                 </div>
-                <h2 className="text-base font-bold text-gray-900 dark:text-white mb-1">No data yet</h2>
-                <p className="text-sm text-gray-500 dark:text-slate-400 max-w-xs">Analytics will appear here once guests start booking meetings with you.</p>
+                <h2 className="text-base font-bold text-gray-900 dark:text-white mb-1">No bookings to chart yet</h2>
+                <p className="text-sm text-gray-500 dark:text-slate-400 max-w-xs mb-4">Share your booking link. After 10 meetings, Analytics also appears in your sidebar.</p>
+                <Link to="/dashboard#share" className="inline-flex text-sm font-semibold text-brand-600 hover:underline">Share your link →</Link>
               </div>
             )
           )}

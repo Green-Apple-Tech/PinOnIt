@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import type { Booking, Service } from '../lib/types';
@@ -1143,8 +1144,9 @@ export function AppointmentsPage() {
           ) : sortedDateKeys.length === 0 ? (
             <div className="text-center py-20">
               <CalendarDays className="h-12 w-12 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
-              <p className="text-slate-500 dark:text-slate-400 text-sm">No meetings found.</p>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Meetings scheduled through your page will appear here.</p>
+              <p className="text-slate-500 dark:text-slate-400 text-sm">No meetings on this calendar yet.</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Share your booking link so clients can pick a time — they will show up here.</p>
+              <Link to="/dashboard#share" className="inline-flex mt-4 text-sm font-semibold text-brand-600 hover:underline">Share your link →</Link>
             </div>
           ) : (
             /* ── AGENDA VIEW ── */

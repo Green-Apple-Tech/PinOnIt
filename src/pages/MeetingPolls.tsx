@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { revealTool } from '../lib/progressiveDisclosure';
 import { supabase } from '../lib/supabase';
 import type { MeetingPoll, MeetingPollSlot, AvailabilitySlot } from '../lib/types';
 import {
@@ -364,7 +365,7 @@ interface CreatePollModalProps {
 }
 
 export function CreatePollModal({ onClose, onCreated }: CreatePollModalProps) {
-  const { profile } = useAuth();
+  const { profile, refreshProfile } = useAuth();
   const [step, setStep] = useState<1|2|3>(1);
 
   // Step 1 — title lives here now
@@ -472,6 +473,9 @@ export function CreatePollModal({ onClose, onCreated }: CreatePollModalProps) {
       .maybeSingle();
 
     if (pollErr || !poll) { setError(pollErr?.message ?? 'Failed to create poll.'); setSaving(false); return; }
+
+    await revealTool(profile.id, 'group-scheduling', profile.revealed_tools);
+    await refreshProfile();
 
     const slots: Array<{ poll_id: string; start_time: string; end_time: string }> = [];
     for (const key of Array.from(selectedCells).sort()) {

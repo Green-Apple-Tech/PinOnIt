@@ -37,7 +37,7 @@ function GuaranteeBadge() {
 }
 
 export function BillingPage({ embedded }: { embedded?: boolean }) {
-  const { profile, subscription, refreshProfile } = useAuth();
+  const { user, profile, subscription, refreshProfile } = useAuth();
   const currentPlan = effectivePlan(subscription, profile);
   const isPro = currentPlan === 'pro';
   const isTrialing = subscription?.status === 'trialing';
@@ -161,6 +161,27 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
     }
   };
 
+  const handleFourteenDayNoCard = async () => {
+    if (!user) {
+      setCheckoutError('You must be signed in to start a trial.');
+      return;
+    }
+    setCheckoutError(null);
+    setCheckoutLoading(true);
+    try {
+      const { hasStripeBilling, startLocalTrial } = await import('../lib/localTrial');
+      if (!(await hasStripeBilling(user.id))) {
+        const { error } = await startLocalTrial();
+        if (error) throw new Error(error);
+      }
+      await refreshProfile();
+      setSuccessBanner(true);
+    } catch (e) {
+      setCheckoutError((e as Error).message ?? 'Could not start the 14-day trial.');
+    }
+    setCheckoutLoading(false);
+  };
+
   const handleManageBilling = async () => {
     setPortalLoading(true);
     try {
@@ -271,9 +292,9 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
 
             {/* Trial offer callout */}
             <div className="mb-4 p-4 bg-brand-50 border border-brand-100 rounded-xl">
-              <p className="text-sm font-semibold text-brand-800 mb-0.5">Try every Pro feature free for 60 days</p>
+              <p className="text-sm font-semibold text-brand-800 mb-0.5">Two ways to try Pro</p>
               <p className="text-xs text-brand-600">
-                Switch from Calendly? No charge for 60 days. New user? 14 days free. Cancel anytime.
+                14 days with no credit card, or 60 days with a card on file ($0 today). After 60 days, billing starts automatically at ${PRO_PRICE}/mo unless you cancel.
               </p>
             </div>
 
@@ -285,14 +306,27 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
             )}
 
             <button
-              onClick={() => handleUpgrade()}
+              onClick={() => void handleFourteenDayNoCard()}
               disabled={checkoutLoading}
               className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-all inline-flex items-center justify-center gap-2 shadow-sm disabled:opacity-60 hover:opacity-90" style={{ backgroundColor: '#5864C6' }}
             >
-              {checkoutLoading
-                ? <Loader2 className="h-4 w-4 animate-spin" />
-                : <ArrowRight className="h-4 w-4" />}
-              Upgrade to Pro — ${PRO_PRICE}/mo
+              {checkoutLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+              14 days free — no credit card
+            </button>
+            <button
+              onClick={() => handleUpgrade(60)}
+              disabled={checkoutLoading}
+              className="w-full mt-2 py-3 rounded-xl text-sm font-semibold border-2 border-brand-600 text-brand-700 transition-all inline-flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-brand-50"
+            >
+              {checkoutLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+              60 days free — card on file, $0 today
+            </button>
+            <button
+              onClick={() => handleUpgrade()}
+              disabled={checkoutLoading}
+              className="w-full mt-2 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:text-gray-900 transition-all"
+            >
+              Or subscribe now — ${PRO_PRICE}/mo
             </button>
 
             <p className="mt-2 text-xs text-center text-gray-400">
