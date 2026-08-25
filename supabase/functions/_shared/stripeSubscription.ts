@@ -132,9 +132,26 @@ export async function applyStripeSubscription(opts: {
     }
   }
 
-  const profilePlan = plan === 'enterprise' ? 'pro' : plan;
-  await supabase.from('profiles').update({ plan: profilePlan }).eq('id', userId);
+  const profilePlan = await writeProfilePlanFromStripe(supabase, userId, plan);
   return { plan: profilePlan, status };
+}
+
+/** Complimentary Pro (plan_override) is never overwritten by Stripe. */
+export async function writeProfilePlanFromStripe(
+  supabase: AdminClient,
+  userId: string,
+  stripePlan: string,
+): Promise<string> {
+  const { data } = await supabase
+    .from('profiles')
+    .select('plan_override')
+    .eq('id', userId)
+    .maybeSingle();
+  const next = data?.plan_override === 'pro'
+    ? 'pro'
+    : (stripePlan === 'enterprise' ? 'pro' : stripePlan);
+  await supabase.from('profiles').update({ plan: next }).eq('id', userId);
+  return next;
 }
 
 export function isLiveStripeStatus(status: string): boolean {

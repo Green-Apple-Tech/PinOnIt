@@ -4,11 +4,22 @@ type PlanBits = Pick<Subscription, 'plan' | 'status'> & {
   stripe_current_period_end?: string | null;
 };
 
-/** Plan shown in the UI. Subscription is source of truth when it exists; profile is fallback. */
+type ProfilePlanBits = Pick<Profile, 'plan'> & {
+  plan_override?: 'pro' | null;
+};
+
+export function isComplimentaryPro(
+  profile?: Pick<Profile, 'plan_override'> | null,
+): boolean {
+  return profile?.plan_override === 'pro';
+}
+
+/** Plan shown in the UI. Complimentary override wins over Stripe. */
 export function effectivePlan(
   subscription?: PlanBits | null,
-  profile?: Pick<Profile, 'plan'> | null,
+  profile?: ProfilePlanBits | null,
 ): 'free' | 'pro' {
+  if (isComplimentaryPro(profile)) return 'pro';
   if (subscription?.status === 'canceled') {
     const periodEnd = subscription.stripe_current_period_end
       ? new Date(subscription.stripe_current_period_end).getTime()

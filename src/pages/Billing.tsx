@@ -4,7 +4,7 @@ import { SUPPORT_EMAIL } from '../lib/contactEmail';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { syncStripeSubscription } from '../lib/stripe';
-import { effectivePlan } from '../lib/plan';
+import { effectivePlan, isComplimentaryPro } from '../lib/plan';
 import {
   Check, Zap, Loader2, AlertCircle, ArrowRight,
   DollarSign, TrendingUp, Copy, Users, ChevronDown,
@@ -40,7 +40,8 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
   const { user, profile, subscription, refreshProfile } = useAuth();
   const currentPlan = effectivePlan(subscription, profile);
   const isPro = currentPlan === 'pro';
-  const isTrialing = subscription?.status === 'trialing';
+  const isComplimentary = isComplimentaryPro(profile);
+  const isTrialing = subscription?.status === 'trialing' && !isComplimentary;
 
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
@@ -228,7 +229,11 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
         <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl success">
           <Check className="h-5 w-5 text-emerald-600 shrink-0" />
           <div className="flex-1">
-            <p className="text-sm font-semibold text-emerald-800">You're on Pro — $6/mo, cancel anytime in Billing.</p>
+            <p className="text-sm font-semibold text-emerald-800">
+              {isComplimentaryPro(profile)
+                ? "You're on Pro — complimentary, no payment needed."
+                : "You're on Pro — $6/mo, cancel anytime in Billing."}
+            </p>
             <p className="text-xs text-emerald-600 mt-0.5">All Pro features are now active on your account.</p>
           </div>
           <button onClick={() => setSuccessBanner(false)} className="p-1 text-emerald-400 hover:text-emerald-600 transition-colors">
@@ -249,7 +254,7 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
                   : 'bg-gray-100 text-gray-600'
               }`}>
                 {isPro && <Zap className="h-3.5 w-3.5" />}
-                {isPro ? 'Pro' : 'Free'}
+                {isPro ? (isComplimentary ? 'Pro — complimentary' : 'Pro') : 'Free'}
               </span>
               {isTrialing && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold">
@@ -258,7 +263,7 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
               )}
             </div>
           </div>
-          {isPro && nextBillingDate && !isTrialing && (
+          {isPro && nextBillingDate && !isTrialing && !isComplimentary && (
             <div className="text-right shrink-0">
               <p className="text-xs text-gray-400">Next billing</p>
               <p className="text-sm font-semibold text-gray-700">{nextBillingDate}</p>
@@ -362,22 +367,30 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
               </div>
             )}
 
-            <button
-              onClick={handleManageBilling}
-              disabled={portalLoading}
-              className="w-full py-3 rounded-xl text-sm font-semibold bg-gray-900 hover:bg-gray-800 text-white transition-all inline-flex items-center justify-center gap-2 disabled:opacity-60"
-            >
-              {portalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-              Manage Billing
-            </button>
+            {isComplimentary ? (
+              <p className="text-sm text-gray-500">
+                This account is on Pro at no charge. There is nothing to pay and no billing to manage.
+              </p>
+            ) : (
+              <>
+                <button
+                  onClick={handleManageBilling}
+                  disabled={portalLoading}
+                  className="w-full py-3 rounded-xl text-sm font-semibold bg-gray-900 hover:bg-gray-800 text-white transition-all inline-flex items-center justify-center gap-2 disabled:opacity-60"
+                >
+                  {portalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+                  Manage Billing
+                </button>
 
-            <p className="mt-2 text-xs text-center text-gray-400">
-              Cancel anytime — no contracts, no fees. You keep Pro access until {nextBillingDate ?? 'end of billing period'}.
-            </p>
+                <p className="mt-2 text-xs text-center text-gray-400">
+                  Cancel anytime — no contracts, no fees. You keep Pro access until {nextBillingDate ?? 'end of billing period'}.
+                </p>
 
-            <div className="mt-4 flex justify-center">
-              <GuaranteeBadge />
-            </div>
+                <div className="mt-4 flex justify-center">
+                  <GuaranteeBadge />
+                </div>
+              </>
+            )}
           </>
         )}
       </div>

@@ -40,6 +40,16 @@ describe('effectivePlan', () => {
   it('falls back to profile.plan when there is no subscription row', () => {
     expect(effectivePlan(null, { plan: 'pro' })).toBe('pro');
   });
+
+  it('keeps complimentary Pro even after a canceled Stripe period has ended', () => {
+    const past = new Date(Date.now() - 86400000).toISOString();
+    expect(
+      effectivePlan(
+        { plan: 'pro', status: 'canceled', stripe_current_period_end: past },
+        { plan: 'free', plan_override: 'pro' },
+      ),
+    ).toBe('pro');
+  });
 });
 
 describe('pickBestSubscription', () => {

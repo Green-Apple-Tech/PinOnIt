@@ -4,6 +4,7 @@ import {
   applyStripeSubscription,
   isRealStripeCustomerId,
   resolveUserId,
+  writeProfilePlanFromStripe,
 } from '../_shared/stripeSubscription.ts';
 
 const corsHeaders = {
@@ -163,7 +164,7 @@ Deno.serve(async (req: Request) => {
               stripe_price_id: null,
             })
             .eq('user_id', userId);
-          await supabase.from('profiles').update({ plan: 'free' }).eq('id', userId);
+          await writeProfilePlanFromStripe(supabase, userId, 'free');
         } else if (isRealStripeCustomerId(customerId ?? null)) {
           await supabase
             .from('subscriptions')
