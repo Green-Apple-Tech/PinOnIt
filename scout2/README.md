@@ -1,6 +1,35 @@
 # Scout2 — Calendly SMB lead pipeline
 
-Python 3.9+ works (3.12 ideal). Finds small US businesses that use **Calendly**, classifies them with Claude Haiku, extracts emails, verifies MX, stores in Supabase, exports CSV.
+Last updated: August 25, 2026
+
+Python 3.9+ works (3.12 ideal). Finds small US businesses that use **Calendly** (and related booking signals), classifies them with Claude Haiku, extracts emails, verifies MX, stores in Supabase (`scout2_leads`), exports to Google Sheets for GMass.
+
+## Current status (Aug 25, 2026)
+
+### Done
+- Pipeline live under `~/Projects/PinOnIt/scout2` (venv + `.env` configured)
+- Schema applied: migrations `001`–`005` (`scout2_leads`, scoring/directory columns, export batches, **`scout2_send_batches`**)
+- Google service account loads (`secrets/google-sa.json`); campaign sheet via `GOOGLE_CAMPAIGN_SHEET_ID`
+- Pool snapshot (~5.6k leads): ~1.4k `ready`; landscaping had 83 exportable
+- First campaign dump: **25 landscaping** via `export-sheet`  
+  Sheet: https://docs.google.com/spreadsheets/d/1Etb_Eju0DN5v8LrhoHGWD_SWYas4ptlgHt43GlYVGGU
+- **Ramp-batch** mode shipped: `export-batch`, `batches`, `config/ramp.yaml` (day 1–3: 10 … day 21+: 110)
+
+### Next
+```bash
+cd ~/Projects/PinOnIt/scout2 && source .venv/bin/activate
+python -m scout2.cli export-batch --niche landscaping   # day 1 → 10 leads, new tab
+python -m scout2.cli batches --niche landscaping
+```
+- Commit remaining uncommitted scout2 modules when ready
+- Outreach from a **separate warmed domain** (not pinonit.com); CAN-SPAM basics
+
+### Do not
+- Reverse Common Crawl “who links to Calendly” via CDX (not supported cheaply)
+- Enable launchd `--schedule` until the ramp feels right
+- Spend Places/Anthropic without a cost cap (`--limit-queries` / `--limit`)
+
+---
 
 ## Honest scope (read this)
 
@@ -12,26 +41,30 @@ Python 3.9+ works (3.12 ideal). Finds small US businesses that use **Calendly**,
 
 ```
 scout2/
-  config/niches.yaml      # Places niches
-  config/metros.yaml      # Places metros
-  config/domains.txt      # Seed domains
-  config/exclude_domains.txt  # Skip at GMass export
+  config/niches.yaml
+  config/metros.yaml
+  config/domains.txt
+  config/exclude_domains.txt
+  config/ramp.yaml              # Daily GMass warmup targets
   migrations/001_leads.sql
+  migrations/002_lead_scoring.sql
   migrations/003_directory_leads.sql
   migrations/004_export_campaign.sql
+  migrations/005_send_batches.sql
   scout2/
-    export_sheet.py       # GMass sheet + stats
-    sync_results.py       # GMass results → replied/bounced/unsubscribed
-    discover_cc.py        # seedlist (+ CC stub)
-    discover_places.py    # Google Places
+    export_sheet.py             # Ad-hoc GMass sheet + stats
+    ramp_export.py              # export-batch / batches
+    sync_results.py
+    discover_cc.py
+    discover_places.py
     fingerprint.py
     classify.py
     extract.py
     verify.py
     cli.py
-    night.py              # 5-hour SERP + directory session
-    scrapers/             # chamber, thumbtack, bark, ScaleSerp
-    politeness.py         # 1 rps/domain, robots, UA, timeout, retries
+    night.py
+    scrapers/
+    politeness.py
   .env.example
   requirements.txt
 ```
@@ -47,13 +80,13 @@ pip install -U pip
 pip install -r requirements.txt
 cp .env.example .env
 # fill SUPABASE_URL, SUPABASE_SERVICE_KEY, ANTHROPIC_API_KEY, GOOGLE_PLACES_KEY,
-# GOOGLE_SERVICE_ACCOUNT_JSON, DRIVE_FOLDER_ID
+# GOOGLE_SERVICE_ACCOUNT_FILE, DRIVE_FOLDER_ID, GOOGLE_CAMPAIGN_SHEET_ID
 ```
 
-Apply schema in Supabase SQL editor:
+Apply schema in Supabase (SQL editor or `supabase db query --linked -f …`):
 
 ```bash
-# paste migrations/001_leads.sql then 002, 003, and 004_export_campaign.sql
+# 001 → 005 (005_send_batches.sql applied Aug 25)
 ```
 
 ## Run order

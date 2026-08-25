@@ -1,6 +1,67 @@
 # PinOnIt - Project Summary
 
-Last updated: June 30, 2026
+Last updated: August 25, 2026
+
+---
+
+## PinOnIt Session Summary — August 25, 2026
+
+### Project basics
+
+- **Live**: pinonit.com (Bolt Cloud)
+- **GitHub**: Green-Apple-Tech/PinOnIt (private, `main`)
+- **Local**: ~/Projects/PinOnIt
+- **Bolt**: bolt.new/~/sb1-nzt1kjlj
+- **Supabase**: adlusgtlwgcfyxgeoias
+- **Lead gen**: `scout2/` in this repo (Python pipeline → Google Sheets / GMass)
+
+### Deploy (unchanged)
+
+1. Cursor → `git push` to `main`
+2. Bolt → GitHub **Synced** on `main` → **Publish → Update**
+3. Edge: `./scripts/deploy-edge-functions.sh` or per-function deploy  
+   **Stripe webhook must use** `--no-verify-jwt` (see `.cursor/rules/stripe-webhook-ops.mdc`)
+
+### Completed (Aug 17–25)
+
+**Stripe webhook (critical)**
+- Stripe had disabled the endpoint after ~9 days of **400** failures
+- Root cause: sync `constructEvent` under Deno SubtleCrypto → always failed; then wrong `whsec_` (two destinations)
+- Fixed: `constructEventAsync`, processing errors return 200 after valid signature, health-monitor probes webhook
+- Live destination: **`engaging-sensation`** only (old Disabled destination deleted)
+- `STRIPE_WEBHOOK_SECRET` matches that destination’s signing secret
+- Resend test → **200 OK** `{"received": true}`
+- Ops rule: `.cursor/rules/stripe-webhook-ops.mdc`
+- Set `HEALTH_ALERT_PHONE` for SMS when health checks fail
+
+**WhatsApp**
+- Freeform sends fail outside 24h window (**Twilio 63016**)
+- `send-reminder` uses Content template (`TWILIO_WHATSAPP_CONTENT_SID` = `HX…`)
+- Template `pinonit_reminder` submitted for WhatsApp review (Utility); wait for **Approved** then Test WhatsApp
+- Sender online: `whatsapp:+17869527242`
+
+**Security / QC hardening (partial list)**
+- Public booking reads `public_host_profiles` (no tokens/PII dump)
+- Plan writes locked; `start_local_trial()` RPC
+- No payment Skip on paid bookings; payment intent amount from DB
+- Checkout price/origin allowlists; Zoom/Teams require booking ownership + action_token
+- Guest SMS no host-phone fallback; send-reminder auth for tests/cron
+- Reminder cron every 5 min; parse-availability on Haiku
+- React #130 on Reminders: `ChannelIcon` fallback (commit `72218d3`)
+
+**Scout2 (see `scout2/README.md`)**
+- Places/seedlist → fingerprint/classify/extract/verify → `scout2_leads`
+- Campaign sheet + first **landscaping** export (25 rows)
+- **Ramp-batch** mode: `export-batch` / `batches` / `config/ramp.yaml` / table `scout2_send_batches`
+- Migration `005_send_batches.sql` applied
+
+### Still outstanding
+
+- WhatsApp template **Approved** + confirm Test WhatsApp delivers
+- Twilio A2P 10DLC brand email / resubmit if still rejected
+- Scout2: run first `export-batch --niche landscaping` (day 1 = 10 leads); commit remaining uncommitted scout2 files when ready
+- Outreach: separate warmed sending domain (not pinonit.com)
+- Bolt Publish after frontend pushes; Zoom marketplace screenshots; Google OAuth verification; DBA at sunbiz.org
 
 ---
 
@@ -52,7 +113,7 @@ Last updated: June 30, 2026
 - Photo upload on Paid Booking page — fixed handler (validation, toasts, saves to `avatar_url`), improved circle UI with tooltip
 - Email Signature carousel — mobile fix (full-width preview, nav arrows below, larger tap targets)
 
-### Still outstanding
+### Still outstanding (as of June 30 — see August summary for updates)
 
 - **Twilio A2P campaign** — fix support email and resubmit (P0)
 - Zoom app marketplace submission incomplete (needs screenshots + App Listing)
@@ -222,10 +283,16 @@ Do **not** rely on Bolt chat pull for routine deploys. Private repo is OK. See [
 
 - Live mode enabled
 - Pro plan price ID: price_1TZHhhIVv38UYFOXMXT2EV8v
-- Webhook: https://adlusgtlwgcfyxgeoias.supabase.co/functions/v1/stripe-webhook
-- 60-day trial for Calendly switchers (CC required)
-- 14-day trial for new users (CC required)
+- Webhook URL: https://adlusgtlwgcfyxgeoias.supabase.co/functions/v1/stripe-webhook
+- **Active destination name**: `engaging-sensation` (keep **one** destination only)
+- Signature verify: **`constructEventAsync`** (never sync `constructEvent` on Deno)
+- Deploy: `supabase functions deploy stripe-webhook --no-verify-jwt --project-ref adlusgtlwgcfyxgeoias`
+- Secret: Supabase `STRIPE_WEBHOOK_SECRET` must match that destination’s `whsec_…`
+- Health-monitor probes Stripe Webhook; set `HEALTH_ALERT_PHONE` for SMS alerts
+- Billing page heals plan via `stripe-sync-subscription` if webhooks lag
+- 60-day trial for Calendly switchers; 14-day local trial via `start_local_trial()`
 - Money back guarantee: 60 days
+- Ops doc: `.cursor/rules/stripe-webhook-ops.mdc`
 
 ## Edge Functions (all deployed and ACTIVE)
 
@@ -276,8 +343,11 @@ Do **not** rely on Bolt chat pull for routine deploys. Private repo is OK. See [
 - SMS: `send-reminder` uses `MessagingServiceSid` / `TWILIO_MESSAGING_SERVICE_SID`
 - Voice calls working (critical meeting alerts, host voice reminders)
 - WhatsApp: profile `whatsapp_number` + default channel in Settings
+- WhatsApp outbound: Twilio **Content template** required outside 24h window (error 63016 if freeform)
+- Secret: `TWILIO_WHATSAPP_CONTENT_SID` (`HX…` approved Utility template, e.g. `pinonit_reminder`)
+- Secret: `TWILIO_WHATSAPP_NUMBER` = `whatsapp:+17869527242`
 - Legacy verified trial number: +1 305 321 2060
-- Secrets in Supabase: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_MESSAGING_SERVICE_SID (and/or TWILIO_PHONE_NUMBER)
+- Secrets in Supabase: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_MESSAGING_SERVICE_SID (and/or TWILIO_PHONE_NUMBER), TWILIO_WHATSAPP_* , HEALTH_ALERT_PHONE
 
 ## Secrets Required
 
@@ -312,6 +382,10 @@ Do **not** rely on Bolt chat pull for routine deploys. Private repo is OK. See [
 - TWILIO_ACCOUNT_SID
 - TWILIO_AUTH_TOKEN
 - TWILIO_MESSAGING_SERVICE_SID
+- TWILIO_WHATSAPP_NUMBER
+- TWILIO_WHATSAPP_CONTENT_SID
+- HEALTH_ALERT_PHONE
+- CRON_DISPATCH_SECRET (optional)
 
 ## Google OAuth Status
 
@@ -367,17 +441,29 @@ Do **not** rely on Bolt chat pull for routine deploys. Private repo is OK. See [
 - coordinated_meetings - SMS/WhatsApp multi-party coordination (selected_dates, preferred_times jsonb)
 - coordinated_meeting_participants - participants with availability_pre_entered, parsed_slots
 - uptime_logs - for status page
+- scout2_leads - lead-gen pipeline (separate from website leads)
+- scout2_export_batches - ad-hoc GMass sheet exports
+- scout2_send_batches - daily ramp warmup exports (`export-batch`)
+
+## Scout2 (lead gen)
+
+- Path: `~/Projects/PinOnIt/scout2`
+- Docs: [scout2/README.md](./scout2/README.md)
+- Stack: Python 3.9+, httpx, Supabase `scout2_leads`, Anthropic Haiku, Google Places, Google Sheets (service account)
+- First campaign: landscaping — 25-row `export-sheet` done Aug 25; ramp via `export-batch`
+- Campaign sheet ID in `.env` as `GOOGLE_CAMPAIGN_SHEET_ID`
+- Outreach: separate sending domain + warmup; never burn pinonit.com
 
 ## Known Issues / To Do
 
-- **Twilio A2P campaign REJECTED** — update brand support email (Miami Expeditions LLC) in Twilio console → resubmit (P0)
-- **Bolt publish required** after every GitHub push — live site won't update otherwise
-- **Verify on production** after Publish: Calendly-style booking page, calendar desktop views, indigo UI theme, T&C off-by-default
-- Run **`supabase db push --linked`** if any columns missing on production
+- **WhatsApp template** — wait for Meta **Approved**, then Test WhatsApp in Settings → Reminders
+- **Twilio A2P campaign** — brand support email / resubmit if still rejected
+- **Stripe** — keep single webhook destination; enable Stripe failure emails; monthly error-rate check
+- **Bolt publish required** after every frontend GitHub push
+- Scout2: first `export-batch --niche landscaping`; commit remaining local scout2 modules when ready
 - Zoom app submission incomplete (needs screenshots, App Listing)
-- Google OAuth verification in progress (4–6 weeks from May 28)
+- Google OAuth verification in progress (from May 28)
 - PinOnIt DBA registration at sunbiz.org pending
 - Recurring bookings — DB columns exist; full booking UX not built
-- WhatsApp production may still need Meta Business verification beyond Twilio A2P
 - Consider forming separate LLC for PinOnIt vs Miami Expeditions
 - Apple Sign In — planned for future (needs Apple Developer account $99/yr)
