@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { MessageSquare, X, Send, Loader2, Sparkles } from 'lucide-react';
 
 interface Message {
@@ -52,6 +53,8 @@ function getAIResponse(input: string): string {
 }
 
 export function AIChat() {
+  const location = useLocation();
+  const onDashboard = location.pathname.startsWith('/dashboard');
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: 'Hi! I\'m your Pin on It assistant. Ask me anything about setting up your scheduling, reminders, payments, or migrating from another tool.' },
@@ -65,6 +68,8 @@ export function AIChat() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  if (onDashboard) return null;
 
   const handleSend = (text?: string) => {
     const msg = text ?? input.trim();

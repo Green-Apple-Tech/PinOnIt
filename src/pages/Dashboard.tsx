@@ -17,6 +17,7 @@ import {
   writeMoreToolsOpen,
 } from '../lib/dashboardNav';
 import { parseRevealedTools, revealTool } from '../lib/progressiveDisclosure';
+import { PageHelpButton } from '../components/PageHelp';
 import { QRModal } from '../components/QRModal';
 import {
   buildAvailabilityEmailInvite,
@@ -1478,6 +1479,7 @@ export function Dashboard() {
         </>
       )}
       <div className="flex items-center gap-0.5">
+        <PageHelpButton compact={opts?.compact} />
         <button onClick={toggleTheme} className="min-h-11 min-w-11 inline-flex items-center justify-center text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors rounded-lg" title="Toggle theme">
           {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </button>
