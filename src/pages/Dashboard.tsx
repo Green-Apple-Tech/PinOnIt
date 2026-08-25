@@ -9,7 +9,7 @@ import { supabase } from '../lib/supabase';
 import { syncStripeSubscription } from '../lib/stripe';
 import { effectivePlan } from '../lib/plan';
 import type { Booking, Service } from '../lib/types';
-import { CalendarDays, LogOut, X, Check, Sun, Moon, Copy, Share2, Mail, Link2, ExternalLink, PenLine, Video, Phone, MapPin, ChevronRight, Loader2, Plus, ChevronLeft, LayoutGrid, Menu, AlertCircle, Sparkles, Search, Wrench as Tool, QrCode, MessageSquare, ChevronDown, Navigation } from 'lucide-react';
+import { CalendarDays, LogOut, X, Check, Sun, Moon, Copy, Share2, Mail, Link2, ExternalLink, PenLine, Video, Phone, MapPin, ChevronRight, Loader2, Plus, ChevronLeft, LayoutGrid, Menu, AlertCircle, Sparkles, Search, Wrench as Tool, QrCode, MessageSquare, ChevronDown, Navigation, Trash2 } from 'lucide-react';
 import {
   MORE_TOOLS_HUB_PATH,
   buildSidebarNav,
@@ -32,7 +32,15 @@ import {
   resolveLinkExpiry,
   type LinkExpiryValue,
 } from '../lib/singleUseLinks';
-import { defaultSelectedServiceIds, eventTypeSlug, withoutPinOnItDemoFeedback } from '../lib/eventTypes';
+import {
+  EXAMPLE_PAID_CONSULTATION_NAME,
+  bookableEventTypes,
+  defaultSelectedServiceIds,
+  displayEventTypeName,
+  eventTypeSlug,
+  isExamplePaidConsultation,
+  withoutPinOnItDemoFeedback,
+} from '../lib/eventTypes';
 
 type NavItem = { to: string; icon: typeof LayoutGrid; label: string; badge?: string; children?: NavItem[] };
 
@@ -1008,6 +1016,7 @@ export function Dashboard() {
   const [serviceQrModal, setServiceQrModal] = useState<{ url: string; title: string } | null>(null);
   const [selectedServiceIds, setSelectedServiceIds] = useState<Set<string>>(new Set());
   const serviceSelectionInitialized = useRef(false);
+  const examplePaidNormalized = useRef(false);
 
   // Re-fetch profile on mount and when returning to dashboard (e.g. after saving slug in Settings)
   useEffect(() => {
@@ -1175,9 +1184,9 @@ export function Dashboard() {
     if (!profile || loading) return;
     if (profile.onboarding_completed || services.length > 0) return;
     const defaults = [
-      { name: '15 Minute Meeting', duration_minutes: 15, color: '#5864C6' },
-      { name: '30 Minute Meeting', duration_minutes: 30, color: '#3b82f6' },
-      { name: '60 Minute Meeting', duration_minutes: 60, color: '#f59e0b' },
+      { name: '15 Minute Meeting', duration_minutes: 15, color: '#5864C6', price_cents: 0, is_active: true },
+      { name: '30 Minute Meeting', duration_minutes: 30, color: '#3b82f6', price_cents: 0, is_active: true },
+      { name: EXAMPLE_PAID_CONSULTATION_NAME, duration_minutes: 60, color: '#f59e0b', price_cents: 5000, is_active: false },
     ];
     (async () => {
       const { count } = await supabase
@@ -1191,8 +1200,8 @@ export function Dashboard() {
         duration_minutes: d.duration_minutes,
         color: d.color,
         description: '',
-        price_cents: 0,
-        is_active: true,
+        price_cents: d.price_cents,
+        is_active: d.is_active,
         meeting_type: 'one_on_one',
         buffer_before_minutes: 0,
         buffer_after_minutes: 0,
@@ -1241,6 +1250,40 @@ export function Dashboard() {
   }, [services]);
 
   useEffect(() => {
+    if (!profile || loading || examplePaidNormalized.current) return;
+    const toFix = services.filter(
+      (s) => isExamplePaidConsultation(s) && (s.is_active || s.name !== EXAMPLE_PAID_CONSULTATION_NAME),
+    );
+    if (toFix.length === 0) {
+      if (services.length > 0) examplePaidNormalized.current = true;
+      return;
+    }
+    examplePaidNormalized.current = true;
+    void (async () => {
+      const next = [...services];
+      for (const svc of toFix) {
+        const { data } = await supabase
+          .from('services')
+          .update({ name: EXAMPLE_PAID_CONSULTATION_NAME, is_active: false })
+          .eq('id', svc.id)
+          .eq('host_id', profile.id)
+          .select()
+          .maybeSingle();
+        if (data) {
+          const idx = next.findIndex((s) => s.id === svc.id);
+          if (idx >= 0) next[idx] = data as Service;
+        }
+      }
+      setServices(next);
+      setSelectedServiceIds((prev) => {
+        const n = new Set(prev);
+        for (const svc of toFix) n.delete(svc.id);
+        return n;
+      });
+    })();
+  }, [profile, loading, services]);
+
+  useEffect(() => {
     if (!profile?.id || loading) return;
     const have = parseRevealedTools(profile.revealed_tools);
     const run = async () => {
@@ -1252,7 +1295,7 @@ export function Dashboard() {
         current = await revealTool(profile.id, tool, current);
         changed = true;
       };
-      if (services.some((s) => (s.price_cents ?? 0) > 0)) await bump('paid-booking');
+      if (services.some((s) => (s.price_cents ?? 0) > 0 && !isExamplePaidConsultation(s))) await bump('paid-booking');
       if (services.some((s) => s.meeting_type === 'group')) await bump('group-scheduling');
       const bookingCount = bookings.filter((b) => b.status === 'confirmed' || b.status === 'completed').length;
       if (bookingCount >= 10) await bump('analytics');
@@ -1282,9 +1325,10 @@ export function Dashboard() {
   ]);
 
   const meetingServices = withoutPinOnItDemoFeedback(services);
+  const bookableServices = bookableEventTypes(meetingServices);
   const effectiveSlug = (liveSlug || profile?.slug || '').trim();
   const bookingSlug = effectiveSlug;
-  const shareUrl = bookingSlug ? buildShareUrl(bookingSlug, meetingServices, selectedServiceIds) : '';
+  const shareUrl = bookingSlug ? buildShareUrl(bookingSlug, bookableServices, selectedServiceIds) : '';
 
   const toggleServiceSelection = (serviceId: string) => {
     serviceSelectionInitialized.current = true;
@@ -1296,6 +1340,18 @@ export function Dashboard() {
       } else {
         next.add(serviceId);
       }
+      return next;
+    });
+  };
+
+  const removeExampleService = async (svc: Service) => {
+    if (!profile) return;
+    const { error } = await supabase.from('services').delete().eq('id', svc.id).eq('host_id', profile.id);
+    if (error) return;
+    setServices((prev) => prev.filter((s) => s.id !== svc.id));
+    setSelectedServiceIds((prev) => {
+      const next = new Set(prev);
+      next.delete(svc.id);
       return next;
     });
   };
@@ -1803,25 +1859,37 @@ export function Dashboard() {
                   {meetingServices
                     .filter((s) => !serviceSearch || s.name.toLowerCase().includes(serviceSearch.toLowerCase()))
                     .map((svc) => {
-                      const eventTypeUrl = bookingSlug
-                        ? buildShareUrl(bookingSlug, meetingServices, new Set([svc.id]))
+                      const isExample = isExamplePaidConsultation(svc);
+                      const label = displayEventTypeName(svc);
+                      const eventTypeUrl = bookingSlug && !isExample
+                        ? buildShareUrl(bookingSlug, bookableServices, new Set([svc.id]))
                         : null;
                       const meta = `${svc.duration_minutes} min · ${svc.price_cents ? `$${(svc.price_cents / 100).toFixed(2)}` : 'Free'} · ${(svc.location_type ?? 'video').replace('_', ' ')}`;
-                      const isSelected = selectedServiceIds.has(svc.id);
+                      const isSelected = !isExample && selectedServiceIds.has(svc.id);
                       return (
                         <div
                           key={svc.id}
-                          className="flex items-center gap-3 px-4 py-3.5 bg-white dark:bg-slate-900/50 border border-gray-200 dark:border-slate-800 rounded-xl transition-colors group hover:border-gray-300 dark:hover:border-slate-700"
+                          className={`flex items-center gap-3 px-4 py-3.5 border rounded-xl transition-colors group ${
+                            isExample
+                              ? 'bg-gray-50 dark:bg-slate-900/30 border-gray-200 dark:border-slate-800 opacity-70'
+                              : 'bg-white dark:bg-slate-900/50 border-gray-200 dark:border-slate-800 hover:border-gray-300 dark:hover:border-slate-700'
+                          }`}
                         >
                           <input
                             type="checkbox"
                             checked={isSelected}
-                            onChange={() => toggleServiceSelection(svc.id)}
-                            className="h-4 w-4 rounded border-gray-300 dark:border-slate-600 text-brand-600 focus:ring-brand-500 shrink-0 cursor-pointer"
-                            aria-label={`Include ${svc.name} in booking link`}
+                            disabled={isExample}
+                            onChange={() => { if (!isExample) toggleServiceSelection(svc.id); }}
+                            className="h-4 w-4 rounded border-gray-300 dark:border-slate-600 text-brand-600 focus:ring-brand-500 shrink-0 disabled:cursor-not-allowed disabled:opacity-40"
+                            aria-label={isExample ? `${label} example (not in your booking link)` : `Include ${label} in booking link`}
                           />
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{svc.name}</p>
+                            <div className="flex items-center gap-2 min-w-0">
+                              <p className={`text-sm font-semibold truncate ${isExample ? 'text-gray-500 dark:text-slate-400' : 'text-gray-900 dark:text-white'}`}>{label}</p>
+                              {isExample && (
+                                <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-gray-200 dark:bg-slate-800 text-gray-500 dark:text-slate-400">Example</span>
+                              )}
+                            </div>
                             <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{meta}</p>
                           </div>
 
@@ -1829,22 +1897,34 @@ export function Dashboard() {
                             {eventTypeUrl && (
                               <button
                                 type="button"
-                                onClick={() => setServiceQrModal({ url: eventTypeUrl, title: svc.name })}
+                                onClick={() => setServiceQrModal({ url: eventTypeUrl, title: label })}
                                 className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 hover:border-brand-300 dark:hover:border-brand-600 hover:bg-brand-50 dark:hover:bg-brand-950/30 transition-colors"
                                 title="QR code for this event type"
                               >
                                 <QrCode className="h-3.5 w-3.5" />
                               </button>
                             )}
-                            <button
-                              onClick={() => navigate(`/dashboard/services?edit=${svc.id}`)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg hover:opacity-80 transition-colors text-white"
-                              style={{ backgroundColor: '#5864C6' }}
-                              title="Edit meeting type"
-                            >
-                              <PenLine className="h-3.5 w-3.5" />
-                              Edit
-                            </button>
+                            {isExample ? (
+                              <button
+                                type="button"
+                                onClick={() => void removeExampleService(svc)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                                title="Remove this example"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Remove
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => navigate(`/dashboard/services?edit=${svc.id}`)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg hover:opacity-80 transition-colors text-white"
+                                style={{ backgroundColor: '#5864C6' }}
+                                title="Edit meeting type"
+                              >
+                                <PenLine className="h-3.5 w-3.5" />
+                                Edit
+                              </button>
+                            )}
                           </div>
                         </div>
                       );

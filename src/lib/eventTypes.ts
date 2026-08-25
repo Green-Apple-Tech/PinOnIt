@@ -8,11 +8,44 @@ export function withoutPinOnItDemoFeedback<T extends { name: string }>(items: T[
   return items.filter((item) => !isPinOnItDemoFeedback(item.name));
 }
 
-/** Default booking-link checkboxes: every real event type (never PinOnIt demo Feedback). */
-export function defaultSelectedServiceIds<T extends { id: string; name: string }>(
+export const EXAMPLE_PAID_CONSULTATION_NAME = 'Paid Consultation';
+
+/** Calendly-style sample paid consult — show as an off example, not a live event type. */
+export function isExamplePaidConsultation(s: {
+  name: string;
+  price_cents?: number | null;
+}): boolean {
+  const n = s.name.toLowerCase().replace(/\s+/g, ' ').trim();
+  if (n === 'paid consultation' || n === 'paid service/consultation') return true;
+  if ((s.price_cents ?? 0) <= 0) return false;
+  if (n === 'consultation') return true;
+  return /^consultation\s*\(.*\)$/.test(n);
+}
+
+export function displayEventTypeName(s: {
+  name: string;
+  price_cents?: number | null;
+}): string {
+  return isExamplePaidConsultation(s) ? EXAMPLE_PAID_CONSULTATION_NAME : s.name;
+}
+
+export function bookableEventTypes<T extends { name: string; price_cents?: number | null; is_active?: boolean }>(
+  items: T[],
+): T[] {
+  return withoutPinOnItDemoFeedback(items).filter(
+    (item) => !isExamplePaidConsultation(item) && item.is_active !== false,
+  );
+}
+
+/** Default booking-link checkboxes: live event types only (never demo Feedback or the paid example). */
+export function defaultSelectedServiceIds<T extends { id: string; name: string; price_cents?: number | null }>(
   services: T[],
 ): Set<string> {
-  return new Set(withoutPinOnItDemoFeedback(services).map((s) => s.id));
+  return new Set(
+    withoutPinOnItDemoFeedback(services)
+      .filter((s) => !isExamplePaidConsultation(s))
+      .map((s) => s.id),
+  );
 }
 
 export type EventTypeSlugInput = {

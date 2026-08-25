@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   defaultSelectedServiceIds,
+  displayEventTypeName,
   eventTypeSlug,
+  isExamplePaidConsultation,
   isPinOnItDemoFeedback,
   serviceMatchesTypeToken,
 } from './eventTypes';
@@ -19,17 +21,32 @@ describe('isPinOnItDemoFeedback', () => {
   });
 });
 
+describe('isExamplePaidConsultation', () => {
+  it('matches the sample paid consult, not a real 15-min consult', () => {
+    expect(isExamplePaidConsultation({ name: 'Consultation', price_cents: 5000 })).toBe(true);
+    expect(isExamplePaidConsultation({ name: 'Consultation (60 min $50)', price_cents: 5000 })).toBe(true);
+    expect(isExamplePaidConsultation({ name: 'Paid Consultation', price_cents: 5000 })).toBe(true);
+    expect(isExamplePaidConsultation({ name: '15 Min Consultation', price_cents: 0 })).toBe(false);
+  });
+});
+
+describe('displayEventTypeName', () => {
+  it('labels the sample as Paid Consultation', () => {
+    expect(displayEventTypeName({ name: 'Consultation', price_cents: 5000 })).toBe('Paid Consultation');
+  });
+});
+
 describe('defaultSelectedServiceIds', () => {
   const types = [
     { id: '15', name: '15 Min Quick Call', duration_minutes: 15 },
     { id: '30', name: '30 Min Consultation', duration_minutes: 30 },
-    { id: '60', name: 'Consultation (60 min $50)', duration_minutes: 60 },
+    { id: '60', name: 'Consultation (60 min $50)', duration_minutes: 60, price_cents: 5000 },
     { id: 'fb1', name: 'Piin On It Feedback', duration_minutes: 15 },
     { id: 'fb2', name: 'Pin On It Feedback', duration_minutes: 30 },
   ];
 
-  it('checks every real event type and skips PinOnIt demo feedback', () => {
-    expect([...defaultSelectedServiceIds(types)].sort()).toEqual(['15', '30', '60']);
+  it('checks live event types and skips Feedback plus the paid example', () => {
+    expect([...defaultSelectedServiceIds(types)].sort()).toEqual(['15', '30']);
   });
 
   it('still skips feedback when it is the only 30-minute type', () => {
