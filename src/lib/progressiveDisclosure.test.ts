@@ -21,6 +21,32 @@ describe('presetsForBusinessType', () => {
     expect(p.eventName).toMatch(/appointment/i);
   });
 
+  it('uses travel time and parts quotes for HVAC', () => {
+    const p = presetsForBusinessType('hvac');
+    expect(p.bufferAfter).toBeGreaterThan(0);
+    expect(p.usesTax).toBe(true);
+    expect(p.revealed).toContain('quotes');
+  });
+
+  it('uses video consults for legal and accounting', () => {
+    expect(presetsForBusinessType('legal').locationType).toBe('video');
+    expect(presetsForBusinessType('accounting').quoteLines.some((i) => /tax/i.test(i.description))).toBe(true);
+  });
+
+  it('covers pressure washing, handyman, carpenter, and car wash', () => {
+    expect(presetsForBusinessType('pressure_washer').quoteLines.length).toBeGreaterThan(0);
+    expect(presetsForBusinessType('handyman').bufferAfter).toBeGreaterThan(0);
+    expect(presetsForBusinessType('carpenter').eventName.toLowerCase()).toContain('site');
+    expect(presetsForBusinessType('car_washer').durationMinutes).toBe(45);
+  });
+
+  it('sets computer / IT services with diagnostic quotes and travel time', () => {
+    const p = presetsForBusinessType('computer_services');
+    expect(p.bufferAfter).toBeGreaterThan(0);
+    expect(p.quoteLines.some((i) => /diagnostic/i.test(i.description))).toBe(true);
+    expect(p.confirmationSms).toBe(true);
+  });
+
   it('surfaces group scheduling for real estate', () => {
     const p = presetsForBusinessType('real_estate');
     expect(p.revealed).toContain('group-scheduling');

@@ -20,7 +20,7 @@ import {
   wizardSavedStepLocal,
 } from '../lib/onboardingState';
 import { withoutPinOnItDemoFeedback } from '../lib/eventTypes';
-import { BUSINESS_TYPE_OPTIONS, presetsForBusinessType, profilePatchForBusinessType, servicePatchForBusinessType, type BusinessType } from '../lib/progressiveDisclosure';
+import { BUSINESS_TYPE_GROUPS, presetsForBusinessType, profilePatchForBusinessType, servicePatchForBusinessType, type BusinessType } from '../lib/progressiveDisclosure';
 import { enableConfirmationSms } from '../lib/reminderSetup';
 import { US_REGIONS } from '../lib/usSalesTax';
 
@@ -287,6 +287,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
   const [trialCheckoutError, setTrialCheckoutError] = useState('');
   const [businessType, setBusinessType] = useState<BusinessType | null>(null);
   const [businessRegion, setBusinessRegion] = useState('');
+  const [businessQuery, setBusinessQuery] = useState('');
 
   // Calendar step
   const [calendars, setCalendars] = useState<ConnectedCalendar[]>([]);
@@ -1542,30 +1543,61 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
       }
 
       case 'business_type': {
+        const q = businessQuery.trim().toLowerCase();
+        const groups = BUSINESS_TYPE_GROUPS.map((g) => ({
+          ...g,
+          options: q
+            ? g.options.filter((opt) =>
+                `${opt.label} ${opt.desc}`.toLowerCase().includes(q),
+              )
+            : g.options,
+        })).filter((g) => g.options.length > 0);
+        const selected = businessType
+          ? BUSINESS_TYPE_GROUPS.flatMap((g) => g.options).find((o) => o.id === businessType)
+          : undefined;
         const needsRegion = businessType ? presetsForBusinessType(businessType).usesTax : false;
         return (
           <div>
-            <div className="mb-5">
+            <div className="mb-4">
               <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">What kind of work do you do?</h2>
               <p className="text-sm text-slate-500 dark:text-slate-400">We’ll preset travel time, quotes, tax, and reminders. Skip if you’d rather set this up yourself.</p>
             </div>
-            <div className="grid grid-cols-1 gap-3 mb-4">
-              {BUSINESS_TYPE_OPTIONS.map((opt) => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => setBusinessType(opt.id)}
-                  className={`p-4 rounded-2xl border-2 text-left transition-all ${
-                    businessType === opt.id
-                      ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/20'
-                      : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300'
-                  }`}
-                >
-                  <p className="text-sm font-semibold text-slate-900 dark:text-white">{opt.label}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{opt.desc}</p>
-                </button>
+            <input
+              type="search"
+              value={businessQuery}
+              onChange={(e) => setBusinessQuery(e.target.value)}
+              placeholder="Search — HVAC, legal, computer, handyman…"
+              className="w-full mb-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-sm"
+            />
+            <div className="max-h-72 overflow-y-auto pr-1 space-y-4 mb-3">
+              {groups.map((g) => (
+                <div key={g.label}>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2">{g.label}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {g.options.map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setBusinessType(opt.id)}
+                        className={`px-3 py-2 rounded-full border text-sm font-medium transition-all ${
+                          businessType === opt.id
+                            ? 'border-indigo-600 bg-indigo-50 text-indigo-800 dark:bg-indigo-950/30 dark:text-indigo-200'
+                            : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-300'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
+              {groups.length === 0 && (
+                <p className="text-sm text-slate-500">No match. Try another word, or pick Other.</p>
+              )}
             </div>
+            {selected && (
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{selected.desc}</p>
+            )}
             {needsRegion && (
               <label className="block mb-4">
                 <span className="text-xs font-medium text-slate-500 dark:text-slate-400">State you work in (for a starting tax rate)</span>
