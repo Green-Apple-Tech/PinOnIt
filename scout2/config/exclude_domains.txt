@@ -1,0 +1,6 @@
+# Exact hosts skipped at export (one per line). Also skipped in code:
+# any domain containing "chamber", or ending in .gov / .edu.
+calendly.com
+squareup.com
+wa.me
+kiter.app

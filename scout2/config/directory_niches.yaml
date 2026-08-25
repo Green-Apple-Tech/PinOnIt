@@ -1,0 +1,26 @@
+# Niches for ScaleSerp directory scrapers (chamber / thumbtack / bark / night SERP).
+# Separate from config/niches.yaml (Google Places).
+niches:
+  - therapist
+  - life coach
+  - real estate agent
+  - consultant
+  - financial advisor
+  - personal trainer
+  - attorney
+  - accountant
+  - photographer
+  - nutritionist
+  - chiropractor
+  - dentist
+  - mortgage broker
+  - tutor
+  - interior designer
+  - contractor
+  - barber
+  - notary
+  - landscaping
+  - plumbing
+  - hvac
+  - handyman
+  - house cleaning

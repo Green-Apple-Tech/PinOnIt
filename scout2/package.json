@@ -1,0 +1,12 @@
+{
+  "name": "scout2",
+  "private": true,
+  "scripts": {
+    "scrape:night": "PYTHONPATH=. .venv/bin/python -m scout2.cli scrape-night",
+    "scrape:chamber": "PYTHONPATH=. .venv/bin/python -m scout2.cli scrape-chamber",
+    "scrape:thumbtack": "PYTHONPATH=. .venv/bin/python -m scout2.cli scrape-thumbtack",
+    "scrape:bark": "PYTHONPATH=. .venv/bin/python -m scout2.cli scrape-bark",
+    "places:once": "PYTHONPATH=. .venv/bin/python -m scout2.cli places-once",
+    "scrape:extra": "PYTHONPATH=. .venv/bin/python -m scout2.cli scrape-extra"
+  }
+}

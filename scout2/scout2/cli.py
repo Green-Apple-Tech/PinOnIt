@@ -277,7 +277,7 @@ def export_batch_cmd(
     send_date: Optional[str] = typer.Option(
         None,
         "--date",
-        help="Send date YYYY-MM-DD (default: today UTC)",
+        help="Send date YYYY-MM-DD (default: today America/New_York)",
     ),
     force: bool = typer.Option(
         False,
@@ -287,7 +287,7 @@ def export_batch_cmd(
     schedule: bool = typer.Option(
         False,
         "--schedule",
-        help="Write a weekday 7am launchd plist (does not enable it)",
+        help="Write a weekday 10:00am launchd plist (does not enable it)",
     ),
 ) -> None:
     """Ramp warmup export: next day_number from ramp.yaml → new sheet tab → status=exported."""
@@ -301,9 +301,16 @@ def export_batch_cmd(
             raise typer.BadParameter(f"Invalid --date {send_date!r}; use YYYY-MM-DD") from e
     result = export_batch(niche=niche, send_date=parsed, force=force, schedule=schedule)
     rprint(result)
+    if result.get("scheduled"):
+        rprint(f"Load (you run this): {result.get('load')}")
+        rprint(f"Unload: {result.get('unload')}")
+        rprint(f"Verify: {result.get('verify')}")
+        return
     if result.get("tab_name") and result.get("sheet_url"):
         rprint(f"Tab: {result['tab_name']}")
         rprint(f"Sheet: {result['sheet_url']}")
+    if result.get("checklist"):
+        rprint(result["checklist"])
     if result.get("warning"):
         rprint(f"[yellow]Warning:[/yellow] {result['warning']}")
 
@@ -332,6 +339,25 @@ def sync_results_cmd(
 def stats_cmd() -> None:
     """Counts by pipeline/campaign status, plus the remaining ready export pool by niche."""
     rprint(campaign_stats())
+
+
+@app.command("conversions")
+def conversions_cmd(
+    limit: int = typer.Option(50, "--limit", "-n"),
+) -> None:
+    """List Scout2 leads marked converted (email matched a PinOnIt signup)."""
+    sb = get_client()
+    rows = list(
+        sb.table("scout2_leads")
+        .select("domain,email,niche,converted_user_id,converted_at,status,source")
+        .eq("status", "converted")
+        .order("converted_at", desc=True)
+        .limit(limit)
+        .execute()
+        .data
+        or []
+    )
+    rprint({"count": len(rows), "conversions": rows})
 
 
 @app.command("run-all")

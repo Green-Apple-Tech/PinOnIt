@@ -7,3 +7,8 @@ leads_ready.csv
 *.egg-info/
 dist/
 build/
+secrets/*
+!secrets/.gitkeep
+data/places_queries_done.txt
+data/places_daily.json
+logs/*.json

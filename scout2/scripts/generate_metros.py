@@ -1,0 +1,310 @@
+#!/usr/bin/env python3
+"""Write config/metros.yaml — all 50 states + DC, city-by-city Places coverage."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+OUT = ROOT / "config" / "metros.yaml"
+
+# City ST — 50k+ places plus every state capital (even if smaller).
+# Format must stay "{City} {ST}" so finished queries in places_queries_done.txt still match.
+CITIES: list[str] = [
+    # Alabama
+    "Birmingham AL", "Montgomery AL", "Huntsville AL", "Mobile AL", "Tuscaloosa AL",
+    "Hoover AL", "Dothan AL", "Auburn AL", "Decatur AL", "Madison AL", "Florence AL",
+    "Gadsden AL", "Vestavia Hills AL", "Prattville AL", "Phenix City AL",
+    # Alaska
+    "Anchorage AK", "Fairbanks AK", "Juneau AK", "Wasilla AK", "Sitka AK", "Ketchikan AK",
+    # Arizona
+    "Phoenix AZ", "Tucson AZ", "Mesa AZ", "Chandler AZ", "Scottsdale AZ", "Glendale AZ",
+    "Gilbert AZ", "Tempe AZ", "Peoria AZ", "Surprise AZ", "Yuma AZ", "Avondale AZ",
+    "Goodyear AZ", "Flagstaff AZ", "Buckeye AZ", "Casa Grande AZ", "Lake Havasu City AZ",
+    "Maricopa AZ", "Prescott AZ", "Prescott Valley AZ", "Sierra Vista AZ", "Apache Junction AZ",
+    # Arkansas
+    "Little Rock AR", "Fort Smith AR", "Fayetteville AR", "Springdale AR", "Jonesboro AR",
+    "Rogers AR", "Conway AR", "North Little Rock AR", "Bentonville AR", "Pine Bluff AR",
+    "Hot Springs AR", "Benton AR",
+    # California
+    "Los Angeles CA", "San Diego CA", "San Jose CA", "San Francisco CA", "Fresno CA",
+    "Sacramento CA", "Long Beach CA", "Oakland CA", "Bakersfield CA", "Anaheim CA",
+    "Santa Ana CA", "Riverside CA", "Stockton CA", "Irvine CA", "Chula Vista CA",
+    "Fremont CA", "San Bernardino CA", "Modesto CA", "Fontana CA", "Oxnard CA",
+    "Moreno Valley CA", "Huntington Beach CA", "Glendale CA", "Santa Clarita CA",
+    "Garden Grove CA", "Oceanside CA", "Rancho Cucamonga CA", "Santa Rosa CA",
+    "Ontario CA", "Elk Grove CA", "Corona CA", "Lancaster CA", "Palmdale CA",
+    "Salinas CA", "Hayward CA", "Pomona CA", "Escondido CA", "Sunnyvale CA",
+    "Torrance CA", "Pasadena CA", "Orange CA", "Fullerton CA", "Thousand Oaks CA",
+    "Visalia CA", "Simi Valley CA", "Concord CA", "Roseville CA", "Santa Clara CA",
+    "Vallejo CA", "Victorville CA", "Berkeley CA", "El Monte CA", "Downey CA",
+    "Costa Mesa CA", "Carlsbad CA", "Inglewood CA", "Fairfield CA", "Ventura CA",
+    "West Covina CA", "Murrieta CA", "Richmond CA", "Norwalk CA", "Antioch CA",
+    "Daly City CA", "Temecula CA", "Burbank CA", "Santa Maria CA", "El Cajon CA",
+    "San Mateo CA", "Rialto CA", "Clovis CA", "Compton CA", "Jurupa Valley CA",
+    "Vista CA", "South Gate CA", "Mission Viejo CA", "Vacaville CA", "Carson CA",
+    "Hesperia CA", "Santa Monica CA", "Westminster CA", "Redding CA", "Santa Barbara CA",
+    "Chico CA", "Whittier CA", "Newport Beach CA", "San Leandro CA", "Hawthorne CA",
+    "San Marcos CA", "Hemet CA", "Indio CA", "Menifee CA", "Livermore CA",
+    "Napa CA", "Redwood City CA", "Merced CA", "Lake Forest CA", "Bellflower CA",
+    "Chino CA", "Mountain View CA", "Folsom CA", "Alameda CA", "Tustin CA",
+    "Upland CA", "San Ramon CA", "Pleasanton CA", "Perris CA", "Manteca CA",
+    "Davis CA", "South San Francisco CA", "Turlock CA", "Camarillo CA", "Walnut Creek CA",
+    # Colorado
+    "Denver CO", "Colorado Springs CO", "Aurora CO", "Fort Collins CO", "Lakewood CO",
+    "Thornton CO", "Arvada CO", "Westminster CO", "Pueblo CO", "Centennial CO",
+    "Boulder CO", "Greeley CO", "Longmont CO", "Loveland CO", "Grand Junction CO",
+    "Broomfield CO", "Castle Rock CO", "Commerce City CO", "Parker CO",
+    # Connecticut
+    "Bridgeport CT", "New Haven CT", "Stamford CT", "Hartford CT", "Waterbury CT",
+    "Norwalk CT", "Danbury CT", "New Britain CT", "Bristol CT", "Meriden CT",
+    "Milford CT", "West Haven CT", "Middletown CT", "Norwich CT", "Shelton CT",
+    # Delaware
+    "Wilmington DE", "Dover DE", "Newark DE", "Middletown DE", "Smyrna DE", "Milford DE",
+    # District of Columbia
+    "Washington DC",
+    # Florida
+    "Jacksonville FL", "Miami FL", "Tampa FL", "Orlando FL", "St. Petersburg FL",
+    "Hialeah FL", "Port St. Lucie FL", "Cape Coral FL", "Tallahassee FL", "Fort Lauderdale FL",
+    "Pembroke Pines FL", "Hollywood FL", "Gainesville FL", "Miramar FL", "Coral Springs FL",
+    "Clearwater FL", "Palm Bay FL", "Pompano Beach FL", "West Palm Beach FL", "Lakeland FL",
+    "Davie FL", "Miami Gardens FL", "Boca Raton FL", "Sunrise FL", "Plantation FL",
+    "Deltona FL", "Palm Coast FL", "Largo FL", "Melbourne FL", "Deerfield Beach FL",
+    "Boynton Beach FL", "Fort Myers FL", "Kissimmee FL", "Homestead FL", "Daytona Beach FL",
+    "Delray Beach FL", "Tamarac FL", "Lauderhill FL", "Weston FL", "North Miami FL",
+    "Sanford FL", "Fort Pierce FL", "North Port FL", "Ocala FL", "Port Orange FL",
+    "Palm Beach Gardens FL", "Wellington FL", "Jupiter FL", "Sarasota FL", "Pensacola FL",
+    "Bradenton FL", "Bonita Springs FL", "St. Augustine FL", "Naples FL",
+    # Georgia
+    "Atlanta GA", "Augusta GA", "Columbus GA", "Macon GA", "Savannah GA", "Athens GA",
+    "Sandy Springs GA", "Roswell GA", "Johns Creek GA", "Albany GA", "Warner Robins GA",
+    "Alpharetta GA", "Marietta GA", "Valdosta GA", "Smyrna GA", "Dunwoody GA",
+    "Rome GA", "Gainesville GA", "Brookhaven GA", "Peachtree Corners GA",
+    # Hawaii
+    "Honolulu HI", "Hilo HI", "Kailua HI", "Kapolei HI", "Kaneohe HI", "Pearl City HI",
+    # Idaho
+    "Boise ID", "Meridian ID", "Nampa ID", "Idaho Falls ID", "Caldwell ID", "Pocatello ID",
+    "Coeur d'Alene ID", "Twin Falls ID", "Lewiston ID", "Post Falls ID",
+    # Illinois
+    "Chicago IL", "Aurora IL", "Naperville IL", "Joliet IL", "Rockford IL", "Springfield IL",
+    "Elgin IL", "Peoria IL", "Champaign IL", "Waukegan IL", "Cicero IL", "Bloomington IL",
+    "Arlington Heights IL", "Evanston IL", "Schaumburg IL", "Bolingbrook IL", "Decatur IL",
+    "Palatine IL", "Skokie IL", "Des Plaines IL", "Orland Park IL", "Tinley Park IL",
+    "Oak Lawn IL", "Berwyn IL", "Mount Prospect IL", "Normal IL", "Wheaton IL",
+    "Hoffman Estates IL", "Oak Park IL", "Downers Grove IL", "Elmhurst IL", "Glenview IL",
+    "Lombard IL", "Buffalo Grove IL", "Urbana IL", "Crystal Lake IL", "Quincy IL",
+    # Indiana
+    "Indianapolis IN", "Fort Wayne IN", "Evansville IN", "South Bend IN", "Carmel IN",
+    "Fishers IN", "Bloomington IN", "Hammond IN", "Gary IN", "Lafayette IN",
+    "Muncie IN", "Terre Haute IN", "Kokomo IN", "Noblesville IN", "Anderson IN",
+    "Greenwood IN", "Elkhart IN", "Mishawaka IN", "Lawrence IN", "Jeffersonville IN",
+    # Iowa
+    "Des Moines IA", "Cedar Rapids IA", "Davenport IA", "Sioux City IA", "Iowa City IA",
+    "Waterloo IA", "Ames IA", "West Des Moines IA", "Council Bluffs IA", "Ankeny IA",
+    "Dubuque IA", "Urbandale IA", "Cedar Falls IA", "Marion IA",
+    # Kansas
+    "Wichita KS", "Overland Park KS", "Kansas City KS", "Olathe KS", "Topeka KS",
+    "Lawrence KS", "Shawnee KS", "Manhattan KS", "Lenexa KS", "Salina KS",
+    "Hutchinson KS", "Leavenworth KS", "Leawood KS", "Dodge City KS",
+    # Kentucky
+    "Louisville KY", "Lexington KY", "Bowling Green KY", "Owensboro KY", "Covington KY",
+    "Richmond KY", "Georgetown KY", "Florence KY", "Hopkinsville KY", "Nicholasville KY",
+    "Elizabethtown KY", "Frankfort KY",
+    # Louisiana
+    "New Orleans LA", "Baton Rouge LA", "Shreveport LA", "Lafayette LA", "Lake Charles LA",
+    "Kenner LA", "Bossier City LA", "Monroe LA", "Alexandria LA", "Houma LA",
+    "Marrero LA", "New Iberia LA", "Slidell LA",
+    # Maine
+    "Portland ME", "Lewiston ME", "Bangor ME", "South Portland ME", "Auburn ME",
+    "Biddeford ME", "Sanford ME", "Augusta ME", "Saco ME", "Westbrook ME",
+    # Maryland
+    "Baltimore MD", "Frederick MD", "Rockville MD", "Gaithersburg MD", "Bowie MD",
+    "Hagerstown MD", "Annapolis MD", "College Park MD", "Salisbury MD", "Laurel MD",
+    "Greenbelt MD", "Cumberland MD", "Westminster MD", "Hyattsville MD",
+    # Massachusetts
+    "Boston MA", "Worcester MA", "Springfield MA", "Cambridge MA", "Lowell MA",
+    "Brockton MA", "Quincy MA", "Lynn MA", "New Bedford MA", "Fall River MA",
+    "Newton MA", "Lawrence MA", "Somerville MA", "Framingham MA", "Haverhill MA",
+    "Waltham MA", "Malden MA", "Brookline MA", "Plymouth MA", "Medford MA",
+    "Taunton MA", "Chicopee MA", "Weymouth MA", "Revere MA", "Peabody MA",
+    "Methuen MA", "Barnstable MA", "Pittsfield MA", "Attleboro MA", "Everett MA",
+    "Salem MA", "Westfield MA", "Leominster MA", "Fitchburg MA", "Beverly MA",
+    "Holyoke MA", "Marlborough MA", "Woburn MA", "Amherst MA", "Chelsea MA",
+    # Michigan
+    "Detroit MI", "Grand Rapids MI", "Warren MI", "Sterling Heights MI", "Ann Arbor MI",
+    "Lansing MI", "Dearborn MI", "Livonia MI", "Troy MI", "Westland MI",
+    "Farmington Hills MI", "Flint MI", "Wyoming MI", "Southfield MI", "Kalamazoo MI",
+    "Rochester Hills MI", "Taylor MI", "Pontiac MI", "St. Clair Shores MI", "Royal Oak MI",
+    "Novi MI", "Dearborn Heights MI", "Battle Creek MI", "Saginaw MI", "Kentwood MI",
+    "East Lansing MI", "Portage MI", "Roseville MI", "Midland MI", "Muskegon MI",
+    # Minnesota
+    "Minneapolis MN", "St. Paul MN", "Rochester MN", "Duluth MN", "Bloomington MN",
+    "Brooklyn Park MN", "Plymouth MN", "Woodbury MN", "Maple Grove MN", "St. Cloud MN",
+    "Eagan MN", "Eden Prairie MN", "Coon Rapids MN", "Burnsville MN", "Blaine MN",
+    "Lakeville MN", "Minnetonka MN", "Apple Valley MN", "Edina MN", "St. Louis Park MN",
+    "Mankato MN", "Moorhead MN", "Shakopee MN", "Maplewood MN",
+    # Mississippi
+    "Jackson MS", "Gulfport MS", "Southaven MS", "Hattiesburg MS", "Biloxi MS",
+    "Meridian MS", "Tupelo MS", "Olive Branch MS", "Greenville MS", "Horn Lake MS",
+    "Clinton MS", "Pearl MS", "Madison MS", "Starkville MS",
+    # Missouri
+    "Kansas City MO", "St. Louis MO", "Springfield MO", "Columbia MO", "Independence MO",
+    "Lee's Summit MO", "O'Fallon MO", "St. Joseph MO", "St. Charles MO", "Blue Springs MO",
+    "St. Peters MO", "Florissant MO", "Joplin MO", "Chesterfield MO", "Jefferson City MO",
+    "Cape Girardeau MO", "Wildwood MO", "University City MO", "Wentzville MO",
+    # Montana
+    "Billings MT", "Missoula MT", "Great Falls MT", "Bozeman MT", "Butte MT",
+    "Helena MT", "Kalispell MT", "Havre MT", "Anaconda MT", "Miles City MT",
+    # Nebraska
+    "Omaha NE", "Lincoln NE", "Bellevue NE", "Grand Island NE", "Kearney NE",
+    "Fremont NE", "Hastings NE", "Norfolk NE", "Columbus NE", "North Platte NE",
+    "Papillion NE", "La Vista NE",
+    # Nevada
+    "Las Vegas NV", "Henderson NV", "Reno NV", "North Las Vegas NV", "Sparks NV",
+    "Carson City NV", "Fernley NV", "Elko NV", "Mesquite NV", "Boulder City NV",
+    # New Hampshire
+    "Manchester NH", "Nashua NH", "Concord NH", "Dover NH", "Rochester NH",
+    "Keene NH", "Derry NH", "Portsmouth NH", "Laconia NH", "Lebanon NH",
+    "Claremont NH", "Somersworth NH",
+    # New Jersey
+    "Newark NJ", "Jersey City NJ", "Paterson NJ", "Elizabeth NJ", "Trenton NJ",
+    "Clifton NJ", "Camden NJ", "Passaic NJ", "Union City NJ", "Bayonne NJ",
+    "East Orange NJ", "Vineland NJ", "New Brunswick NJ", "Hoboken NJ", "Perth Amboy NJ",
+    "West New York NJ", "Plainfield NJ", "Hackensack NJ", "Sayreville NJ", "Kearny NJ",
+    "Linden NJ", "Atlantic City NJ", "Fort Lee NJ", "Fair Lawn NJ", "Garfield NJ",
+    "Princeton NJ", "Cherry Hill NJ", "Toms River NJ", "Edison NJ", "Woodbridge NJ",
+    # New Mexico
+    "Albuquerque NM", "Las Cruces NM", "Rio Rancho NM", "Santa Fe NM", "Roswell NM",
+    "Farmington NM", "Clovis NM", "Hobbs NM", "Alamogordo NM", "Carlsbad NM",
+    "Gallup NM", "Los Lunas NM",
+    # New York
+    "New York NY", "Buffalo NY", "Rochester NY", "Yonkers NY", "Syracuse NY",
+    "Albany NY", "New Rochelle NY", "Mount Vernon NY", "Schenectady NY", "Utica NY",
+    "White Plains NY", "Hempstead NY", "Troy NY", "Niagara Falls NY", "Binghamton NY",
+    "Freeport NY", "Valley Stream NY", "Long Beach NY", "Ithaca NY", "Poughkeepsie NY",
+    "Rome NY", "North Tonawanda NY", "Jamestown NY", "Elmira NY", "Watertown NY",
+    "Saratoga Springs NY", "Kingston NY", "Newburgh NY", "Middletown NY",
+    # North Carolina
+    "Charlotte NC", "Raleigh NC", "Greensboro NC", "Durham NC", "Winston-Salem NC",
+    "Fayetteville NC", "Cary NC", "Wilmington NC", "High Point NC", "Concord NC",
+    "Asheville NC", "Greenville NC", "Gastonia NC", "Jacksonville NC", "Chapel Hill NC",
+    "Huntersville NC", "Apex NC", "Burlington NC", "Rocky Mount NC", "Wilson NC",
+    "Kannapolis NC", "Hickory NC", "Indian Trail NC", "Wake Forest NC", "Mooresville NC",
+    # North Dakota
+    "Fargo ND", "Bismarck ND", "Grand Forks ND", "Minot ND", "West Fargo ND",
+    "Williston ND", "Dickinson ND", "Mandan ND", "Jamestown ND", "Wahpeton ND",
+    # Ohio
+    "Columbus OH", "Cleveland OH", "Cincinnati OH", "Toledo OH", "Akron OH",
+    "Dayton OH", "Parma OH", "Canton OH", "Youngstown OH", "Lorain OH",
+    "Hamilton OH", "Springfield OH", "Kettering OH", "Elyria OH", "Lakewood OH",
+    "Cuyahoga Falls OH", "Middletown OH", "Newark OH", "Mentor OH", "Mansfield OH",
+    "Cleveland Heights OH", "Beavercreek OH", "Strongsville OH", "Fairfield OH",
+    "Dublin OH", "Warren OH", "Findlay OH", "Lancaster OH", "Lima OH", "Huber Heights OH",
+    # Oklahoma
+    "Oklahoma City OK", "Tulsa OK", "Norman OK", "Broken Arrow OK", "Edmond OK",
+    "Lawton OK", "Moore OK", "Midwest City OK", "Enid OK", "Stillwater OK",
+    "Muskogee OK", "Bartlesville OK", "Owasso OK", "Shawnee OK", "Ponca City OK",
+    # Oregon
+    "Portland OR", "Salem OR", "Eugene OR", "Gresham OR", "Hillsboro OR",
+    "Bend OR", "Beaverton OR", "Medford OR", "Springfield OR", "Corvallis OR",
+    "Albany OR", "Tigard OR", "Lake Oswego OR", "Keizer OR", "Grants Pass OR",
+    "Oregon City OR", "McMinnville OR", "Redmond OR", "Tualatin OR", "West Linn OR",
+    # Pennsylvania
+    "Philadelphia PA", "Pittsburgh PA", "Allentown PA", "Reading PA", "Erie PA",
+    "Scranton PA", "Bethlehem PA", "Lancaster PA", "Harrisburg PA", "York PA",
+    "Wilkes-Barre PA", "Chester PA", "Williamsport PA", "Altoona PA", "Easton PA",
+    "Lebanon PA", "Hazleton PA", "New Castle PA", "Johnstown PA", "State College PA",
+    "West Chester PA", "Norristown PA", "Pottstown PA", "Chambersburg PA",
+    # Rhode Island
+    "Providence RI", "Warwick RI", "Cranston RI", "Pawtucket RI", "East Providence RI",
+    "Woonsocket RI", "Newport RI", "Central Falls RI", "Westerly RI", "Cumberland RI",
+    # South Carolina
+    "Charleston SC", "Columbia SC", "North Charleston SC", "Mount Pleasant SC",
+    "Rock Hill SC", "Greenville SC", "Summerville SC", "Sumter SC", "Goose Creek SC",
+    "Hilton Head Island SC", "Florence SC", "Spartanburg SC", "Myrtle Beach SC",
+    "Aiken SC", "Anderson SC", "Greer SC", "Hanahan SC", "Bluffton SC",
+    # South Dakota
+    "Sioux Falls SD", "Rapid City SD", "Aberdeen SD", "Brookings SD", "Watertown SD",
+    "Mitchell SD", "Yankton SD", "Pierre SD", "Huron SD", "Vermillion SD",
+    # Tennessee
+    "Nashville TN", "Memphis TN", "Knoxville TN", "Chattanooga TN", "Clarksville TN",
+    "Murfreesboro TN", "Franklin TN", "Jackson TN", "Johnson City TN", "Bartlett TN",
+    "Hendersonville TN", "Kingsport TN", "Collierville TN", "Cleveland TN", "Smyrna TN",
+    "Germantown TN", "Brentwood TN", "Columbia TN", "Spring Hill TN", "Gallatin TN",
+    # Texas
+    "Houston TX", "San Antonio TX", "Dallas TX", "Austin TX", "Fort Worth TX",
+    "El Paso TX", "Arlington TX", "Corpus Christi TX", "Plano TX", "Laredo TX",
+    "Lubbock TX", "Garland TX", "Irving TX", "Amarillo TX", "Grand Prairie TX",
+    "Brownsville TX", "McKinney TX", "Frisco TX", "Pasadena TX", "Killeen TX",
+    "McAllen TX", "Mesquite TX", "Denton TX", "Waco TX", "Carrollton TX",
+    "Midland TX", "Abilene TX", "Round Rock TX", "Odessa TX", "Pearland TX",
+    "Richardson TX", "College Station TX", "Lewisville TX", "Tyler TX", "League City TX",
+    "Allen TX", "Sugar Land TX", "Edinburg TX", "Mission TX", "Longview TX",
+    "Bryan TX", "Pharr TX", "Baytown TX", "Temple TX", "Missouri City TX",
+    "Flower Mound TX", "New Braunfels TX", "Cedar Park TX", "Conroe TX", "Harlingen TX",
+    "North Richland Hills TX", "Mansfield TX", "Rowlett TX", "Port Arthur TX",
+    "Euless TX", "San Angelo TX", "Pflugerville TX", "Wichita Falls TX", "Beaumont TX",
+    "Georgetown TX", "Cedar Hill TX", "Texas City TX", "San Marcos TX", "The Woodlands TX",
+    # Utah
+    "Salt Lake City UT", "West Valley City UT", "Provo UT", "West Jordan UT", "Orem UT",
+    "Sandy UT", "Ogden UT", "St. George UT", "Layton UT", "South Jordan UT",
+    "Lehi UT", "Millcreek UT", "Taylorsville UT", "Logan UT", "Murray UT",
+    "Draper UT", "Bountiful UT", "Riverton UT", "Spanish Fork UT", "Roy UT",
+    # Vermont
+    "Burlington VT", "South Burlington VT", "Rutland VT", "Essex Junction VT",
+    "Barre VT", "Montpelier VT", "St. Albans VT", "Winooski VT", "Newport VT",
+    "Vergennes VT",
+    # Virginia
+    "Virginia Beach VA", "Chesapeake VA", "Norfolk VA", "Richmond VA", "Newport News VA",
+    "Alexandria VA", "Hampton VA", "Roanoke VA", "Portsmouth VA", "Suffolk VA",
+    "Lynchburg VA", "Harrisonburg VA", "Leesburg VA", "Charlottesville VA", "Blacksburg VA",
+    "Danville VA", "Manassas VA", "Petersburg VA", "Fredericksburg VA", "Winchester VA",
+    "Salem VA", "Staunton VA", "Fairfax VA", "Hopewell VA", "Waynesboro VA",
+    "Herndon VA", "Vienna VA", "Falls Church VA",
+    # Washington
+    "Seattle WA", "Spokane WA", "Tacoma WA", "Vancouver WA", "Bellevue WA",
+    "Kent WA", "Everett WA", "Renton WA", "Spokane Valley WA", "Federal Way WA",
+    "Yakima WA", "Bellingham WA", "Kirkland WA", "Kennewick WA", "Auburn WA",
+    "Pasco WA", "Marysville WA", "Lakewood WA", "Redmond WA", "Sammamish WA",
+    "Shoreline WA", "Richland WA", "Olympia WA", "Lacey WA", "Edmonds WA",
+    "Bremerton WA", "Puyallup WA", "Wenatchee WA", "Issaquah WA", "Lynnwood WA",
+    # West Virginia
+    "Charleston WV", "Huntington WV", "Morgantown WV", "Parkersburg WV", "Wheeling WV",
+    "Weirton WV", "Fairmont WV", "Martinsburg WV", "Beckley WV", "Clarksburg WV",
+    "South Charleston WV", "St. Albans WV",
+    # Wisconsin
+    "Milwaukee WI", "Madison WI", "Green Bay WI", "Kenosha WI", "Racine WI",
+    "Appleton WI", "Waukesha WI", "Eau Claire WI", "Oshkosh WI", "Janesville WI",
+    "West Allis WI", "La Crosse WI", "Sheboygan WI", "Wauwatosa WI", "Fond du Lac WI",
+    "New Berlin WI", "Wausau WI", "Brookfield WI", "Beloit WI", "Greenfield WI",
+    "Franklin WI", "Oak Creek WI", "Manitowoc WI", "West Bend WI", "Sun Prairie WI",
+    # Wyoming
+    "Cheyenne WY", "Casper WY", "Laramie WY", "Gillette WY", "Rock Springs WY",
+    "Sheridan WY", "Green River WY", "Evanston WY", "Riverton WY", "Jackson WY",
+]
+
+
+def main() -> None:
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for city in CITIES:
+        key = " ".join(city.split())
+        if key in seen:
+            continue
+        seen.add(key)
+        ordered.append(key)
+    states = sorted({c.rsplit(" ", 1)[-1] for c in ordered})
+    lines = [
+        "# US cities for Google Places. Knocked out city-by-city (all niches in one city, then the next).",
+        "# Already-finished searches in data/places_queries_done.txt are skipped.",
+        "# Capitals included even when small. Not every tiny town (that would blow the Places bill).",
+        "metros:",
+    ]
+    for city in ordered:
+        lines.append(f"  - {city}")
+    OUT.write_text("\n".join(lines) + "\n")
+    print(f"Wrote {len(ordered)} cities, {len(states)} states+DC → {OUT}")
+
+
+if __name__ == "__main__":
+    main()

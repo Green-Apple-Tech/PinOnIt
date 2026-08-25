@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import re
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import yaml
 
@@ -19,6 +20,14 @@ from .export_sheet import (
 from .settings import ROOT, settings
 
 SEND_BATCHES = "scout2_send_batches"
+LOCAL_TZ = ZoneInfo("America/New_York")
+GMASS_CHECKLIST = (
+    "Before sending: check yesterday's GMass report — bounces <2%, complaints 0, note replies."
+)
+
+
+def today_local() -> date:
+    return datetime.now(LOCAL_TZ).date()
 
 
 def ramp_path() -> Path:
@@ -87,7 +96,6 @@ def _write_new_tab(sh, tab_name: str, rows: list[dict]) -> None:
         raise SystemExit(
             f"Sheet tab already exists: {tab_name!r}. Pick another date or delete the tab."
         )
-    # Google Sheet tab titles max 100 chars
     title = tab_name[:100]
     ws = sh.add_worksheet(
         title=title,
@@ -101,20 +109,24 @@ def _write_new_tab(sh, tab_name: str, rows: list[dict]) -> None:
         lead["_sheet_tab"] = title
 
 
+def pinonit_root() -> Path:
+    # ROOT is scout2/; batch.sh and LaunchAgents live at PinOnIt repo root
+    return ROOT.parent
+
+
 def write_launchd_plist(
     *,
-    niche: str,
+    niche: str = "landscaping",
     plist_path: Path | None = None,
 ) -> Path:
-    """Write a weekday 7am launchd plist. Does NOT load/enable it."""
-    root = ROOT
-    python = root / ".venv" / "bin" / "python"
-    if not python.is_file():
-        python = Path("/usr/bin/python3")
-    label = f"com.pinonit.scout2.export-batch.{niche_slug(niche)}"
+    """Write weekday 10:00 local launchd plist. Does NOT load it."""
+    repo = pinonit_root()
+    batch_sh = repo / "batch.sh"
+    label = f"com.pinonit.scout2.batch.{niche_slug(niche)}"
     out = plist_path or (Path.home() / "Library" / "LaunchAgents" / f"{label}.plist")
     out.parent.mkdir(parents=True, exist_ok=True)
-    # Weekdays Mon-Fri at 07:00 local
+    log = ROOT / "logs" / "batch.log"
+    (ROOT / "logs").mkdir(exist_ok=True)
     body = f"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -122,33 +134,29 @@ def write_launchd_plist(
   <key>Label</key>
   <string>{label}</string>
   <key>WorkingDirectory</key>
-  <string>{root}</string>
+  <string>{repo}</string>
   <key>ProgramArguments</key>
   <array>
-    <string>{python}</string>
-    <string>-m</string>
-    <string>scout2.cli</string>
-    <string>export-batch</string>
-    <string>--niche</string>
+    <string>/bin/bash</string>
+    <string>{batch_sh}</string>
     <string>{niche}</string>
   </array>
   <key>StartCalendarInterval</key>
   <array>
-    <dict><key>Weekday</key><integer>1</integer><key>Hour</key><integer>7</integer><key>Minute</key><integer>0</integer></dict>
-    <dict><key>Weekday</key><integer>2</integer><key>Hour</key><integer>7</integer><key>Minute</key><integer>0</integer></dict>
-    <dict><key>Weekday</key><integer>3</integer><key>Hour</key><integer>7</integer><key>Minute</key><integer>0</integer></dict>
-    <dict><key>Weekday</key><integer>4</integer><key>Hour</key><integer>7</integer><key>Minute</key><integer>0</integer></dict>
-    <dict><key>Weekday</key><integer>5</integer><key>Hour</key><integer>7</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Weekday</key><integer>1</integer><key>Hour</key><integer>10</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Weekday</key><integer>2</integer><key>Hour</key><integer>10</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Weekday</key><integer>3</integer><key>Hour</key><integer>10</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Weekday</key><integer>4</integer><key>Hour</key><integer>10</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Weekday</key><integer>5</integer><key>Hour</key><integer>10</integer><key>Minute</key><integer>0</integer></dict>
   </array>
   <key>StandardOutPath</key>
-  <string>{root / "logs" / "export-batch.out.log"}</string>
+  <string>{log}</string>
   <key>StandardErrorPath</key>
-  <string>{root / "logs" / "export-batch.err.log"}</string>
+  <string>{log}</string>
 </dict>
 </plist>
 """
     out.write_text(body)
-    (root / "logs").mkdir(exist_ok=True)
     return out
 
 
@@ -182,30 +190,26 @@ def export_batch(
         return {
             "scheduled": True,
             "plist": str(plist),
-            "note": (
-                "Plist written but NOT loaded. To enable: "
-                f"launchctl load {plist}"
-            ),
+            "load": f"launchctl load {plist}",
+            "unload": f"launchctl unload {plist}",
+            "verify": f"launchctl list | grep {plist.stem}",
+            "note": "Plist written but NOT loaded. Weekdays 10:00 only — weekends do not run.",
         }
 
-    send_date = send_date or datetime.now(timezone.utc).date()
+    send_date = send_date or today_local()
     sb = get_client()
     existing = existing_batch_for_date(sb, niche, send_date)
     if existing and not force:
         raise SystemExit(
             f"Already exported for niche={niche!r} date={send_date.isoformat()} "
             f"(day {existing.get('day_number')}, tab={existing.get('tab_name')}). "
-            "Pass --force to override (will create another tab and new batch row — "
-            "delete the unique row first or use a different date)."
+            "Pass --force to override."
         )
 
     day_number = next_day_number(sb, niche)
-    # If forcing same date after a row exists, still advance day unless we replace —
-    # unique (niche, send_date) means force must delete/update. Prefer update path:
     if existing and force:
-        # Remove unique blocker so we can insert a fresh batch for the same date
         sb.table(SEND_BATCHES).delete().eq("id", existing["id"]).execute()
-        day_number = int(existing["day_number"])  # redo same day number
+        day_number = int(existing["day_number"])
 
     target = target_for_day(day_number)
     rows = select_export_rows(sb, niche=niche, limit=target)
@@ -225,6 +229,7 @@ def export_batch(
             "target_count": target,
             "actual_count": 0,
             "warning": warning or "no ready leads matched filters",
+            "checklist": GMASS_CHECKLIST,
         }
 
     import asyncio
@@ -254,17 +259,18 @@ def export_batch(
     batch_id = batch[0]["id"] if batch else None
     stamped = now_iso()
     for lead in rows:
-        sb.table(TABLE).update(
-            {
-                "status": "exported",
-                "exported_at": stamped,
-                "sheet_tab": tab,
-                "page_title": lead.get("page_title") or None,
-                "city": lead.get("city") or None,
-                "state": lead.get("state") or None,
-                "updated_at": stamped,
-            }
-        ).eq("id", lead["id"]).execute()
+        payload = {
+            "status": "exported",
+            "exported_at": stamped,
+            "sheet_tab": tab,
+            "page_title": lead.get("page_title") or None,
+            "city": lead.get("city") or None,
+            "state": lead.get("state") or None,
+            "updated_at": stamped,
+        }
+        if batch_id:
+            payload["send_batch_id"] = batch_id
+        sb.table(TABLE).update(payload).eq("id", lead["id"]).execute()
 
     result = {
         "exported": len(rows),
@@ -276,6 +282,7 @@ def export_batch(
         "actual_count": len(rows),
         "tab_name": tab,
         "sheet_url": url,
+        "checklist": GMASS_CHECKLIST,
     }
     if warning:
         result["warning"] = warning

@@ -1,24 +1,31 @@
 # Google Places query niches (appended with metro name at runtime)
 niches:
+  - landscaping
+  - pool service
+  - plumbing
+  - electrical
+  - hvac
+  - handyman
+  - pressure washing
+  - pest control
+  - mobile detailing
+  - house cleaning
+  - barber
+  - salon suite
+  - lash tech
+  - massage therapy
+  - personal training
+  - tattoo
+  - mobile notary
+  - photography
+  - pet grooming
+  - solo attorney
+  - tax preparer
+  - insurance agent
   - real estate agent
-  - realtor
-  - photographer
-  - wedding photographer
-  - life coach
-  - business coach
-  - consultant
-  - therapist
-  - counselor
+  - tutoring
+  - music lessons
+  - private practice therapist
   - chiropractor
-  - dentist
-  - personal trainer
-  - yoga instructor
-  - hair salon
-  - spa
-  - attorney
-  - lawyer
-  - accountant
-  - financial advisor
-  - tutor
-  - music teacher
-  - interior designer
+  - med spa
+  - dietitian

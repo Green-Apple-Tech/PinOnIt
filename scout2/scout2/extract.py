@@ -1,4 +1,4 @@
-"""Extract and rank emails from Calendly-positive classified leads."""
+"""Extract and rank emails (and textable phones) from classified leads."""
 
 from __future__ import annotations
 
@@ -29,6 +29,10 @@ DROP_LOCAL = frozenset(
     }
 )
 PATHS = ("", "/contact", "/about", "/team", "/book")
+PHONE_RE = re.compile(
+    r"(?:\+1[\s.-]?)?(?:\(?\d{3}\)?[\s.-]?)\d{3}[\s.-]?\d{4}"
+)
+TEL_RE = re.compile(r"tel:(\+?[\d][\d\s().-]{7,})", re.I)
 
 
 def _local_part(email: str) -> str:
@@ -80,6 +84,29 @@ def emails_from_html(html: str) -> set[str]:
     return found
 
 
+def normalize_phone(raw: str) -> str | None:
+    digits = re.sub(r"\D", "", raw or "")
+    if len(digits) == 11 and digits.startswith("1"):
+        digits = digits[1:]
+    if len(digits) != 10:
+        return None
+    return f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
+
+
+def phones_from_html(html: str) -> str | None:
+    soup = BeautifulSoup(html or "", "lxml")
+    for a in soup.select('a[href^="tel:"]'):
+        href = a.get("href") or ""
+        m = TEL_RE.search(href)
+        if m:
+            phone = normalize_phone(m.group(1))
+            if phone:
+                return phone
+    text = unescape(soup.get_text(" "))
+    m = PHONE_RE.search(text)
+    return normalize_phone(m.group(0)) if m else None
+
+
 def pick_best(emails: set[str], domain: str) -> tuple[str | None, int | None]:
     ranked = []
     for e in emails:
@@ -103,29 +130,34 @@ async def run_extract(limit: int = 100) -> dict:
         for row in rows:
             domain = row["domain"]
             all_emails: set[str] = set()
+            phone: str | None = None
             for path in PATHS:
                 url = f"https://{domain}{path}"
                 _, _, html = await fetcher.get_text(url)
                 if html:
                     all_emails |= emails_from_html(html)
+                    if not phone:
+                        phone = phones_from_html(html)
             email, email_rank = pick_best(all_emails, domain)
+            payload = {
+                "domain": domain,
+                "email": email,
+                "status": "extracted",
+            }
             if email:
-                upsert_lead(
-                    sb,
-                    {
-                        "domain": domain,
-                        "email": email,
-                        "email_rank": email_rank,
-                        "status": "extracted",
-                        "niche": row.get("niche"),
-                        "employees_bucket": row.get("employees_bucket"),
-                        "calendly_url": row.get("calendly_url"),
-                        "source": row.get("source"),
-                    },
-                )
+                payload["email_rank"] = email_rank
+                payload["niche"] = row.get("niche")
+                payload["employees_bucket"] = row.get("employees_bucket")
+                payload["practice_type"] = row.get("practice_type")
+                payload["calendly_url"] = row.get("calendly_url")
+                payload["scheduler_name"] = row.get("scheduler_name")
+                payload["booking_url"] = row.get("booking_url")
+                payload["source"] = row.get("source")
                 got += 1
             else:
-                upsert_lead(sb, {"domain": domain, "status": "extracted", "email": None})
                 missing += 1
+            if phone:
+                payload["phone"] = phone
+            upsert_lead(sb, payload)
 
     return {"processed": len(rows), "with_email": got, "without_email": missing}

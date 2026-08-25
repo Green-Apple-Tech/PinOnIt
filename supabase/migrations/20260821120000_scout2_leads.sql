@@ -11,15 +11,6 @@ CREATE TABLE IF NOT EXISTS public.scout2_leads (
     OR employees_bucket IN ('1', '2-10', '11+')
   ),
   calendly_url text,
-  scheduler_name text,
-  booking_url text,
-  email_provider text,
-  zoom_links boolean NOT NULL DEFAULT false,
-  teams_links boolean NOT NULL DEFAULT false,
-  phone_only boolean NOT NULL DEFAULT false,
-  practice_type text,
-  lead_score integer,
-  segment text,
   source text,
   mx_valid boolean,
   status text NOT NULL DEFAULT 'discovered',
@@ -30,9 +21,8 @@ CREATE TABLE IF NOT EXISTS public.scout2_leads (
 CREATE INDEX IF NOT EXISTS scout2_leads_status_idx ON public.scout2_leads (status);
 CREATE INDEX IF NOT EXISTS scout2_leads_niche_idx ON public.scout2_leads (niche);
 CREATE INDEX IF NOT EXISTS scout2_leads_source_idx ON public.scout2_leads (source);
-CREATE INDEX IF NOT EXISTS scout2_leads_segment_idx ON public.scout2_leads (segment);
-CREATE INDEX IF NOT EXISTS scout2_leads_score_idx ON public.scout2_leads (lead_score);
 
 ALTER TABLE public.scout2_leads ENABLE ROW LEVEL SECURITY;
 
--- Service role bypasses RLS; no anon policies on purpose (internal pipeline).
+-- Service role bypasses RLS; no anon policies (internal pipeline).
+NOTIFY pgrst, 'reload schema';
