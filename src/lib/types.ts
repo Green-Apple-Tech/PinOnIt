@@ -31,6 +31,7 @@ export interface Profile {
   timezone: string;
   slug: string | null;
   plan: 'free' | 'pro';
+  plan_override?: 'pro' | null;
   stripe_customer_id: string | null;
   referral_code: string | null;
   referred_by: string | null;
@@ -79,16 +80,7 @@ export interface Profile {
   global_terms_text: string;
   ui_mode?: 'simple' | 'advanced';
   revealed_tools?: string[] | null;
-  business_type?:
-    | 'landscaper'
-    | 'plumber'
-    | 'dentist'
-    | 'real_estate'
-    | 'mobile_trade'
-    | 'personal_services'
-    | 'professional_services'
-    | 'other'
-    | null;
+  business_type?: string | null;
   default_tax_percent?: number | null;
   quote_line_defaults?: { description: string; amount: number }[] | null;
   business_region?: string | null;
@@ -110,6 +102,8 @@ export interface PaidBookingSettings {
   use_categories?: boolean;
   categories?: string[];
   business_photo_url?: string | null;
+  /** When set, only these service IDs appear on the paid booking menu. */
+  visible_service_ids?: string[] | null;
 }
 
 export type MeetingType = 'one_on_one' | 'group' | 'one_off';

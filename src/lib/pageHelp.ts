@@ -101,11 +101,11 @@ const GUIDES: Record<string, PageHelpGuide> = {
   },
   'paid-booking': {
     title: 'Paid Booking',
-    purpose: 'A storefront for paid appointments. Use it when you charge at booking time.',
+    purpose: 'A price-list page clients can book from — share by link, email, SMS, or embed.',
     steps: [
-      'Put a price on an event type first (Event types).',
-      'Pick Stripe, PayPal, Venmo, Cash App, or Zelle on that event type.',
-      'Fill in your business info, pick colors, save, then share your link.',
+      'See what it is: a short menu of your priced options.',
+      'Customize your logo, colors, and which event types appear (set prices under Event types).',
+      'Share the full page link, or a single-option booking link.',
     ],
   },
   group: {

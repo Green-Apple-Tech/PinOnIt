@@ -22,6 +22,7 @@ import {
 } from '../lib/bookingSmsConsent';
 import { resolveTermsText } from '../lib/terms';
 import { bookableEventTypes, serviceMatchesTypeToken } from '../lib/eventTypes';
+import { isUnusedSingleUseExpired } from '../lib/singleUseLinks';
 import { stripePromise } from '../lib/stripe';
 import { StripeBookingCheckout } from '../components/StripeBookingCheckout';
 import type { RescheduleSession } from '../lib/reschedule';
@@ -559,6 +560,7 @@ interface SingleUseLinkRecord {
   label: string | null;
   used: boolean;
   expires_at: string | null;
+  created_at?: string | null;
 }
 
 export function BookPage({ rescheduleSession }: { rescheduleSession?: RescheduleSession } = {}) {
@@ -746,7 +748,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
         const linkRecord = link as SingleUseLinkRecord;
 
         if (linkRecord.used) { setSingleUseLinkInvalid(true); setLoading(false); return; }
-        if (linkRecord.expires_at && new Date(linkRecord.expires_at) < new Date()) {
+        if (isUnusedSingleUseExpired(linkRecord.expires_at, linkRecord.created_at)) {
           setSingleUseLinkInvalid(true); setLoading(false); return;
         }
 
@@ -784,9 +786,19 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
         ? publicServices
         : bookableEventTypes(publicServices);
       const typesParam = searchParams.get('types');
+      const onPaidMenu =
+        Boolean(slug && !token && location.pathname.replace(/\/$/, '').endsWith('/services'));
+      const visibleIds = onPaidMenu
+        ? ((loadedProfile as { paid_booking_settings?: PaidBookingSettings } | null)?.paid_booking_settings
+            ?.visible_service_ids ?? null)
+        : null;
+      const menuFiltered =
+        visibleIds && visibleIds.length > 0
+          ? listedServices.filter((s) => visibleIds.includes(s.id))
+          : listedServices;
       const filteredServices = typesParam
-        ? listedServices.filter((s) => typesParam.split(',').some((token) => serviceMatchesTypeToken(s, token)))
-        : listedServices;
+        ? menuFiltered.filter((s) => typesParam.split(',').some((tok) => serviceMatchesTypeToken(s, tok)))
+        : menuFiltered;
       setServices(filteredServices);
 
       setAvailability(availRes.data ?? []);
@@ -934,6 +946,14 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
     }
     const isRecurring = !!(selectedService.is_recurring && selectedService.recurrence_frequency);
     const email = guestEmail.trim();
+    const { data: blocked } = await supabase.rpc('guest_is_blocked', {
+      p_host_id: host.id,
+      p_email: email,
+    });
+    if (blocked) {
+      setDetailsError('This email cannot book with this host.');
+      return null;
+    }
     const { guestPhone: phoneVal, smsConsentGranted, whatsappConsentGranted } =
       resolveBookingSmsConsent(phone, smsOptIn, whatsappOptIn);
     const notifyViaPayload = buildNotifyViaPayload(email, phone, smsOptIn, whatsappOptIn);
@@ -942,7 +962,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
       if (ch === 'whatsapp') return whatsappConsentGranted;
       return true;
     });
-    const { data } = await supabase.from('bookings').insert({
+    const { data, error: insertError } = await supabase.from('bookings').insert({
       service_id: selectedService.id,
       host_id: host.id,
       guest_name: guestName,
@@ -960,6 +980,15 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
       reminder_times: selectedTimes,
       stripe_payment_id: stripePaymentId,
     }).select().maybeSingle();
+    if (insertError || !data) {
+      const msg = `${insertError?.message ?? ''} ${insertError?.code ?? ''}`;
+      setDetailsError(
+        /guest_blocked/i.test(msg)
+          ? 'This email cannot book with this host.'
+          : 'Could not complete this booking. Please try another time.',
+      );
+      return null;
+    }
     if (data) {
       // Mark single-use link as used
       if (singleUseLink) {
