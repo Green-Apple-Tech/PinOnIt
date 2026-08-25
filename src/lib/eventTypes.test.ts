@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   defaultSelectedServiceIds,
+  eventTypeSlug,
   isPinOnItDemoFeedback,
-  isThirtyMinIncludedByDefault,
+  serviceMatchesTypeToken,
 } from './eventTypes';
 
 describe('isPinOnItDemoFeedback', () => {
@@ -27,29 +28,46 @@ describe('defaultSelectedServiceIds', () => {
     { id: 'fb2', name: 'Pin On It Feedback', duration_minutes: 30 },
   ];
 
-  it('checks only the 30 min consultation', () => {
-    expect([...defaultSelectedServiceIds(types)]).toEqual(['30']);
+  it('checks every real event type and skips PinOnIt demo feedback', () => {
+    expect([...defaultSelectedServiceIds(types)].sort()).toEqual(['15', '30', '60']);
   });
 
-  it('falls back to a non-feedback 30-minute type', () => {
+  it('still skips feedback when it is the only 30-minute type', () => {
     const ids = defaultSelectedServiceIds([
       { id: '15', name: '15 Min Quick Call', duration_minutes: 15 },
       { id: 'meet', name: '30 Minute Meeting', duration_minutes: 30 },
       { id: 'fb', name: 'Pin On It Feedback', duration_minutes: 30 },
     ]);
-    expect([...ids]).toEqual(['meet']);
-  });
-
-  it('leaves all unchecked when nothing 30-minute matches', () => {
-    expect(defaultSelectedServiceIds([
-      { id: '15', name: '15 Min Quick Call', duration_minutes: 15 },
-      { id: '60', name: 'Consultation (60 min $50)', duration_minutes: 60 },
-    ]).size).toBe(0);
+    expect([...ids].sort()).toEqual(['15', 'meet']);
   });
 });
 
-describe('isThirtyMinIncludedByDefault', () => {
-  it('does not select PinOnIt feedback even at 30 minutes', () => {
-    expect(isThirtyMinIncludedByDefault({ name: 'Pin On It Feedback', duration_minutes: 30 })).toBe(false);
+describe('eventTypeSlug', () => {
+  it('turns a 15-minute consultation into 15_min_consult', () => {
+    expect(eventTypeSlug({ name: '15 Min Consultation', duration_minutes: 15 })).toBe('15_min_consult');
+  });
+
+  it('turns a paid 60-minute consultation into 60_min_paid', () => {
+    expect(eventTypeSlug({
+      name: 'Consultation (60 min $50)',
+      duration_minutes: 60,
+      price_cents: 5000,
+    })).toBe('60_min_paid');
+  });
+
+  it('keeps a distinctive name', () => {
+    expect(eventTypeSlug({ name: '15 Min Quick Call', duration_minutes: 15 })).toBe('15_min_quick_call');
+  });
+});
+
+describe('serviceMatchesTypeToken', () => {
+  const svc = { id: 'e80024ee-a65d-487d-95b7-b61aaca6f877', name: '15 Min Consultation', duration_minutes: 15 };
+
+  it('matches the readable slug', () => {
+    expect(serviceMatchesTypeToken(svc, '15_min_consult')).toBe(true);
+  });
+
+  it('still matches old UUID links', () => {
+    expect(serviceMatchesTypeToken(svc, svc.id)).toBe(true);
   });
 });

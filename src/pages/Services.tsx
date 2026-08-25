@@ -7,6 +7,7 @@ import type { Service, BookingQuestion, MeetingType, RecurrenceFrequency } from 
 import { getRecurrenceEndType, type RecurrenceEndType } from '../lib/recurring';
 import { resolveDefaultReminderChannel } from '../lib/reminderChannels';
 import { computeSingleUseExpiresAtForProfile, formatLinkExpiryHint, formatSingleUseExpiryLabel, isSingleUseLinksEnabled } from '../lib/singleUseLinks';
+import { eventTypeSlug } from '../lib/eventTypes';
 import { LOCATION_TYPES, MEETING_TYPE_META } from '../lib/types';
 import {
   Plus, Trash2, X, Check, Loader2, MapPin, Clock, Settings2, MessageSquare,
@@ -346,6 +347,7 @@ export function ServicesPage() {
   const [generatingLink, setGeneratingLink] = useState(false);
   const [newLinkLabel, setNewLinkLabel] = useState('');
   const drawerRef = useRef<HTMLDivElement>(null);
+  const lastRegularMeetingType = useRef<Exclude<MeetingType, 'one_off'>>('one_on_one');
 
   const copyText = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -354,7 +356,9 @@ export function ServicesPage() {
   };
 
   const buildBookingUrl = (svc: Service) =>
-    profile?.slug ? `${window.location.origin}/${profile.slug}/${svc.id}` : `${window.location.origin}/book/${svc.id}`;
+    profile?.slug
+      ? `${window.location.origin}/${profile.slug}?types=${eventTypeSlug(svc)}`
+      : `${window.location.origin}/book/${svc.id}`;
 
   const buildShareMessages = (svc: Service) => {
     const bookingUrl = buildBookingUrl(svc);
@@ -457,6 +461,8 @@ export function ServicesPage() {
   }, []);
 
   const openNew = (meetingType?: MeetingType) => {
+    const nextType = meetingType ?? DEFAULT_SERVICE.meeting_type;
+    lastRegularMeetingType.current = nextType === 'group' ? 'group' : 'one_on_one';
     setForm({ ...DEFAULT_SERVICE, ...(meetingType ? { meeting_type: meetingType } : {}) });
     setRecurrenceEndType('never');
     setPriceStr('');
@@ -485,11 +491,13 @@ export function ServicesPage() {
   }, [searchParams, loading, services]);
 
   const openEdit = async (svc: Service) => {
+    const currentType = svc.meeting_type ?? 'one_on_one';
+    lastRegularMeetingType.current = currentType === 'group' ? 'group' : 'one_on_one';
     setForm({
       name: svc.name, description: svc.description ?? '',
       duration_minutes: svc.duration_minutes, price_cents: svc.price_cents,
       color: svc.color, is_active: svc.is_active,
-      meeting_type: svc.meeting_type ?? 'one_on_one', max_invitees: svc.max_invitees ?? null,
+      meeting_type: currentType, max_invitees: svc.max_invitees ?? null,
       buffer_before_minutes: svc.buffer_before_minutes ?? 0,
       buffer_after_minutes: svc.buffer_after_minutes ?? 0,
       min_notice_hours: svc.min_notice_hours ?? 1,
@@ -671,6 +679,23 @@ export function ServicesPage() {
   };
 
   const setField = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((prev) => ({ ...prev, [k]: v }));
+
+  const applyMeetingType = (next: MeetingType) => {
+    if (next === 'one_on_one' || next === 'group') lastRegularMeetingType.current = next;
+    setField('meeting_type', next);
+  };
+
+  const toggleSingleUse = () => {
+    if (form.meeting_type === 'one_off') {
+      applyMeetingType(lastRegularMeetingType.current);
+    } else {
+      lastRegularMeetingType.current = form.meeting_type === 'group' ? 'group' : 'one_on_one';
+      applyMeetingType('one_off');
+    }
+  };
+
+  const singleUseEnabled = Boolean(profile && isSingleUseLinksEnabled(profile));
+  const showSingleUseType = singleUseEnabled || form.meeting_type === 'one_off';
 
   const tabs: { key: ServiceTab; label: string; icon: typeof Clock | null }[] = [
     { key: 'basic', label: 'Basic', icon: Settings2 },
@@ -1046,24 +1071,48 @@ export function ServicesPage() {
                     <label className="block text-sm font-semibold text-gray-500 dark:text-slate-400 mb-2 uppercase tracking-wide">Meeting type</label>
                     <div className="flex flex-col gap-2">
                       {(Object.entries(MEETING_TYPE_META) as [MeetingType, typeof MEETING_TYPE_META[MeetingType]][])
-                        .filter(([key]) => key !== 'one_off')
+                        .filter(([key]) => key !== 'one_off' || showSingleUseType)
                         .map(([key, meta]) => (
-                          <button key={key} onClick={() => setField('meeting_type', key)}
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => {
+                              if (key === 'one_off' && !singleUseEnabled) return;
+                              applyMeetingType(key);
+                            }}
                             className={`flex items-center gap-4 px-4 rounded-xl border text-left transition-all min-h-[60px] ${
                               form.meeting_type === key
-                                ? 'border-brand-500 bg-brand-50 dark:bg-brand-950/30'
+                                ? key === 'one_off'
+                                  ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/30'
+                                  : 'border-brand-500 bg-brand-50 dark:bg-brand-950/30'
                                 : 'border-gray-200 dark:border-slate-700 hover:border-gray-300 bg-white dark:bg-slate-800'
+                            }`}
+                          >
+                            <div className={`h-4 w-4 rounded-full border-2 shrink-0 flex items-center justify-center ${
+                              form.meeting_type === key
+                                ? key === 'one_off' ? 'border-amber-500' : 'border-brand-500'
+                                : 'border-gray-300 dark:border-slate-500'
                             }`}>
-                            <div className={`h-4 w-4 rounded-full border-2 shrink-0 flex items-center justify-center ${form.meeting_type === key ? 'border-brand-500' : 'border-gray-300 dark:border-slate-500'}`}>
-                              {form.meeting_type === key && <div className="h-2 w-2 rounded-full bg-brand-500" />}
+                              {form.meeting_type === key && (
+                                <div className={`h-2 w-2 rounded-full ${key === 'one_off' ? 'bg-amber-500' : 'bg-brand-500'}`} />
+                              )}
                             </div>
                             <div>
-                              <span className={`block text-sm font-bold ${form.meeting_type === key ? 'text-brand-700 dark:text-brand-300' : 'text-gray-700 dark:text-slate-300'}`}>{meta.label}</span>
+                              <span className={`block text-sm font-bold ${
+                                form.meeting_type === key
+                                  ? key === 'one_off' ? 'text-amber-800 dark:text-amber-300' : 'text-brand-700 dark:text-brand-300'
+                                  : 'text-gray-700 dark:text-slate-300'
+                              }`}>{meta.label}</span>
                               <span className="block text-sm text-gray-400 dark:text-slate-500 leading-tight">{meta.desc}</span>
                             </div>
                           </button>
                         ))}
                     </div>
+                    {form.meeting_type === 'one_off' && (
+                      <p className="mt-2 text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+                        This type stays off your public booking page. Share a one-time link from the event list instead.
+                      </p>
+                    )}
                     {form.meeting_type === 'group' && (
                       <div className="mt-3">
                         <label className="block text-sm font-medium text-gray-500 dark:text-slate-400 mb-1.5">Max invitees <span className="font-normal text-gray-400">(optional)</span></label>
@@ -1194,28 +1243,22 @@ export function ServicesPage() {
                   </div>
 
                   <div className={`flex items-center justify-between py-4 border rounded-xl px-4 min-h-[64px] ${
-                    profile && isSingleUseLinksEnabled(profile)
+                    singleUseEnabled
                       ? 'border-amber-200 dark:border-amber-800/60 bg-amber-50/40 dark:bg-amber-950/20'
                       : 'border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/30 opacity-80'
                   }`}>
                     <div>
                       <p className="text-base font-semibold text-gray-900 dark:text-white">Single use</p>
                       <p className="text-sm text-gray-400 dark:text-slate-500 leading-relaxed">
-                        {profile && isSingleUseLinksEnabled(profile)
+                        {singleUseEnabled
                           ? 'Hidden from your public booking page. Guests book only via a one-time link you generate.'
                           : 'Enable single-use links in Settings → General → Booking page first.'}
                       </p>
                     </div>
                     <button
                       type="button"
-                      disabled={!(profile && isSingleUseLinksEnabled(profile))}
-                      onClick={() => {
-                        if (form.meeting_type === 'one_off') {
-                          setField('meeting_type', 'one_on_one');
-                        } else {
-                          setField('meeting_type', 'one_off');
-                        }
-                      }}
+                      disabled={!singleUseEnabled}
+                      onClick={toggleSingleUse}
                       className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0 disabled:cursor-not-allowed ${
                         form.meeting_type === 'one_off' ? 'bg-amber-500' : 'bg-gray-300 dark:bg-slate-600'
                       }`}

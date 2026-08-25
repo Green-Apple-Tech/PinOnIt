@@ -74,7 +74,6 @@ export const MORE_TOOLS_NAV: MoreToolsNavItem[] = [
 export const REVEALABLE_NAV: MoreToolsNavItem[] = MORE_TOOLS_NAV.filter((item) => item.toolId);
 
 export const MORE_TOOLS_HUB_PATH = '/dashboard/more-tools';
-export const MORE_TOOLS_OPEN_KEY = 'pinonit_more_tools_open';
 
 export function isMoreToolsNavActive(item: MoreToolsNavItem, pathname: string, search = '', hash = ''): boolean {
   if (navPathMatches(item.path, pathname, search, hash)) return true;
@@ -126,23 +125,4 @@ export function buildSidebarNav(
     primary: [...primary, ...surfaced.map(toDashboardItem)],
     moreTools,
   };
-}
-
-export function readMoreToolsOpen(): boolean {
-  try {
-    const stored = localStorage.getItem(MORE_TOOLS_OPEN_KEY);
-    if (stored === '0') return false;
-    if (stored === '1') return true;
-  } catch {
-    /* ignore */
-  }
-  return false;
-}
-
-export function writeMoreToolsOpen(open: boolean): void {
-  try {
-    localStorage.setItem(MORE_TOOLS_OPEN_KEY, open ? '1' : '0');
-  } catch {
-    /* ignore */
-  }
 }

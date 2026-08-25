@@ -21,7 +21,7 @@ import {
   shouldRecordSmsOptIn,
 } from '../lib/bookingSmsConsent';
 import { resolveTermsText } from '../lib/terms';
-import { withoutPinOnItDemoFeedback } from '../lib/eventTypes';
+import { serviceMatchesTypeToken, withoutPinOnItDemoFeedback } from '../lib/eventTypes';
 import { stripePromise } from '../lib/stripe';
 import { StripeBookingCheckout } from '../components/StripeBookingCheckout';
 import type { RescheduleSession } from '../lib/reschedule';
@@ -785,7 +785,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
         : withoutPinOnItDemoFeedback(publicServices);
       const typesParam = searchParams.get('types');
       const filteredServices = typesParam
-        ? listedServices.filter((s) => typesParam.split(',').includes(s.id))
+        ? listedServices.filter((s) => typesParam.split(',').some((token) => serviceMatchesTypeToken(s, token)))
         : listedServices;
       setServices(filteredServices);
 

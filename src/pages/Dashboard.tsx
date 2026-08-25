@@ -13,8 +13,6 @@ import {
   MORE_TOOLS_HUB_PATH,
   buildSidebarNav,
   navPathMatches,
-  readMoreToolsOpen,
-  writeMoreToolsOpen,
 } from '../lib/dashboardNav';
 import { parseRevealedTools, revealTool } from '../lib/progressiveDisclosure';
 import { PageHelpButton } from '../components/PageHelp';
@@ -33,7 +31,7 @@ import {
   resolveLinkExpiry,
   type LinkExpiryValue,
 } from '../lib/singleUseLinks';
-import { defaultSelectedServiceIds, withoutPinOnItDemoFeedback } from '../lib/eventTypes';
+import { defaultSelectedServiceIds, eventTypeSlug, withoutPinOnItDemoFeedback } from '../lib/eventTypes';
 
 type NavItem = { to: string; icon: typeof LayoutGrid; label: string; badge?: string; children?: NavItem[] };
 
@@ -635,7 +633,11 @@ function buildShareUrl(
   if (services.length === 0 || selectedIds.size === 0 || selectedIds.size >= services.length) {
     return base;
   }
-  return `${base}?types=${Array.from(selectedIds).join(',')}`;
+  const tokens = Array.from(selectedIds).map((id) => {
+    const svc = services.find((s) => s.id === id);
+    return svc ? eventTypeSlug(svc) : id;
+  });
+  return `${base}?types=${tokens.join(',')}`;
 }
 
 function SharePanel({
@@ -962,17 +964,13 @@ export function Dashboard() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createdUrl, setCreatedUrl] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [moreToolsOpen, setMoreToolsOpen] = useState(readMoreToolsOpen);
+  const [moreToolsOpen, setMoreToolsOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const planName = effectivePlan(subscription, profile);
   const [checklistDismissed, setChecklistDismissed] = useState(() => localStorage.getItem('onboarding_checklist_dismissed') === '1');
   const [liveSlug, setLiveSlug] = useState<string | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
-
-  useEffect(() => {
-    writeMoreToolsOpen(moreToolsOpen);
-  }, [moreToolsOpen]);
 
   const isCalendlyOAuthSuccessReturn = () => {
     const params = new URLSearchParams(window.location.search);
@@ -1798,7 +1796,7 @@ export function Dashboard() {
                     .filter((s) => !serviceSearch || s.name.toLowerCase().includes(serviceSearch.toLowerCase()))
                     .map((svc) => {
                       const eventTypeUrl = bookingSlug
-                        ? buildShareUrl(bookingSlug, [svc], new Set([svc.id]))
+                        ? buildShareUrl(bookingSlug, meetingServices, new Set([svc.id]))
                         : null;
                       const meta = `${svc.duration_minutes} min · ${svc.price_cents ? `$${(svc.price_cents / 100).toFixed(2)}` : 'Free'} · ${(svc.location_type ?? 'video').replace('_', ' ')}`;
                       const isSelected = selectedServiceIds.has(svc.id);
