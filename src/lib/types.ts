@@ -79,7 +79,19 @@ export interface Profile {
   global_terms_text: string;
   ui_mode?: 'simple' | 'advanced';
   revealed_tools?: string[] | null;
-  business_type?: 'mobile_trade' | 'personal_services' | 'professional_services' | 'other' | null;
+  business_type?:
+    | 'landscaper'
+    | 'plumber'
+    | 'dentist'
+    | 'real_estate'
+    | 'mobile_trade'
+    | 'personal_services'
+    | 'professional_services'
+    | 'other'
+    | null;
+  default_tax_percent?: number | null;
+  quote_line_defaults?: { description: string; amount: number }[] | null;
+  business_region?: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -8,6 +8,7 @@ import type { MessageTemplate, ReminderRule, Service } from '../lib/types';
 import { SUPPORTED_LANGUAGES, TEMPLATE_VARIABLES } from '../lib/types';
 import { formatErrorMessage, formatFunctionError } from '../lib/errors';
 import { toast } from '../components/Toast';
+import { backfillMissingReminderRules } from '../lib/reminderSetup';
 import {
   Bell, Plus, Trash2, X, Check, Loader2, Mail, MessageSquare,
   Languages, Clock, ChevronDown, ChevronUp, Eye, Settings2,
@@ -331,8 +332,7 @@ export function RemindersPage({
         return stored ? blurFormatPhone(stored) : '';
       })());
       const loadedTemplates = tplRes.data ?? [];
-      setTemplates(loadedTemplates);
-      setRules((ruleRes.data ?? []).map((r) => {
+      const loadedRules = (ruleRes.data ?? []).map((r) => {
         const row = r as ReminderRule & { message_templates?: MessageTemplate | null; services?: Service | null };
         const { message_templates, services, ...rule } = row;
         return {
@@ -340,7 +340,25 @@ export function RemindersPage({
           template: message_templates ?? undefined,
           service: services ?? undefined,
         };
-      }));
+      });
+      const createdRules = await backfillMissingReminderRules(
+        profile.id,
+        loadedTemplates
+          .filter((t) => t.type === 'confirmation')
+          .map((t) => ({ id: t.id, timing_offset_minutes: t.timing_offset_minutes })),
+        new Set(loadedRules.map((r) => r.template_id)),
+      );
+      setTemplates(loadedTemplates);
+      setRules([
+        ...loadedRules,
+        ...createdRules.map((r) => ({
+          ...r,
+          host_id: profile.id,
+          service_id: null,
+          created_at: new Date().toISOString(),
+          template: loadedTemplates.find((t) => t.id === r.template_id),
+        })),
+      ]);
       setServices(svcRes.data ?? []);
       setLoading(false);
       if (!testSmsPhone) {
@@ -394,7 +412,11 @@ export function RemindersPage({
   const isSlotChannelActive = (slotKey: string, channel: Channel): boolean => {
     const slot = REMINDER_SLOTS.find((s) => s.key === slotKey);
     if (!slot) return false;
-    return templates.some((t) => t.type === slot.type && t.timing_offset_minutes === slot.offset && t.channel === channel);
+    return rules.some((r) => {
+      if (!r.is_active || r.timing_offset_minutes !== slot.offset) return false;
+      const tpl = r.template ?? templates.find((t) => t.id === r.template_id);
+      return tpl?.type === slot.type && tpl?.channel === channel;
+    });
   };
 
   const enableSlotChannel = async (slotKey: string, channel: Channel) => {

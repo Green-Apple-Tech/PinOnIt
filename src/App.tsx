@@ -12,7 +12,6 @@ import { WhyPinOnItPage } from './pages/WhyPinOnIt';
 import { BookPage } from './pages/Book';
 import { ReschedulePage } from './pages/Reschedule';
 import { BookingActionPage } from './pages/BookingAction';
-import { Onboarding } from './pages/Onboarding';
 import { TermsPage } from './pages/Terms';
 import { PrivacyPage } from './pages/Privacy';
 import { SmsConsentPage } from './pages/SmsConsent';
@@ -99,7 +98,7 @@ function App() {
             <Route path="/signup" element={<AuthForm />} />
             <Route path="/ref/:code" element={<RefRedirect />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
-            <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+            <Route path="/onboarding" element={<Navigate to="/dashboard?onboarding=1" replace />} />
             <Route path="/booking/:bookingId/:action/:actionToken" element={<BookingActionPage />} />
             <Route path="/r/:token" element={<ReschedulePage />} />
             <Route

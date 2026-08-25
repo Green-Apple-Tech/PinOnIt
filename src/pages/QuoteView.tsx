@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { quoteTotals } from '../lib/quoteMath';
 import type { HostQuoteKind, HostQuoteLineItem } from '../lib/types';
 
 type PublicQuote = {
@@ -57,12 +58,8 @@ export function QuoteViewPage() {
   }
 
   const items = Array.isArray(quote.line_items) ? quote.line_items : [];
-  const subtotal = items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
   const taxPercent = Number(quote.tax_percent) || 0;
-  const subtotalCents = Math.round(subtotal * 100);
-  const taxCents = Math.round(subtotalCents * taxPercent / 100);
-  const taxAmount = taxCents / 100;
-  const total = (subtotalCents + taxCents) / 100;
+  const { subtotal, taxAmount, total } = quoteTotals(items, taxPercent);
   const title = quote.kind === 'invoice' ? 'Invoice' : quote.kind === 'receipt' ? 'Receipt' : 'Quote';
 
   return (

@@ -45,21 +45,6 @@ export const SIMPLE_PRIMARY_NAV: MoreToolsNavItem[] = [
   { label: 'Share', icon: Share2, path: '/dashboard#share' },
 ];
 
-/** Tools that can be permanently surfaced after a trigger. */
-export const REVEALABLE_NAV: MoreToolsNavItem[] = [
-  { label: 'Paid Booking', icon: ShoppingBag, path: '/dashboard/paid-booking', toolId: 'paid-booking' },
-  { label: 'Quote/Invoice', icon: FileText, path: '/dashboard/quotes', toolId: 'quotes' },
-  {
-    label: 'Group Scheduling',
-    icon: Users,
-    path: '/dashboard/group-scheduling',
-    toolId: 'group-scheduling',
-    activePathPrefixes: ['/dashboard/group-scheduling'],
-    activePaths: ['/dashboard/coordinate'],
-  },
-  { label: 'Analytics', icon: BarChart3, path: '/dashboard/settings?tab=analytics', toolId: 'analytics' },
-];
-
 /** Single source of truth for sidebar More Tools — add items here. */
 export const MORE_TOOLS_NAV: MoreToolsNavItem[] = [
   {
@@ -84,6 +69,9 @@ export const MORE_TOOLS_NAV: MoreToolsNavItem[] = [
   { label: 'Analytics', icon: BarChart3, path: '/dashboard/settings?tab=analytics', toolId: 'analytics' },
   { label: 'Settings', icon: Settings, path: '/dashboard/settings' },
 ];
+
+/** Tools that can be permanently surfaced after a trigger — derived from MORE_TOOLS_NAV. */
+export const REVEALABLE_NAV: MoreToolsNavItem[] = MORE_TOOLS_NAV.filter((item) => item.toolId);
 
 export const MORE_TOOLS_HUB_PATH = '/dashboard/more-tools';
 export const MORE_TOOLS_OPEN_KEY = 'pinonit_more_tools_open';

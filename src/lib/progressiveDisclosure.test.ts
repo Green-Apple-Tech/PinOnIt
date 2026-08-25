@@ -1,13 +1,37 @@
 import { describe, expect, it } from 'vitest';
 import { buildSidebarNav, navPathMatches } from './dashboardNav';
-import { parseRevealedTools, presetsForBusinessType } from './progressiveDisclosure';
+import { parseRevealedTools, presetsForBusinessType, profilePatchForBusinessType } from './progressiveDisclosure';
+import { taxRateForRegion } from './usSalesTax';
+import { quoteTotals } from './quoteMath';
 
 describe('presetsForBusinessType', () => {
-  it('uses SMS and on-site visits for mobile trades', () => {
-    const p = presetsForBusinessType('mobile_trade');
+  it('gives landscapers drive-time buffers and quote lines', () => {
+    const p = presetsForBusinessType('landscaper');
     expect(p.reminderChannel).toBe('sms');
     expect(p.locationType).toBe('in_person');
-    expect(p.revealed).toContain('paid-booking');
+    expect(p.bufferAfter).toBe(30);
+    expect(p.usesTax).toBe(true);
+    expect(p.quoteLines.some((i) => /lawn/i.test(i.description))).toBe(true);
+    expect(p.revealed).toContain('quotes');
+  });
+
+  it('sends confirmation SMS for dental offices', () => {
+    const p = presetsForBusinessType('dentist');
+    expect(p.confirmationSms).toBe(true);
+    expect(p.eventName).toMatch(/appointment/i);
+  });
+
+  it('surfaces group scheduling for real estate', () => {
+    const p = presetsForBusinessType('real_estate');
+    expect(p.revealed).toContain('group-scheduling');
+  });
+});
+
+describe('profilePatchForBusinessType', () => {
+  it('seeds Florida tax on landscaper quotes', () => {
+    const patch = profilePatchForBusinessType('landscaper', 'FL', []);
+    expect(patch.default_tax_percent).toBe(taxRateForRegion('FL'));
+    expect(patch.meeting_buffer_minutes).toBe(30);
   });
 });
 
@@ -54,5 +78,11 @@ describe('navPathMatches', () => {
   it('does not highlight Settings when an availability tab is open', () => {
     expect(navPathMatches('/dashboard/settings', '/dashboard/settings', '?tab=availability', '')).toBe(false);
     expect(navPathMatches('/dashboard/settings?tab=availability', '/dashboard/settings', '?tab=availability', '')).toBe(true);
+  });
+});
+
+describe('quoteTotals', () => {
+  it('applies tax to the subtotal in cents', () => {
+    expect(quoteTotals([{ amount: 100 }], 6)).toEqual({ subtotal: 100, taxAmount: 6, total: 106 });
   });
 });

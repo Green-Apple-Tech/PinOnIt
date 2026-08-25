@@ -167,6 +167,13 @@ export function MoreToolsPage() {
             to="/dashboard/group-scheduling"
           />
           <ToolCard
+            icon={Users}
+            title="Contacts"
+            description="Import from Gmail or Outlook, add people by hand, and see every booking with a client in one place."
+            buttonLabel="Open Contacts"
+            to="/dashboard/contacts"
+          />
+          <ToolCard
             icon={CalendarDays}
             title="Appointments"
             description="See your full calendar of upcoming, past, and pending bookings. Cancel or reschedule with one tap."
@@ -182,16 +189,6 @@ export function MoreToolsPage() {
           Coming Soon
         </h2>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <ComingSoonCard
-            icon={Users}
-            title="Contact CRM"
-            description="Manage your clients, import from Google or Outlook, and keep notes on every booking relationship."
-          />
-          <ComingSoonCard
-            icon={Bell}
-            title="Reminder Templates"
-            description="Customize your reminder messages by channel, language, and timing — with smart templates for every event type."
-          />
           <ComingSoonCard
             icon={Sparkles}
             title="AI Booking Assistant"

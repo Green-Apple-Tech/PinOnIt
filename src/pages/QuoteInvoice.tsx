@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { revealTool } from '../lib/progressiveDisclosure';
+import { quoteTotals } from '../lib/quoteMath';
 import type { HostQuote, HostQuoteKind, HostQuoteLineItem } from '../lib/types';
 
 const KINDS: { id: HostQuoteKind; label: string; hint: string }[] = [
@@ -17,17 +18,6 @@ const fieldClass =
 
 function money(amount: number, currency = 'USD') {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount || 0);
-}
-
-function quoteTotals(items: HostQuoteLineItem[], taxPercent: number) {
-  const subtotal = items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-  const subtotalCents = Math.round(subtotal * 100);
-  const taxCents = Math.round(subtotalCents * (Number(taxPercent) || 0) / 100);
-  return {
-    subtotal: subtotalCents / 100,
-    taxAmount: taxCents / 100,
-    total: (subtotalCents + taxCents) / 100,
-  };
 }
 
 function newToken() {
@@ -46,6 +36,7 @@ export function QuoteInvoicePage() {
   const [clientPhone, setClientPhone] = useState('');
   const [items, setItems] = useState<HostQuoteLineItem[]>([{ description: '', amount: 0 }]);
   const [taxPercent, setTaxPercent] = useState(0);
+  const [defaultsApplied, setDefaultsApplied] = useState(false);
   const [notes, setNotes] = useState('');
   const [payUrl, setPayUrl] = useState('');
   const [payLabel, setPayLabel] = useState('PayPal');
@@ -79,13 +70,27 @@ export function QuoteInvoicePage() {
     void loadQuotes();
   }, [loadQuotes]);
 
+  const starterItems = (): HostQuoteLineItem[] =>
+    profile?.quote_line_defaults?.length
+      ? profile.quote_line_defaults.map((i) => ({ description: i.description, amount: Number(i.amount) || 0 }))
+      : [{ description: '', amount: 0 }];
+
+  useEffect(() => {
+    if (defaultsApplied || !profile) return;
+    setDefaultsApplied(true);
+    if (!editingId) {
+      setItems(starterItems());
+      setTaxPercent(Number(profile.default_tax_percent) || 0);
+    }
+  }, [profile, defaultsApplied, editingId]);
+
   const resetForm = () => {
     setKind('quote');
     setClientName('');
     setClientEmail('');
     setClientPhone('');
-    setItems([{ description: '', amount: 0 }]);
-    setTaxPercent(0);
+    setItems(starterItems());
+    setTaxPercent(Number(profile?.default_tax_percent) || 0);
     setNotes('');
     setPayUrl('');
     setPayLabel('PayPal');
@@ -347,6 +352,7 @@ export function QuoteInvoicePage() {
                   className={fieldClass}
                   placeholder="0"
                 />
+                <span className="block text-[11px] text-gray-400 mt-1">Starting rate from your state. Change it anytime.</span>
               </label>
               <div className="flex flex-col justify-end rounded-xl bg-gray-50 dark:bg-slate-800 px-3 py-3 text-sm">
                 <span className="text-xs text-gray-500">Tax amount</span>

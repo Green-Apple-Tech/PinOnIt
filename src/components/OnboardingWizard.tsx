@@ -20,7 +20,9 @@ import {
   wizardSavedStepLocal,
 } from '../lib/onboardingState';
 import { withoutPinOnItDemoFeedback } from '../lib/eventTypes';
-import { BUSINESS_TYPE_OPTIONS, presetsForBusinessType, type BusinessType } from '../lib/progressiveDisclosure';
+import { BUSINESS_TYPE_OPTIONS, presetsForBusinessType, profilePatchForBusinessType, servicePatchForBusinessType, type BusinessType } from '../lib/progressiveDisclosure';
+import { enableConfirmationSms } from '../lib/reminderSetup';
+import { US_REGIONS } from '../lib/usSalesTax';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -284,6 +286,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
   const [trialCheckoutLoading, setTrialCheckoutLoading] = useState(false);
   const [trialCheckoutError, setTrialCheckoutError] = useState('');
   const [businessType, setBusinessType] = useState<BusinessType | null>(null);
+  const [businessRegion, setBusinessRegion] = useState('');
 
   // Calendar step
   const [calendars, setCalendars] = useState<ConnectedCalendar[]>([]);
@@ -747,8 +750,9 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
 
   // ── Save onboarding step ──────────────────────────────────────────────────────
   const saveStep = useCallback(async (s: number) => {
+    setWizardActiveLocal(s);
     if (!user) return;
-    await supabase.from('profiles').update({ onboarding_step: s }).eq('id', user.id);
+    await supabase.from('profiles').update({ onboarding_step: s, wizard_active: true }).eq('id', user.id);
   }, [user]);
 
   const saveCalendarPurposes = useCallback(async () => {
@@ -996,12 +1000,9 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
     if (!user || !businessType) return;
     setSaving(true);
     const presets = presetsForBusinessType(businessType);
-    const revealed = [...new Set([...(profile?.revealed_tools ?? []), ...presets.revealed])];
-    await supabase.from('profiles').update({
-      business_type: businessType,
-      default_reminder_channel: presets.reminderChannel,
-      revealed_tools: revealed,
-    }).eq('id', user.id);
+    await supabase.from('profiles').update(
+      profilePatchForBusinessType(businessType, businessRegion || null, profile?.revealed_tools),
+    ).eq('id', user.id);
     setEventName(presets.eventName);
     const { data: svcs } = await supabase
       .from('services')
@@ -1009,14 +1010,19 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
       .eq('host_id', user.id);
     const target = (svcs ?? []).find((s) => s.duration_minutes === 30) ?? (svcs ?? [])[0];
     if (target) {
-      await supabase.from('services').update({
-        name: presets.eventName,
-        location_type: presets.locationType,
-      }).eq('id', target.id);
+      await supabase.from('services').update(servicePatchForBusinessType(businessType)).eq('id', target.id);
+    }
+    if (presets.confirmationSms) {
+      await enableConfirmationSms(user.id);
     }
     await refreshProfile();
     await saveStep(STEPS.indexOf('business_type') + 1);
     setSaving(false);
+    goNext();
+  };
+
+  const handleSkipBusinessType = async () => {
+    await saveStep(STEPS.indexOf('business_type') + 1);
     goNext();
   };
 
@@ -1535,12 +1541,13 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
         );
       }
 
-      case 'business_type':
+      case 'business_type': {
+        const needsRegion = businessType ? presetsForBusinessType(businessType).usesTax : false;
         return (
           <div>
             <div className="mb-5">
               <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">What kind of work do you do?</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">We’ll set up a matching meeting type and reminders. You can change this later.</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">We’ll preset travel time, quotes, tax, and reminders. Skip if you’d rather set this up yourself.</p>
             </div>
             <div className="grid grid-cols-1 gap-3 mb-4">
               {BUSINESS_TYPE_OPTIONS.map((opt) => (
@@ -1559,15 +1566,33 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
                 </button>
               ))}
             </div>
+            {needsRegion && (
+              <label className="block mb-4">
+                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">State you work in (for a starting tax rate)</span>
+                <select
+                  value={businessRegion}
+                  onChange={(e) => setBusinessRegion(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-3 text-sm"
+                >
+                  <option value="">Skip tax for now</option>
+                  {US_REGIONS.map((r) => (
+                    <option key={r.code} value={r.code}>{r.name}</option>
+                  ))}
+                </select>
+                <span className="block text-xs text-slate-400 mt-1">You can change the tax % on every quote.</span>
+              </label>
+            )}
             <NavButtons
               onBack={goBack}
               onNext={() => void handleSaveBusinessType()}
+              onSkip={() => void handleSkipBusinessType()}
               nextDisabled={!businessType}
               loading={saving}
               nextLabel="Continue"
             />
           </div>
         );
+      }
 
       // ── Step: Custom booking URL ─────────────────────────────────────────────
       case 'username':

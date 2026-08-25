@@ -1131,16 +1131,16 @@ export function Dashboard() {
       || (calendarCount > 0 && services.length > 0)
       || (services.length > 0 && !!profile.slug);
 
-    if (established) {
+            if (established) {
       markOnboardingCompletedLocal();
       if (!profile.onboarding_completed) {
         void supabase.from('profiles').update({ onboarding_completed: true, wizard_active: false }).eq('id', profile.id);
       }
-      // Close a leftover popup unless they clicked Wizard Setup or are mid calendar OAuth
       if (showWizard && !wizardUserRequested && !profile.wizard_active) {
         setShowWizard(false);
       } else if (profile.wizard_active && !wizardUserRequested) {
         setShowWizard(true);
+        if (typeof profile.onboarding_step === 'number') setWizardInitialStep(profile.onboarding_step);
       }
       return;
     }
@@ -1241,6 +1241,7 @@ export function Dashboard() {
 
   useEffect(() => {
     if (!profile?.id || loading) return;
+    const have = parseRevealedTools(profile.revealed_tools);
     const run = async () => {
       let changed = false;
       let current = profile.revealed_tools;
@@ -1254,16 +1255,30 @@ export function Dashboard() {
       if (services.some((s) => s.meeting_type === 'group')) await bump('group-scheduling');
       const bookingCount = bookings.filter((b) => b.status === 'confirmed' || b.status === 'completed').length;
       if (bookingCount >= 10) await bump('analytics');
-      const [{ count: quoteCount }, { count: pollCount }] = await Promise.all([
-        supabase.from('host_quotes').select('id', { count: 'exact', head: true }).eq('host_id', profile.id),
-        supabase.from('meeting_polls').select('id', { count: 'exact', head: true }).eq('host_id', profile.id),
-      ]);
-      if ((quoteCount ?? 0) > 0) await bump('quotes');
-      if ((pollCount ?? 0) > 0) await bump('group-scheduling');
+      const needQuotes = !have.includes('quotes');
+      const needPolls = !have.includes('group-scheduling');
+      if (needQuotes || needPolls) {
+        const [{ count: quoteCount }, { count: pollCount }] = await Promise.all([
+          needQuotes
+            ? supabase.from('host_quotes').select('id', { count: 'exact', head: true }).eq('host_id', profile.id)
+            : Promise.resolve({ count: 0 }),
+          needPolls
+            ? supabase.from('meeting_polls').select('id', { count: 'exact', head: true }).eq('host_id', profile.id)
+            : Promise.resolve({ count: 0 }),
+        ]);
+        if ((quoteCount ?? 0) > 0) await bump('quotes');
+        if ((pollCount ?? 0) > 0) await bump('group-scheduling');
+      }
       if (changed) await refreshProfile();
     };
     void run();
-  }, [profile?.id, profile?.revealed_tools, loading, services, bookings, refreshProfile]);
+  }, [
+    profile?.id,
+    loading,
+    services,
+    bookings.length,
+    refreshProfile,
+  ]);
 
   const meetingServices = withoutPinOnItDemoFeedback(services);
   const effectiveSlug = (liveSlug || profile?.slug || '').trim();
@@ -1871,6 +1886,7 @@ export function Dashboard() {
 
       {showWizard && (
         <OnboardingWizard
+          key={wizardInitialStep ?? 'start'}
           isModal
           onClose={() => {
             setShowWizard(false);
