@@ -105,7 +105,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
     steps: [
       'Put a price on an event type first (Event types).',
       'Pick Stripe, PayPal, Venmo, Cash App, or Zelle on that event type.',
-      'Customize this page’s look, then share the paid-booking link.',
+      'Fill in your business info, pick colors, save, then share your link.',
     ],
   },
   group: {
@@ -186,6 +186,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
     steps: [
       'General → set your name and booking username.',
       'Turn on Advanced mode if you want every tool in the sidebar.',
+      'Settings → General → Advanced to block an email or domain from booking, or mark it as spam.',
       'Use the tabs for Availability, Reminders, Billing, and Analytics.',
     ],
   },
@@ -202,8 +203,8 @@ const GUIDES: Record<string, PageHelpGuide> = {
     purpose: 'Every extra PinOnIt tool in one place. In simple mode these stay tucked away until you need them.',
     steps: [
       'Open any card to use that tool.',
-      'Tools you actually use (paid booking, quotes, group scheduling) also pin to the sidebar.',
-      'Turn on Advanced mode in Settings to show them all in the menu.',
+      'Paid booking, quotes, and the rest stay here so the main menu stays simple.',
+      'Turn on Advanced mode in Settings if you want every tool listed in the sidebar.',
     ],
   },
 };
