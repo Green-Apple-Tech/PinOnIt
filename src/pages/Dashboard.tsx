@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { OnboardingWizard, wizardIsActive, wizardSavedStep, onboardingIsCompleted } from '../components/OnboardingWizard';
+import { wizardStartIndex } from '../lib/wizardSteps';
 import { clearStaleOnboardingLocalState, markOnboardingCompletedLocal } from '../lib/onboardingState';
 import { useTheme } from '../hooks/useTheme';
 import { supabase } from '../lib/supabase';
@@ -1001,6 +1002,7 @@ export function Dashboard() {
     if (!onboardingIsCompleted() && wizardIsActive()) return wizardSavedStep();
     return undefined;
   });
+  const [wizardSession, setWizardSession] = useState(0);
   const [trialToast, setTrialToast] = useState<{ message: string } | null>(null);
   const [serviceSearch, setServiceSearch] = useState('');
   const [serviceQrModal, setServiceQrModal] = useState<{ url: string; title: string } | null>(null);
@@ -1619,6 +1621,12 @@ export function Dashboard() {
                   <button
                     onClick={() => {
                       setWizardUserRequested(true);
+                      setWizardInitialStep(wizardStartIndex({
+                        onboardingCompleted: profile?.onboarding_completed,
+                        hasServices: services.length > 0,
+                        hasSlug: !!(profile?.slug || liveSlug),
+                      }));
+                      setWizardSession((n) => n + 1);
                       setShowWizard(true);
                     }}
                     className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
@@ -1886,7 +1894,7 @@ export function Dashboard() {
 
       {showWizard && (
         <OnboardingWizard
-          key={wizardInitialStep ?? 'start'}
+          key={`${wizardSession}-${wizardInitialStep ?? 'start'}`}
           isModal
           onClose={() => {
             setShowWizard(false);

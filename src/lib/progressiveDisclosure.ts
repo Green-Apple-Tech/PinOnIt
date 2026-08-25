@@ -49,6 +49,15 @@ export const ALL_BUSINESS_TYPES = [
 
 export type BusinessType = (typeof ALL_BUSINESS_TYPES)[number];
 
+export function isBusinessType(value: unknown): value is BusinessType {
+  return typeof value === 'string' && (ALL_BUSINESS_TYPES as readonly string[]).includes(value);
+}
+
+/** Default names seeded for brand-new hosts — safe to overwrite with an industry preset. */
+export function isPlaceholderMeetingName(name: string): boolean {
+  return /^(15|30|60) minute meeting$/i.test(name.trim());
+}
+
 export type IndustryPreset = {
   reminderChannel: 'sms' | 'email';
   locationType: 'in_person' | 'video';

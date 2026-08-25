@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildSidebarNav, navPathMatches } from './dashboardNav';
-import { parseRevealedTools, presetsForBusinessType, profilePatchForBusinessType } from './progressiveDisclosure';
+import { isBusinessType, isPlaceholderMeetingName, parseRevealedTools, presetsForBusinessType, profilePatchForBusinessType } from './progressiveDisclosure';
 import { taxRateForRegion } from './usSalesTax';
 import { quoteTotals } from './quoteMath';
 
@@ -92,6 +92,20 @@ describe('buildSidebarNav', () => {
 describe('parseRevealedTools', () => {
   it('drops unknown ids', () => {
     expect(parseRevealedTools(['paid-booking', 'nope'])).toEqual(['paid-booking']);
+  });
+});
+
+describe('isBusinessType', () => {
+  it('accepts known industries and rejects junk', () => {
+    expect(isBusinessType('landscaper')).toBe(true);
+    expect(isBusinessType('spaceship')).toBe(false);
+  });
+});
+
+describe('isPlaceholderMeetingName', () => {
+  it('matches seeded default meetings only', () => {
+    expect(isPlaceholderMeetingName('30 Minute Meeting')).toBe(true);
+    expect(isPlaceholderMeetingName('15 Min Consultation')).toBe(false);
   });
 });
 

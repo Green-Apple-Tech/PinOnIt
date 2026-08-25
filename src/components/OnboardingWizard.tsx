@@ -20,9 +20,10 @@ import {
   wizardSavedStepLocal,
 } from '../lib/onboardingState';
 import { withoutPinOnItDemoFeedback } from '../lib/eventTypes';
-import { BUSINESS_TYPE_GROUPS, presetsForBusinessType, profilePatchForBusinessType, servicePatchForBusinessType, type BusinessType } from '../lib/progressiveDisclosure';
+import { BUSINESS_TYPE_GROUPS, isBusinessType, isPlaceholderMeetingName, presetsForBusinessType, profilePatchForBusinessType, servicePatchForBusinessType, type BusinessType } from '../lib/progressiveDisclosure';
 import { enableConfirmationSms } from '../lib/reminderSetup';
 import { US_REGIONS } from '../lib/usSalesTax';
+import { WIZARD_STEPS as STEPS, type WizardStep as Step } from '../lib/wizardSteps';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -103,22 +104,6 @@ interface WizardProps {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const STEPS = [
-  'welcome',
-  'business_type',
-  'username',
-  'phone',
-  'timezone',
-  'calendar',
-  'calendar_purpose',
-  'contacts',
-  'booking_link',
-  'video',
-  'done',
-] as const;
-type Step = (typeof STEPS)[number];
-
-/** Map saved onboarding_step from older wizards that still had a `profile` step at index 8. */
 function normalizeLegacyOnboardingStep(saved: number): number {
   let idx = saved;
   if (idx >= 8) idx -= 1;
@@ -285,9 +270,20 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
   const [trialAgreed, setTrialAgreed] = useState(false);
   const [trialCheckoutLoading, setTrialCheckoutLoading] = useState(false);
   const [trialCheckoutError, setTrialCheckoutError] = useState('');
-  const [businessType, setBusinessType] = useState<BusinessType | null>(null);
-  const [businessRegion, setBusinessRegion] = useState('');
+  const [businessType, setBusinessType] = useState<BusinessType | null>(() =>
+    isBusinessType(profile?.business_type) ? profile.business_type : null,
+  );
+  const [businessRegion, setBusinessRegion] = useState(profile?.business_region ?? '');
   const [businessQuery, setBusinessQuery] = useState('');
+
+  useEffect(() => {
+    if (!businessType && isBusinessType(profile?.business_type)) {
+      setBusinessType(profile.business_type);
+    }
+    if (!businessRegion && profile?.business_region) {
+      setBusinessRegion(profile.business_region);
+    }
+  }, [profile?.business_type, profile?.business_region, businessType, businessRegion]);
 
   // Calendar step
   const [calendars, setCalendars] = useState<ConnectedCalendar[]>([]);
@@ -1010,7 +1006,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
       .select('id, name, duration_minutes')
       .eq('host_id', user.id);
     const target = (svcs ?? []).find((s) => s.duration_minutes === 30) ?? (svcs ?? [])[0];
-    if (target) {
+    if (target && isPlaceholderMeetingName(target.name)) {
       await supabase.from('services').update(servicePatchForBusinessType(businessType)).eq('id', target.id);
     }
     if (presets.confirmationSms) {
