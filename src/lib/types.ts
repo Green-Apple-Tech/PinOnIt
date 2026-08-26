@@ -59,6 +59,7 @@ export interface Profile {
   } | null;
   voice_reminder_enabled: boolean;
   voice_message_template: string | null;
+  personal_reminder_add_to_calendar?: boolean;
   personal_reminder_defaults?: {
     day_before?: string[];
     hour_before?: string[];
@@ -286,6 +287,7 @@ export interface Booking {
   reminder_times?: string[];
   meet_link: string | null;
   calendar_event_id: string | null;
+  external_calendar_events?: { connected_calendar_id: string; provider: 'google' | 'outlook'; provider_event_id: string }[] | null;
   is_critical: boolean;
   voice_reminder_sent?: boolean;
   is_recurring: boolean;

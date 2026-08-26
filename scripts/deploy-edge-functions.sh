@@ -38,6 +38,7 @@ deploy send-quote
 deploy send-reminder
 deploy booking-reply
 deploy complete-reschedule
+deploy write-calendar-event
 deploy sms-inbound --no-verify-jwt
 
 echo ""

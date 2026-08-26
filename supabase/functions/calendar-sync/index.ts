@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { ensureCalendarAccessToken } from "../_shared/calendar-tokens.ts";
 
 // calendar_events columns (including new conflict-aware ones):
 //   id, host_id, calendar_id (uuid FK), provider_event_id, title,
@@ -100,92 +101,20 @@ function titleIndicatesBlocking(title: string): boolean {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Token refresh
-// ─────────────────────────────────────────────────────────────────────────────
-
-async function refreshGoogleToken(refreshToken: string): Promise<{ access_token: string; expires_in: number } | null> {
-  const clientId = Deno.env.get("GOOGLE_CLIENT_ID");
-  const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET");
-  if (!clientId || !clientSecret || !refreshToken) return null;
-
-  const res = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
-      refresh_token: refreshToken,
-      grant_type: "refresh_token",
-    }),
-  });
-
-  if (!res.ok) {
-    console.error("[calendar-sync] Google token refresh HTTP error:", res.status);
-    return null;
-  }
-  const data = await res.json() as { access_token?: string; expires_in?: number; error?: string };
-  if (data.error || !data.access_token) {
-    console.error("[calendar-sync] Google token refresh error:", data.error);
-    return null;
-  }
-  return { access_token: data.access_token, expires_in: data.expires_in ?? 3600 };
-}
-
-async function refreshOutlookToken(refreshToken: string): Promise<{ access_token: string; refresh_token?: string; expires_in: number } | null> {
-  const clientId = Deno.env.get("AZURE_CLIENT_ID");
-  const clientSecret = Deno.env.get("AZURE_CLIENT_SECRET");
-  if (!clientId || !clientSecret || !refreshToken) return null;
-
-  const res = await fetch("https://login.microsoftonline.com/common/oauth2/v2.0/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
-      refresh_token: refreshToken,
-      grant_type: "refresh_token",
-      scope: "offline_access Calendars.Read User.Read",
-    }),
-  });
-
-  if (!res.ok) {
-    console.error("[calendar-sync] Outlook token refresh HTTP error:", res.status);
-    return null;
-  }
-  const data = await res.json() as { access_token?: string; refresh_token?: string; expires_in?: number; error?: string };
-  if (data.error || !data.access_token) {
-    console.error("[calendar-sync] Outlook token refresh error:", data.error);
-    return null;
-  }
-  return { access_token: data.access_token, refresh_token: data.refresh_token, expires_in: data.expires_in ?? 3600 };
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Google Calendar sync
 // ─────────────────────────────────────────────────────────────────────────────
 
 // deno-lint-ignore no-explicit-any
 async function syncGoogle(supabase: any, cal: ConnectedCalendar): Promise<{ synced: number; error?: string }> {
-  let accessToken = cal.access_token;
-
-  const needsRefresh = !accessToken ||
-    !cal.token_expires_at ||
-    new Date(cal.token_expires_at).getTime() <= Date.now() + 60_000;
-
-  if (needsRefresh) {
-    if (!cal.refresh_token) {
-      return { synced: 0, error: "No refresh token — please reconnect Google Calendar." };
-    }
-    const refreshed = await refreshGoogleToken(cal.refresh_token);
-    if (!refreshed) {
-      return { synced: 0, error: "Token refresh failed — please reconnect Google Calendar." };
-    }
-    accessToken = refreshed.access_token;
-    const newExpiry = new Date(Date.now() + refreshed.expires_in * 1000).toISOString();
-    await supabase.from("connected_calendars").update({ access_token: accessToken, token_expires_at: newExpiry }).eq("id", cal.id);
+  const accessToken = await ensureCalendarAccessToken(supabase, cal);
+  if (!accessToken) {
+    return {
+      synced: 0,
+      error: cal.refresh_token
+        ? "Token refresh failed — please reconnect Google Calendar."
+        : "No refresh token — please reconnect Google Calendar.",
+    };
   }
-
-  if (!accessToken) return { synced: 0, error: "No access token available." };
 
   const now = new Date();
   const timeMin = new Date(now); timeMin.setMonth(timeMin.getMonth() - 1);
@@ -342,28 +271,15 @@ async function syncGoogle(supabase: any, cal: ConnectedCalendar): Promise<{ sync
 
 // deno-lint-ignore no-explicit-any
 async function syncOutlook(supabase: any, cal: ConnectedCalendar): Promise<{ synced: number; error?: string }> {
-  let accessToken = cal.access_token;
-
-  const needsRefresh = !accessToken ||
-    !cal.token_expires_at ||
-    new Date(cal.token_expires_at).getTime() <= Date.now() + 60_000;
-
-  if (needsRefresh) {
-    if (!cal.refresh_token) {
-      return { synced: 0, error: "No refresh token — please reconnect Outlook Calendar." };
-    }
-    const refreshed = await refreshOutlookToken(cal.refresh_token);
-    if (!refreshed) {
-      return { synced: 0, error: "Token refresh failed — please reconnect Outlook Calendar." };
-    }
-    accessToken = refreshed.access_token;
-    const newExpiry = new Date(Date.now() + refreshed.expires_in * 1000).toISOString();
-    const updatePayload: Record<string, string> = { access_token: accessToken, token_expires_at: newExpiry };
-    if (refreshed.refresh_token) updatePayload.refresh_token = refreshed.refresh_token;
-    await supabase.from("connected_calendars").update(updatePayload).eq("id", cal.id);
+  const accessToken = await ensureCalendarAccessToken(supabase, cal);
+  if (!accessToken) {
+    return {
+      synced: 0,
+      error: cal.refresh_token
+        ? "Token refresh failed — please reconnect Outlook Calendar."
+        : "No refresh token — please reconnect Outlook Calendar.",
+    };
   }
-
-  if (!accessToken) return { synced: 0, error: "No access token available." };
 
   const now = new Date();
   const startDateTime = new Date(now); startDateTime.setMonth(startDateTime.getMonth() - 1);

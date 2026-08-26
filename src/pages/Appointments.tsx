@@ -6,6 +6,7 @@ import type { Booking, Service } from '../lib/types';
 import { formatRecurrenceHostLabel, getSeriesRootId } from '../lib/recurring';
 import { parseBlockInput } from '../lib/bookingBlocks';
 import { toast } from '../components/Toast';
+import { syncBookingToExternalCalendarsAsHost } from '../lib/writeCalendarEvent';
 import { CalendarConnections } from '../components/CalendarConnections';
 import {
   ChevronLeft,
@@ -181,6 +182,9 @@ function AddEventModal({ services, defaultDate, onClose, onSaved }: AddEventModa
           message: '',
         })),
       );
+    }
+    if (created?.id) {
+      void syncBookingToExternalCalendarsAsHost({ bookingId: created.id, hostId: profile.id });
     }
     onSaved();
     onClose();
@@ -686,9 +690,13 @@ export function AppointmentsPage() {
   };
 
   const handleCancelBooking = async (id: string) => {
+    const b = bookings.find((x) => x.id === id);
     await supabase.from('bookings').update({ status: 'canceled' }).eq('id', id);
     setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'canceled' as const } : b));
     if (detailBooking?.id === id) setDetailBooking(null);
+    if (b && profile?.id) {
+      void syncBookingToExternalCalendarsAsHost({ bookingId: id, hostId: profile.id, action: 'delete' });
+    }
   };
 
   const blockGuestFromBooking = async (
@@ -775,6 +783,9 @@ export function AppointmentsPage() {
   const handleApproveBooking = async (id: string) => {
     await supabase.from('bookings').update({ status: 'confirmed' }).eq('id', id);
     setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'confirmed' as const } : b));
+    if (profile?.id) {
+      void syncBookingToExternalCalendarsAsHost({ bookingId: id, hostId: profile.id });
+    }
   };
   const handleMarkTentative = async (id: string) => {
     await supabase.from('bookings').update({ status: 'tentative' }).eq('id', id);

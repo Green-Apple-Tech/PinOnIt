@@ -100,7 +100,9 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: rpcReason(rpcError) }, 400);
     }
 
-    const newId = (rpcData as { new_booking_id?: string } | null)?.new_booking_id;
+    const rpc = rpcData as { new_booking_id?: string; old_booking_id?: string } | null;
+    const newId = rpc?.new_booking_id;
+    const oldId = rpc?.old_booking_id;
     if (!newId) {
       return jsonResponse({ error: "error" }, 500);
     }
@@ -118,6 +120,25 @@ Deno.serve(async (req: Request) => {
     try {
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const calHeaders = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${serviceKey}`,
+      };
+
+      // Remove old slot from Google/Outlook before writing the new one
+      if (oldId) {
+        await fetch(`${supabaseUrl}/functions/v1/write-calendar-event`, {
+          method: "POST",
+          headers: calHeaders,
+          body: JSON.stringify({
+            kind: "booking",
+            action: "delete",
+            booking_id: oldId,
+            host_id: booking.host_id,
+          }),
+        });
+      }
+
       const { data: rules } = await supabase
         .from("reminder_rules")
         .select("template_id, timing_offset_minutes, service_id")
@@ -129,10 +150,7 @@ Deno.serve(async (req: Request) => {
         if (rule.service_id && rule.service_id !== booking.service_id) continue;
         await fetch(`${supabaseUrl}/functions/v1/send-reminder`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${serviceKey}`,
-          },
+          headers: calHeaders,
           body: JSON.stringify({
             booking_id: booking.id,
             template_id: rule.template_id,
@@ -140,6 +158,18 @@ Deno.serve(async (req: Request) => {
           }),
         });
       }
+
+      await fetch(`${supabaseUrl}/functions/v1/write-calendar-event`, {
+        method: "POST",
+        headers: calHeaders,
+        body: JSON.stringify({
+          kind: "booking",
+          action: "create",
+          booking_id: booking.id,
+          host_id: booking.host_id,
+          action_token: booking.action_token,
+        }),
+      });
     } catch (e) {
       console.error("confirmation send failed:", e);
     }

@@ -52,6 +52,27 @@ Deno.serve(async (req: Request) => {
         .update({ status: 'confirmed' })
         .eq('id', booking_id);
 
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        await fetch(`${supabaseUrl}/functions/v1/write-calendar-event`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${serviceKey}`,
+          },
+          body: JSON.stringify({
+            kind: 'booking',
+            action: 'create',
+            booking_id,
+            host_id: booking.host_id,
+            action_token,
+          }),
+        });
+      } catch (e) {
+        console.error('[booking-reply] calendar write failed:', e);
+      }
+
       return jsonResponse({
         success: true,
         message: 'Booking confirmed',
@@ -65,6 +86,27 @@ Deno.serve(async (req: Request) => {
         .from('bookings')
         .update({ status: 'canceled' })
         .eq('id', booking_id);
+
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        await fetch(`${supabaseUrl}/functions/v1/write-calendar-event`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${serviceKey}`,
+          },
+          body: JSON.stringify({
+            kind: 'booking',
+            action: 'delete',
+            booking_id,
+            host_id: booking.host_id,
+            action_token,
+          }),
+        });
+      } catch (e) {
+        console.error('[booking-reply] calendar delete failed:', e);
+      }
 
       return jsonResponse({
         success: true,

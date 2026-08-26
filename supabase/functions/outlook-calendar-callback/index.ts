@@ -259,9 +259,10 @@ Deno.serve(async (req: Request) => {
       return Response.redirect(`${redirectBase}?calendar_error=oauth_not_configured`, 302);
     }
 
+    // Must match outlook-calendar-auth authorize scopes (incl. ReadWrite for booking write-back)
     const tokenScope = source === "contacts"
       ? "offline_access Contacts.Read User.Read"
-      : "offline_access Calendars.Read Contacts.Read User.Read OnlineMeetings.ReadWrite";
+      : "offline_access Calendars.ReadWrite Contacts.Read User.Read OnlineMeetings.ReadWrite";
 
     // Must exactly match the redirect_uri sent in outlook-calendar-auth and registered in Azure
     const redirectUri = `${supabaseUrl}/functions/v1/outlook-calendar-callback`;

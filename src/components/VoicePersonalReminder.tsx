@@ -1,7 +1,8 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from 'react';
-import { Mic, Square, Loader2, Check, Mail, MessageSquare, PhoneCall, X, PenLine } from 'lucide-react';
+import { Mic, Square, Loader2, Check, Mail, MessageSquare, PhoneCall, X, PenLine, CalendarDays } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
+import { syncPersonalReminderToExternalCalendars } from '../lib/writeCalendarEvent';
 import { parsePersonalReminder } from '../lib/parsePersonalReminder';
 import {
   PERSONAL_TIMING_LABELS,
@@ -42,14 +43,17 @@ function toLocalInput(d: Date) {
 }
 
 export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(function VoicePersonalReminder(_props, ref) {
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const defaults = normalizePersonalDefaults(profile?.personal_reminder_defaults);
+  const profileAddToCalendar = profile?.personal_reminder_add_to_calendar ?? false;
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [title, setTitle] = useState('');
   const [dueLocal, setDueLocal] = useState('');
   const [notes, setNotes] = useState('');
   const [plan, setPlan] = useState<PersonalReminderDefaults>(defaults);
+  const [addToCalendar, setAddToCalendar] = useState(profileAddToCalendar);
+  const [rememberCalendarDefault, setRememberCalendarDefault] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -76,6 +80,10 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
     setPlan(defaults);
   }, [profile?.personal_reminder_defaults]);
 
+  useEffect(() => {
+    setAddToCalendar(profileAddToCalendar);
+  }, [profileAddToCalendar]);
+
   const openTypeModal = useCallback(() => {
     setListening(false);
     setTranscript('');
@@ -83,9 +91,11 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
     setNotes('');
     setDueLocal('');
     setPlan(defaults);
+    setAddToCalendar(profileAddToCalendar);
+    setRememberCalendarDefault(false);
     setError('');
     setModalOpen(true);
-  }, [defaults]);
+  }, [defaults, profileAddToCalendar]);
 
   useImperativeHandle(ref, () => ({ openTypeModal }), [openTypeModal]);
 
@@ -95,6 +105,8 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
     setTitle(parsed.title);
     setDueLocal(parsed.dueAt ? toLocalInput(parsed.dueAt) : '');
     setPlan(defaults);
+    setAddToCalendar(profileAddToCalendar);
+    setRememberCalendarDefault(false);
     setError(parsed.dueAt ? '' : 'Pick a day and time — I heard the task but not when.');
     setModalOpen(true);
   };
@@ -192,6 +204,26 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
         })),
       );
       if (jobErr) throw jobErr;
+
+      if (addToCalendar) {
+        try {
+          await syncPersonalReminderToExternalCalendars({
+            reminderId: reminder.id,
+            addToCalendar: true,
+          });
+        } catch {
+          // Reminder saved; calendar sync is best-effort
+        }
+      }
+
+      if (rememberCalendarDefault && profile?.id) {
+        await supabase
+          .from('profiles')
+          .update({ personal_reminder_add_to_calendar: addToCalendar })
+          .eq('id', profile.id);
+        await refreshProfile();
+      }
+
       setModalOpen(false);
       setTranscript('');
       setTitle('');
@@ -313,6 +345,37 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
                   placeholder="Bring contract / her number is…"
                 />
               </label>
+
+              <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-3 space-y-2">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={addToCalendar}
+                    onChange={(e) => setAddToCalendar(e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                  />
+                  <span className="text-sm text-slate-700 dark:text-slate-200">
+                    <span className="inline-flex items-center gap-1.5 font-semibold">
+                      <CalendarDays className="h-4 w-4 text-brand-600" />
+                      Also add to Google / Outlook calendar
+                    </span>
+                    <span className="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Uses calendars marked for reminders in Settings.
+                    </span>
+                  </span>
+                </label>
+                {addToCalendar ? (
+                  <label className="flex items-center gap-2 pl-7 cursor-pointer text-xs text-slate-500">
+                    <input
+                      type="checkbox"
+                      checked={rememberCalendarDefault}
+                      onChange={(e) => setRememberCalendarDefault(e.target.checked)}
+                      className="h-3.5 w-3.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                    />
+                    Remember this as my default
+                  </label>
+                ) : null}
+              </div>
 
               <p className="text-xs font-medium text-slate-500 pt-1">Reminder options (skip = defaults)</p>
               <div className="space-y-2">

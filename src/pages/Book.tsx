@@ -23,6 +23,7 @@ import {
 import { resolveTermsText } from '../lib/terms';
 import { bookableEventTypes, serviceMatchesTypeToken } from '../lib/eventTypes';
 import { isUnusedSingleUseExpired } from '../lib/singleUseLinks';
+import { syncBookingToExternalCalendars } from '../lib/writeCalendarEvent';
 import { stripePromise } from '../lib/stripe';
 import { StripeBookingCheckout } from '../components/StripeBookingCheckout';
 import type { RescheduleSession } from '../lib/reschedule';
@@ -1071,6 +1072,12 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
           }
         }
       } catch { /* non-blocking */ }
+
+      syncBookingToExternalCalendars({
+        bookingId: data.id,
+        hostId: host.id,
+        actionToken: (data as Booking).action_token,
+      });
 
       if (isRecurring && selectedService.recurrence_frequency) {
         const freq = selectedService.recurrence_frequency;

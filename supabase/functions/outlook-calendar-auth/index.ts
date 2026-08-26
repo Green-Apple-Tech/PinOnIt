@@ -13,7 +13,7 @@ const corsHeaders = {
 // Microsoft Identity Platform OAuth 2.0 scopes
 const CALENDAR_SCOPES = [
   "offline_access",
-  "Calendars.Read",
+  "Calendars.ReadWrite",
   "Contacts.Read",
   "User.Read",
   "OnlineMeetings.ReadWrite",
