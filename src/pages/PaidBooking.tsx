@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
-import { effectivePlan } from '../lib/plan';
 import { eventTypeSlug, isExamplePaidConsultation } from '../lib/eventTypes';
 import {
   mergePaidBookingSuggestion,
@@ -115,10 +114,14 @@ function CameraLogoSVG() {
   );
 }
 
-type PreviewSvc = Pick<
-  ServiceWithMeta,
-  'id' | 'name' | 'duration_minutes' | 'price_cents' | 'description' | 'show_description_on_paid_booking'
->;
+type PreviewSvc = {
+  id: string;
+  name: string;
+  duration_minutes: number;
+  price_cents: number;
+  description?: string | null;
+  show_description_on_paid_booking?: boolean;
+};
 
 function PriceListPreview({
   theme,
@@ -410,8 +413,7 @@ function StepProgress({ step, onJump }: { step: WizardStep; onJump: (s: WizardSt
 }
 
 export function PaidBookingPage() {
-  const { user, profile, subscription, refreshProfile } = useAuth();
-  const plan = effectivePlan(subscription, profile);
+  const { user, profile, refreshProfile } = useAuth();
 
   const [step, setStep] = useState<WizardStep>(1);
   const [theme, setTheme] = useState<Theme>('clean');
