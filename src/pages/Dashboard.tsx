@@ -24,9 +24,12 @@ import { QRModal } from '../components/QRModal';
 import {
   buildAvailabilityEmailInvite,
   buildAvailabilitySmsInvite,
+  canUseSystemShare,
+  isMobileShareClient,
   openEmailComposer,
   openSmsComposer,
   openWhatsAppComposer,
+  shareViaSystemSheet,
 } from '../lib/bookingShare';
 import {
   LINK_EXPIRY_OPTIONS,
@@ -702,11 +705,28 @@ function SharePanel({
 
   const emailInvite = buildAvailabilityEmailInvite(shareUrl, hostName);
   const smsInvite = buildAvailabilitySmsInvite(shareUrl, hostName);
+  const onPhone = isMobileShareClient();
+  const hasSystemShare = canUseSystemShare();
+
+  const handleSystemShare = async () => {
+    const result = await shareViaSystemSheet({
+      title: emailInvite.subject,
+      text: smsInvite,
+      url: shareUrl,
+    });
+    setShareMenuOpen(false);
+    if (result === 'shared') showShareToast('Opened share sheet');
+    else if (result === 'unavailable') showShareToast('Share not available — try Email or WhatsApp below');
+  };
 
   const handleEmail = (provider: 'gmail' | 'outlook' | 'default') => {
     openEmailComposer(provider, emailInvite.subject, emailInvite.body);
     setShareMenuOpen(false);
-    showShareToast(provider === 'gmail' ? 'Opened Gmail compose' : provider === 'outlook' ? 'Opened Outlook compose' : 'Opened email app');
+    if (onPhone || provider === 'default') {
+      showShareToast('Opened email app');
+    } else {
+      showShareToast(provider === 'gmail' ? 'Opened Gmail compose' : 'Opened Outlook compose');
+    }
   };
 
   const handleSms = () => {
@@ -810,12 +830,33 @@ function SharePanel({
               className="absolute left-0 right-0 top-full mt-2 z-50 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl shadow-lg p-1.5"
               role="menu"
             >
+              {hasSystemShare && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => void handleSystemShare()}
+                    className={`${menuItemCls} flex items-center gap-1.5 font-semibold`}
+                  >
+                    <Share2 className="h-3.5 w-3.5" />
+                    {onPhone ? 'Share via phone…' : 'Share via device…'}
+                  </button>
+                  <div className="my-1 border-t border-gray-100 dark:border-slate-800" />
+                </>
+              )}
               <p className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-slate-500">
                 Send email with
               </p>
-              <button type="button" onClick={() => handleEmail('gmail')} className={menuItemCls}>Gmail</button>
-              <button type="button" onClick={() => handleEmail('outlook')} className={menuItemCls}>Outlook</button>
-              <button type="button" onClick={() => handleEmail('default')} className={menuItemCls}>Default email app</button>
+              {onPhone ? (
+                <button type="button" onClick={() => handleEmail('default')} className={menuItemCls}>
+                  Email app (Mail / Gmail / Outlook)
+                </button>
+              ) : (
+                <>
+                  <button type="button" onClick={() => handleEmail('gmail')} className={menuItemCls}>Gmail</button>
+                  <button type="button" onClick={() => handleEmail('outlook')} className={menuItemCls}>Outlook</button>
+                  <button type="button" onClick={() => handleEmail('default')} className={menuItemCls}>Default email app</button>
+                </>
+              )}
               <button type="button" onClick={copyEmailInvite} className={`${menuItemCls} flex items-center gap-1.5`}>
                 <Copy className="h-3.5 w-3.5" /> Copy email message
               </button>

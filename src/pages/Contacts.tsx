@@ -25,6 +25,14 @@ import {
   Pencil,
 } from 'lucide-react';
 import { PHONE_PLACEHOLDER, normalizePhoneE164 } from '../lib/phone';
+import {
+  canUseSystemShare,
+  isMobileShareClient,
+  openEmailComposer as openSharedEmailComposer,
+  openSmsComposer as openSharedSmsComposer,
+  openWhatsAppComposer as openSharedWhatsAppComposer,
+  shareViaSystemSheet,
+} from '../lib/bookingShare';
 
 interface Contact {
   id: string;
@@ -609,8 +617,7 @@ export function ContactsPage() {
       showToast('Add a phone number to send an SMS invite', 'error');
       return;
     }
-    const body = buildSmsInvite(contact);
-    window.location.href = `sms:${phone}?body=${encodeURIComponent(body)}`;
+    openSharedSmsComposer(buildSmsInvite(contact), phone);
     closeInviteMenus();
     showToast('Opened Messages', 'success');
   };
@@ -621,41 +628,28 @@ export function ContactsPage() {
       showToast('Add a phone number to send a WhatsApp invite', 'error');
       return;
     }
-    const digits = phone.replace(/\D/g, '');
-    const body = buildSmsInvite(contact);
-    window.open(`https://wa.me/${digits}?text=${encodeURIComponent(body)}`, '_blank', 'noopener,noreferrer');
+    openSharedWhatsAppComposer(buildSmsInvite(contact), phone);
     closeInviteMenus();
     showToast('Opened WhatsApp', 'success');
   };
 
   const openEmailComposer = (provider: 'gmail' | 'outlook' | 'default', contact: Contact) => {
     const { subject, body } = buildBookingInvite(contact);
-    const to = contact.email;
-
-    if (provider === 'gmail') {
-      window.open(
-        `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,
-        '_blank',
-        'noopener,noreferrer',
-      );
-      closeInviteMenus();
-      showToast('Opened Gmail compose', 'success');
-      return;
-    }
-
-    if (provider === 'outlook') {
-      window.open(
-        `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(to)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,
-        '_blank',
-        'noopener,noreferrer',
-      );
-      closeInviteMenus();
-      showToast('Opened Outlook compose', 'success');
-      return;
-    }
-
-    window.location.href = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    openSharedEmailComposer(provider, subject, body, contact.email);
     closeInviteMenus();
+    if (isMobileShareClient() || provider === 'default') {
+      showToast('Opened email app', 'success');
+    } else {
+      showToast(provider === 'gmail' ? 'Opened Gmail compose' : 'Opened Outlook compose', 'success');
+    }
+  };
+
+  const shareContactInvite = async (contact: Contact) => {
+    const { subject, body } = buildBookingInvite(contact);
+    const result = await shareViaSystemSheet({ title: subject, text: body });
+    closeInviteMenus();
+    if (result === 'shared') showToast('Opened share sheet', 'success');
+    else if (result === 'unavailable') showToast('Share not available on this device', 'error');
   };
 
   const copyBookingInvite = async (contact: Contact) => {
@@ -676,30 +670,54 @@ export function ContactsPage() {
       className="absolute right-0 top-full mt-2 w-52 z-50 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl shadow-lg p-1.5"
       role="menu"
     >
+      {canUseSystemShare() && (
+        <>
+          <button
+            type="button"
+            onClick={() => void shareContactInvite(contact)}
+            className="w-full text-left px-2.5 py-2 rounded-lg text-xs font-semibold text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+          >
+            Share via phone…
+          </button>
+          <div className="my-1 border-t border-gray-100 dark:border-slate-800" />
+        </>
+      )}
       <p className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-slate-500">
         Send email with
       </p>
-      <button
-        type="button"
-        onClick={() => openEmailComposer('gmail', contact)}
-        className="w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
-      >
-        Gmail
-      </button>
-      <button
-        type="button"
-        onClick={() => openEmailComposer('outlook', contact)}
-        className="w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
-      >
-        Outlook
-      </button>
-      <button
-        type="button"
-        onClick={() => openEmailComposer('default', contact)}
-        className="w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
-      >
-        Default email app
-      </button>
+      {isMobileShareClient() ? (
+        <button
+          type="button"
+          onClick={() => openEmailComposer('default', contact)}
+          className="w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+        >
+          Email app (Mail / Gmail / Outlook)
+        </button>
+      ) : (
+        <>
+          <button
+            type="button"
+            onClick={() => openEmailComposer('gmail', contact)}
+            className="w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+          >
+            Gmail
+          </button>
+          <button
+            type="button"
+            onClick={() => openEmailComposer('outlook', contact)}
+            className="w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+          >
+            Outlook
+          </button>
+          <button
+            type="button"
+            onClick={() => openEmailComposer('default', contact)}
+            className="w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+          >
+            Default email app
+          </button>
+        </>
+      )}
       <div className="my-1 border-t border-gray-100 dark:border-slate-800" />
       <button
         type="button"
