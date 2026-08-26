@@ -748,7 +748,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
         const linkRecord = link as SingleUseLinkRecord;
 
         if (linkRecord.used) { setSingleUseLinkInvalid(true); setLoading(false); return; }
-        if (isUnusedSingleUseExpired(linkRecord.expires_at, linkRecord.created_at)) {
+        if (isUnusedSingleUseExpired(linkRecord.expires_at ?? null, linkRecord.created_at ?? null)) {
           setSingleUseLinkInvalid(true); setLoading(false); return;
         }
 
@@ -802,7 +802,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
       setServices(filteredServices);
 
       setAvailability(availRes.data ?? []);
-      setBookings(bookRes.data ?? []);
+      setBookings((bookRes.data ?? []) as Booking[]);
       setDateOverrides((ovRes.data as DateOverride[]) ?? []);
 
       // Resolve the host's calendar conflict settings (with defaults)

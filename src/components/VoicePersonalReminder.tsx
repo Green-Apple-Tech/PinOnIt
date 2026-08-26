@@ -16,7 +16,7 @@ type SpeechRec = {
   lang: string;
   interimResults: boolean;
   continuous: boolean;
-  onresult: ((ev: { results: { 0: { 0: { transcript: string } } }[] }) => void) | null;
+  onresult: ((ev: { results: Array<Array<{ transcript: string }> | undefined> }) => void) | null;
   onerror: (() => void) | null;
   onend: (() => void) | null;
   start: () => void;
@@ -101,7 +101,7 @@ export function VoicePersonalReminder() {
     rec.interimResults = false;
     rec.continuous = false;
     rec.onresult = (ev) => {
-      const spoken = ev.results?.[0]?.[0]?.transcript ?? '';
+      const spoken = ev.results[0]?.[0]?.transcript ?? '';
       if (spoken) applySpeech(spoken);
     };
     rec.onerror = () => {

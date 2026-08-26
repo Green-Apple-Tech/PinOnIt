@@ -1768,9 +1768,13 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
 
       // ── Step: Timezone ───────────────────────────────────────────────────────
       case 'timezone': {
-        const timezoneOptions = typeof Intl.supportedValuesOf === 'function'
-          ? Intl.supportedValuesOf('timeZone')
-          : [...TIMEZONES];
+        const intlWithZones = Intl as typeof Intl & {
+          supportedValuesOf?: (key: string) => string[];
+        };
+        const timezoneOptions: string[] =
+          typeof intlWithZones.supportedValuesOf === 'function'
+            ? intlWithZones.supportedValuesOf('timeZone')
+            : [...TIMEZONES];
         return (
           <div>
             <div className="mb-5">
@@ -1782,7 +1786,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
               onChange={(e) => setTimezone(e.target.value)}
               className="w-full border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600"
             >
-              {timezoneOptions.map((tz) => (
+              {timezoneOptions.map((tz: string) => (
                 <option key={tz} value={tz}>{tz}</option>
               ))}
             </select>

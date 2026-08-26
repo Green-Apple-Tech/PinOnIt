@@ -489,7 +489,7 @@ export function AppointmentsPage() {
       const q = search.toLowerCase();
       list = list.filter(b =>
         b.guest_name.toLowerCase().includes(q) ||
-        b.guest_email.toLowerCase().includes(q) ||
+        (b.guest_email ?? '').toLowerCase().includes(q) ||
         (b as any).services?.name?.toLowerCase().includes(q)
       );
     }
