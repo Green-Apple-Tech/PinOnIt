@@ -173,11 +173,11 @@ const GUIDES: Record<string, PageHelpGuide> = {
   },
   billing: {
     title: 'Billing',
-    purpose: 'Start a trial or manage Pro. 14 days with no card, or 60 days with a card ($0 today). After 60 days, billing starts unless you cancel.',
+    purpose: 'Manage your Pro subscription. Every account starts with a 14-day trial; subscribe before it ends to keep booking and reminders running.',
     steps: [
-      'Pick 14 days (no card) or 60 days (card on file, $0 today).',
-      'Pro unlocks SMS, unlimited event types, and the extra tools.',
-      'Cancel anytime in this tab before the trial ends if you do not want to be charged.',
+      'Expired accounts are read-only until you reactivate — your data stays.',
+      'Calendly switchers: 60 days with a card on file ($0 today).',
+      'Cancel anytime before a paid period renews if you do not want to be charged.',
     ],
   },
   settings: {

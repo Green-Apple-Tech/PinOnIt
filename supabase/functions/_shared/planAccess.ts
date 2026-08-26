@@ -1,22 +1,26 @@
-import type { Profile, Subscription } from './types';
+/** Server-side plan resolution — mirrors src/lib/plan.ts for edge functions. */
 
 export type PlanTier = 'trial' | 'pro' | 'expired';
 
-type PlanBits = Pick<Subscription, 'plan' | 'status' | 'trial_ends_at'> & {
-  stripe_current_period_end?: string | null;
-};
-
-type ProfilePlanBits = Pick<Profile, 'plan'> & {
+export type ProfilePlanRow = {
+  plan?: string | null;
   plan_override?: 'pro' | null;
 };
 
-export function isComplimentaryPro(
-  profile?: Pick<Profile, 'plan_override'> | null,
-): boolean {
+export type SubscriptionPlanRow = {
+  plan?: string | null;
+  status?: string | null;
+  trial_ends_at?: string | null;
+  stripe_current_period_end?: string | null;
+  stripe_customer_id?: string | null;
+  stripe_subscription_id?: string | null;
+  updated_at?: string | null;
+};
+
+export function isComplimentaryPro(profile?: ProfilePlanRow | null): boolean {
   return profile?.plan_override === 'pro';
 }
 
-/** Trial and paid Pro have full product access. */
 export function isActivePlan(plan: PlanTier): boolean {
   return plan === 'trial' || plan === 'pro';
 }
@@ -26,10 +30,9 @@ function localTrialExpired(trialEndsAt?: string | null): boolean {
   return new Date(trialEndsAt).getTime() <= Date.now();
 }
 
-/** Plan shown in the UI. Complimentary override wins over Stripe. */
 export function effectivePlan(
-  subscription?: PlanBits | null,
-  profile?: ProfilePlanBits | null,
+  subscription?: SubscriptionPlanRow | null,
+  profile?: ProfilePlanRow | null,
 ): PlanTier {
   if (isComplimentaryPro(profile)) return 'pro';
 
@@ -61,7 +64,7 @@ export function effectivePlan(
   return 'expired';
 }
 
-function subscriptionScore(row: Subscription): number {
+function subscriptionScore(row: SubscriptionPlanRow): number {
   let score = 0;
   if (row.stripe_subscription_id) score += 8;
   if (typeof row.stripe_customer_id === 'string' && row.stripe_customer_id.startsWith('cus_')) score += 4;
@@ -72,12 +75,23 @@ function subscriptionScore(row: Subscription): number {
   return score;
 }
 
-/** Prefer a live Stripe-backed row when duplicates exist. */
-export function pickBestSubscription(rows: Subscription[] | null | undefined): Subscription | null {
+export function pickBestSubscription(
+  rows: SubscriptionPlanRow[] | null | undefined,
+): SubscriptionPlanRow | null {
   if (!rows?.length) return null;
   return [...rows].sort((a, b) => {
     const diff = subscriptionScore(b) - subscriptionScore(a);
     if (diff !== 0) return diff;
-    return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+    const aTs = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+    const bTs = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+    return bTs - aTs;
   })[0];
+}
+
+export function hostRowIsActive(
+  profile: ProfilePlanRow & { id?: string },
+  subscriptions: SubscriptionPlanRow[] | null | undefined,
+): boolean {
+  const sub = pickBestSubscription(subscriptions ?? []);
+  return isActivePlan(effectivePlan(sub, profile));
 }

@@ -3,10 +3,9 @@ import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 
 export type AdminClient = ReturnType<typeof createClient>;
 
-export const PLAN_MAP: Record<string, 'pro' | 'enterprise'> = {
+export const PLAN_MAP: Record<string, 'pro'> = {
   price_1TZHhhIVv38UYFOXMXT2EV8v: 'pro',
   price_pro_monthly: 'pro',
-  price_enterprise_monthly: 'enterprise',
 };
 
 export function isAllowedCheckoutPriceId(priceId: string): boolean {
@@ -29,12 +28,11 @@ export function periodEndIso(subscription: Stripe.Subscription): string | null {
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
-export function planFromStripe(priceId: string | undefined, status: string): 'free' | 'pro' | 'enterprise' {
+export function planFromStripe(priceId: string | undefined, status: string): 'trial' | 'pro' | 'expired' {
   if (priceId && PLAN_MAP[priceId]) return PLAN_MAP[priceId];
-  // Paid/trialing Stripe subscriptions are Pro even if the price ID is new/unknown.
-  // Never default a live subscription to Free — that is what left paying customers on Free.
-  if (status === 'active' || status === 'trialing' || status === 'past_due') return 'pro';
-  return 'free';
+  if (status === 'trialing') return 'trial';
+  if (status === 'active' || status === 'past_due') return 'pro';
+  return 'expired';
 }
 
 export function dbStatusFromStripe(subscription: Stripe.Subscription): string {
@@ -96,7 +94,7 @@ export async function applyStripeSubscription(opts: {
   const priceId = subscription.items.data[0]?.price?.id;
   const stripeStatus = subscription.status;
   const plan = stripeStatus === 'canceled' || stripeStatus === 'unpaid' || stripeStatus === 'incomplete_expired'
-    ? 'free'
+    ? 'expired'
     : planFromStripe(priceId, stripeStatus);
   const status = dbStatusFromStripe(subscription);
   const trialEnd = subscription.trial_end
@@ -147,9 +145,7 @@ export async function writeProfilePlanFromStripe(
     .select('plan_override')
     .eq('id', userId)
     .maybeSingle();
-  const next = data?.plan_override === 'pro'
-    ? 'pro'
-    : (stripePlan === 'enterprise' ? 'pro' : stripePlan);
+  const next = data?.plan_override === 'pro' ? 'pro' : stripePlan;
   await supabase.from('profiles').update({ plan: next }).eq('id', userId);
   return next;
 }

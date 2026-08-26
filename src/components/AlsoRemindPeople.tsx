@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Loader2, Plus, Trash2, Users } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { PHONE_PLACEHOLDER, blurFormatPhone } from '../lib/phone';
@@ -110,8 +111,13 @@ export function AlsoRemindPeople() {
         <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-white">Coworker roster</h2>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Save people who can receive reminder copies. By default they are <strong className="font-semibold text-slate-700 dark:text-slate-300">only</strong> notified on meetings you pick in Calendar — not every booking.
+            Save people who can receive reminder copies. Then on <strong className="font-semibold text-slate-700 dark:text-slate-300">Calendar</strong>, click the bell on any event and check their name.
           </p>
+          <ol className="mt-2 text-xs text-slate-500 dark:text-slate-400 space-y-1 list-decimal list-inside">
+            <li>Add a person below and choose <strong className="font-medium">Only meetings I pick</strong> (recommended).</li>
+            <li>Open <Link to="/dashboard/appointments" className="font-semibold text-brand-600 hover:underline">Calendar</Link> → click the <strong className="font-medium">bell</strong> on the event.</li>
+            <li>Check their name → <strong className="font-medium">Save for this event</strong>.</li>
+          </ol>
         </div>
       </div>
 

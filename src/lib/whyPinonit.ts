@@ -137,7 +137,7 @@ export const WHY_PINONIT = {
   exclusiveHeadline: 'What Calendly genuinely doesn’t do',
   exclusiveSubhead: 'These are not “Calendly charges extra.” These are missing.',
   priceLine: '$6/mo after trial · cancel anytime',
-  trialCta: 'Start free trial',
+  trialCta: 'Start 14-day trial',
   features: [
     { id: 'whatsapp', label: 'WhatsApp reminders', pinonit: true, calendly: false },
     { id: 'voice', label: 'Voice reminders & critical alerts', pinonit: true, calendly: false },

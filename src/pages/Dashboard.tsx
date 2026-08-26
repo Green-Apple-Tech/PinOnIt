@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { ExpiredBanner } from '../components/ExpiredBanner';
 import { useAuth } from '../hooks/useAuth';
 import { OnboardingWizard, wizardIsActive, wizardSavedStep, onboardingIsCompleted } from '../components/OnboardingWizard';
 import { wizardStartIndex } from '../lib/wizardSteps';
@@ -7,7 +8,7 @@ import { clearStaleOnboardingLocalState, markOnboardingCompletedLocal } from '..
 import { useTheme } from '../hooks/useTheme';
 import { supabase } from '../lib/supabase';
 import { syncStripeSubscription } from '../lib/stripe';
-import { effectivePlan } from '../lib/plan';
+import { effectivePlan, isActivePlan } from '../lib/plan';
 import type { Booking, Service } from '../lib/types';
 import { CalendarDays, LogOut, X, Check, Sun, Moon, Copy, Share2, Mail, Link2, ExternalLink, PenLine, Video, Phone, MapPin, ChevronRight, Loader2, Plus, ChevronLeft, LayoutGrid, Menu, AlertCircle, Sparkles, Search, Wrench as Tool, QrCode, MessageSquare, ChevronDown, Trash2 } from 'lucide-react';
 import {
@@ -1161,9 +1162,7 @@ export function Dashboard() {
     if (wizardChecked || !profile || loading || !subscriptionLoaded) return;
     setWizardChecked(true);
 
-    const isActivePro = (
-      subscription?.plan === 'pro' && subscription?.status !== 'canceled'
-    ) || profile.plan === 'pro' || profile.plan_override === 'pro';
+    const isActivePro = isActivePlan(effectivePlan(subscription, profile));
     const established =
       profile.onboarding_completed === true
       || isActivePro
@@ -1580,6 +1579,8 @@ export function Dashboard() {
           </button>
         </div>
       )}
+
+      <ExpiredBanner profile={profile} subscription={subscription} />
 
       {/* ── Desktop Sidebar ── */}
       <aside className={`hidden md:flex flex-col border-r border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-950 transition-all duration-200 ${sidebarCollapsed ? 'w-16' : 'w-60'}`}>

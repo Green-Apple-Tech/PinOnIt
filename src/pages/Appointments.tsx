@@ -47,6 +47,7 @@ interface CalendarEvent {
   end_at: string;
   all_day: boolean;
   provider: string;
+  also_remind_ids?: string[] | null;
 }
 
 type ReminderChannel = 'email' | 'sms' | 'whatsapp';
@@ -437,7 +438,7 @@ export function AppointmentsPage() {
       supabase.from('services').select('*').eq('host_id', profile.id),
       supabase
         .from('calendar_events')
-        .select('id, title, start_at, end_at, all_day, connected_calendars(provider)')
+        .select('id, title, start_at, end_at, all_day, also_remind_ids, connected_calendars(provider)')
         .eq('host_id', profile.id)
         .order('start_at', { ascending: true }),
       supabase
@@ -456,6 +457,7 @@ export function AppointmentsPage() {
       end_at: e.end_at,
       all_day: e.all_day,
       provider: e.connected_calendars?.provider ?? 'external',
+      also_remind_ids: e.also_remind_ids,
     }));
     const personal = (personalRes.data ?? []).map((r: { id: string; title: string; due_at: string }) => {
       const start = new Date(r.due_at);
@@ -1469,7 +1471,7 @@ export function AppointmentsPage() {
             {/* Header */}
             <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-base font-bold text-slate-900 dark:text-white">Extra reminder</h2>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">Event reminders</h2>
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                   {reminderTarget.kind === 'booking'
                     ? `${(reminderTarget.booking as Booking & { services?: { name?: string } }).services?.name ?? 'Meeting'} · ${reminderTarget.booking.guest_name} · ${formatTime(reminderTarget.booking.start_time)}`
@@ -1482,11 +1484,6 @@ export function AppointmentsPage() {
             </div>
 
             <div className="p-5 space-y-4">
-              {/* Info */}
-              <div className="text-xs text-slate-500 dark:text-slate-400 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-xl px-3 py-2.5">
-                Extra reminders for this event only — email, SMS, or WhatsApp. Guest SMS/WhatsApp is sent only if they opted in; otherwise it goes to you.
-              </div>
-
               {reminderTarget.kind === 'booking' ? (
                 <BookingAlsoRemindPicker
                   bookingId={reminderTarget.booking.id}
@@ -1503,7 +1500,37 @@ export function AppointmentsPage() {
                     );
                   }}
                 />
-              ) : null}
+              ) : (
+                <BookingAlsoRemindPicker
+                  calendarEventId={reminderTarget.event.id}
+                  alsoRemindIds={parseAlsoRemindIds(reminderTarget.event.also_remind_ids)}
+                  onSaved={(ids) => {
+                    setExternalEvents((prev) =>
+                      prev.map((e) => (e.id === reminderTarget.event.id ? { ...e, also_remind_ids: ids } : e)),
+                    );
+                    setReminderTarget((t) =>
+                      t?.kind === 'external' && t.event.id === reminderTarget.event.id
+                        ? { ...t, event: { ...t.event, also_remind_ids: ids } }
+                        : t,
+                    );
+                  }}
+                />
+              )}
+
+              {/* Info */}
+              <div className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5">
+                {reminderTarget.kind === 'external' ? (
+                  <>
+                    <p className="font-semibold text-slate-700 dark:text-slate-300 mb-1">When should reminders go out?</p>
+                    Add a time below (e.g. 1 hour before). Checked coworkers get a copy at that time — email, SMS, or WhatsApp per their roster settings.
+                  </>
+                ) : (
+                  <>
+                    <p className="font-semibold text-slate-700 dark:text-slate-300 mb-1">Optional: extra one-off reminder</p>
+                    PinOnIt already sends your normal guest reminders for this booking. Add another timing here if you want one more nudge. Checked coworkers get a copy too.
+                  </>
+                )}
+              </div>
 
               {/* Existing overrides */}
               {loadingOverrides ? (

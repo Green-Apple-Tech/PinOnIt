@@ -1366,6 +1366,20 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
     </div>
   );
 
+  if (host.plan === 'expired') return (
+    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950 text-slate-900 dark:text-white transition-colors">
+      <div className="text-center max-w-sm px-6">
+        <div className="h-16 w-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-4">
+          <Clock className="h-8 w-8 text-slate-400" />
+        </div>
+        <h1 className="text-xl font-bold mb-2">Not currently accepting bookings</h1>
+        <p className="text-slate-500 dark:text-slate-400 text-sm">
+          {host.full_name || 'This host'} is not taking new appointments through this page right now. Please check back later or contact them directly.
+        </p>
+      </div>
+    </div>
+  );
+
   return (
     <div className={`min-h-screen transition-colors ${calendlyStyle ? 'bg-white text-slate-800' : ''}`} style={calendlyStyle ? undefined : { backgroundColor: pageBgColor, color: pageTextColor }}>
       {!calendlyStyle && <div className="h-1.5 w-full" style={{ backgroundColor: pageTheme.accentBar }} />}
@@ -1382,17 +1396,6 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                 Single-use link
               </span>
             )}
-            {host?.plan === 'free' && !calendlyStyle ? (
-              <Link
-                to="/"
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors font-medium"
-              >
-                <img src="/Screenshot_2026-04-29_at_2.49.32_PM.png" alt="Pin on It" className="h-4 w-auto opacity-70" />
-                <span>Powered by Pin on It</span>
-              </Link>
-            ) : !calendlyStyle ? (
-              <img src="/Screenshot_2026-04-29_at_2.49.32_PM.png" alt="Pin on It" className="h-5 w-auto opacity-40" />
-            ) : null}
           </div>
         </div>
       </header>
@@ -2196,24 +2199,9 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                         Need to cancel or reschedule? Check your confirmation email for links.
                       </p>
                     )}
-                    {host?.plan === 'free' ? (
-                      <div className="mt-2 pt-5 border-t border-slate-100 dark:border-slate-800">
-                        <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">Scheduling powered by</p>
-                        <Link
-                          to="/"
-                          className="inline-flex flex-col items-center gap-2 group"
-                        >
-                          <img src="/Screenshot_2026-04-29_at_2.49.32_PM.png" alt="Pin on It" className="h-6 w-auto opacity-70 group-hover:opacity-100 transition-opacity" />
-                          <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-500 group-hover:underline transition-all">
-                            Get your free scheduling page →
-                          </span>
-                        </Link>
-                      </div>
-                    ) : (
-                      <Link to="/" className="inline-flex items-center gap-1.5 opacity-30 hover:opacity-60 transition-opacity">
-                        <img src="/Screenshot_2026-04-29_at_2.49.32_PM.png" alt="Pin on It" className="h-5 w-auto" />
-                      </Link>
-                    )}
+                    <Link to="/" className="inline-flex items-center gap-1.5 opacity-30 hover:opacity-60 transition-opacity">
+                      <img src="/Screenshot_2026-04-29_at_2.49.32_PM.png" alt="Pin on It" className="h-5 w-auto" />
+                    </Link>
                   </div>
                 )}
               </div>
@@ -2240,30 +2228,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
         </div>
         </div>
       </main>
-      {calendlyStyle && host?.plan === 'free' && (
-        <Link
-          to="/"
-          className="fixed bottom-4 right-4 z-40 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-slate-200 shadow-md text-slate-500 hover:text-slate-700 transition-colors text-xs font-medium"
-        >
-          <img src="/Screenshot_2026-04-29_at_2.49.32_PM.png" alt="PinOnIt" className="h-3.5 w-auto opacity-70" />
-          Powered by PinOnIt
-        </Link>
-      )}
       <footer className={`py-4 px-6 ${calendlyStyle ? 'bg-white border-t border-slate-100' : 'border-t'}`} style={calendlyStyle ? undefined : { borderColor: pageBorderColor, backgroundColor: pageSurfaceColor }}>
-        {host?.plan === 'free' && !calendlyStyle && (
-          <div className="flex items-center justify-center gap-2 mb-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-            <Link
-              to="/"
-              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-50 border border-slate-200 hover:bg-slate-100 transition-colors group"
-            >
-              <img src="/Screenshot_2026-04-29_at_2.49.32_PM.png" alt="Pin on It" className="h-4 w-auto opacity-70 group-hover:opacity-100 transition-opacity" />
-              <span className="text-xs font-semibold text-slate-600">
-                Powered by PinOnIt — free scheduling for anyone
-              </span>
-              <ArrowRight className="h-3 w-3 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
-            </Link>
-          </div>
-        )}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-xs text-slate-400">
           <Link to="/terms" className="hover:text-slate-600 transition-colors">Terms of Service</Link>
           <span className="hidden sm:inline">·</span>

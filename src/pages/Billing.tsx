@@ -4,7 +4,7 @@ import { SUPPORT_EMAIL } from '../lib/contactEmail';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { syncStripeSubscription } from '../lib/stripe';
-import { effectivePlan, isComplimentaryPro } from '../lib/plan';
+import { effectivePlan, isActivePlan, isComplimentaryPro } from '../lib/plan';
 import {
   Check, Zap, Loader2, AlertCircle, ArrowRight,
   DollarSign, TrendingUp, Copy, Users, ChevronDown,
@@ -39,9 +39,11 @@ function GuaranteeBadge() {
 export function BillingPage({ embedded }: { embedded?: boolean }) {
   const { user, profile, subscription, refreshProfile } = useAuth();
   const currentPlan = effectivePlan(subscription, profile);
-  const isPro = currentPlan === 'pro';
+  const isPaidPro = currentPlan === 'pro';
+  const isTrial = currentPlan === 'trial';
+  const isExpired = currentPlan === 'expired';
+  const hasAccess = isActivePlan(currentPlan);
   const isComplimentary = isComplimentaryPro(profile);
-  const isTrialing = subscription?.status === 'trialing' && !isComplimentary;
 
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
@@ -69,7 +71,7 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
           const synced = await syncStripeSubscription(session.access_token);
           if (cancelled) return;
           await refreshProfile?.();
-          if (synced?.plan && synced.plan !== 'free') break;
+          if (synced?.plan && synced.plan !== 'expired') break;
           if (attempt < 2) await new Promise((r) => setTimeout(r, 1500));
         }
       } else {
@@ -249,28 +251,28 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
             <h2 className="text-lg font-bold text-gray-900 mb-1.5">Current plan</h2>
             <div className="flex items-center gap-2 flex-wrap">
               <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold ${
-                isPro
+                hasAccess
                   ? 'bg-indigo-100 text-indigo-700'
                   : 'bg-gray-100 text-gray-600'
               }`}>
-                {isPro && <Zap className="h-3.5 w-3.5" />}
-                {isPro ? (isComplimentary ? 'Pro — complimentary' : 'Pro') : 'Free'}
+                {hasAccess && <Zap className="h-3.5 w-3.5" />}
+                {isComplimentary ? 'Pro — complimentary' : isTrial ? 'Pro trial' : isPaidPro ? 'Pro' : 'Expired'}
               </span>
-              {isTrialing && (
+              {isTrial && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold">
-                  Pro Trial — {trialDaysLeft} day{trialDaysLeft !== 1 ? 's' : ''} remaining (no charge until {trialEndsDate})
+                  {trialDaysLeft} day{trialDaysLeft !== 1 ? 's' : ''} left{trialEndsDate ? ` · ends ${trialEndsDate}` : ''}
                 </span>
               )}
             </div>
           </div>
-          {isPro && nextBillingDate && !isTrialing && !isComplimentary && (
+          {isPaidPro && nextBillingDate && !isTrial && !isComplimentary && (
             <div className="text-right shrink-0">
               <p className="text-xs text-gray-400">Next billing</p>
               <p className="text-sm font-semibold text-gray-700">{nextBillingDate}</p>
               <p className="text-sm text-gray-500">${PRO_PRICE}/mo</p>
             </div>
           )}
-          {isTrialing && trialEndsDate && (
+          {isTrial && trialEndsDate && (
             <div className="text-right shrink-0">
               <p className="text-xs text-gray-400">Trial ends</p>
               <p className="text-sm font-semibold text-gray-700">{trialEndsDate}</p>
@@ -279,91 +281,57 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
           )}
         </div>
 
-        {!isPro ? (
+        <ul className="space-y-2.5 mb-5">
+          {[
+            'Unlimited event types',
+            'SMS + WhatsApp + Email + voice reminders',
+            'Calendar sync (Google, Outlook, Apple)',
+            'Paid booking storefront & quotes',
+            'Two-way SMS reschedule',
+            'No PinOnIt branding on booking pages',
+          ].map((f) => (
+            <li key={f} className="flex items-center gap-2.5 text-sm text-gray-600">
+              <Check className="h-4 w-4 text-indigo-600 shrink-0" />
+              {f}
+            </li>
+          ))}
+        </ul>
+
+        {isExpired ? (
           <>
-            <ul className="space-y-2.5 mb-5">
-              {[
-                '1 event type',
-                'Basic scheduling',
-                'Email reminders',
-                'Referral program access',
-              ].map((f) => (
-                <li key={f} className="flex items-center gap-2.5 text-sm text-gray-600">
-                  <Check className="h-4 w-4 text-indigo-600 shrink-0" />
-                  {f}
-                </li>
-              ))}
-            </ul>
-
-            {/* Trial offer callout */}
-            <div className="mb-4 p-4 bg-brand-50 border border-brand-100 rounded-xl">
-              <p className="text-sm font-semibold text-brand-800 mb-0.5">Two ways to try Pro</p>
-              <p className="text-xs text-brand-600">
-                14 days with no credit card, or 60 days with a card on file ($0 today). After 60 days, billing starts automatically at ${PRO_PRICE}/mo unless you cancel.
-              </p>
+            <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
+              Your trial ended. Subscribe to turn booking pages and reminders back on. Your data is still here.
             </div>
-
             {checkoutError && (
               <div className="mb-4 flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
                 <AlertCircle className="h-4 w-4 shrink-0" />
                 {checkoutError}
               </div>
             )}
-
-            <button
-              onClick={() => void handleFourteenDayNoCard()}
-              disabled={checkoutLoading}
-              className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-all inline-flex items-center justify-center gap-2 shadow-sm disabled:opacity-60 hover:opacity-90" style={{ backgroundColor: '#5864C6' }}
-            >
-              {checkoutLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-              14 days free — no credit card
-            </button>
-            <button
-              onClick={() => handleUpgrade(60)}
-              disabled={checkoutLoading}
-              className="w-full mt-2 py-3 rounded-xl text-sm font-semibold border-2 border-brand-600 text-brand-700 transition-all inline-flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-brand-50"
-            >
-              {checkoutLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
-              60 days free — card on file, $0 today
-            </button>
             <button
               onClick={() => handleUpgrade()}
               disabled={checkoutLoading}
-              className="w-full mt-2 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:text-gray-900 transition-all"
+              className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-all inline-flex items-center justify-center gap-2 shadow-sm disabled:opacity-60 hover:opacity-90"
+              style={{ backgroundColor: '#5864C6' }}
             >
-              Or subscribe now — ${PRO_PRICE}/mo
+              {checkoutLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+              Reactivate Pro — ${PRO_PRICE}/mo
             </button>
-
-            <p className="mt-2 text-xs text-center text-gray-400">
-              Cancel anytime — no contracts, no fees
-            </p>
-
-            <div className="mt-4 flex justify-center">
-              <GuaranteeBadge />
-            </div>
+            <button
+              onClick={() => void handleFourteenDayNoCard()}
+              disabled={checkoutLoading}
+              className="w-full mt-2 py-3 rounded-xl text-sm font-semibold border-2 border-brand-600 text-brand-700 transition-all inline-flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-brand-50"
+            >
+              Restart 14-day trial (no card)
+            </button>
           </>
         ) : (
           <>
-            <ul className="space-y-2.5 mb-5">
-              {[
-                'Unlimited event types',
-                'SMS + WhatsApp + Email reminders',
-                'Calendar sync (Google, Outlook, Apple)',
-                'PayPal payments at booking',
-                'Email signature creator',
-                'Remove PinOnIt branding',
-                'Priority support',
-              ].map((f) => (
-                <li key={f} className="flex items-center gap-2.5 text-sm text-gray-600">
-                  <Check className="h-4 w-4 text-indigo-600 shrink-0" />
-                  {f}
-                </li>
-              ))}
-            </ul>
-
-            {isTrialing && (
+            {isTrial && (
               <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700">
-                Your trial ends {trialEndsDate} — no charge until then. Cancel before that date and you will never be billed.
+                {trialEndsDate
+                  ? `Your trial ends ${trialEndsDate}. Subscribe before then to keep booking and reminders running.`
+                  : 'You are on a full-access trial.'}
               </div>
             )}
 
@@ -371,6 +339,31 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
               <p className="text-sm text-gray-500">
                 This account is on Pro at no charge. There is nothing to pay and no billing to manage.
               </p>
+            ) : isTrial ? (
+              <>
+                {checkoutError && (
+                  <div className="mb-4 flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    {checkoutError}
+                  </div>
+                )}
+                <button
+                  onClick={() => handleUpgrade()}
+                  disabled={checkoutLoading}
+                  className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-all inline-flex items-center justify-center gap-2 shadow-sm disabled:opacity-60 hover:opacity-90"
+                  style={{ backgroundColor: '#5864C6' }}
+                >
+                  {checkoutLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+                  Subscribe — ${PRO_PRICE}/mo
+                </button>
+                <button
+                  onClick={() => handleUpgrade(60)}
+                  disabled={checkoutLoading}
+                  className="w-full mt-2 py-3 rounded-xl text-sm font-semibold border-2 border-brand-600 text-brand-700 transition-all inline-flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-brand-50"
+                >
+                  60 days free — card on file (Calendly switchers)
+                </button>
+              </>
             ) : (
               <>
                 <button
@@ -381,16 +374,15 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
                   {portalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
                   Manage Billing
                 </button>
-
                 <p className="mt-2 text-xs text-center text-gray-400">
                   Cancel anytime — no contracts, no fees. You keep Pro access until {nextBillingDate ?? 'end of billing period'}.
                 </p>
-
-                <div className="mt-4 flex justify-center">
-                  <GuaranteeBadge />
-                </div>
               </>
             )}
+
+            <div className="mt-4 flex justify-center">
+              <GuaranteeBadge />
+            </div>
           </>
         )}
       </div>
@@ -442,7 +434,7 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
                   </button>
                 </div>
                 <p className="mt-2 text-xs text-gray-400">
-                  Refer 6 Pro users and your plan is free forever. Refer more and we pay you.{' '}
+                  Refer 6 Pro users and earn enough credits to cover your bill. Refer more and we pay you.{' '}
                   <Link to="/leaderboard" className="text-indigo-600 hover:underline">View leaderboard</Link>
                 </p>
               </div>

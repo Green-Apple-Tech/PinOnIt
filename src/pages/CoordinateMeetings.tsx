@@ -1451,12 +1451,14 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
     }
 
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
-    fetch(`${supabaseUrl}/functions/v1/coordinate-sms`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anonKey}` },
-      body: JSON.stringify({ meeting_id: meeting.id }),
-    }).catch(() => {});
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      fetch(`${supabaseUrl}/functions/v1/coordinate-sms`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ meeting_id: meeting.id }),
+      }).catch(() => {});
+    }
 
     onCreated(meeting as CoordMeeting);
     setSending(false);
@@ -2073,12 +2075,14 @@ function MeetingDetail({ meeting: initialMeeting, onBack, onStatusChange }: {
     await supabase.from('coordinated_meetings').update({ status: 'confirmed', confirmed_time: slotIso }).eq('id', meeting.id);
     await supabase.from('coordinated_meeting_participants').update({ confirmed: true }).eq('meeting_id', meeting.id).eq('opted_out', false);
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
-    fetch(`${supabaseUrl}/functions/v1/coordinate-sms`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anonKey}` },
-      body: JSON.stringify({ type: 'confirm', meeting_id: meeting.id, confirmed_time: slotIso }),
-    }).catch(() => {});
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      fetch(`${supabaseUrl}/functions/v1/coordinate-sms`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ type: 'confirm', meeting_id: meeting.id, confirmed_time: slotIso }),
+      }).catch(() => {});
+    }
     load();
   };
 

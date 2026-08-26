@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, type CSSProperties, type Elem
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
-import { effectivePlan } from '../lib/plan';
+import { effectivePlan, isActivePlan } from '../lib/plan';
 import { PageChecklist } from '../components/PageChecklist';
 import type { MessageTemplate, ReminderRule, Service } from '../lib/types';
 import { SUPPORTED_LANGUAGES, TEMPLATE_VARIABLES } from '../lib/types';
@@ -103,8 +103,8 @@ const CHANNEL_TEMPLATES: Record<string, Record<Channel, { subject: string | null
 const QUICK_TEMPLATES = [
   {
     id: 'basic',
-    label: 'Free',
-    badge: 'Free',
+    label: 'Email only',
+    badge: 'Quick start',
     badgeColor: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300',
     description: 'Email only, 1 hour before',
     icon: Mail,
@@ -192,7 +192,8 @@ export function RemindersPage({
 } = {}) {
   const navigate = useNavigate();
   const { user, profile, subscription, refreshProfile } = useAuth();
-  const isPro = effectivePlan(subscription, profile) === 'pro';
+  const plan = effectivePlan(subscription, profile);
+  const hasFullAccess = isActivePlan(plan);
   const personalReminderRef = useRef<VoicePersonalReminderHandle>(null);
 
   const openPersonalReminder = useCallback(() => {
@@ -649,7 +650,7 @@ export function RemindersPage({
     <Wrapper className={embedded ? 'w-full' : 'p-6 md:p-8 max-w-3xl space-y-6'}>
 
       {/* Contextual checklist — hidden for Pro users */}
-      {!isPro && (
+      {!hasFullAccess && (
         <PageChecklist
           storageKey="reminders_checklist"
           items={[
@@ -684,7 +685,7 @@ export function RemindersPage({
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Smart Reminders</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Remind yourself, your guests, and coworkers you pick per meeting — not every booking by default. Use the roster below, then choose who gets copied on Calendar → Extra reminder.
+          Remind yourself, your guests, and coworkers you pick per event. Add people to the roster below, then on Calendar click the bell on any meeting or synced event.
         </p>
         <button
           type="button"
@@ -715,7 +716,7 @@ export function RemindersPage({
       </Link>
 
       {/* ── FIRST-TIME SETUP GUIDE (shown when no reminders exist, not for Pro) ── */}
-      {!hasAnyReminders && !showAddForm && !isPro && (
+      {!hasAnyReminders && !showAddForm && !hasFullAccess && (
         <div className="rounded-2xl border-2 border-dashed border-[#5864C6]/30 dark:border-[#5864C6]/20 bg-[#5864C6]/5 dark:bg-[#5864C6]/5 p-8 text-center">
           <div className="h-16 w-16 rounded-2xl bg-[#5864C6]/10 dark:bg-[#5864C6]/20 flex items-center justify-center mx-auto mb-5">
             <Bell className="h-8 w-8" style={{ color: '#5864C6' }} />
@@ -755,7 +756,7 @@ export function RemindersPage({
       )}
 
       {/* ── QUICK SETUP TEMPLATES — hidden for Pro users ── */}
-      {!showAddForm && !isPro && (
+      {!showAddForm && hasFullAccess && (
         <div>
           <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">
             {hasAnyReminders ? 'Add more reminders with one click' : 'Quick-start templates'}
@@ -763,8 +764,6 @@ export function RemindersPage({
           <div className="grid sm:grid-cols-2 gap-3">
             {QUICK_TEMPLATES.map((qt) => {
               const alreadyApplied = qt.combos.every((c) => isSlotChannelActive(c.slotKey, c.channel));
-              const requiresPro = qt.id === 'pro';
-              const locked = requiresPro && !isPro;
               const Icon = qt.icon || Mail;
               return (
                 <div
@@ -772,8 +771,6 @@ export function RemindersPage({
                   className={`rounded-2xl border p-5 transition-all ${
                     alreadyApplied
                       ? 'border-[#5864C6]/40 bg-[#5864C6]/5 dark:bg-[#5864C6]/10'
-                      : locked
-                      ? 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/30 opacity-80'
                       : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 hover:border-[#5864C6]/40 dark:hover:border-[#5864C6]/40 hover:shadow-md'
                   }`}
                 >
@@ -788,17 +785,6 @@ export function RemindersPage({
                   {alreadyApplied ? (
                     <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#5864C6' }}>
                       <CheckCircle2 className="h-4 w-4" /> Applied
-                    </div>
-                  ) : locked ? (
-                    <div>
-                      <p className="text-xs text-amber-700 dark:text-amber-400 mb-2">This is a Pro feature — upgrade for $6/mo, cancel anytime.</p>
-                      <a
-                        href="/dashboard/billing"
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-amber-600 hover:bg-amber-500 px-3 py-1.5 rounded-lg transition-colors"
-                      >
-                        <Zap className="h-3.5 w-3.5" />
-                        Upgrade to Pro
-                      </a>
                     </div>
                   ) : (
                     <button

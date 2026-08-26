@@ -19,3 +19,16 @@ export function jsonAuthError(corsHeaders: Record<string, string>, message = 'Un
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 }
+
+/** Authenticated user id from a Supabase JWT (not anon / service role). */
+export async function hostIdFromJwt(
+  req: Request,
+  supabase: { auth: { getUser: (token: string) => Promise<{ data: { user?: { id?: string } | null } }> } },
+): Promise<string | null> {
+  const token = bearerToken(req);
+  if (!token || token === 'anon') return null;
+  const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  if (service && token === service) return null;
+  const { data } = await supabase.auth.getUser(token);
+  return data.user?.id ?? null;
+}

@@ -2,6 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { appendSmsOptOut } from '../_shared/sms-opt-out.ts';
 import { NOREPLY_FROM, SUPPORT_EMAIL } from '../_shared/contact-email.ts';
 import { jsonAuthError } from '../_shared/callerAuth.ts';
+import { expireStaleTrials, hostPlanIsActive } from '../_shared/hostPlan.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -133,6 +134,11 @@ Deno.serve(async (req: Request) => {
     const { data: userData } = await supabase.auth.getUser(token);
     const hostId = userData.user?.id;
     if (!hostId) return jsonAuthError(corsHeaders);
+
+    await expireStaleTrials(supabase);
+    if (!(await hostPlanIsActive(supabase, hostId))) {
+      return jsonResponse({ error: 'Reactivate Pro to send quotes and invoices.' }, 403);
+    }
 
     const body = await req.json();
     const quoteId = String(body.quote_id ?? '');

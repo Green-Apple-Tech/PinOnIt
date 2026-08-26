@@ -2,9 +2,10 @@ import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { appendSmsOptOut } from '../_shared/sms-opt-out.ts';
 import { NOREPLY_FROM, SUPPORT_EMAIL } from '../_shared/contact-email.ts';
 import { bookingAllowsGuestSms, bookingAllowsGuestWhatsapp, hostAllowsSms, hostAllowsWhatsapp } from '../_shared/sms-compliance.ts';
-import { isServiceRoleRequest, jsonAuthError } from '../_shared/callerAuth.ts';
+import { isServiceRoleRequest, jsonAuthError, hostIdFromJwt } from '../_shared/callerAuth.ts';
 import { isValidSlackWebhookUrl, notifySlackWebhook } from '../_shared/slack-webhook.ts';
 import { parseAlsoPeople, resolveAlsoPeople, type AlsoPerson } from '../_shared/reminder-also.ts';
+import { expireStaleTrials, hostPlanIsActive, loadActiveHostIds } from '../_shared/hostPlan.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -483,8 +484,13 @@ async function dispatchPersonalReminders(supabase: SupabaseClient): Promise<numb
     console.error('personal reminder jobs query failed:', error.message);
     return 0;
   }
+  const activeHosts = await loadActiveHostIds(
+    supabase,
+    (jobs ?? []).map((j) => j.host_id as string),
+  );
   let sent = 0;
   for (const job of jobs ?? []) {
+    if (!activeHosts.has(job.host_id as string)) continue;
     const reminder = job.personal_reminders as { title?: string; due_at?: string; status?: string } | null;
     if (!reminder || reminder.status !== 'active') continue;
     const { data: hostProfile } = await supabase
@@ -577,14 +583,6 @@ async function dispatchPersonalReminders(supabase: SupabaseClient): Promise<numb
     }
   }
   return sent;
-}
-
-async function hostIdFromJwt(req: Request, supabase: SupabaseClient): Promise<string | null> {
-  const header = req.headers.get('Authorization') ?? '';
-  const token = header.replace(/^Bearer\s+/i, '').trim();
-  if (!token || token === 'anon') return null;
-  const { data } = await supabase.auth.getUser(token);
-  return data.user?.id ?? null;
 }
 
 function hostEmailRecipients(hostProfile: Record<string, unknown>): string[] {
@@ -744,6 +742,11 @@ async function dispatchScheduledReminders(supabase: SupabaseClient): Promise<num
     return 0;
   }
 
+  const activeHosts = await loadActiveHostIds(
+    supabase,
+    (bookings ?? []).map((b) => b.host_id as string),
+  );
+
   let sent = 0;
   const hostRulesCache = new Map<string, Array<{
     id: string;
@@ -760,6 +763,7 @@ async function dispatchScheduledReminders(supabase: SupabaseClient): Promise<num
   }>>();
 
   for (const booking of bookings ?? []) {
+    if (!activeHosts.has(booking.host_id as string)) continue;
     const startMs = Date.parse(booking.start_time);
     if (!Number.isFinite(startMs)) continue;
     const hostProfile = booking.profiles as Record<string, unknown> | null;
@@ -1031,6 +1035,9 @@ Deno.serve(async (req: Request) => {
     if (body.test_slack) {
       const hostId = await hostIdFromJwt(req, supabase);
       if (!hostId) return jsonAuthError(corsHeaders, 'Sign in to send a Slack test');
+      if (!(await hostPlanIsActive(supabase, hostId))) {
+        return jsonResponse({ error: 'Reactivate Pro to send test notifications.' }, 403);
+      }
       const raw = typeof body.slack_webhook_url === 'string' ? body.slack_webhook_url.trim() : '';
       let url = raw;
       if (!url) {
@@ -1055,6 +1062,9 @@ Deno.serve(async (req: Request) => {
     if (body.test_email) {
       const hostId = await hostIdFromJwt(req, supabase);
       if (!hostId) return jsonAuthError(corsHeaders, 'Sign in to send a test email');
+      if (!(await hostPlanIsActive(supabase, hostId))) {
+        return jsonResponse({ error: 'Reactivate Pro to send test notifications.' }, 403);
+      }
 
       const resendKey = Deno.env.get('RESEND_API_KEY');
       if (!resendKey) {
@@ -1111,6 +1121,9 @@ Deno.serve(async (req: Request) => {
       const channel = body.test_voice ? 'voice' : body.test_whatsapp ? 'whatsapp' : 'sms';
       const hostId = await hostIdFromJwt(req, supabase);
       if (!hostId) return jsonAuthError(corsHeaders, 'Sign in to send a test message');
+      if (!(await hostPlanIsActive(supabase, hostId))) {
+        return jsonResponse({ error: 'Reactivate Pro to send test notifications.' }, 403);
+      }
 
       const twilioSid = Deno.env.get('TWILIO_ACCOUNT_SID');
       if (!twilioSid) {
@@ -1166,7 +1179,14 @@ Deno.serve(async (req: Request) => {
         .limit(250);
 
       let sent = 0;
+      await expireStaleTrials(supabase);
+      const overrideActiveHosts = await loadActiveHostIds(
+        supabase,
+        (overrides ?? []).map((ov) => ov.host_id as string),
+      );
+
       for (const ov of overrides ?? []) {
+        if (!overrideActiveHosts.has(ov.host_id as string)) continue;
         const offsetMs = (ov.offset_minutes ?? -60) * 60 * 1000;
         let startIso: string | null = null;
         let title = 'Meeting';
@@ -1214,7 +1234,7 @@ Deno.serve(async (req: Request) => {
         } else if (ov.calendar_event_id) {
           const { data: ev } = await supabase
             .from('calendar_events')
-            .select('title, start_at, host_id')
+            .select('title, start_at, host_id, also_remind_ids')
             .eq('id', ov.calendar_event_id)
             .maybeSingle();
           if (!ev) continue;
@@ -1232,7 +1252,9 @@ Deno.serve(async (req: Request) => {
           hostSmsConsent = hostAllowsSms(hp);
           hostWhatsappConsent = hostAllowsWhatsapp(hp);
           guestName = hostName;
-          alsoPeople = resolveAlsoPeople(parseAlsoPeople(hp?.reminder_also));
+          alsoPeople = resolveAlsoPeople(parseAlsoPeople(hp?.reminder_also), {
+            bookingAlsoIds: ev.also_remind_ids,
+          });
           slackWebhook = hp?.slack_webhook_url || null;
         }
 
@@ -1343,6 +1365,7 @@ Deno.serve(async (req: Request) => {
       }
 
       if (body.dispatch_scheduled) {
+        await expireStaleTrials(supabase);
         const scheduled = await dispatchScheduledReminders(supabase);
         const personal = await dispatchPersonalReminders(supabase);
         sent += scheduled + personal;
@@ -1355,6 +1378,7 @@ Deno.serve(async (req: Request) => {
       if (!isServiceRoleRequest(req)) {
         return jsonAuthError(corsHeaders, 'Dispatcher requires a service role token');
       }
+      await expireStaleTrials(supabase);
       const sent = await dispatchScheduledReminders(supabase);
       const personal = await dispatchPersonalReminders(supabase);
       return jsonResponse({ success: true, sent: sent + personal });
@@ -1377,6 +1401,10 @@ Deno.serve(async (req: Request) => {
 
     if (!booking) {
       return jsonResponse({ error: 'Booking not found' }, 404);
+    }
+
+    if (!(await hostPlanIsActive(supabase, booking.host_id as string))) {
+      return jsonResponse({ error: 'Host account inactive' }, 403);
     }
 
     if (!privileged) {

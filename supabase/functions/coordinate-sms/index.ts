@@ -1,6 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { appendSmsOptOut } from "../_shared/sms-opt-out.ts";
+import { hostIdFromJwt, jsonAuthError } from "../_shared/callerAuth.ts";
+import { expireStaleTrials, hostPlanIsActive } from "../_shared/hostPlan.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -547,7 +549,9 @@ async function findHostMeetingForPhone(
   const { data: profiles } = await supabase
     .from("profiles")
     .select("id, phone")
-    .not("phone", "is", null);
+    .not("phone", "is", null)
+    .ilike("phone", `%${digits}`)
+    .limit(8);
 
   const hostProfile = (profiles ?? []).find((p) =>
     p.phone && phonesMatch(p.phone as string, phone)
@@ -576,6 +580,16 @@ async function processHostInbound(
   hostPhone: string,
 ): Promise<Response> {
   const meetingId = meeting.id as string;
+  const hostId = meeting.host_id as string;
+  await expireStaleTrials(supabase);
+  if (!(await hostPlanIsActive(supabase, hostId))) {
+    await sendSms(
+      hostPhone,
+      "Your PinOnIt trial has ended. Reactivate at pinonit.com/billing to keep coordinating meetings.",
+    );
+    return new Response("OK", { status: 200 });
+  }
+
   const title = meeting.title as string;
   const durationMinutes = meeting.duration_minutes as number;
   const preferredTimes = meeting.preferred_times;
@@ -595,7 +609,7 @@ async function processHostInbound(
       hostPhone,
       `Extended the window for "${title}" by one week. We'll text participants to share new availability.`,
     );
-    await handleInitialSend(meetingId);
+    await sendCoordinationInvites(meetingId).catch(() => {});
     return new Response("OK", { status: 200 });
   }
 
@@ -742,7 +756,7 @@ async function checkAndRunOverlap(meetingId: string): Promise<void> {
   await notifyHostBestMatch(meeting, overlaps, active.length, hostProfile.phone);
 }
 
-async function handleInitialSend(meetingId: string): Promise<Response> {
+async function sendCoordinationInvites(meetingId: string): Promise<{ sent: number; skipped: number }> {
   const { data: meeting, error: mErr } = await supabase
     .from("coordinated_meetings")
     .select("*")
@@ -750,10 +764,7 @@ async function handleInitialSend(meetingId: string): Promise<Response> {
     .maybeSingle();
 
   if (mErr || !meeting) {
-    return new Response(JSON.stringify({ error: "Meeting not found" }), {
-      status: 404,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    throw new Error("Meeting not found");
   }
 
   const { data: participants, error: pErr } = await supabase
@@ -762,10 +773,7 @@ async function handleInitialSend(meetingId: string): Promise<Response> {
     .eq("meeting_id", meetingId);
 
   if (pErr || !participants) {
-    return new Response(JSON.stringify({ error: "Failed to load participants" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    throw new Error("Failed to load participants");
   }
 
   const { data: hostProfile } = await supabase
@@ -780,18 +788,57 @@ async function handleInitialSend(meetingId: string): Promise<Response> {
 
   const toSms = participants.filter((p) => !p.availability_pre_entered);
 
-  const smsPromises = toSms.map(async (p) => {
-    const body = buildCoordInviteSms(p.name, hostName, meeting, pt, meeting.selected_dates);
-    await sendSms(p.phone, body);
-  });
-
-  await Promise.all(smsPromises);
+  await Promise.all(
+    toSms.map(async (p) => {
+      const body = buildCoordInviteSms(p.name, hostName, meeting, pt, meeting.selected_dates);
+      await sendSms(p.phone, body);
+    }),
+  );
   await checkAndRunOverlap(meetingId);
 
-  return new Response(JSON.stringify({ ok: true, sent: toSms.length, skipped: participants.length - toSms.length }), {
-    status: 200,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+  return { sent: toSms.length, skipped: participants.length - toSms.length };
+}
+
+async function handleInitialSend(meetingId: string, callerHostId: string): Promise<Response> {
+  const { data: meeting } = await supabase
+    .from("coordinated_meetings")
+    .select("host_id")
+    .eq("id", meetingId)
+    .maybeSingle();
+
+  if (!meeting) {
+    return new Response(JSON.stringify({ error: "Meeting not found" }), {
+      status: 404,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  if (meeting.host_id !== callerHostId) {
+    return jsonAuthError(corsHeaders, "Not allowed for this meeting", 403);
+  }
+
+  await expireStaleTrials(supabase);
+  if (!(await hostPlanIsActive(supabase, callerHostId))) {
+    return new Response(JSON.stringify({ error: "Reactivate Pro to coordinate meetings." }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  try {
+    const result = await sendCoordinationInvites(meetingId);
+    return new Response(JSON.stringify({ ok: true, ...result }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to send invites";
+    const status = message === "Meeting not found" ? 404 : 500;
+    return new Response(JSON.stringify({ error: message }), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 }
 
 async function handleInboundSms(from: string, body: string): Promise<Response> {
@@ -882,7 +929,32 @@ async function processInboundReply(
   return new Response("OK", { status: 200 });
 }
 
-async function handleConfirm(meetingId: string, confirmedTime: string): Promise<Response> {
+async function handleConfirm(meetingId: string, confirmedTime: string, callerHostId: string): Promise<Response> {
+  const { data: meeting } = await supabase
+    .from("coordinated_meetings")
+    .select("host_id")
+    .eq("id", meetingId)
+    .maybeSingle();
+
+  if (!meeting) {
+    return new Response(JSON.stringify({ error: "Meeting not found" }), {
+      status: 404,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  if (meeting.host_id !== callerHostId) {
+    return jsonAuthError(corsHeaders, "Not allowed for this meeting", 403);
+  }
+
+  await expireStaleTrials(supabase);
+  if (!(await hostPlanIsActive(supabase, callerHostId))) {
+    return new Response(JSON.stringify({ error: "Reactivate Pro to coordinate meetings." }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   await finalizeHostConfirmation(meetingId, confirmedTime);
 
   return new Response(JSON.stringify({ ok: true }), {
@@ -908,16 +980,21 @@ Deno.serve(async (req: Request) => {
 
     const payload = await req.json();
 
+    const callerHostId = await hostIdFromJwt(req, supabase);
+    if (!callerHostId) {
+      return jsonAuthError(corsHeaders, "Sign in to coordinate meetings");
+    }
+
     if (payload.type === "sms_webhook") {
       return await handleInboundSms(payload.From, payload.Body);
     }
 
     if (payload.type === "confirm") {
-      return await handleConfirm(payload.meeting_id, payload.confirmed_time);
+      return await handleConfirm(payload.meeting_id, payload.confirmed_time, callerHostId);
     }
 
     if (payload.meeting_id) {
-      return await handleInitialSend(payload.meeting_id);
+      return await handleInitialSend(payload.meeting_id, callerHostId);
     }
 
     return new Response(JSON.stringify({ error: "Unknown request type" }), {

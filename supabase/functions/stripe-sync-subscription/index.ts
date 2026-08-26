@@ -89,7 +89,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!customerId) {
-      return new Response(JSON.stringify({ synced: false, plan: 'free', reason: 'no_stripe_customer' }), {
+      return new Response(JSON.stringify({ synced: false, plan: 'expired', reason: 'no_stripe_customer' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -102,7 +102,7 @@ Deno.serve(async (req: Request) => {
       // Do not clobber a paid DB row if Stripe lookup is incomplete.
       return new Response(JSON.stringify({
         synced: false,
-        plan: 'free',
+        plan: 'expired',
         reason: 'no_live_subscription',
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

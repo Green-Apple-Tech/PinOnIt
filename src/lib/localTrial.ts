@@ -12,7 +12,7 @@ export async function hasStripeBilling(userId: string): Promise<boolean> {
     (row) =>
       Boolean(row.stripe_subscription_id) ||
       isRealStripeCustomerId(row.stripe_customer_id) ||
-      (row.plan !== 'free' && row.status === 'active'),
+      (row.plan !== 'expired' && row.status === 'active'),
   );
 }
 

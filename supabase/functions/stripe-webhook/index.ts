@@ -158,18 +158,18 @@ Deno.serve(async (req: Request) => {
           await supabase
             .from('subscriptions')
             .update({
-              plan: 'free',
+              plan: 'expired',
               status: 'canceled',
               stripe_subscription_id: null,
               stripe_price_id: null,
             })
             .eq('user_id', userId);
-          await writeProfilePlanFromStripe(supabase, userId, 'free');
+          await writeProfilePlanFromStripe(supabase, userId, 'expired');
         } else if (isRealStripeCustomerId(customerId ?? null)) {
           await supabase
             .from('subscriptions')
             .update({
-              plan: 'free',
+              plan: 'expired',
               status: 'canceled',
               stripe_subscription_id: null,
               stripe_price_id: null,

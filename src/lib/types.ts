@@ -30,7 +30,7 @@ export interface Profile {
   bio: string | null;
   timezone: string;
   slug: string | null;
-  plan: 'free' | 'pro';
+  plan: 'trial' | 'pro' | 'expired';
   plan_override?: 'pro' | null;
   stripe_customer_id: string | null;
   referral_code: string | null;
@@ -320,7 +320,7 @@ export interface Subscription {
   stripe_current_period_end: string | null;
   trial_ends_at?: string | null;
   status: 'active' | 'canceled' | 'past_due' | 'trialing';
-  plan: 'free' | 'pro';
+  plan: 'trial' | 'pro' | 'expired';
   created_at: string;
   updated_at: string;
 }

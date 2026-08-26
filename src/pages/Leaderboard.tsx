@@ -47,7 +47,7 @@ export function LeaderboardPage() {
             to="/signup"
             className="px-4 py-1.5 text-white text-sm font-semibold rounded-lg transition-colors inline-flex items-center gap-1.5 hover:opacity-90" style={{ backgroundColor: '#5864C6' }}
           >
-            Get started free <ArrowRight className="h-3.5 w-3.5" />
+            Start free trial <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
       </header>
@@ -71,7 +71,7 @@ export function LeaderboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
           {[
             { label: '1 referral', value: '$1 off/mo' },
-            { label: '6 referrals', value: 'Free forever' },
+            { label: '6 referrals', value: 'Pro covered' },
             { label: '7+ referrals', value: 'We pay you' },
           ].map((s) => (
             <div key={s.label} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 text-center">

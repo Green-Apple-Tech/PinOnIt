@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
-import { effectivePlan } from '../lib/plan';
 import type { Service, BookingQuestion, MeetingType, RecurrenceFrequency } from '../lib/types';
 import { getRecurrenceEndType, type RecurrenceEndType } from '../lib/recurring';
 import { resolveDefaultReminderChannel } from '../lib/reminderChannels';
@@ -327,7 +326,6 @@ function PaymentTab({
 
 export function ServicesPage() {
   const { profile, subscription, refreshProfile } = useAuth();
-  const isPro = effectivePlan(subscription, profile) === 'pro';
   const [searchParams, setSearchParams] = useSearchParams();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
@@ -728,19 +726,7 @@ export function ServicesPage() {
         </button>
       </div>
 
-      {/* Pro upgrade banner */}
-      {!isPro && services.length >= 1 && (
-        <div className="mb-5 flex items-center gap-3 px-4 py-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-xl">
-          <Zap className="h-4 w-4 text-amber-600 shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Unlimited event types is a Pro feature</p>
-            <p className="text-xs text-amber-600 dark:text-amber-500 mt-0.5">You're on the Free plan (1 event type). Upgrade for $6/mo, cancel anytime.</p>
-          </div>
-          <a href="/dashboard/billing" className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-lg transition-colors">
-            <Zap className="h-3.5 w-3.5" /> Upgrade
-          </a>
-        </div>
-      )}
+      {/* Pro upgrade banner removed — trial includes unlimited event types */}
 
       {/* Search bar */}
       {!loading && services.length > 0 && (

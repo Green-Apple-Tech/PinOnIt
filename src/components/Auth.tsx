@@ -274,7 +274,7 @@ export function AuthForm() {
               <p className="text-sm text-slate-400 dark:text-slate-500">
                 Don't have an account?{' '}
                 <button onClick={() => setView('signup')} className="text-indigo-600 hover:text-indigo-500 font-semibold transition-colors">
-                  Sign up free
+                  Start free trial
                 </button>
               </p>
             </>

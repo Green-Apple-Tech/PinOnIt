@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import { effectivePlan, isActivePlan } from '../lib/plan';
 import { supabase } from '../lib/supabase';
 import { TIMEZONES } from '../lib/types';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
@@ -377,10 +377,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
   const stepIndex = STEPS.indexOf(step);
 
   // True if user already has an active Pro/trial subscription
-  const isAlreadyPro = (
-    (subscription?.plan === 'pro' && subscription?.status !== 'canceled')
-    || profile?.plan === 'pro'
-  );
+  const isAlreadyPro = isActivePlan(effectivePlan(subscription, profile));
 
   // ── Persist completed state to both DB and localStorage ──────────────────────
   const persistCompleted = useCallback(async () => {
@@ -1301,7 +1298,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
             <div className="grid grid-cols-2 gap-3 mb-6">
               {[
                 { val: true, label: 'Switching from Calendly?', icon: '📅', desc: 'Import your events. 60 days Pro with a card on file — $0 today, billing starts after day 60.' },
-                { val: false, label: 'Starting fresh', icon: '🚀', desc: '14 days Pro with no credit card, or 60 days if you add a card ($0 today).' },
+                { val: false, label: 'Starting fresh', icon: '🚀', desc: 'Your 14-day Pro trial starts automatically. Add a card anytime for 60 days ($0 today).' },
               ].map(opt => (
                 <button
                   key={String(opt.val)}

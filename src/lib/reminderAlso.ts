@@ -18,7 +18,7 @@ export const ALSO_SCOPE_OPTIONS: { id: AlsoScope; label: string; hint: string }[
   {
     id: 'manual',
     label: 'Only meetings I pick',
-    hint: 'Add them on Calendar when you want a copy for that meeting.',
+    hint: 'On Calendar, open the event (bell icon) and check their name.',
   },
   {
     id: 'all',

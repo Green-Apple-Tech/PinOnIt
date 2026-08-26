@@ -1735,7 +1735,7 @@ function ReferralsTab({ userId, profile }: { userId: string | null; profile: imp
           <div>
             <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">You're earning monthly payments!</p>
             <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">
-              With {totalConverted} active referrals, you earn ${monthlyEarning}/month above your free plan.
+              With {totalConverted} active referrals, you earn ${monthlyEarning}/month above your Pro subscription.
             </p>
           </div>
         </div>
@@ -1744,7 +1744,7 @@ function ReferralsTab({ userId, profile }: { userId: string | null; profile: imp
         <div className="flex items-start gap-3 p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 rounded-xl success">
           <Check className="h-5 w-5 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
           <div>
-            <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">Your plan is free!</p>
+            <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">Pro is fully covered!</p>
             <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">6 active referrals fully covers your $6/month.</p>
           </div>
         </div>

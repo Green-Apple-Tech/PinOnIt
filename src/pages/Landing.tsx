@@ -353,7 +353,7 @@ export function Landing() {
             ) : (
               <>
                 <Link to="/login" className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Log in</Link>
-                <Link to="/signup" className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold rounded-full transition-colors">Get started free</Link>
+                <Link to="/signup" className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold rounded-full transition-colors">Start free trial</Link>
               </>
             )}
             <button className="lg:hidden p-2 rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
@@ -548,7 +548,7 @@ export function Landing() {
               <ArrowRight className="h-5 w-5" />
             </Link>
             <p className="text-indigo-300/60 text-sm mt-3">
-              Free plan available · Pro from $6/month · Cancel anytime
+              14-day Pro trial · $6/mo after · Cancel anytime
             </p>
           </div>
         </div>
@@ -673,87 +673,51 @@ export function Landing() {
 
       {/* ── 5. PRICING ── */}
       <section id="pricing" className="py-24 px-6 bg-white dark:bg-slate-950 scroll-mt-16">
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-lg mx-auto">
           <div className="text-center mb-12">
             <p className="text-xs font-bold text-brand-500 uppercase tracking-widest mb-3">Pricing</p>
             <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-3">
-              14 days free with no card, or 60 days with a card on file
+              One plan. Full access. Try it free.
             </h2>
             <p className="text-slate-500 dark:text-slate-400 text-lg">
-              60-day trials charge $0 today. Billing starts automatically after day 60 unless you cancel.
+              Every account starts with 14 days of Pro — no card required. Calendly switchers get 60 days with a card on file ($0 today).
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-5">
-            {/* Free */}
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 flex flex-col">
-              <div className="mb-6">
-                <div className="mb-3 h-6" />
-                <h3 className="text-xl font-extrabold text-slate-900 dark:text-white">Free</h3>
-                <div className="mt-2 flex items-baseline gap-1">
-                  <span className="text-4xl font-extrabold text-slate-900 dark:text-white">$0</span>
-                  <span className="text-slate-400 text-sm">/month</span>
-                </div>
-                <p className="mt-1 text-xs text-slate-400">Free forever — no card needed.</p>
+          <div className="relative rounded-2xl border-2 border-brand-500 bg-brand-500 shadow-xl shadow-brand-200/50 dark:shadow-none p-8 flex flex-col">
+            <div className="mb-6">
+              <h3 className="text-2xl font-extrabold text-white">PinOnIt Pro</h3>
+              <div className="mt-2 flex items-baseline gap-1.5">
+                <span className="text-5xl font-extrabold text-white">$6</span>
+                <span className="line-through text-brand-200 text-sm">$16</span>
+                <span className="text-brand-200 text-sm">/month after trial</span>
               </div>
-              <div className="border-t border-slate-100 dark:border-slate-800 mb-5" />
-              <ul className="space-y-2.5 flex-1 mb-6">
-                {['1 event type', 'Email reminders', 'Basic calendar sync', 'Referral program access'].map((f) => (
-                  <li key={f} className="flex items-start gap-2.5">
-                    <div className="h-4 w-4 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center shrink-0 mt-0.5">
-                      <Check className="h-2.5 w-2.5 text-brand-600 dark:text-brand-400" />
-                    </div>
-                    <span className="text-sm text-slate-600 dark:text-slate-300">{f}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link to="/signup" className="w-full py-3 rounded-full text-sm font-bold flex items-center justify-center bg-brand-500 hover:bg-brand-600 text-white transition-all">
-                Get started free
-              </Link>
+              <p className="mt-2 text-sm text-brand-100">14-day trial included · cancel anytime</p>
             </div>
-
-            {/* Pro */}
-            <div className="relative rounded-2xl border-2 border-brand-500 bg-brand-500 shadow-xl shadow-brand-200/50 dark:shadow-none p-6 flex flex-col">
-              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                <span className="px-4 py-1 bg-white text-brand-600 text-xs font-black rounded-full shadow-md whitespace-nowrap">Most Popular</span>
-              </div>
-              <div className="mb-6">
-                <div className="mb-3 h-6" />
-                <h3 className="text-xl font-extrabold text-white">Pro</h3>
-                <div className="mt-2 flex items-baseline gap-1.5">
-                  <span className="text-4xl font-extrabold text-white">$6</span>
-                  <span className="line-through text-brand-200 text-sm">$16</span>
-                  <span className="text-brand-200 text-sm">/month</span>
-                </div>
-                <p className="mt-1 text-xs text-brand-100">$6/mo after trial · cancel anytime · no contracts</p>
-              </div>
-              <div className="border-t border-white/20 mb-5" />
-              <ul className="space-y-2.5 flex-1 mb-6">
-                {[
-                  'WhatsApp + two-way SMS (text 2 to reschedule)',
-                  'Critical alerts + voice reminders',
-                  'Personal “remind me…” with calendar write-back',
-                  'Bookings sync to Google / Outlook',
-                  'Native share on mobile (email, text, WhatsApp)',
-                  'Quotes, invoices, Paid Booking storefront',
-                  'Calendly import + $1/mo referral credit',
-                ].map((f) => (
-                  <li key={f} className="flex items-start gap-2.5">
-                    <div className="h-4 w-4 rounded-full bg-white/25 flex items-center justify-center shrink-0 mt-0.5">
-                      <Check className="h-2.5 w-2.5 text-white" />
-                    </div>
-                    <span className="text-sm text-brand-50">{f}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link to="/signup" className="w-full py-3 rounded-full text-sm font-bold flex items-center justify-center bg-white text-brand-600 hover:bg-brand-50 transition-all">
-                Start Free 60-Day Trial
-              </Link>
-            </div>
+            <ul className="space-y-2.5 flex-1 mb-8">
+              {[
+                'WhatsApp + two-way SMS (text 2 to reschedule)',
+                'Critical alerts + voice reminders',
+                'Personal “remind me…” with calendar write-back',
+                'Bookings sync to Google / Outlook',
+                'Quotes, invoices, Paid Booking storefront',
+                'Calendly import + referral credits',
+              ].map((f) => (
+                <li key={f} className="flex items-start gap-2.5">
+                  <div className="h-4 w-4 rounded-full bg-white/25 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check className="h-2.5 w-2.5 text-white" />
+                  </div>
+                  <span className="text-sm text-brand-50">{f}</span>
+                </li>
+              ))}
+            </ul>
+            <Link to="/signup" className="w-full py-3.5 rounded-full text-sm font-bold flex items-center justify-center bg-white text-brand-600 hover:bg-brand-50 transition-all">
+              Start 14-day trial
+            </Link>
           </div>
 
           <p className="mt-6 text-center text-sm text-slate-400 dark:text-slate-500">
-            <span className="font-semibold text-indigo-600 dark:text-indigo-500">Refer 6 people → Pro is free forever.</span>{' '}
+            <span className="font-semibold text-indigo-600 dark:text-indigo-500">Refer 6 people → enough credits to cover Pro.</span>{' '}
             Refer more → PinOnIt pays you $1/mo per person.
           </p>
         </div>
@@ -954,7 +918,7 @@ export function Landing() {
           >
             Create Your Free Account <ArrowRight className="h-5 w-5" />
           </Link>
-          <p className="mt-5 text-brand-200 text-sm">Free plan · No card needed · Cancel anytime</p>
+          <p className="mt-5 text-brand-200 text-sm">14-day trial · $6/mo after · Cancel anytime</p>
         </div>
       </section>
 

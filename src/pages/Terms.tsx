@@ -42,33 +42,17 @@ const sections: Section[] = [
   },
   {
     icon: Zap,
-    title: 'Free and Pro Plans',
+    title: 'PinOnIt Pro — trial then $6/mo',
     content: (
       <div className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl">
-            <p className="font-semibold text-slate-800 dark:text-slate-200 mb-2">Free Plan</p>
-            <ul className="space-y-1.5 text-xs text-slate-500 dark:text-slate-400">
-              <li className="flex gap-1.5"><span className="text-indigo-600">✓</span> Unlimited booking links</li>
-              <li className="flex gap-1.5"><span className="text-indigo-600">✓</span> Basic event types</li>
-              <li className="flex gap-1.5"><span className="text-indigo-600">✓</span> Email reminders</li>
-              <li className="flex gap-1.5"><span className="text-indigo-600">✓</span> Core scheduling features</li>
-            </ul>
-          </div>
-          <div className="p-4 bg-brand-50 dark:bg-brand-500/10 border border-brand-200 dark:border-brand-700/40 rounded-xl">
-            <div className="flex items-center justify-between mb-2">
-              <p className="font-semibold text-slate-800 dark:text-slate-200">Pro Plan</p>
-              <span className="text-xs font-bold text-brand-700 dark:text-brand-300">$6/month</span>
-            </div>
-            <ul className="space-y-1.5 text-xs text-slate-500 dark:text-slate-400">
-              <li className="flex gap-1.5"><span className="text-indigo-600">✓</span> Everything in Free</li>
-              <li className="flex gap-1.5"><span className="text-indigo-600">✓</span> SMS & WhatsApp reminders</li>
-              <li className="flex gap-1.5"><span className="text-indigo-600">✓</span> Calendar integrations</li>
-              <li className="flex gap-1.5"><span className="text-indigo-600">✓</span> Advanced event types</li>
-              <li className="flex gap-1.5"><span className="text-indigo-600">✓</span> Priority support</li>
-            </ul>
-          </div>
-        </div>
+        <p className="text-sm text-slate-600 dark:text-slate-400">
+          Every account includes a <strong>14-day full-access trial</strong> (no credit card required). After the trial, Pro is <strong>$6/month</strong> unless you cancel. Calendly switchers can get <strong>60 days</strong> with a card on file ($0 today).
+        </p>
+        <ul className="space-y-1.5 text-xs text-slate-500 dark:text-slate-400">
+          <li className="flex gap-1.5"><span className="text-indigo-600">✓</span> SMS, WhatsApp, voice, and calendar write-back</li>
+          <li className="flex gap-1.5"><span className="text-indigo-600">✓</span> Unlimited event types and reminders</li>
+          <li className="flex gap-1.5"><span className="text-indigo-600">✓</span> If your trial ends without subscribing, your account becomes read-only — data stays, booking and reminders pause</li>
+        </ul>
         <p className="text-xs text-slate-400 dark:text-slate-500">
           Plan features, pricing, and availability are subject to change. We will provide at least 30 days' notice before increasing prices for existing subscribers.
         </p>
@@ -160,7 +144,7 @@ const sections: Section[] = [
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>No refunds:</strong> All subscription payments are non-refundable. If you cancel, you retain access until the end of your current billing period.</span></li>
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Cancellation:</strong> You may cancel your subscription at any time from your Billing settings. Cancellation takes effect at the end of the current billing period.</span></li>
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Free trials:</strong> New accounts may start a 14-day Pro trial with no credit card. A 60-day Pro trial is available when you add a payment method ($0 is charged at signup). When a 60-day trial ends, your subscription bills automatically at the standard monthly rate unless you cancel first. The 14-day no-card trial does not store a card and does not auto-charge; add a card before it ends to keep Pro.</span></li>
-          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Failed payments:</strong> If a payment fails, we will attempt to retry. Continued failure may result in downgrade to the Free plan.</span></li>
+          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Failed payments:</strong> If a payment fails, we will attempt to retry. Continued failure may result in your account becoming read-only until you reactivate.</span></li>
         </ul>
       </div>
     ),
