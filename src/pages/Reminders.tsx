@@ -681,20 +681,18 @@ export function RemindersPage({
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Smart Reminders</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Remind yourself, your guests, and extra people (coworkers or anyone else) — not just meetings. Email, SMS, WhatsApp, or Voice for you and guests; extra people get email, SMS, or WhatsApp (no voice).
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Smart Reminders</h1>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          Remind yourself, your guests, and extra people (coworkers or anyone else) — not just meetings. Email, SMS, WhatsApp, or Voice for you and guests; extra people get email, SMS, or WhatsApp (no voice).
+        </p>
         <button
           type="button"
           onClick={openPersonalReminder}
-          className="shrink-0 inline-flex items-center justify-center gap-2 min-h-11 px-4 py-2 text-white text-sm font-semibold rounded-xl transition-all hover:opacity-90"
+          className="mt-4 w-full sm:w-auto sm:min-w-[280px] inline-flex items-center justify-center gap-2.5 min-h-14 px-8 py-3.5 text-white text-base font-semibold rounded-2xl transition-all hover:opacity-90 shadow-sm"
           style={{ backgroundColor: '#5864C6' }}
         >
-          <Plus className="h-4 w-4" /> Add Reminder
+          <Plus className="h-5 w-5" /> Add Reminder
         </button>
       </div>
 
