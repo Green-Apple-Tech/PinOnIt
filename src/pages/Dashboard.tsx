@@ -724,8 +724,10 @@ function SharePanel({
     setShareMenuOpen(false);
     if (onPhone || provider === 'default') {
       showShareToast('Opened email app');
+    } else if (provider === 'outlook') {
+      showShareToast('Opening Outlook…');
     } else {
-      showShareToast(provider === 'gmail' ? 'Opened Gmail compose' : 'Opened Outlook compose');
+      showShareToast('Opened Gmail compose');
     }
   };
 
@@ -853,7 +855,7 @@ function SharePanel({
               ) : (
                 <>
                   <button type="button" onClick={() => handleEmail('gmail')} className={menuItemCls}>Gmail</button>
-                  <button type="button" onClick={() => handleEmail('outlook')} className={menuItemCls}>Outlook</button>
+                  <button type="button" onClick={() => handleEmail('outlook')} className={menuItemCls}>Outlook (app or web)</button>
                   <button type="button" onClick={() => handleEmail('default')} className={menuItemCls}>Default email app</button>
                 </>
               )}

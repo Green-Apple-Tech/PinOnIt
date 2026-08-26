@@ -78,10 +78,45 @@ function mailtoHref(subject: string, body: string, to?: string): string {
     : `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
+function outlookWebComposeUrl(subject: string, body: string, to?: string): string {
+  const params = new URLSearchParams();
+  if (to) params.set('to', to);
+  params.set('subject', subject);
+  params.set('body', body);
+  return `https://outlook.office.com/mail/deeplink/compose?${params.toString()}`;
+}
+
+function outlookDesktopComposeUrl(subject: string, body: string, to?: string): string {
+  const params = new URLSearchParams();
+  if (to) params.set('to', to);
+  params.set('subject', subject);
+  params.set('body', body);
+  return `ms-outlook://compose?${params.toString()}`;
+}
+
+/**
+ * Try a native app URL scheme; if the page is still visible shortly after,
+ * assume the app isn't installed and open the web fallback.
+ */
+function openAppThenWebFallback(appUrl: string, webUrl: string, delayMs = 900) {
+  const started = Date.now();
+  const hidden = () => document.visibilityState === 'hidden';
+
+  // Prefer navigating the current tab for custom schemes (popup blockers ignore these less).
+  window.location.href = appUrl;
+
+  window.setTimeout(() => {
+    if (Date.now() - started < delayMs + 400 && !hidden()) {
+      window.open(webUrl, '_blank', 'noopener,noreferrer');
+    }
+  }, delayMs);
+}
+
 /**
  * Open an email compose surface.
- * Mobile: mailto: (native Mail / default app) for all providers — Gmail/Outlook web URLs stay in the browser.
- * Desktop: Gmail/Outlook use web compose; default uses mailto:.
+ * Mobile: mailto: (native Mail / default app) for all providers.
+ * Desktop Outlook: try Outlook desktop/app (`ms-outlook://`), then Outlook on the web.
+ * Desktop Gmail: web compose. Default: mailto:.
  */
 export function openEmailComposer(
   provider: EmailProvider,
@@ -106,14 +141,9 @@ export function openEmailComposer(
   }
 
   if (provider === 'outlook') {
-    const params = new URLSearchParams();
-    if (to) params.set('to', to);
-    params.set('subject', subject);
-    params.set('body', body);
-    window.open(
-      `https://outlook.office.com/mail/deeplink/compose?${params.toString()}`,
-      '_blank',
-      'noopener,noreferrer',
+    openAppThenWebFallback(
+      outlookDesktopComposeUrl(subject, body, to),
+      outlookWebComposeUrl(subject, body, to),
     );
   }
 }
@@ -132,24 +162,15 @@ export function openSmsComposer(body: string, phone?: string) {
 export function openWhatsAppComposer(body: string, phone?: string) {
   const digits = phone?.replace(/\D/g, '') ?? '';
   const text = encodeURIComponent(body);
+  const webUrl = digits ? `https://wa.me/${digits}?text=${text}` : `https://wa.me/?text=${text}`;
 
   if (isMobileShareClient()) {
     const appUrl = digits
       ? `whatsapp://send?phone=${digits}&text=${text}`
       : `whatsapp://send?text=${text}`;
-    const webUrl = digits ? `https://wa.me/${digits}?text=${text}` : `https://wa.me/?text=${text}`;
-
-    // Try native scheme first; if the app isn't installed, briefly fall through to wa.me.
-    const started = Date.now();
-    window.location.href = appUrl;
-    window.setTimeout(() => {
-      if (Date.now() - started < 2500 && document.visibilityState === 'visible') {
-        window.location.href = webUrl;
-      }
-    }, 800);
+    openAppThenWebFallback(appUrl, webUrl, 800);
     return;
   }
 
-  const base = digits ? `https://wa.me/${digits}` : 'https://wa.me/';
-  window.open(`${base}?text=${text}`, '_blank', 'noopener,noreferrer');
+  window.open(webUrl, '_blank', 'noopener,noreferrer');
 }

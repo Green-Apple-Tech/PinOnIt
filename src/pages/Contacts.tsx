@@ -639,8 +639,10 @@ export function ContactsPage() {
     closeInviteMenus();
     if (isMobileShareClient() || provider === 'default') {
       showToast('Opened email app', 'success');
+    } else if (provider === 'outlook') {
+      showToast('Opening Outlook…', 'success');
     } else {
-      showToast(provider === 'gmail' ? 'Opened Gmail compose' : 'Opened Outlook compose', 'success');
+      showToast('Opened Gmail compose', 'success');
     }
   };
 
