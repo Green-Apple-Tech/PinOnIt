@@ -7,6 +7,8 @@ import { formatRecurrenceHostLabel, getSeriesRootId } from '../lib/recurring';
 import { parseBlockInput } from '../lib/bookingBlocks';
 import { toast } from '../components/Toast';
 import { syncBookingToExternalCalendarsAsHost } from '../lib/writeCalendarEvent';
+import { BookingAlsoRemindPicker } from '../components/BookingAlsoRemindPicker';
+import { parseAlsoRemindIds } from '../lib/reminderAlso';
 import { CalendarConnections } from '../components/CalendarConnections';
 import {
   ChevronLeft,
@@ -1484,6 +1486,24 @@ export function AppointmentsPage() {
               <div className="text-xs text-slate-500 dark:text-slate-400 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-xl px-3 py-2.5">
                 Extra reminders for this event only — email, SMS, or WhatsApp. Guest SMS/WhatsApp is sent only if they opted in; otherwise it goes to you.
               </div>
+
+              {reminderTarget.kind === 'booking' ? (
+                <BookingAlsoRemindPicker
+                  bookingId={reminderTarget.booking.id}
+                  serviceId={reminderTarget.booking.service_id}
+                  alsoRemindIds={parseAlsoRemindIds(reminderTarget.booking.also_remind_ids)}
+                  onSaved={(ids) => {
+                    setBookings((prev) =>
+                      prev.map((b) => (b.id === reminderTarget.booking.id ? { ...b, also_remind_ids: ids } : b)),
+                    );
+                    setReminderTarget((t) =>
+                      t?.kind === 'booking' && t.booking.id === reminderTarget.booking.id
+                        ? { ...t, booking: { ...t.booking, also_remind_ids: ids } }
+                        : t,
+                    );
+                  }}
+                />
+              ) : null}
 
               {/* Existing overrides */}
               {loadingOverrides ? (

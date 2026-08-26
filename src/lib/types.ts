@@ -71,6 +71,8 @@ export interface Profile {
     email?: string;
     phone?: string;
     channels?: string[];
+    scope?: 'manual' | 'all' | 'services';
+    service_ids?: string[];
   }> | null;
   slack_webhook_url?: string | null;
   reschedule_cutoff_hours?: number;
@@ -288,6 +290,7 @@ export interface Booking {
   meet_link: string | null;
   calendar_event_id: string | null;
   external_calendar_events?: { connected_calendar_id: string; provider: 'google' | 'outlook'; provider_event_id: string }[] | null;
+  also_remind_ids?: string[] | null;
   is_critical: boolean;
   voice_reminder_sent?: boolean;
   is_recurring: boolean;

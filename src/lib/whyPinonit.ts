@@ -43,7 +43,14 @@ export const CALENDLY_EXCLUSIVES: ExclusiveFeature[] = [
     id: 'personal',
     icon: '🗣️',
     title: 'Host “remind me to…”',
-    desc: 'Tell PinOnIt to call or text you about a pickup, a refill, or a flight — not just bookings on your public page.',
+    desc: 'Type or record a personal reminder — optionally add it to Google or Outlook, not just PinOnIt’s calendar.',
+    tag: 'Not on Calendly',
+  },
+  {
+    id: 'writeback',
+    icon: '📆',
+    title: 'Calendar write-back',
+    desc: 'Confirmed bookings land on Google or Outlook automatically. Cancel or reschedule removes the old event.',
     tag: 'Not on Calendly',
   },
   {
@@ -126,7 +133,7 @@ export const WHY_PINONIT = {
   canonical: 'https://pinonit.com/why-pinonit',
   heroHeadline: 'Calendly books meetings. PinOnIt runs your business.',
   heroSubhead:
-    'WhatsApp reminders, two-way SMS to cancel or reschedule, voice alerts, quotes, a paid storefront, and group scheduling by text — things Calendly does not do. $6/mo after trial.',
+    'WhatsApp reminders, critical alerts, calendar write-back to Google/Outlook, personal “remind me…”, two-way SMS, and a paid storefront — things Calendly does not do. $6/mo after trial.',
   exclusiveHeadline: 'What Calendly genuinely doesn’t do',
   exclusiveSubhead: 'These are not “Calendly charges extra.” These are missing.',
   priceLine: '$6/mo after trial · cancel anytime',
@@ -134,7 +141,8 @@ export const WHY_PINONIT = {
   features: [
     { id: 'whatsapp', label: 'WhatsApp reminders', pinonit: true, calendly: false },
     { id: 'voice', label: 'Voice reminders & critical alerts', pinonit: true, calendly: false },
-    { id: 'personal', label: 'Host “remind me to…”', pinonit: true, calendly: false },
+    { id: 'personal', label: 'Host “remind me to…” + calendar sync', pinonit: true, calendly: false },
+    { id: 'writeback', label: 'Bookings write back to Google / Outlook', pinonit: true, calendly: false },
     { id: 'coworkers', label: 'Remind coworkers / assistant', pinonit: true, calendly: false },
     { id: 'twoway', label: 'Two-way SMS cancel/reschedule', pinonit: true, calendly: false },
     { id: 'sms', label: 'SMS reminders', pinonit: true, calendly: 'One-way, $16+/mo' },

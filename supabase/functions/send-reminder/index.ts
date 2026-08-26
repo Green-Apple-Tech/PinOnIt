@@ -4,6 +4,7 @@ import { NOREPLY_FROM, SUPPORT_EMAIL } from '../_shared/contact-email.ts';
 import { bookingAllowsGuestSms, bookingAllowsGuestWhatsapp, hostAllowsSms, hostAllowsWhatsapp } from '../_shared/sms-compliance.ts';
 import { isServiceRoleRequest, jsonAuthError } from '../_shared/callerAuth.ts';
 import { isValidSlackWebhookUrl, notifySlackWebhook } from '../_shared/slack-webhook.ts';
+import { parseAlsoPeople, resolveAlsoPeople, type AlsoPerson } from '../_shared/reminder-also.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -560,7 +561,7 @@ async function dispatchPersonalReminders(supabase: SupabaseClient): Promise<numb
         supabase,
         hostId: job.host_id,
         channel: job.channel,
-        people: parseAlsoPeople(hostProfile?.reminder_also),
+        people: resolveAlsoPeople(parseAlsoPeople(hostProfile?.reminder_also)),
         dedupeKey: `personal:${job.id}`,
         emailSubject: `Copy: Reminder: ${title}`,
         hostName: hostProfile?.full_name || 'PinOnIt',
@@ -629,34 +630,6 @@ async function sendResendEmail(
     console.error('Resend send error:', e);
     return false;
   }
-}
-
-type AlsoPerson = {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  channels: string[];
-};
-
-function parseAlsoPeople(raw: unknown): AlsoPerson[] {
-  if (!Array.isArray(raw)) return [];
-  const out: AlsoPerson[] = [];
-  for (const item of raw) {
-    if (!item || typeof item !== 'object') continue;
-    const row = item as Record<string, unknown>;
-    const channels = Array.isArray(row.channels)
-      ? (row.channels as string[]).filter((c) => c === 'email' || c === 'sms' || c === 'whatsapp')
-      : [];
-    out.push({
-      id: typeof row.id === 'string' && row.id ? row.id : `p${out.length}`,
-      name: String(row.name || '').trim() || 'there',
-      email: String(row.email || '').trim(),
-      phone: String(row.phone || '').trim(),
-      channels,
-    });
-  }
-  return out;
 }
 
 function alsoCopyBody(opts: {
@@ -760,7 +733,7 @@ async function dispatchScheduledReminders(supabase: SupabaseClient): Promise<num
 
   const { data: bookings, error } = await supabase
     .from('bookings')
-    .select('id, host_id, service_id, guest_name, guest_email, guest_phone, guest_address, notify_via, reminder_times, reminder_channels, start_time, status, meet_link, guest_timezone, action_token, services(name, duration_minutes, location), profiles(full_name, slug, timezone, email, notification_email, phone, whatsapp_number, sms_opt_in, whatsapp_opt_in, default_reminder_channel, reminder_also, slack_webhook_url)')
+    .select('id, host_id, service_id, guest_name, guest_email, guest_phone, guest_address, notify_via, reminder_times, reminder_channels, start_time, status, meet_link, guest_timezone, action_token, also_remind_ids, services(name, duration_minutes, location), profiles(full_name, slug, timezone, email, notification_email, phone, whatsapp_number, sms_opt_in, whatsapp_opt_in, default_reminder_channel, reminder_also, slack_webhook_url)')
     .in('status', ['confirmed', 'pending', 'pending_approval'])
     .gte('start_time', fromIso)
     .lte('start_time', toIso)
@@ -799,7 +772,10 @@ async function dispatchScheduledReminders(supabase: SupabaseClient): Promise<num
     const meetLink = booking.meet_link as string | null;
     const hostPhone = (hostProfile?.phone as string) || null;
     const hostWhatsapp = (hostProfile?.whatsapp_number as string) || hostPhone;
-    const alsoPeople = parseAlsoPeople(hostProfile?.reminder_also);
+    const alsoPeople = resolveAlsoPeople(parseAlsoPeople(hostProfile?.reminder_also), {
+      serviceId: booking.service_id as string | null,
+      bookingAlsoIds: booking.also_remind_ids,
+    });
     const rescheduleLink = await ensureRescheduleLink(supabase, booking.id);
     const actionLinks = {
       booking_link: hostProfile?.slug ? `${APP_PUBLIC_URL}/${hostProfile.slug}` : '',
@@ -1211,7 +1187,7 @@ Deno.serve(async (req: Request) => {
         if (ov.booking_id) {
           const { data: booking } = await supabase
             .from('bookings')
-            .select('guest_name, guest_email, guest_phone, notify_via, start_time, status, meet_link, services(name), profiles(full_name, email, notification_email, phone, whatsapp_number, sms_opt_in, whatsapp_opt_in, default_reminder_channel, reminder_also, slack_webhook_url)')
+            .select('guest_name, guest_email, guest_phone, notify_via, start_time, status, meet_link, service_id, also_remind_ids, services(name), profiles(full_name, email, notification_email, phone, whatsapp_number, sms_opt_in, whatsapp_opt_in, default_reminder_channel, reminder_also, slack_webhook_url)')
             .eq('id', ov.booking_id)
             .maybeSingle();
           if (!booking || booking.status === 'canceled' || booking.status === 'completed') continue;
@@ -1230,7 +1206,10 @@ Deno.serve(async (req: Request) => {
           hostWhatsapp = (hp?.whatsapp_number as string) || hostPhone;
           hostSmsConsent = hostAllowsSms(hp);
           hostWhatsappConsent = hostAllowsWhatsapp(hp);
-          alsoPeople = parseAlsoPeople(hp?.reminder_also);
+          alsoPeople = resolveAlsoPeople(parseAlsoPeople(hp?.reminder_also), {
+            serviceId: booking.service_id as string | null,
+            bookingAlsoIds: booking.also_remind_ids,
+          });
           slackWebhook = (hp?.slack_webhook_url as string) || null;
         } else if (ov.calendar_event_id) {
           const { data: ev } = await supabase
@@ -1253,7 +1232,7 @@ Deno.serve(async (req: Request) => {
           hostSmsConsent = hostAllowsSms(hp);
           hostWhatsappConsent = hostAllowsWhatsapp(hp);
           guestName = hostName;
-          alsoPeople = parseAlsoPeople(hp?.reminder_also);
+          alsoPeople = resolveAlsoPeople(parseAlsoPeople(hp?.reminder_also));
           slackWebhook = hp?.slack_webhook_url || null;
         }
 

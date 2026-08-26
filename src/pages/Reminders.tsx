@@ -165,7 +165,7 @@ function ChannelIcon({
 
 /** One grid for label + 4 channel columns (header and rows share tracks). */
 const REMINDER_MATRIX_GRID =
-  'grid grid-cols-[minmax(0,1fr)_repeat(4,minmax(3.25rem,5rem))] gap-x-3 sm:gap-x-4';
+  'grid grid-cols-[minmax(0,1fr)_repeat(4,minmax(2.75rem,4.5rem))] gap-x-2 sm:gap-x-4';
 
 const inputCls = 'w-full px-3 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-base focus:outline-none focus:ring-2 focus:ring-[#5864C6] transition';
 const selectCls = inputCls;
@@ -684,7 +684,7 @@ export function RemindersPage({
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Smart Reminders</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Remind yourself, your guests, and extra people (coworkers or anyone else) — not just meetings. Email, SMS, WhatsApp, or Voice for you and guests; extra people get email, SMS, or WhatsApp (no voice).
+          Remind yourself, your guests, and coworkers you pick per meeting — not every booking by default. Use the roster below, then choose who gets copied on Calendar → Extra reminder.
         </p>
         <button
           type="button"
@@ -1096,17 +1096,70 @@ export function RemindersPage({
             </p>
           </div>
 
-          <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-          <div className="min-w-[540px] bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-            {/* Column headers — 5-column grid: When + 4 channels */}
+          {/* Mobile: one card per timing — no horizontal scroll */}
+          <div className="md:hidden space-y-2.5">
+            {REMINDER_SLOTS.map((slot) => {
+              const anyActive = CHANNEL_INFO.some((ch) => isSlotChannelActive(slot.key, ch.key));
+              return (
+                <div
+                  key={slot.key}
+                  className={`rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 p-3.5 ${anyActive ? '' : 'opacity-70'}`}
+                >
+                  <div className="mb-3">
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 leading-snug">{slot.label}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{slot.sublabel}</p>
+                  </div>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {CHANNEL_INFO.map((ch) => {
+                      const savingId = `${slot.key}-${ch.key}`;
+                      const isSaving = savingSlot === savingId;
+                      const checked = isSlotChannelActive(slot.key, ch.key);
+                      return (
+                        <div key={ch.key} className="flex flex-col items-center gap-1">
+                          {isSaving ? (
+                            <Loader2 className="h-5 w-5 animate-spin my-2" style={{ color: '#5864C6' }} />
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleSlotChannel(slot.key, ch.key)}
+                              aria-label={`${slot.label} — ${ch.label}`}
+                              className={`h-10 w-full max-w-[4.25rem] rounded-lg flex items-center justify-center border-2 transition-all ${
+                                checked
+                                  ? 'border-transparent'
+                                  : 'border-slate-300 dark:border-slate-600'
+                              }`}
+                              style={checked ? { backgroundColor: '#5864C6', borderColor: '#5864C6' } : {}}
+                            >
+                              {checked ? (
+                                <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
+                              ) : (
+                                <ChannelIcon channel={ch.key} className={`h-4 w-4 ${ch.color}`} />
+                              )}
+                            </button>
+                          )}
+                          <span className={`text-[9px] font-semibold uppercase tracking-wide text-center leading-tight ${ch.color}`}>
+                            {ch.key === 'whatsapp' ? 'WA' : ch.label.split(' ')[0]}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop: matrix table */}
+          <div className="hidden md:block">
+          <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
             <div
-              className={`${REMINDER_MATRIX_GRID} items-center px-5 py-3 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800`}
+              className={`${REMINDER_MATRIX_GRID} items-center px-4 lg:px-5 py-3 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800`}
             >
               <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">When</span>
               {CHANNEL_INFO.map((ch) => (
                 <div key={ch.key} className={`flex flex-col items-center justify-center gap-1 text-center ${ch.color}`}>
                   <ChannelIcon channel={ch.key} className="h-5 w-5 shrink-0" />
-                  <span className="text-[10px] font-semibold uppercase tracking-wide leading-tight max-w-full">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide leading-tight">
                     {ch.label}
                   </span>
                 </div>
@@ -1119,9 +1172,9 @@ export function RemindersPage({
                 return (
                   <div
                     key={slot.key}
-                    className={`${REMINDER_MATRIX_GRID} items-center px-5 py-4 transition-colors ${anyActive ? 'hover:bg-[#5864C6]/5 dark:hover:bg-[#5864C6]/5' : 'hover:bg-slate-50/50 dark:hover:bg-slate-800/20 opacity-60'}`}
+                    className={`${REMINDER_MATRIX_GRID} items-center px-4 lg:px-5 py-3.5 transition-colors ${anyActive ? 'hover:bg-[#5864C6]/5 dark:hover:bg-[#5864C6]/5' : 'hover:bg-slate-50/50 dark:hover:bg-slate-800/20 opacity-60'}`}
                   >
-                    <div className="min-w-0 pr-2">
+                    <div className="min-w-0 pr-1">
                       <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{slot.label}</p>
                       <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{slot.sublabel}</p>
                     </div>
@@ -1135,8 +1188,9 @@ export function RemindersPage({
                             <Loader2 className="h-5 w-5 animate-spin" style={{ color: '#5864C6' }} />
                           ) : (
                             <button
+                              type="button"
                               onClick={() => handleToggleSlotChannel(slot.key, ch.key)}
-                              className={`min-h-11 min-w-11 rounded-lg flex items-center justify-center border-2 transition-all ${
+                              className={`h-10 w-10 rounded-lg flex items-center justify-center border-2 transition-all ${
                                 checked
                                   ? 'border-transparent'
                                   : 'border-slate-300 dark:border-slate-600 hover:border-[#5864C6]/50'

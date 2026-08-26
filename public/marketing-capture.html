@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1024" />
+  <title>PinOnIt marketing screenshots</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#eef0fb', 500: '#5864C6', 600: '#4a55b3', 700: '#3d4799' },
+          },
+        },
+      },
+    };
+  </script>
+  <style>body { font-family: system-ui, -apple-system, sans-serif; }</style>
+</head>
+<body class="bg-slate-100 py-8 space-y-10">
+
+<section id="reminders" class="w-[1024px] mx-auto bg-slate-50 p-6">
+  <div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+      <div>
+        <h1 class="text-xl font-bold text-slate-900">Smart Reminders</h1>
+        <p class="text-sm text-slate-500 mt-0.5">Email, SMS, WhatsApp, and voice for every booking</p>
+      </div>
+      <div class="px-4 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-semibold">🔔 Add Reminder</div>
+    </div>
+    <div class="p-6 grid grid-cols-2 gap-5">
+      <div class="rounded-2xl border border-slate-200 p-5 space-y-3">
+        <p class="text-xs font-bold uppercase tracking-wide text-brand-600">Booking reminders</p>
+        <div class="flex justify-between py-2 border-b border-slate-100"><div><p class="text-sm font-semibold">24 Hour Reminder</p><p class="text-xs text-slate-400">Before the event</p></div><div class="flex gap-1"><span class="h-7 w-7 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center text-xs">✉</span><span class="h-7 w-7 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center text-xs">💬</span></div></div>
+        <div class="flex justify-between py-2 border-b border-slate-100"><div><p class="text-sm font-semibold">1 Hour Reminder</p></div><div class="flex gap-1"><span class="h-7 w-7 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center text-xs">✉</span><span class="h-7 w-7 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center text-xs">📱</span></div></div>
+      </div>
+      <div class="rounded-2xl border border-red-200 bg-red-50/50 p-5 space-y-3">
+        <h2 class="text-sm font-bold text-slate-900">🔔 Critical Meeting Alerts</h2>
+        <ul class="text-xs text-slate-600 space-y-2">
+          <li><strong>SMS &amp; WhatsApp</strong> — 1 hour and 15 minutes before</li>
+          <li><strong>Email</strong> — 1 day and 4 hours before</li>
+          <li><strong>Voice call</strong> — optional in Advanced</li>
+        </ul>
+        <div class="flex items-center justify-between pt-2"><span class="text-xs font-medium">Enable critical alerts</span><span class="h-6 w-11 rounded-full bg-brand-500 relative inline-block"><span class="absolute right-1 top-1 h-4 w-4 rounded-full bg-white shadow"></span></span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="personal-reminders" class="w-[1024px] mx-auto bg-slate-50 p-6">
+  <div class="rounded-2xl border border-slate-200 bg-white shadow-lg max-w-lg mx-auto overflow-hidden">
+    <div class="px-5 py-4 border-b border-slate-100 flex justify-between"><h2 class="font-bold text-slate-900">Add personal reminder</h2><span class="text-slate-400">×</span></div>
+    <div class="p-5 space-y-3">
+      <div><p class="text-xs font-medium text-slate-500">Topic</p><div class="mt-1 rounded-xl border border-slate-200 px-3 py-3 text-base">Call Jennifer Smith</div></div>
+      <div><p class="text-xs font-medium text-slate-500">Date &amp; time</p><div class="mt-1 rounded-xl border border-slate-200 px-3 py-3 text-base">Aug 28, 2026 · 2:00 PM</div></div>
+      <div class="rounded-xl border border-slate-200 p-3 flex gap-3"><span class="h-4 w-4 rounded bg-brand-600 text-white text-[10px] flex items-center justify-center mt-1">✓</span><div class="text-sm"><p class="font-semibold">📅 Also add to Google / Outlook calendar</p><p class="text-xs text-slate-500 mt-0.5">Uses calendars marked for reminders in Settings.</p></div></div>
+      <div class="grid grid-cols-2 gap-2"><div class="min-h-14 rounded-2xl bg-brand-600 text-white font-semibold flex items-center justify-center">✏ Type it</div><div class="min-h-14 rounded-2xl border-2 border-brand-600 text-brand-700 font-semibold flex items-center justify-center">🎤 Record it</div></div>
+    </div>
+  </div>
+</section>
+
+<section id="dashboard" class="w-[1024px] mx-auto bg-slate-50 p-6">
+  <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 max-w-2xl mx-auto">
+    <h1 class="text-2xl font-bold text-slate-900">Send your Availability</h1>
+    <p class="text-sm text-slate-500 mt-1">Share your booking link — opens native apps on phone</p>
+    <div class="mt-5 rounded-xl border border-brand-200 bg-brand-50/50 p-4">
+      <p class="text-sm font-semibold">30 Min Consultation</p>
+      <p class="text-xs text-slate-500 font-mono mt-0.5">pinonit.com/jane</p>
+      <div class="mt-3 grid grid-cols-4 gap-2">
+        <div class="min-h-11 rounded-xl bg-white border text-xs font-semibold flex items-center justify-center">↗ Share</div>
+        <div class="min-h-11 rounded-xl bg-white border text-xs font-semibold flex items-center justify-center">✉ Email</div>
+        <div class="min-h-11 rounded-xl bg-white border text-xs font-semibold flex items-center justify-center">💬 Text</div>
+        <div class="min-h-11 rounded-xl bg-white border text-xs font-semibold flex items-center justify-center">📱 WhatsApp</div>
+      </div>
+    </div>
+    <div class="mt-4 flex gap-2"><span class="px-3 py-2 rounded-full bg-slate-100 text-xs">Today · 2 meetings</span><span class="px-3 py-2 rounded-full bg-slate-100 text-xs">Wed 3 PM · Discovery call</span></div>
+  </div>
+</section>
+
+<section id="calendar-write-back" class="w-[1024px] mx-auto bg-slate-50 p-6">
+  <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-6">
+    <div class="flex items-center justify-between mb-4"><h1 class="text-xl font-bold">Calendar</h1><span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">✓ Google &amp; Outlook synced</span></div>
+    <div class="grid grid-cols-3 gap-3">
+      <div class="rounded-xl border border-brand-200 bg-brand-50 p-4"><p class="text-xs text-slate-500">Wed 2:00 PM</p><p class="text-sm font-bold mt-1">Consultation with Alex</p><p class="text-[10px] font-semibold text-brand-600 mt-2 uppercase">Booking → Google</p></div>
+      <div class="rounded-xl border border-violet-200 bg-violet-50 p-4"><p class="text-xs text-slate-500">Thu 9:00 AM</p><p class="text-sm font-bold mt-1">Call Jennifer Smith</p><p class="text-[10px] font-semibold text-brand-600 mt-2 uppercase">Personal → Outlook</p></div>
+      <div class="rounded-xl border border-slate-200 bg-slate-50 p-4"><p class="text-xs text-slate-500">Fri 11:30 AM</p><p class="text-sm font-bold mt-1">Team standup</p><p class="text-[10px] font-semibold text-slate-500 mt-2 uppercase">From Outlook</p></div>
+    </div>
+    <p class="text-xs text-slate-500 mt-4 text-center">Bookings write back on confirm · Canceled events removed automatically</p>
+  </div>
+</section>
+
+<section id="booking-page" class="w-[1024px] mx-auto bg-slate-50 p-6">
+  <div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden max-w-lg mx-auto">
+    <div class="bg-brand-600 px-6 py-8 text-white text-center"><p class="text-sm opacity-90">Book with Jane</p><h1 class="text-2xl font-bold mt-1">30 Min Consultation</h1><p class="text-sm opacity-80 mt-2">🕐 30 min · Video call</p></div>
+    <div class="p-6"><p class="text-xs font-bold uppercase text-slate-400 mb-3">Pick a time</p><div class="grid grid-cols-3 gap-2"><div class="py-2.5 rounded-lg border text-sm text-center">Mon 10:00</div><div class="py-2.5 rounded-lg border text-sm text-center">Mon 2:30</div><div class="py-2.5 rounded-lg border border-brand-600 bg-brand-50 text-brand-700 text-sm text-center font-semibold">Tue 9:00</div></div><div class="mt-5 w-full py-3.5 rounded-xl bg-brand-600 text-white font-bold text-center">Continue</div></div>
+  </div>
+</section>
+
+<section id="group-scheduling" class="w-[1024px] mx-auto bg-slate-50 p-6">
+  <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 max-w-2xl mx-auto">
+    <h1 class="text-lg font-bold">👥 Align &amp; book over SMS</h1>
+    <p class="text-sm text-slate-500 mb-4">Find overlap when you only have phone numbers</p>
+    <div class="space-y-2">
+      <div class="rounded-xl px-4 py-3 text-sm bg-slate-50"><strong>You:</strong> When works this week for a 30-min call?</div>
+      <div class="rounded-xl px-4 py-3 text-sm bg-slate-50"><strong>Alex:</strong> Tue afternoon or Wed morning</div>
+      <div class="rounded-xl px-4 py-3 text-sm bg-brand-50 border border-brand-100 text-brand-800 font-medium"><strong>PinOnIt:</strong> Overlap found: Wed 10:00 AM — book link sent to everyone</div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

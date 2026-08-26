@@ -61,7 +61,8 @@ const COMP_ROWS: CompRow[] = [
   { section: 'Calendly does not do this' },
   { feature: 'WhatsApp reminders', pinonit: true, calendly: false, acuity: false },
   { feature: 'Voice reminders & critical alerts', pinonit: true, calendly: false, acuity: false },
-  { feature: 'Host “remind me to…”', pinonit: true, calendly: false, acuity: false },
+  { feature: 'Personal “remind me…” + calendar write-back', pinonit: true, calendly: false, acuity: false },
+  { feature: 'Bookings write to Google / Outlook', pinonit: true, calendly: false, acuity: false },
   { feature: 'Remind coworkers / assistant', pinonit: true, calendly: false, acuity: false },
   { feature: 'Two-way SMS cancel/reschedule', pinonit: true, calendly: false, acuity: false },
   { feature: 'Quotes / invoices / receipts', pinonit: true, calendly: false, acuity: false },
@@ -77,52 +78,55 @@ const COMP_ROWS: CompRow[] = [
   { section: 'Calendar Sync' },
   { feature: 'Google Calendar',   pinonit: true,  calendly: true,  acuity: true },
   { feature: 'Outlook / Office 365', pinonit: true, calendly: true, acuity: true },
+  { feature: 'Write bookings back to calendar', pinonit: true, calendly: false, acuity: false },
   { feature: 'Apple Calendar / iCal link', pinonit: true, calendly: false, acuity: false },
   { section: 'Payments' },
   { feature: 'Stripe payments',   pinonit: 'Pro', calendly: 'Standard+', acuity: 'Emerging+' },
   { feature: 'PayPal payments',   pinonit: 'Pro', calendly: false, acuity: false },
 ];
 
+const SCREENSHOT_V = '20260826';
+
 const SCREENSHOTS = [
+  {
+    title: 'Super Reminders & Critical Alerts',
+    emoji: '🔔',
+    desc: 'Email, SMS, WhatsApp, and voice for every booking — plus extra pings for critical meetings (1h + 15m text, 1d + 4h email).',
+    tag: 'Smart Reminders',
+    color: 'from-violet-500 to-violet-700',
+    image: `/screenshots/reminders.png?v=${SCREENSHOT_V}`,
+  },
+  {
+    title: 'Personal “Remind me…”',
+    emoji: '🗣️',
+    desc: 'Type or record a reminder — call someone, pick up a prescription — and optionally add it to Google or Outlook.',
+    tag: 'Personal Reminders',
+    color: 'from-amber-500 to-orange-600',
+    image: `/screenshots/personal-reminders.png?v=${SCREENSHOT_V}`,
+  },
+  {
+    title: 'Share Anywhere — Even on Phone',
+    emoji: '📱',
+    desc: 'Copy, QR, email, text, or WhatsApp from your dashboard. On mobile, share opens native apps and the OS share sheet.',
+    tag: 'Dashboard',
+    color: 'from-indigo-500 to-indigo-700',
+    image: `/screenshots/dashboard.png?v=${SCREENSHOT_V}`,
+  },
+  {
+    title: 'Calendar Write-Back',
+    emoji: '📆',
+    desc: 'Confirmed bookings and personal reminders land on Google or Outlook. Reschedule or cancel removes the old event automatically.',
+    tag: 'Calendar Sync',
+    color: 'from-emerald-500 to-teal-600',
+    image: `/screenshots/calendar-write-back.png?v=${SCREENSHOT_V}`,
+  },
   {
     title: 'Your Booking Page',
     emoji: '📅',
     desc: 'A clean, professional page clients book from instantly — no account needed.',
     tag: 'Public Booking Page',
     color: 'from-orange-500 to-orange-600',
-    image: '/screenshots/booking-page.png',
-  },
-  {
-    title: 'Super Reminders',
-    emoji: '🔔',
-    desc: 'Email, SMS, WhatsApp, and voice — for PinOnIt bookings and events already on your calendar.',
-    tag: 'Never miss a meeting',
-    color: 'from-violet-500 to-violet-700',
-    image: '/screenshots/reminders.png',
-  },
-  {
-    title: 'Send Your Availability',
-    emoji: '🔗',
-    desc: 'Share your booking link via copy, QR code, email, or text in one click.',
-    tag: 'Dashboard',
-    color: 'from-indigo-500 to-indigo-700',
-    image: '/screenshots/dashboard.png',
-  },
-  {
-    title: 'Email Signature Creator',
-    emoji: '✍️',
-    desc: 'Generate a professional email signature with a booking button built right in.',
-    tag: 'More Tools',
-    color: 'from-purple-500 to-purple-700',
-    image: '/screenshots/email-signature.png',
-  },
-  {
-    title: 'QR Code Creator',
-    emoji: '🔳',
-    desc: 'Turn any link into a scannable QR code for business cards, flyers, and more.',
-    tag: 'More Tools',
-    color: 'from-teal-500 to-teal-700',
-    image: '/screenshots/qr-code.png',
+    image: `/screenshots/booking-page.png?v=${SCREENSHOT_V}`,
   },
   {
     title: 'Group Scheduling',
@@ -130,7 +134,7 @@ const SCREENSHOTS = [
     desc: 'Run a meeting poll or coordinate via SMS when you only have phone numbers.',
     tag: 'Group Scheduling',
     color: 'from-blue-500 to-blue-700',
-    image: '/screenshots/group-scheduling.png',
+    image: `/screenshots/group-scheduling.png?v=${SCREENSHOT_V}`,
   },
 ];
 
@@ -180,7 +184,7 @@ function ScreenshotShowcase() {
             Everything you need to schedule — and actually show up
           </h2>
           <p className="text-gray-500 dark:text-slate-400 text-lg max-w-xl mx-auto">
-            Calendar, reminders, booking pages, and extras — in one subscription.
+            Reminders, calendar write-back, booking pages, and mobile-native sharing — in one subscription.
           </p>
         </div>
 
@@ -418,7 +422,7 @@ export function Landing() {
           </h1>
 
           <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto mb-8 leading-relaxed">
-            PinOnIt is mainly a calendar scheduler and a super reminder app — email, SMS, WhatsApp, and voice — so you and your guests actually show up. Booking links, QR codes, and email signatures come with it.
+            PinOnIt is a calendar scheduler and super reminder app — email, SMS, WhatsApp, and voice — so you and your guests actually show up. Bookings write back to Google or Outlook, personal reminders land on your calendar, and sharing opens native apps on your phone.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-2 mb-10">
@@ -461,10 +465,10 @@ export function Landing() {
               <Bell className="h-3.5 w-3.5" /> Super reminder app
             </span>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3">
-              Four ways to make sure the meeting happens
+              Four channels — plus critical alerts when it really matters
             </h2>
             <p className="text-gray-500 dark:text-slate-400 text-lg max-w-2xl mx-auto">
-              Remind yourself and your guests on the channel they actually answer. Works for PinOnIt bookings and events already on Google, Outlook, or Apple calendars.
+              Remind yourself and your guests on the channel they actually answer. Critical meetings get extra SMS/WhatsApp at 1 hour and 15 minutes, email at 1 day and 4 hours, and optional voice calls.
             </p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -484,7 +488,7 @@ export function Landing() {
             ))}
           </div>
           <p className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
-            Guests can text 2 to reschedule. You can remind a coworker, call yourself, and send quotes — none of that is on Calendly.
+            Tell PinOnIt to remind you about a call or errand — type it or say it — and add it to Google/Outlook. Guests can text 2 to reschedule.
           </p>
         </div>
       </section>
@@ -727,11 +731,11 @@ export function Landing() {
               <ul className="space-y-2.5 flex-1 mb-6">
                 {[
                   'WhatsApp + two-way SMS (text 2 to reschedule)',
-                  'Voice reminders & critical call alerts',
-                  'Remind coworkers / an assistant',
-                  'Quotes, invoices, receipts',
-                  'Paid Booking storefront + QR + signatures',
-                  'Align & book over SMS',
+                  'Critical alerts + voice reminders',
+                  'Personal “remind me…” with calendar write-back',
+                  'Bookings sync to Google / Outlook',
+                  'Native share on mobile (email, text, WhatsApp)',
+                  'Quotes, invoices, Paid Booking storefront',
                   'Calendly import + $1/mo referral credit',
                 ].map((f) => (
                   <li key={f} className="flex items-start gap-2.5">
