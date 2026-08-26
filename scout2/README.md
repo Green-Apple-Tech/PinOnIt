@@ -202,6 +202,8 @@ python -m scout2.cli places-status
 
 Optional overnight loop (same work, unattended): `./scripts/run-nightly.sh`
 
+When a city finishes, the overnight loop **starts the next city immediately** (no 10‑minute wait). It only pauses overnight when the daily Places cap is hit.
+
 Google’s list prices (legacy Places, USD): Text Search **$32 / 1,000**, Place Details **$17 / 1,000**, website field **$3 / 1,000**. Each city is ~29 Scout2 searches (2 Google pages + website lookups). **80 searches ≈ 2–3 cities, usually about $5–$25** after Google’s monthly free allowance (often a few thousand Text Search / Details calls free). One city is less. Check the bill in Google Cloud → Maps.
 
 Default cap is **80 Google Places searches/day** on the overnight script only. Manual `run-once` does the city you asked for.

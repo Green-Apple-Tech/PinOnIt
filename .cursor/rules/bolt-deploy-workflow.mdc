@@ -15,8 +15,21 @@ alwaysApply: true
    ```bash
    git add . && git commit -m "your change" && git push
    ```
-2. **Bolt** ([project](https://bolt.new/~/sb1-nzt1kjlj)) → open project → **GitHub icon** (left of Publish) → confirm **Synced**, branch **`main`** → wait **~30s** for auto-fetch from GitHub (no Pull button in UI). Spot-check Code tab, then **Publish**.
+2. **Bolt** ([project](https://bolt.new/~/sb1-nzt1kjlj)) → open project → **GitHub icon** (left of Publish) → confirm **Synced**, **Active = `main`** → wait **~30s** for auto-fetch from GitHub (no Pull button in UI). Spot-check Code tab, then **Publish**.
 3. **Bolt → Publish → Update** (then hard-refresh pinonit.com).
+
+## GitHub: `main` only
+
+Bolt’s GitHub menu lists **every** remote branch. Extra `cursor/…` branches are leftover agent copies; they confuse Publish and can leave Bolt on stale code.
+
+- Default / Active branch is always **`main`**. Never tell Bolt or Cursor to create a long-lived extra branch for this repo.
+- After a cloud/agent branch is merged (or abandoned), **delete it on origin immediately**:
+  ```bash
+  git push origin --delete <branch>
+  git fetch --prune
+  git branch -d <branch>
+  ```
+- Do not leave merged `cursor/*` (or other leftover) branches on `Green-Apple-Tech/PinOnIt`.
 
 ## Do not rely on
 
