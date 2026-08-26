@@ -9,7 +9,7 @@ import { supabase } from '../lib/supabase';
 import { syncStripeSubscription } from '../lib/stripe';
 import { effectivePlan } from '../lib/plan';
 import type { Booking, Service } from '../lib/types';
-import { CalendarDays, LogOut, X, Check, Sun, Moon, Copy, Share2, Mail, Link2, ExternalLink, PenLine, Video, Phone, MapPin, ChevronRight, Loader2, Plus, ChevronLeft, LayoutGrid, Menu, AlertCircle, Sparkles, Search, Wrench as Tool, QrCode, MessageSquare, ChevronDown, Navigation, Trash2 } from 'lucide-react';
+import { CalendarDays, LogOut, X, Check, Sun, Moon, Copy, Share2, Mail, Link2, ExternalLink, PenLine, Video, Phone, MapPin, ChevronRight, Loader2, Plus, ChevronLeft, LayoutGrid, Menu, AlertCircle, Sparkles, Search, Wrench as Tool, QrCode, MessageSquare, ChevronDown, Trash2 } from 'lucide-react';
 import {
   MORE_TOOLS_HUB_PATH,
   buildSidebarNav,
@@ -19,6 +19,7 @@ import {
 import { parseRevealedTools, revealTool } from '../lib/progressiveDisclosure';
 import { defaultAvailabilityRows } from '../lib/availabilityGrid';
 import { PageHelpButton } from '../components/PageHelp';
+import { AddToHomeScreenPrompt } from '../components/AddToHomeScreenPrompt';
 import { QRModal } from '../components/QRModal';
 import {
   buildAvailabilityEmailInvite,
@@ -872,88 +873,65 @@ function isTodayBooking(iso: string): boolean {
   return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
 }
 
-function MobileTodayBoard({
-  bookings,
-  shareUrl,
-  shareCopied,
-  onShare,
-}: {
-  bookings: Booking[];
-  shareUrl: string;
-  shareCopied: boolean;
-  onShare: () => void;
-}) {
+/** Compact “today” strip for phones — desktop home content shows below. */
+function MobileTodayStrip({ bookings }: { bookings: Booking[] }) {
   const todays = bookings
     .filter((b) => b.status === 'confirmed' && isTodayBooking(b.start_time))
     .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
 
+  if (todays.length === 0) {
+    return (
+      <div className="md:hidden mb-4 rounded-xl border border-dashed border-gray-200 dark:border-slate-700 px-3 py-2.5">
+        <p className="text-sm font-semibold text-gray-900 dark:text-white">Today</p>
+        <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">No meetings yet — share your link below.</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="md:hidden mb-6 min-h-[calc(100dvh-8rem)] flex flex-col">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Today</h1>
-      <p className="mt-1 text-sm text-gray-500 dark:text-slate-400 mb-4">
-        {todays.length > 0
-          ? `${todays.length} meeting${todays.length !== 1 ? 's' : ''} today`
-          : 'No meetings on the calendar yet.'}
-      </p>
-      {todays.length === 0 ? (
-        <div className="rounded-2xl border-2 border-dashed border-gray-200 dark:border-slate-700 p-6 text-center mb-4">
-          <p className="text-sm font-semibold text-gray-900 dark:text-white">Nothing booked today</p>
-          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
-            Tap Share my link so a client can pick a time — it will show up here.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3 mb-4">
-          {todays.map((b) => {
-            const time = new Date(b.start_time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-            const phone = (b.guest_phone || '').trim();
-            const place = b.services?.location || '';
-            const maps = place ? `https://maps.google.com/?q=${encodeURIComponent(place)}` : '';
-            return (
-              <div key={b.id} className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
-                <p className="text-base font-bold text-gray-900 dark:text-white">{b.guest_name}</p>
-                <p className="text-sm text-gray-500 dark:text-slate-400 mt-0.5">
+    <div className="md:hidden mb-4 space-y-2">
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 className="text-sm font-bold text-gray-900 dark:text-white">Today</h2>
+        <span className="text-xs text-gray-500 dark:text-slate-400">
+          {todays.length} meeting{todays.length !== 1 ? 's' : ''}
+        </span>
+      </div>
+      <div className="space-y-2">
+        {todays.slice(0, 4).map((b) => {
+          const time = new Date(b.start_time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+          const phone = (b.guest_phone || '').trim();
+          return (
+            <div
+              key={b.id}
+              className="flex items-center gap-2 rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{b.guest_name}</p>
+                <p className="text-[11px] text-gray-500 dark:text-slate-400 truncate">
                   {time}
                   {b.services?.name ? ` · ${b.services.name}` : ''}
                 </p>
-                <div className="mt-3 grid grid-cols-3 gap-2">
-                  <a
-                    href={phone ? `tel:${phone}` : undefined}
-                    className={`min-h-11 inline-flex items-center justify-center gap-1 rounded-xl text-xs font-semibold ${phone ? 'bg-brand-50 text-brand-700' : 'bg-gray-100 text-gray-400 pointer-events-none'}`}
-                  >
-                    <Phone className="h-3.5 w-3.5" /> Call
-                  </a>
-                  <a
-                    href={phone ? `sms:${phone}` : undefined}
-                    className={`min-h-11 inline-flex items-center justify-center gap-1 rounded-xl text-xs font-semibold ${phone ? 'bg-brand-50 text-brand-700' : 'bg-gray-100 text-gray-400 pointer-events-none'}`}
-                  >
-                    <MessageSquare className="h-3.5 w-3.5" /> Text
-                  </a>
-                  <a
-                    href={b.meet_link || maps || undefined}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={`min-h-11 inline-flex items-center justify-center gap-1 rounded-xl text-xs font-semibold ${b.meet_link || maps ? 'bg-brand-50 text-brand-700' : 'bg-gray-100 text-gray-400 pointer-events-none'}`}
-                  >
-                    {b.meet_link ? <Video className="h-3.5 w-3.5" /> : <Navigation className="h-3.5 w-3.5" />}
-                    {b.meet_link ? 'Join' : 'Map'}
-                  </a>
-                </div>
               </div>
-            );
-          })}
-        </div>
-      )}
-      <div className="sticky bottom-4 z-30 mt-auto">
-        <button
-          type="button"
-          onClick={onShare}
-          disabled={!shareUrl}
-          className="w-full min-h-12 inline-flex items-center justify-center gap-2 rounded-full bg-brand-600 text-white text-sm font-bold shadow-lg disabled:opacity-50"
-        >
-          <Share2 className="h-4 w-4" />
-          {shareCopied ? 'Link copied' : 'Share my link'}
-        </button>
+              <div className="flex items-center gap-1 shrink-0">
+                {phone ? (
+                  <>
+                    <a href={`tel:${phone}`} className="h-9 w-9 inline-flex items-center justify-center rounded-lg bg-brand-50 text-brand-700" aria-label="Call">
+                      <Phone className="h-3.5 w-3.5" />
+                    </a>
+                    <a href={`sms:${phone}`} className="h-9 w-9 inline-flex items-center justify-center rounded-lg bg-brand-50 text-brand-700" aria-label="Text">
+                      <MessageSquare className="h-3.5 w-3.5" />
+                    </a>
+                  </>
+                ) : null}
+                {b.meet_link ? (
+                  <a href={b.meet_link} target="_blank" rel="noreferrer" className="h-9 w-9 inline-flex items-center justify-center rounded-lg bg-brand-50 text-brand-700" aria-label="Join">
+                    <Video className="h-3.5 w-3.5" />
+                  </a>
+                ) : null}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -983,7 +961,6 @@ export function Dashboard() {
   const planName = effectivePlan(subscription, profile);
   const [checklistDismissed, setChecklistDismissed] = useState(() => localStorage.getItem('onboarding_checklist_dismissed') === '1');
   const [liveSlug, setLiveSlug] = useState<string | null>(null);
-  const [shareCopied, setShareCopied] = useState(false);
 
   // Expand while inside More Tools; collapse automatically when you leave that section.
   useEffect(() => {
@@ -1649,25 +1626,15 @@ export function Dashboard() {
 
         {/* Dashboard home */}
         {isDashboardHome && (
-          <main className="flex-1 p-6 md:p-8 max-w-4xl w-full">
+          <main className="flex-1 p-4 md:p-8 max-w-4xl w-full">
 
-            <MobileTodayBoard
-              bookings={bookings}
-              shareUrl={shareUrl}
-              shareCopied={shareCopied}
-              onShare={() => {
-                if (!shareUrl) return;
-                void navigator.clipboard.writeText(shareUrl);
-                setShareCopied(true);
-                window.setTimeout(() => setShareCopied(false), 2000);
-              }}
-            />
+            <MobileTodayStrip bookings={bookings} />
 
             {/* Page heading */}
-            <div className="mb-6 hidden md:flex items-start justify-between gap-4">
+            <div className="mb-4 md:mb-6 flex items-start justify-between gap-3">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Send your Availability</h1>
-                <p className="mt-1 text-gray-500 dark:text-slate-400 text-sm">
+                <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Send your Availability</h1>
+                <p className="mt-0.5 md:mt-1 text-gray-500 dark:text-slate-400 text-xs md:text-sm">
                   {upcomingBookings.length > 0
                     ? `${upcomingBookings.length} upcoming meeting${upcomingBookings.length !== 1 ? 's' : ''}`
                     : 'Manage your event types and booking link.'}
@@ -1686,7 +1653,7 @@ export function Dashboard() {
                       setWizardSession((n) => n + 1);
                       setShowWizard(true);
                     }}
-                    className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                    className="flex items-center gap-1.5 px-2.5 md:px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                     title="Run setup wizard"
                   >
                     <Sparkles className="h-4 w-4" />
@@ -1697,7 +1664,7 @@ export function Dashboard() {
             </div>
 
             {/* Onboarding checklist — hidden automatically when all steps complete */}
-            <div className="hidden md:block">
+            <div>
             {!loading && !checklistDismissed && (() => {
               const hasCalendar = calendarCount > 0;
               const hasService = services.length > 0;
@@ -1712,15 +1679,15 @@ export function Dashboard() {
               const allDone = completedCount === steps.length;
               if (allDone) return null;
               return (
-                <div className="mb-6 bg-white dark:bg-slate-900/50 rounded-2xl overflow-hidden shadow-sm" style={{ border: '1.5px solid #f97316', animation: 'onboarding-pulse 2s ease-in-out infinite' }}>
-                  <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800">
-                    <div className="flex items-center gap-3">
-                      <div className="flex gap-1">
+                <div className="mb-4 md:mb-6 bg-white dark:bg-slate-900/50 rounded-2xl overflow-hidden shadow-sm" style={{ border: '1.5px solid #f97316', animation: 'onboarding-pulse 2s ease-in-out infinite' }}>
+                  <div className="flex items-center justify-between px-4 md:px-5 py-3 md:py-4 border-b border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex gap-1 shrink-0">
                         {steps.map((s, i) => (
-                          <div key={i} className={`h-2 w-8 rounded-full transition-colors ${s.done ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-700'}`} />
+                          <div key={i} className={`h-2 w-6 md:w-8 rounded-full transition-colors ${s.done ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-700'}`} />
                         ))}
                       </div>
-                      <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                      <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
                         {`Get started — ${completedCount} of ${steps.length} done`}
                       </span>
                     </div>
@@ -1741,7 +1708,7 @@ export function Dashboard() {
                     {steps.map((step, i) => (
                       <div
                         key={i}
-                        className={`flex items-center gap-4 px-5 py-3.5 ${step.to ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors' : ''}`}
+                        className={`flex items-center gap-3 md:gap-4 px-4 md:px-5 py-3 ${step.to ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors' : ''}`}
                         onClick={() => step.to && navigate(step.to)}
                       >
                         <div className={`h-7 w-7 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${step.done ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300 dark:border-slate-600'}`}>
@@ -1765,7 +1732,7 @@ export function Dashboard() {
             {/* Share panel / link created banner */}
             {createdUrl && <LinkCreatedBanner bookingUrl={createdUrl} onDismiss={() => setCreatedUrl('')} />}
             {profile && effectiveSlug && !createdUrl && (
-              <div id="share" className="scroll-mt-20 hidden md:block">
+              <div id="share" className="scroll-mt-20">
               <SharePanel
                 slug={effectiveSlug}
                 userId={profile.id}
@@ -1779,14 +1746,14 @@ export function Dashboard() {
               </div>
             )}
 
-            <div className="hidden md:block">
+            <div>
             <SingleUseLinksRow />
             </div>
 
             {/* No slug nudge */}
-            <div className="hidden md:block">
+            <div>
             {!effectiveSlug && !createdUrl && (
-              <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl flex items-center justify-between gap-3">
+              <div className="mb-4 md:mb-6 p-3 md:p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">Set your meeting URL</p>
                   <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Add a username so your meeting link is shareable.</p>
@@ -1799,12 +1766,12 @@ export function Dashboard() {
             </div>
 
             {/* Types of Meetings section */}
-            <div className="hidden md:block">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Meetings</h2>
+            <div>
+              <div className="flex items-center justify-between mb-3 md:mb-4 gap-2">
+                <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">Meetings</h2>
                 <button
                   onClick={() => navigate('/dashboard/services?new=one_on_one')}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-full transition-all shadow-sm"
+                  className="flex items-center gap-1.5 md:gap-2 px-3 md:px-5 py-2 md:py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-xs md:text-sm font-semibold rounded-full transition-all shadow-sm"
                 >
                   <Plus className="h-4 w-4" />
                   New Meeting Type
@@ -1830,12 +1797,12 @@ export function Dashboard() {
                   <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                 </div>
               ) : meetingServices.length === 0 ? (
-                <div className="rounded-2xl border-2 border-dashed border-gray-200 dark:border-slate-700 p-12 text-center">
-                  <div className="h-14 w-14 bg-brand-50 dark:bg-brand-950/40 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <CalendarDays className="h-7 w-7 text-brand-600 dark:text-brand-400" />
+                <div className="rounded-2xl border-2 border-dashed border-gray-200 dark:border-slate-700 p-6 md:p-12 text-center">
+                  <div className="h-12 w-12 md:h-14 md:w-14 bg-brand-50 dark:bg-brand-950/40 rounded-2xl flex items-center justify-center mx-auto mb-3 md:mb-4">
+                    <CalendarDays className="h-6 w-6 md:h-7 md:w-7 text-brand-600 dark:text-brand-400" />
                   </div>
-                  <h3 className="text-lg font-bold mb-2 text-gray-900 dark:text-white">No meeting types yet</h3>
-                  <p className="text-sm text-gray-500 dark:text-slate-400 mb-6 max-w-sm mx-auto">
+                  <h3 className="text-base md:text-lg font-bold mb-2 text-gray-900 dark:text-white">No meeting types yet</h3>
+                  <p className="text-sm text-gray-500 dark:text-slate-400 mb-4 md:mb-6 max-w-sm mx-auto">
                     Create your first meeting type and share the link so people can book time with you.
                   </p>
                   <button
@@ -2002,6 +1969,8 @@ export function Dashboard() {
           </div>
         </div>
       )}
+
+      {isDashboardHome && <AddToHomeScreenPrompt />}
     </div>
   );
 }
