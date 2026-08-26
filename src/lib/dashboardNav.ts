@@ -103,6 +103,12 @@ export function isMoreToolsChildActive(pathname: string, search = '', hash = '')
   return MORE_TOOLS_NAV.some((item) => isMoreToolsNavActive(item, pathname, search, hash));
 }
 
+/** Hub page or any More Tools child — keeps the sidebar group expanded. */
+export function isMoreToolsSectionActive(pathname: string, search = '', hash = ''): boolean {
+  if (pathname === MORE_TOOLS_HUB_PATH || pathname.startsWith(`${MORE_TOOLS_HUB_PATH}/`)) return true;
+  return isMoreToolsChildActive(pathname, search, hash);
+}
+
 function toDashboardItem(item: MoreToolsNavItem): DashboardNavItem {
   return { to: item.path, icon: item.icon, label: item.label, badge: item.badge };
 }

@@ -262,6 +262,7 @@ export interface Booking {
   guest_name: string;
   guest_email: string | null;
   guest_phone?: string | null;
+  guest_address?: string | null;
   notify_via?: string[] | null;
   guest_timezone: string;
   start_time: string;
@@ -391,6 +392,7 @@ export const SUPPORTED_LANGUAGES: Record<string, string> = {
 
 export const TEMPLATE_VARIABLES = [
   { key: '{{guest_name}}', label: "Guest's name" },
+  { key: '{{guest_address}}', label: 'Guest service address' },
   { key: '{{host_name}}', label: "Host's name" },
   { key: '{{service_name}}', label: 'Service name' },
   { key: '{{date}}', label: 'Appointment date' },

@@ -13,12 +13,14 @@ const corsHeaders = {
 
 interface TemplateData {
   guest_name: string;
+  guest_address: string;
   host_name: string;
   service_name: string;
   date: string;
   time: string;
   timezone: string;
   duration: string;
+  location: string;
   booking_link: string;
   cancel_link: string;
   confirm_link: string;
@@ -30,12 +32,14 @@ const APP_PUBLIC_URL = (Deno.env.get('APP_URL') || 'https://pinonit.com').replac
 function fillTemplate(template: string, data: TemplateData): string {
   return template
     .replace(/\{\{guest_name\}\}/g, data.guest_name)
+    .replace(/\{\{guest_address\}\}/g, data.guest_address)
     .replace(/\{\{host_name\}\}/g, data.host_name)
     .replace(/\{\{service_name\}\}/g, data.service_name)
     .replace(/\{\{date\}\}/g, data.date)
     .replace(/\{\{time\}\}/g, data.time)
     .replace(/\{\{timezone\}\}/g, data.timezone)
     .replace(/\{\{duration\}\}/g, data.duration)
+    .replace(/\{\{location\}\}/g, data.location)
     .replace(/\{\{booking_link\}\}/g, data.booking_link)
     .replace(/\{\{cancel_link\}\}/g, data.cancel_link)
     .replace(/\{\{confirm_link\}\}/g, data.confirm_link)
@@ -756,7 +760,7 @@ async function dispatchScheduledReminders(supabase: SupabaseClient): Promise<num
 
   const { data: bookings, error } = await supabase
     .from('bookings')
-    .select('id, host_id, service_id, guest_name, guest_email, guest_phone, notify_via, reminder_times, reminder_channels, start_time, status, meet_link, guest_timezone, action_token, services(name, duration_minutes), profiles(full_name, slug, timezone, email, notification_email, phone, whatsapp_number, sms_opt_in, whatsapp_opt_in, default_reminder_channel, reminder_also, slack_webhook_url)')
+    .select('id, host_id, service_id, guest_name, guest_email, guest_phone, guest_address, notify_via, reminder_times, reminder_channels, start_time, status, meet_link, guest_timezone, action_token, services(name, duration_minutes, location), profiles(full_name, slug, timezone, email, notification_email, phone, whatsapp_number, sms_opt_in, whatsapp_opt_in, default_reminder_channel, reminder_also, slack_webhook_url)')
     .in('status', ['confirmed', 'pending', 'pending_approval'])
     .gte('start_time', fromIso)
     .lte('start_time', toIso)
@@ -836,12 +840,19 @@ async function dispatchScheduledReminders(supabase: SupabaseClient): Promise<num
 
       const templateData: TemplateData = {
         guest_name: booking.guest_name,
+        guest_address: (booking.guest_address as string) || '',
         host_name: hostName,
         service_name: serviceName,
         date: dateStr,
         time: timeStr,
         timezone: booking.guest_timezone ?? (hostProfile?.timezone as string) ?? 'UTC',
         duration,
+        location:
+          (typeof booking.guest_address === 'string' && booking.guest_address.trim())
+          || (typeof (service as Record<string, unknown> | null)?.location === 'string'
+            ? String((service as Record<string, unknown>).location)
+            : '')
+          || '',
         ...actionLinks,
       };
       const msgBody = withChangeThisLink(fillTemplate(tpl.body, templateData), rescheduleLink);
@@ -1381,7 +1392,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: booking } = await supabase
       .from('bookings')
-      .select('*, services(name, duration_minutes), profiles(full_name, slug, timezone, email, notification_email, phone, whatsapp_number, sms_opt_in, whatsapp_opt_in, default_reminder_channel, voice_message_template, slack_webhook_url)')
+      .select('*, services(name, duration_minutes, location), profiles(full_name, slug, timezone, email, notification_email, phone, whatsapp_number, sms_opt_in, whatsapp_opt_in, default_reminder_channel, voice_message_template, slack_webhook_url)')
       .eq('id', booking_id)
       .maybeSingle();
 
@@ -1414,12 +1425,14 @@ Deno.serve(async (req: Request) => {
 
     const templateData: TemplateData = {
       guest_name: booking.guest_name,
+      guest_address: (booking.guest_address as string) || '',
       host_name: (hostProfile?.full_name as string) ?? 'Your host',
       service_name: (service?.name as string) ?? 'Appointment',
       date: new Date(booking.start_time).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }),
       time: new Date(booking.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
       timezone: booking.guest_timezone ?? (hostProfile?.timezone as string) ?? 'UTC',
       duration: `${service?.duration_minutes ?? 30} min`,
+      location: (booking.guest_address as string) || (service?.location as string) || '',
       booking_link: `${baseUrl}/${hostProfile?.slug ?? ''}`,
       cancel_link: `${baseUrl}/booking/${booking.id}/cancel/${booking.action_token}`,
       confirm_link: `${baseUrl}/booking/${booking.id}/confirm/${booking.action_token}`,

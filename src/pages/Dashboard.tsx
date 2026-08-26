@@ -13,7 +13,7 @@ import { CalendarDays, LogOut, X, Check, Sun, Moon, Copy, Share2, Mail, Link2, E
 import {
   MORE_TOOLS_HUB_PATH,
   buildSidebarNav,
-  isMoreToolsChildActive,
+  isMoreToolsSectionActive,
   navPathMatches,
 } from '../lib/dashboardNav';
 import { parseRevealedTools, revealTool } from '../lib/progressiveDisclosure';
@@ -975,7 +975,9 @@ export function Dashboard() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createdUrl, setCreatedUrl] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [moreToolsOpen, setMoreToolsOpen] = useState(true);
+  const [moreToolsOpen, setMoreToolsOpen] = useState(() =>
+    isMoreToolsSectionActive(location.pathname, location.search, location.hash),
+  );
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const planName = effectivePlan(subscription, profile);
@@ -983,10 +985,9 @@ export function Dashboard() {
   const [liveSlug, setLiveSlug] = useState<string | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
 
+  // Expand while inside More Tools; collapse automatically when you leave that section.
   useEffect(() => {
-    if (isMoreToolsChildActive(location.pathname, location.search, location.hash)) {
-      setMoreToolsOpen(true);
-    }
+    setMoreToolsOpen(isMoreToolsSectionActive(location.pathname, location.search, location.hash));
   }, [location.pathname, location.search, location.hash]);
 
   const isCalendlyOAuthSuccessReturn = () => {

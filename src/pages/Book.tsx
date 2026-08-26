@@ -605,6 +605,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
   const [detailsError, setDetailsError] = useState('');
   const [guestTimezone, setGuestTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York');
   const [guestNotes, setGuestNotes] = useState('');
+  const [guestAddress, setGuestAddress] = useState('');
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [termsAgreed, setTermsAgreed] = useState(false);
   const [ndaAgreed, setNdaAgreed] = useState(false);
@@ -962,12 +963,14 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
       if (ch === 'whatsapp') return whatsappConsentGranted;
       return true;
     });
+    const addressVal = guestAddress.trim() || null;
     const { data, error: insertError } = await supabase.from('bookings').insert({
       service_id: selectedService.id,
       host_id: host.id,
       guest_name: guestName,
       guest_email: email || null,
       guest_phone: phoneVal,
+      guest_address: addressVal,
       notify_via: notifyViaPayload.length > 0 ? notifyViaPayload : null,
       guest_timezone: guestTimezone,
       start_time: startTime.toISOString(),
@@ -1081,6 +1084,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
             guest_name: guestName,
             guest_email: email || null,
             guest_phone: phoneVal,
+            guest_address: addressVal,
             notify_via: notifyViaPayload.length > 0 ? notifyViaPayload : null,
             guest_timezone: guestTimezone,
             start_time: nextStart.toISOString(),
@@ -1115,7 +1119,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
       } catch { /* non-blocking */ }
     }
     return data as Booking | null;
-  }, [selectedService, selectedDate, selectedSlot, host, guestName, guestEmail, phone, smsOptIn, whatsappOptIn, guestTimezone, guestNotes, questions, answers, singleUseLink, selectedChannels, selectedTimes, stripePaymentId, rescheduleSession]);
+  }, [selectedService, selectedDate, selectedSlot, host, guestName, guestEmail, phone, smsOptIn, whatsappOptIn, guestTimezone, guestNotes, guestAddress, questions, answers, singleUseLink, selectedChannels, selectedTimes, stripePaymentId, rescheduleSession]);
 
   useEffect(() => {
     setClientSecret(null);
@@ -1791,6 +1795,27 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                       </>
                     )}
                   </div>
+                  {selectedService.location_type === 'in_person' && (
+                    <div>
+                      <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                        Service address{' '}
+                        <span className="text-slate-400 dark:text-slate-500 font-normal">(optional)</span>
+                      </label>
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-3 h-4 w-4 text-slate-400 dark:text-slate-500" />
+                        <textarea
+                          value={guestAddress}
+                          onChange={(e) => setGuestAddress(e.target.value)}
+                          rows={2}
+                          placeholder="Where should we come? Street, city, gate code…"
+                          className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition resize-none"
+                        />
+                      </div>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                        Job site or property address for this visit.
+                      </p>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Your timezone</label>
                     <div className="relative">

@@ -1556,6 +1556,12 @@ export function AppointmentsPage() {
             <div className="text-sm text-slate-600 dark:text-slate-300 space-y-1">
               <p><strong>{detailBooking.guest_name}</strong> · {detailBooking.guest_email}</p>
               <p>{new Date(detailBooking.start_time).toLocaleString('en-US', { weekday: 'long', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</p>
+              {detailBooking.guest_address && (
+                <p className="flex items-start gap-1.5 pt-1">
+                  <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0 text-slate-400" />
+                  <span className="whitespace-pre-wrap">{detailBooking.guest_address}</span>
+                </p>
+              )}
             </div>
             {detailBooking.status !== 'canceled' && (
               <div className="flex flex-col gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">

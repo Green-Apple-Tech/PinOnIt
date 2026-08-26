@@ -32,6 +32,7 @@ interface Contact {
   email: string;
   full_name: string | null;
   phone: string | null;
+  address: string | null;
   notes: string | null;
   source: string;
   created_at: string;
@@ -124,6 +125,7 @@ export function ContactsPage() {
   const [editName, setEditName] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editPhone, setEditPhone] = useState('');
+  const [editAddress, setEditAddress] = useState('');
   const [savingContact, setSavingContact] = useState(false);
   const [editError, setEditError] = useState('');
 
@@ -285,30 +287,59 @@ export function ContactsPage() {
 
       const { data: existingRows } = await supabase
         .from('contacts')
-        .select('email')
+        .select('email, address, phone, full_name')
         .eq('host_id', profile.id);
 
-      const existingEmails = new Set((existingRows ?? []).map((c) => c.email.toLowerCase()));
-      const newFromBookings: { host_id: string; email: string; full_name: string; source: string }[] = [];
+      const existingByEmail = new Map(
+        (existingRows ?? []).map((c) => [c.email.toLowerCase(), c as { email: string; address: string | null; phone: string | null; full_name: string | null }]),
+      );
+      const toUpsert: {
+        host_id: string;
+        email: string;
+        full_name: string | null;
+        phone: string | null;
+        address: string | null;
+        source: string;
+      }[] = [];
       const seen = new Set<string>();
       for (const b of fetchedBookings) {
         if (!b.guest_email) continue;
         const key = b.guest_email.toLowerCase();
-        if (!existingEmails.has(key) && !seen.has(key)) {
-          seen.add(key);
-          newFromBookings.push({
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const existing = existingByEmail.get(key);
+        const bookingAddr = (b.guest_address ?? '').trim() || null;
+        const bookingPhone = (b.guest_phone ?? '').trim() || null;
+        if (!existing) {
+          toUpsert.push({
             host_id: profile.id,
             email: b.guest_email,
             full_name: b.guest_name,
+            phone: bookingPhone,
+            address: bookingAddr,
+            source: 'booking',
+          });
+          continue;
+        }
+        // Refresh address/phone from newest booking when contact is missing them
+        const needAddress = bookingAddr && !existing.address;
+        const needPhone = bookingPhone && !existing.phone;
+        if (needAddress || needPhone) {
+          toUpsert.push({
+            host_id: profile.id,
+            email: b.guest_email,
+            full_name: existing.full_name || b.guest_name,
+            phone: existing.phone || bookingPhone,
+            address: existing.address || bookingAddr,
             source: 'booking',
           });
         }
       }
 
-      if (newFromBookings.length) {
+      if (toUpsert.length) {
         await supabase
           .from('contacts')
-          .upsert(newFromBookings, { onConflict: 'host_id,email', ignoreDuplicates: true });
+          .upsert(toUpsert, { onConflict: 'host_id,email' });
         setContactsRefreshKey((k) => k + 1);
       }
     })();
@@ -330,7 +361,7 @@ export function ContactsPage() {
       const q = debouncedSearch.trim();
       if (q) {
         const escaped = q.replace(/[%_]/g, '\\$&');
-        query = query.or(`full_name.ilike.%${escaped}%,email.ilike.%${escaped}%`);
+        query = query.or(`full_name.ilike.%${escaped}%,email.ilike.%${escaped}%,address.ilike.%${escaped}%`);
       }
 
       const { data, error } = await query.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
@@ -455,6 +486,7 @@ export function ContactsPage() {
     setEditName(contact.full_name ?? '');
     setEditEmail(contact.email);
     setEditPhone(contact.phone ? formatPhone(contact.phone) : '');
+    setEditAddress(contact.address ?? '');
     setEditError('');
   };
 
@@ -486,6 +518,7 @@ export function ContactsPage() {
         full_name: editName.trim() || null,
         email,
         phone: phoneVal,
+        address: editAddress.trim() || null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', selected.id)
@@ -936,6 +969,7 @@ export function ContactsPage() {
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">{selected.full_name || selected.email}</h2>
             <p className="text-sm text-gray-500 dark:text-slate-400 mt-0.5">{selected.email}</p>
             {selected.phone && <p className="text-sm text-gray-500 dark:text-slate-400">{selected.phone}</p>}
+            {selected.address && <p className="text-sm text-gray-500 dark:text-slate-400 mt-0.5">{selected.address}</p>}
           </div>
           <div className="ml-auto flex items-center gap-2 shrink-0">
             <span className="px-3 py-1 bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 text-xs font-semibold rounded-full">
@@ -1012,6 +1046,16 @@ export function ContactsPage() {
                 />
                 <p className="text-xs text-gray-400 mt-1">Used for SMS and WhatsApp invites</p>
               </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Address</label>
+                <textarea
+                  value={editAddress}
+                  onChange={(e) => setEditAddress(e.target.value)}
+                  rows={2}
+                  placeholder="Service / property address"
+                  className={`${inputCls} resize-none`}
+                />
+              </div>
               {editError && <p className="text-xs text-red-500">{editError}</p>}
             </div>
           ) : (
@@ -1027,6 +1071,10 @@ export function ContactsPage() {
               <div className="flex gap-3">
                 <span className="w-16 shrink-0 text-xs font-medium text-gray-400 dark:text-slate-500">Phone</span>
                 <span className="text-gray-900 dark:text-white">{selected.phone ? formatPhone(selected.phone) : '—'}</span>
+              </div>
+              <div className="flex gap-3">
+                <span className="w-16 shrink-0 text-xs font-medium text-gray-400 dark:text-slate-500">Address</span>
+                <span className="text-gray-900 dark:text-white whitespace-pre-wrap">{selected.address || '—'}</span>
               </div>
             </div>
           )}
