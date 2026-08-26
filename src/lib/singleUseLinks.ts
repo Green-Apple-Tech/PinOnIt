@@ -35,6 +35,20 @@ export function resolveLinkExpiry(profile: {
   return daysToLinkExpiry(profile.default_link_expiry_days);
 }
 
+/** True when an unused single-use link is past expires_at, or past a 24h fallback from created_at. */
+export function isUnusedSingleUseExpired(
+  expiresAt: string | null,
+  createdAt: string | null,
+): boolean {
+  if (expiresAt) {
+    return new Date(expiresAt) < new Date();
+  }
+  if (createdAt) {
+    return Date.now() - new Date(createdAt).getTime() > 24 * 60 * 60 * 1000;
+  }
+  return false;
+}
+
 export function isSingleUseLinksEnabled(profile: {
   single_use_links?: boolean | null;
   single_use_links_enabled?: boolean | null;
