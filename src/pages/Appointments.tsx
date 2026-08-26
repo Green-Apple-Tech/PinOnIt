@@ -422,7 +422,7 @@ export function AppointmentsPage() {
 
   const loadData = async () => {
     if (!profile) return;
-    const [bookRes, svcRes, extEvtRes] = await Promise.all([
+    const [bookRes, svcRes, extEvtRes, personalRes] = await Promise.all([
       supabase
         .from('bookings')
         .select('*, services(name, color, duration_minutes, location_type, location)')
@@ -434,6 +434,12 @@ export function AppointmentsPage() {
         .select('id, title, start_at, end_at, all_day, connected_calendars(provider)')
         .eq('host_id', profile.id)
         .order('start_at', { ascending: true }),
+      supabase
+        .from('personal_reminders')
+        .select('id, title, due_at')
+        .eq('host_id', profile.id)
+        .eq('status', 'active')
+        .order('due_at', { ascending: true }),
     ]);
     setBookings((bookRes.data ?? []) as Booking[]);
     setServices((svcRes.data ?? []) as Service[]);
@@ -445,7 +451,19 @@ export function AppointmentsPage() {
       all_day: e.all_day,
       provider: e.connected_calendars?.provider ?? 'external',
     }));
-    setExternalEvents(evts);
+    const personal = (personalRes.data ?? []).map((r: { id: string; title: string; due_at: string }) => {
+      const start = new Date(r.due_at);
+      const end = new Date(start.getTime() + 30 * 60 * 1000);
+      return {
+        id: `personal:${r.id}`,
+        title: r.title,
+        start_at: start.toISOString(),
+        end_at: end.toISOString(),
+        all_day: false,
+        provider: 'personal',
+      } satisfies CalendarEvent;
+    });
+    setExternalEvents([...evts, ...personal]);
     setLoading(false);
   };
 
@@ -608,6 +626,10 @@ export function AppointmentsPage() {
 
   const openReminderPanel = async (target: ReminderTarget, channel?: ReminderChannel) => {
     setEventMenu(null);
+    if (target.kind === 'external' && target.event.provider === 'personal') {
+      // Personal "Remind me" items already have their own channel schedule — no override panel.
+      return;
+    }
     setReminderTarget(target);
     if (channel) setNewReminderChannel(channel);
     setLoadingOverrides(true);
@@ -972,7 +994,7 @@ export function AppointmentsPage() {
                             className="group relative z-0 hover:z-20 text-sm px-2 py-1 rounded-md flex items-center gap-1.5 bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 shadow-sm cursor-pointer"
                           >
                             <EventHoverHint />
-                            <span className={`h-2 w-2 rounded-full shrink-0 ${e.provider === 'google' ? 'bg-red-400' : e.provider === 'outlook' ? 'bg-blue-400' : 'bg-slate-400'}`} />
+                            <span className={`h-2 w-2 rounded-full shrink-0 ${e.provider === 'google' ? 'bg-red-400' : e.provider === 'outlook' ? 'bg-blue-400' : e.provider === 'personal' ? 'bg-amber-400' : 'bg-slate-400'}`} />
                             <span className="truncate">{e.all_day ? e.title : `${formatTime(e.start_at)} ${e.title}`}</span>
                           </div>
                         ))}
@@ -1245,11 +1267,12 @@ export function AppointmentsPage() {
                           <div className="flex-1 min-w-0 flex items-center gap-2">
                             <span className={`h-2 w-2 rounded-full shrink-0 ${
                               e.provider === 'google' ? 'bg-red-400' :
-                              e.provider === 'outlook' ? 'bg-brand-400' : 'bg-slate-400'
+                              e.provider === 'outlook' ? 'bg-brand-400' :
+                              e.provider === 'personal' ? 'bg-amber-400' : 'bg-slate-400'
                             }`} />
                             <p className="text-xs text-slate-500 dark:text-slate-400 truncate italic">{e.title}</p>
                             <span className="text-[10px] px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 rounded-full capitalize shrink-0">
-                              {e.provider}
+                              {e.provider === 'personal' ? 'reminder' : e.provider}
                             </span>
                           </div>
                         </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type CSSProperties, type ElementType } from 'react';
+import { useState, useEffect, useCallback, useRef, type CSSProperties, type ElementType } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import { resolveDefaultReminderChannel, getWhatsappNumber } from '../lib/reminderChannels';
-import { VoicePersonalReminder, PersonalReminderDefaultsEditor } from '../components/VoicePersonalReminder';
+import { VoicePersonalReminder, PersonalReminderDefaultsEditor, type VoicePersonalReminderHandle } from '../components/VoicePersonalReminder';
 import { AlsoRemindPeople } from '../components/AlsoRemindPeople';
 import { SMS_OPT_OUT_FOOTER } from '../lib/smsOptOut';
 import { SmsBookingConsent } from '../components/SmsConsentText';
@@ -193,6 +193,11 @@ export function RemindersPage({
   const navigate = useNavigate();
   const { user, profile, subscription, refreshProfile } = useAuth();
   const isPro = effectivePlan(subscription, profile) === 'pro';
+  const personalReminderRef = useRef<VoicePersonalReminderHandle>(null);
+
+  const openPersonalReminder = useCallback(() => {
+    personalReminderRef.current?.openTypeModal();
+  }, []);
 
   const goToProfileSettings = useCallback(() => {
     onOpenProfileTab?.();
@@ -683,17 +688,15 @@ export function RemindersPage({
             Remind yourself, your guests, and extra people (coworkers or anyone else) — not just meetings. Email, SMS, WhatsApp, or Voice for you and guests; extra people get email, SMS, or WhatsApp (no voice).
           </p>
         </div>
-        {hasAnyReminders && (
-          <button
-            onClick={() => { setWizardChannels(getDefaultWizardChannels()); setPreviewChannel(defaultWizardChannel); setShowAddForm(true); setWizardStep(1); }}
-            className="shrink-0 inline-flex items-center justify-center gap-2 min-h-11 px-4 py-2 text-white text-sm font-semibold rounded-xl transition-all hover:opacity-90" style={{ backgroundColor: '#5864C6' }}
-          >
-            <Plus className="h-4 w-4" /> Add Reminder
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={openPersonalReminder}
+          className="shrink-0 inline-flex items-center justify-center gap-2 min-h-11 px-4 py-2 text-white text-sm font-semibold rounded-xl transition-all hover:opacity-90"
+          style={{ backgroundColor: '#5864C6' }}
+        >
+          <Plus className="h-4 w-4" /> Add Reminder
+        </button>
       </div>
-
-      <VoicePersonalReminder />
 
       <AlsoRemindPeople />
 
@@ -1257,6 +1260,8 @@ export function RemindersPage({
           </div>
         )}
       </div>
+
+      <VoicePersonalReminder ref={personalReminderRef} />
 
       {/* ── ADVANCED SECTION ── */}
       <div className="border border-slate-200 dark:border-slate-800 rounded-2xl">
