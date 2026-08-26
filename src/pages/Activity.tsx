@@ -164,7 +164,7 @@ export function ActivityPage() {
         Open a quote to edit it on{' '}
         <Link to="/dashboard/quotes" className="font-semibold underline text-slate-600 dark:text-slate-300">Quote/Invoice</Link>
         . Reminder templates stay under{' '}
-        <Link to="/dashboard/settings?tab=reminders" className="font-semibold underline text-slate-600 dark:text-slate-300">Reminders</Link>.
+        <Link to="/dashboard/reminders" className="font-semibold underline text-slate-600 dark:text-slate-300">Smart Reminders</Link>.
       </p>
     </div>
   );

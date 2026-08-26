@@ -31,6 +31,9 @@ const ServicesPage = lazy(() =>
 const AppointmentsPage = lazy(() =>
   import('./pages/Appointments').then((m) => ({ default: m.AppointmentsPage })),
 );
+const RemindersPage = lazy(() =>
+  import('./pages/Reminders').then((m) => ({ default: m.RemindersPage })),
+);
 const SettingsPage = lazy(() =>
   import('./pages/Settings').then((m) => ({ default: m.SettingsPage })),
 );
@@ -113,11 +116,11 @@ function App() {
             >
               <Route path="services" element={<ServicesPage />} />
               <Route path="availability" element={<Navigate to="/dashboard/settings?tab=availability" replace />} />
-              <Route path="reminders" element={<Navigate to="/dashboard/settings?tab=reminders" replace />} />
+              <Route path="reminders" element={<RemindersPage />} />
               <Route path="activity" element={<Navigate to="/dashboard/settings?tab=activity" replace />} />
               <Route path="appointments" element={<AppointmentsPage />} />
               <Route path="contacts" element={<ContactsPage />} />
-              <Route path="messaging" element={<Navigate to="/dashboard/settings?tab=reminders" replace />} />
+              <Route path="messaging" element={<Navigate to="/dashboard/reminders" replace />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="billing" element={<Navigate to="/dashboard/settings?tab=billing" replace />} />
               <Route path="analytics" element={<Navigate to="/dashboard/settings?tab=analytics" replace />} />

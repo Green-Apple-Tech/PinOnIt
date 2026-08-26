@@ -3,7 +3,7 @@ import { getPageHelp } from './pageHelp';
 
 describe('getPageHelp', () => {
   it('explains reminders on the reminders settings tab', () => {
-    const g = getPageHelp('/dashboard/settings', '?tab=reminders');
+    const g = getPageHelp('/dashboard/reminders');
     expect(g.title).toMatch(/reminder/i);
     expect(g.steps.length).toBeGreaterThan(1);
   });

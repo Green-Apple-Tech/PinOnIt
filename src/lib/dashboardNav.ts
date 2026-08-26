@@ -3,7 +3,6 @@ import {
   Bell,
   CalendarCheck,
   CalendarDays,
-  Clock,
   FileText,
   Gift,
   LayoutGrid,
@@ -36,12 +35,11 @@ export type DashboardNavItem = {
   children?: DashboardNavItem[];
 };
 
-/** Simple-mode top of sidebar. Everything else stays under More Tools. */
+/** Simple-mode top of sidebar. Everything else stays under More Tools / Settings. */
 export const SIMPLE_PRIMARY_NAV: MoreToolsNavItem[] = [
   { label: 'Dashboard', icon: LayoutGrid, path: '/dashboard' },
   { label: 'Calendar', icon: CalendarCheck, path: '/dashboard/appointments' },
-  { label: 'Availability', icon: Clock, path: '/dashboard/settings?tab=availability' },
-  { label: 'Reminders', icon: Bell, path: '/dashboard/settings?tab=reminders' },
+  { label: 'Smart Reminders', icon: Bell, path: '/dashboard/reminders' },
 ];
 
 /** Single source of truth for sidebar More Tools — add items here. */
@@ -93,7 +91,7 @@ export function navPathMatches(to: string, pathname: string, search = '', hash =
   if (query && !search.includes(query)) return false;
   if (itemHash) return hash === `#${itemHash}`;
   if (path === '/dashboard' && hash === '#share' && !query) return false;
-  if (path === '/dashboard/settings' && !query && /tab=(availability|reminders|analytics|referrals)/.test(search)) {
+  if (path === '/dashboard/settings' && !query && /tab=(availability|analytics|referrals)/.test(search)) {
     return false;
   }
   return true;

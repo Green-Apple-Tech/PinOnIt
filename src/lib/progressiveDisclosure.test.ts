@@ -67,8 +67,7 @@ describe('buildSidebarNav', () => {
     expect(primary.map((i) => i.label)).toEqual([
       'Dashboard',
       'Calendar',
-      'Availability',
-      'Reminders',
+      'Smart Reminders',
     ]);
     expect(primary.map((i) => i.label)).not.toContain('Share');
     expect(moreTools.some((i) => i.label === 'Settings')).toBe(true);
@@ -120,7 +119,6 @@ describe('navPathMatches', () => {
 
   it('does not highlight Settings when a specialty tab is open', () => {
     expect(navPathMatches('/dashboard/settings', '/dashboard/settings', '?tab=availability', '')).toBe(false);
-    expect(navPathMatches('/dashboard/settings', '/dashboard/settings', '?tab=reminders', '')).toBe(false);
     expect(navPathMatches('/dashboard/settings', '/dashboard/settings', '?tab=referrals', '')).toBe(false);
     expect(navPathMatches('/dashboard/settings?tab=availability', '/dashboard/settings', '?tab=availability', '')).toBe(true);
     expect(navPathMatches('/dashboard/settings?tab=referrals', '/dashboard/settings', '?tab=referrals', '')).toBe(true);

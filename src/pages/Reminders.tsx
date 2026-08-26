@@ -21,6 +21,11 @@ import { VoicePersonalReminder, PersonalReminderDefaultsEditor } from '../compon
 import { AlsoRemindPeople } from '../components/AlsoRemindPeople';
 import { SMS_OPT_OUT_FOOTER } from '../lib/smsOptOut';
 import { SmsBookingConsent } from '../components/SmsConsentText';
+import {
+  normalizeCriticalAutoMatches,
+  parseCriticalAutoInput,
+  type CriticalAutoMatch,
+} from '../lib/criticalAutoMatch';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -195,6 +200,10 @@ export function RemindersPage({
 
   // Critical alerts
   const [criticalAlertsEnabled, setCriticalAlertsEnabled] = useState(profile?.critical_alerts_enabled !== false);
+  const [criticalAutoMatches, setCriticalAutoMatches] = useState<CriticalAutoMatch[]>(() =>
+    normalizeCriticalAutoMatches(profile?.critical_auto_matches),
+  );
+  const [criticalAutoDraft, setCriticalAutoDraft] = useState('');
   const [savingCritical, setSavingCritical] = useState(false);
   const [savedCritical, setSavedCritical] = useState(false);
   const [testingCall, setTestingCall] = useState(false);
@@ -214,13 +223,16 @@ export function RemindersPage({
     setPreviewChannel(ch);
     const storedPhone = profile?.phone ?? '';
     setContactPhone(storedPhone ? blurFormatPhone(storedPhone) : '');
-  }, [profile?.default_reminder_channel, profile?.phone]);
+    setCriticalAlertsEnabled(profile?.critical_alerts_enabled !== false);
+    setCriticalAutoMatches(normalizeCriticalAutoMatches(profile?.critical_auto_matches));
+  }, [profile?.default_reminder_channel, profile?.phone, profile?.critical_alerts_enabled, profile?.critical_auto_matches]);
 
   const handleSaveCriticalAlerts = async () => {
     if (!user) return;
     setSavingCritical(true);
     await supabase.from('profiles').update({
       critical_alerts_enabled: criticalAlertsEnabled,
+      critical_auto_matches: criticalAutoMatches,
     }).eq('id', user.id);
     setSavingCritical(false);
     setSavedCritical(true);
@@ -653,7 +665,7 @@ export function RemindersPage({
 
       <div className="flex flex-col sm:flex-row items-stretch sm:items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Reminders &amp; Messages</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Smart Reminders</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Remind yourself, your guests, and extra people (coworkers or anyone else) — not just meetings. Email, SMS, WhatsApp, or Voice for you and guests; extra people get email, SMS, or WhatsApp (no voice).
           </p>
@@ -1575,14 +1587,14 @@ export function RemindersPage({
                     </div>
                     <div>
                       <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Critical Meeting Alerts</h3>
-                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Receive a voice call 5 and 1 minute before any meeting you mark as critical.</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Voice call 5 and 1 minute before critical meetings. Mark meetings critical on Calendar, or auto-match below.</p>
                     </div>
                   </div>
 
                   <label className="flex items-center justify-between gap-4 cursor-pointer p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
                     <div>
-                      <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Enable voice call reminders</p>
-                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">You will receive a phone call before critical meetings start.</p>
+                      <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Enable critical voice alerts</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Phone call before critical meetings start.</p>
                     </div>
                     <button
                       type="button"
@@ -1592,6 +1604,76 @@ export function RemindersPage({
                       <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${criticalAlertsEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
                     </button>
                   </label>
+
+                  <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+                    <div>
+                      <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Auto-mark as critical</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                        New bookings from these emails, domains, or names are marked critical automatically.
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={criticalAutoDraft}
+                        onChange={(e) => setCriticalAutoDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key !== 'Enter') return;
+                          e.preventDefault();
+                          const parsed = parseCriticalAutoInput(criticalAutoDraft);
+                          if (!parsed) return;
+                          setCriticalAutoMatches((prev) => {
+                            if (prev.some((m) => m.type === parsed.type && m.value === parsed.value)) return prev;
+                            return [...prev, parsed];
+                          });
+                          setCriticalAutoDraft('');
+                        }}
+                        placeholder="ceo@acme.com, @acme.com, or Jane"
+                        className="flex-1 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5864C6]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const parsed = parseCriticalAutoInput(criticalAutoDraft);
+                          if (!parsed) return;
+                          setCriticalAutoMatches((prev) => {
+                            if (prev.some((m) => m.type === parsed.type && m.value === parsed.value)) return prev;
+                            return [...prev, parsed];
+                          });
+                          setCriticalAutoDraft('');
+                        }}
+                        className="px-3 py-2 text-sm font-semibold rounded-lg text-white hover:opacity-90"
+                        style={{ backgroundColor: '#5864C6' }}
+                      >
+                        Add
+                      </button>
+                    </div>
+                    {criticalAutoMatches.length === 0 ? (
+                      <p className="text-xs text-slate-400 italic">No auto rules yet.</p>
+                    ) : (
+                      <ul className="space-y-1.5">
+                        {criticalAutoMatches.map((m) => (
+                          <li
+                            key={`${m.type}:${m.value}`}
+                            className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 text-sm"
+                          >
+                            <span className="text-slate-700 dark:text-slate-200 truncate">
+                              <span className="text-[10px] uppercase font-bold text-slate-400 mr-2">{m.type}</span>
+                              {m.type === 'domain' ? `@${m.value}` : m.value}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setCriticalAutoMatches((prev) => prev.filter((x) => !(x.type === m.type && x.value === m.value)))}
+                              className="p-1 text-slate-400 hover:text-red-500"
+                              aria-label="Remove"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
 
                   <div>
                     <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Call me at</label>

@@ -8,9 +8,9 @@ function keyFromLocation(pathname: string, search: string, hash: string): string
   const tab = new URLSearchParams(search).get('tab') || '';
   if (pathname === '/dashboard' && hash === '#share') return 'share';
   if (pathname === '/dashboard') return 'home';
+  if (pathname.startsWith('/dashboard/reminders')) return 'reminders';
   if (pathname.startsWith('/dashboard/settings')) {
     if (tab === 'availability') return 'availability';
-    if (tab === 'reminders') return 'reminders';
     if (tab === 'analytics') return 'analytics';
     if (tab === 'billing') return 'billing';
     if (tab === 'activity') return 'activity';
@@ -70,13 +70,13 @@ const GUIDES: Record<string, PageHelpGuide> = {
     ],
   },
   reminders: {
-    title: 'Reminders',
+    title: 'Smart Reminders',
     purpose: 'PinOnIt can text, email, WhatsApp, or call so people actually show up. Nothing sends until a reminder is turned on here.',
     steps: [
       'Add your phone and opt in if you want SMS.',
       'Turn on Booking Confirmation for email and/or SMS so they get a message the moment they book.',
       'Turn on a 24-hour or 1-hour reminder so they get a second ping.',
-      'Use custom templates only if you want different wording.',
+      'In Advanced → Critical Alerts, enable voice alerts and auto-mark VIP emails or domains.',
     ],
   },
   services: {
@@ -187,7 +187,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
       'General → set your name and booking username.',
       'Turn on Advanced mode if you want every tool in the sidebar.',
       'Settings → General → Advanced to block an email or domain from booking, or mark it as spam.',
-      'Use the tabs for Availability, Reminders, Billing, and Analytics.',
+      'Use the tabs for Availability, Billing, and Analytics.',
     ],
   },
   activity: {

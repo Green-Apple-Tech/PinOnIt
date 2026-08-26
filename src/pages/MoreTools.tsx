@@ -109,17 +109,17 @@ export function MoreToolsPage() {
               </div>
               <div>
                 <span className="text-[11px] font-bold uppercase tracking-widest text-teal-500">Tool 2</span>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Super Reminders</h3>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Smart Reminders</h3>
               </div>
             </div>
             <p className="text-sm text-gray-600 dark:text-slate-400 leading-relaxed flex-1">
               Email, SMS, WhatsApp, and Voice reminders for every booking and any calendar event. Make sure nobody misses a meeting.
             </p>
             <Link
-              to="/dashboard/settings?tab=reminders"
+              to="/dashboard/reminders"
               className="mt-6 inline-flex items-center justify-center gap-2 px-5 py-3 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold rounded-xl transition-colors"
             >
-              Open Reminders <ArrowRight className="h-4 w-4" />
+              Open Smart Reminders <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>
