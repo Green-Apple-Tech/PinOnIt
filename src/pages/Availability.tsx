@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
@@ -8,6 +8,18 @@ import { Plus, Trash2, X, Check, Loader2, CalendarX, CalendarDays, Settings, Zap
 import { CalendarConnections } from '../components/CalendarConnections';
 import type { CalendarConflictSettings } from '../lib/types';
 import { DEFAULT_CALENDAR_CONFLICT_SETTINGS } from '../lib/types';
+import {
+  DEFAULT_WEEKDAY_DAYS,
+  GRID_AM,
+  GRID_PM,
+  HALF_HOUR_TIMES,
+  defaultAvailabilityRows,
+  defaultWeekdayHalfHours,
+  formatHalfHourLabel,
+  formatRangesSummary,
+  halfHoursToRanges,
+  rangeToHalfHours,
+} from '../lib/availabilityGrid';
 
 function formatTime(time: string): string {
   const [h, m] = time.split(':');
@@ -17,18 +29,9 @@ function formatTime(time: string): string {
   return `${display}:${m} ${ampm}`;
 }
 
-const TIME_OPTIONS: string[] = [];
-for (let h = 0; h < 24; h++) {
-  for (let m = 0; m < 60; m += 30) {
-    TIME_OPTIONS.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
-  }
-}
+const TIME_OPTIONS = HALF_HOUR_TIMES;
 
-const DEFAULT_START = '10:00';
-const DEFAULT_MID_END = '12:00';
-const DEFAULT_MID_START = '13:00';
-const DEFAULT_END = '15:00';
-const DEFAULT_DAYS = [1, 2, 3, 4, 5]; // Mon–Fri
+const DEFAULT_DAYS = [...DEFAULT_WEEKDAY_DAYS];
 
 type AvailTab = 'weekly' | 'overrides' | 'calendar';
 
@@ -127,26 +130,118 @@ function MultiDatePicker({ selected, onToggle }: MultiDatePickerProps) {
 
 // ── Main Page ────────────────────────────────────────────────────────────────
 
-// Each day can have one or two time windows (window2 = optional afternoon)
+/** Selected half-hour starts for a day (e.g. "09:00", "09:30"). */
 type DayConfig = {
   enabled: boolean;
-  start: string;
-  end: string;
-  // second window (e.g. after lunch)
-  split: boolean;
-  start2: string;
-  end2: string;
+  slots: string[];
 };
 
 const DEFAULT_BREAKS: ScheduleBreak[] = [
-  { id: 'work-break', label: 'Work break', start: '12:00', end: '13:00', enabled: false, days: [1,2,3,4,5] },
+  { id: 'work-break', label: 'Work break', start: '12:00', end: '13:00', enabled: false, days: [1, 2, 3, 4, 5] },
 ];
 
 const BUFFER_OPTIONS = [0, 5, 10, 15, 20, 30, 45, 60];
 const CUTOFF_OPTIONS = [0, 1, 2, 4, 8, 12, 24, 48];
 
 function defaultDayConfig(enabled: boolean): DayConfig {
-  return { enabled, start: DEFAULT_START, end: DEFAULT_MID_END, split: false, start2: DEFAULT_MID_START, end2: DEFAULT_END };
+  return { enabled, slots: enabled ? defaultWeekdayHalfHours() : [] };
+}
+
+function DayHourGrid({
+  dayNum,
+  slots,
+  enabled,
+  onChange,
+}: {
+  dayNum: number;
+  slots: string[];
+  enabled: boolean;
+  onChange: (next: string[]) => void;
+}) {
+  const selected = new Set(slots);
+  const slotsRef = useRef(slots);
+  slotsRef.current = slots;
+  const paintRef = useRef<{ painting: boolean; turnOn: boolean }>({ painting: false, turnOn: true });
+
+  useEffect(() => {
+    const stop = () => {
+      paintRef.current.painting = false;
+    };
+    window.addEventListener('mouseup', stop);
+    window.addEventListener('touchend', stop);
+    return () => {
+      window.removeEventListener('mouseup', stop);
+      window.removeEventListener('touchend', stop);
+    };
+  }, []);
+
+  const applyCell = (t: string, turnOn: boolean) => {
+    const cur = new Set(slotsRef.current);
+    if (turnOn) cur.add(t);
+    else cur.delete(t);
+    const next = [...cur].sort();
+    slotsRef.current = next;
+    onChange(next);
+  };
+
+  const startPaint = (t: string) => {
+    if (!enabled) return;
+    const turnOn = !selected.has(t);
+    paintRef.current = { painting: true, turnOn };
+    applyCell(t, turnOn);
+  };
+
+  const continuePaint = (t: string) => {
+    if (!enabled || !paintRef.current.painting) return;
+    applyCell(t, paintRef.current.turnOn);
+  };
+
+  const renderRow = (label: string, times: string[]) => (
+    <div className="flex items-start gap-2 min-w-0">
+      <span className="w-7 shrink-0 pt-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+        {label}
+      </span>
+      <div className="flex flex-wrap gap-1 flex-1">
+        {times.map((t) => {
+          const on = selected.has(t);
+          return (
+            <button
+              key={`${dayNum}-${t}`}
+              type="button"
+              disabled={!enabled}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                startPaint(t);
+              }}
+              onMouseEnter={() => continuePaint(t)}
+              onTouchStart={(e) => {
+                e.preventDefault();
+                startPaint(t);
+              }}
+              className={`min-w-[2.4rem] h-8 px-1.5 rounded-md text-[11px] font-semibold tabular-nums select-none transition-colors border ${
+                on
+                  ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-100 border-amber-300 dark:border-amber-700'
+                  : 'bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-500'
+              } ${!enabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+              aria-pressed={on}
+              title={`${formatTime(t)} – ${formatTime(
+                HALF_HOUR_TIMES[HALF_HOUR_TIMES.indexOf(t) + 1] ?? t,
+              )}`}
+            >
+              {formatHalfHourLabel(t)}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="mt-2 space-y-1.5 pl-0 sm:pl-8 select-none">
+      {renderRow('AM', GRID_AM)}
+      {renderRow('PM', GRID_PM)}
+    </div>
+  );
 }
 
 export function AvailabilityPage({ embedded }: { embedded?: boolean } = {}) {
@@ -216,20 +311,14 @@ export function AvailabilityPage({ embedded }: { embedded?: boolean } = {}) {
         setSlots(fetched);
         const configs: Record<number, DayConfig> = {};
         WEEK_DAYS.forEach((d) => {
-          const daySlots = fetched.filter((s) => s.day_of_week === d).sort((a, b) => a.start_time.localeCompare(b.start_time));
-          if (daySlots.length >= 2) {
-            configs[d] = {
-              enabled: true,
-              start: daySlots[0].start_time,
-              end: daySlots[0].end_time,
-              split: true,
-              start2: daySlots[1].start_time,
-              end2: daySlots[1].end_time,
-            };
-          } else if (daySlots.length === 1) {
-            configs[d] = { enabled: true, start: daySlots[0].start_time, end: daySlots[0].end_time, split: false, start2: DEFAULT_MID_START, end2: DEFAULT_END };
-          } else {
+          const daySlots = fetched
+            .filter((s) => s.day_of_week === d)
+            .sort((a, b) => a.start_time.localeCompare(b.start_time));
+          if (daySlots.length === 0) {
             configs[d] = defaultDayConfig(false);
+          } else {
+            const halfHours = daySlots.flatMap((s) => rangeToHalfHours(s.start_time, s.end_time));
+            configs[d] = { enabled: true, slots: [...new Set(halfHours)].sort() };
           }
         });
         setDayConfigs(configs);
@@ -257,18 +346,15 @@ export function AvailabilityPage({ embedded }: { embedded?: boolean } = {}) {
     if (!profile) return;
     setSettingDefaults(true);
     await supabase.from('availability').delete().eq('host_id', profile.id);
-    // Two rows per enabled day: morning (10-12) and afternoon (13-15)
-    const rows = DEFAULT_DAYS.flatMap((d) => [
-      { host_id: profile.id, day_of_week: d, start_time: DEFAULT_START, end_time: DEFAULT_MID_END, is_active: true },
-      { host_id: profile.id, day_of_week: d, start_time: DEFAULT_MID_START, end_time: DEFAULT_END, is_active: true },
-    ]);
+    const rows = defaultAvailabilityRows(profile.id);
     const { data } = await supabase.from('availability').insert(rows).select();
     const fetched = (data ?? []) as AvailabilitySlot[];
     setSlots(fetched);
+    const weekdaySlots = defaultWeekdayHalfHours();
     const configs: Record<number, DayConfig> = {};
     WEEK_DAYS.forEach((d) => {
       if (DEFAULT_DAYS.includes(d)) {
-        configs[d] = { enabled: true, start: DEFAULT_START, end: DEFAULT_MID_END, split: true, start2: DEFAULT_MID_START, end2: DEFAULT_END };
+        configs[d] = { enabled: true, slots: weekdaySlots };
       } else {
         configs[d] = defaultDayConfig(false);
       }
@@ -288,10 +374,15 @@ export function AvailabilityPage({ embedded }: { embedded?: boolean } = {}) {
     const rows: { host_id: string; day_of_week: number; start_time: string; end_time: string; is_active: boolean }[] = [];
     WEEK_DAYS.forEach((d) => {
       const cfg = dayConfigs[d];
-      if (!cfg?.enabled) return;
-      rows.push({ host_id: profile.id, day_of_week: d, start_time: cfg.start, end_time: cfg.end, is_active: true });
-      if (cfg.split) {
-        rows.push({ host_id: profile.id, day_of_week: d, start_time: cfg.start2, end_time: cfg.end2, is_active: true });
+      if (!cfg?.enabled || cfg.slots.length === 0) return;
+      for (const range of halfHoursToRanges(cfg.slots)) {
+        rows.push({
+          host_id: profile.id,
+          day_of_week: d,
+          start_time: range.start,
+          end_time: range.end,
+          is_active: true,
+        });
       }
     });
     if (rows.length > 0) {
@@ -391,7 +482,7 @@ export function AvailabilityPage({ embedded }: { embedded?: boolean } = {}) {
     setOvOooMsg('');
   };
 
-  const hasEnabledDays = WEEK_DAYS.some((d) => dayConfigs[d]?.enabled);
+  const hasEnabledDays = WEEK_DAYS.some((d) => dayConfigs[d]?.enabled && (dayConfigs[d]?.slots.length ?? 0) > 0);
 
   const Wrapper = embedded ? 'div' : 'main';
   return (
@@ -538,13 +629,13 @@ export function AvailabilityPage({ embedded }: { embedded?: boolean } = {}) {
         <>
           <div className="flex items-center justify-between mb-4 gap-3">
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              Check the days you're available and set your hours.
+              Click the half-hours you&apos;re free. Drag across cells to paint. Default is Mon–Fri 9–5 with lunch 12–1 off.
             </p>
             <button
               onClick={handleSetDefaults}
               disabled={settingDefaults}
               className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-50"
-              title="Mon–Fri 9 AM – 5 PM"
+              title="Mon–Fri 9 AM – 5 PM, lunch 12–1 off"
             >
               {settingDefaults ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
               Use defaults
@@ -560,11 +651,20 @@ export function AvailabilityPage({ embedded }: { embedded?: boolean } = {}) {
                   const cfg = dayConfigs[dayNum] ?? defaultDayConfig(false);
                   const isWeekend = dayNum === 0 || dayNum === 6;
                   return (
-                    <div key={dayNum} className={`px-5 py-2.5 transition-colors ${cfg.enabled ? '' : 'opacity-50'}`}>
-                      {/* Primary row: checkbox, day, first range, + button */}
+                    <div key={dayNum} className={`px-4 sm:px-5 py-3 transition-colors ${cfg.enabled ? '' : 'opacity-55'}`}>
                       <div className="flex items-center gap-3">
                         <button
-                          onClick={() => updateDay(dayNum, { enabled: !cfg.enabled })}
+                          type="button"
+                          onClick={() => {
+                            if (cfg.enabled) {
+                              updateDay(dayNum, { enabled: false });
+                            } else {
+                              updateDay(dayNum, {
+                                enabled: true,
+                                slots: cfg.slots.length > 0 ? cfg.slots : defaultWeekdayHalfHours(),
+                              });
+                            }
+                          }}
                           className={`h-5 w-5 rounded border-2 flex items-center justify-center shrink-0 transition-all ${
                             cfg.enabled
                               ? 'bg-indigo-600 border-indigo-600'
@@ -581,76 +681,31 @@ export function AvailabilityPage({ embedded }: { embedded?: boolean } = {}) {
                         </span>
 
                         {cfg.enabled ? (
-                          <>
-                            <select
-                              value={cfg.start}
-                              onChange={(e) => {
-                                const s = e.target.value;
-                                updateDay(dayNum, { start: s, end: cfg.end <= s ? (TIME_OPTIONS[TIME_OPTIONS.indexOf(s) + 2] ?? '23:30') : cfg.end });
-                              }}
-                              className={selectCls}
-                            >
-                              {TIME_OPTIONS.map((t) => <option key={t} value={t}>{formatTime(t)}</option>)}
-                            </select>
-                            <span className="text-slate-400 text-xs shrink-0">–</span>
-                            <select
-                              value={cfg.end}
-                              onChange={(e) => updateDay(dayNum, { end: e.target.value })}
-                              className={selectCls}
-                            >
-                              {TIME_OPTIONS.filter((t) => t > cfg.start).map((t) => (
-                                <option key={t} value={t}>{formatTime(t)}</option>
-                              ))}
-                            </select>
-                            {!cfg.split && (
-                              <button
-                                onClick={() => updateDay(dayNum, { split: true, start2: cfg.end <= DEFAULT_MID_START ? DEFAULT_MID_START : (TIME_OPTIONS[TIME_OPTIONS.indexOf(cfg.end) + 1] ?? '13:00'), end2: DEFAULT_END })}
-                                className="h-6 w-6 rounded-full border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-400 dark:hover:text-indigo-400 dark:hover:border-indigo-700 transition-colors shrink-0"
-                                title="Add second time window"
-                              >
-                                <Plus className="h-3 w-3" />
-                              </button>
-                            )}
-                          </>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                            {formatRangesSummary(cfg.slots)}
+                          </p>
                         ) : (
                           <span className="flex-1 text-xs text-slate-400 dark:text-slate-600 italic">Unavailable</span>
                         )}
+
+                        {cfg.enabled && (
+                          <button
+                            type="button"
+                            onClick={() => updateDay(dayNum, { slots: [] })}
+                            className="ml-auto shrink-0 text-[11px] font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                          >
+                            Clear
+                          </button>
+                        )}
                       </div>
 
-                      {/* Second range row — only when split */}
-                      {cfg.enabled && cfg.split && (
-                        <div className="flex items-center gap-3 mt-1.5 ml-8">
-                          <div className="w-0.5 h-3 rounded-full bg-slate-200 dark:bg-slate-700 shrink-0" />
-                          <select
-                            value={cfg.start2}
-                            onChange={(e) => {
-                              const s = e.target.value;
-                              updateDay(dayNum, { start2: s, end2: cfg.end2 <= s ? (TIME_OPTIONS[TIME_OPTIONS.indexOf(s) + 2] ?? '23:30') : cfg.end2 });
-                            }}
-                            className={selectCls}
-                          >
-                            {TIME_OPTIONS.filter((t) => t > cfg.end).map((t) => (
-                              <option key={t} value={t}>{formatTime(t)}</option>
-                            ))}
-                          </select>
-                          <span className="text-slate-400 text-xs shrink-0">–</span>
-                          <select
-                            value={cfg.end2}
-                            onChange={(e) => updateDay(dayNum, { end2: e.target.value })}
-                            className={selectCls}
-                          >
-                            {TIME_OPTIONS.filter((t) => t > cfg.start2).map((t) => (
-                              <option key={t} value={t}>{formatTime(t)}</option>
-                            ))}
-                          </select>
-                          <button
-                            onClick={() => updateDay(dayNum, { split: false })}
-                            className="h-6 w-6 rounded-full flex items-center justify-center text-slate-300 dark:text-slate-600 hover:text-red-400 transition-colors shrink-0"
-                            title="Remove second window"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </div>
+                      {cfg.enabled && (
+                        <DayHourGrid
+                          dayNum={dayNum}
+                          slots={cfg.slots}
+                          enabled={cfg.enabled}
+                          onChange={(slots) => updateDay(dayNum, { slots })}
+                        />
                       )}
                     </div>
                   );
@@ -660,7 +715,7 @@ export function AvailabilityPage({ embedded }: { embedded?: boolean } = {}) {
               {!hasEnabledDays && (
                 <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 rounded-xl text-xs text-amber-700 dark:text-amber-400 flex items-center gap-2">
                   <Zap className="h-3.5 w-3.5 shrink-0" />
-                  No days selected — guests won't be able to book any meetings. Click "Use defaults" to quickly set Mon–Fri 9–5.
+                  No hours selected — guests won&apos;t be able to book. Click &quot;Use defaults&quot; for Mon–Fri 9–5 with lunch off.
                 </div>
               )}
 

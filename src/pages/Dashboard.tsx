@@ -17,6 +17,7 @@ import {
   navPathMatches,
 } from '../lib/dashboardNav';
 import { parseRevealedTools, revealTool } from '../lib/progressiveDisclosure';
+import { defaultAvailabilityRows } from '../lib/availabilityGrid';
 import { PageHelpButton } from '../components/PageHelp';
 import { QRModal } from '../components/QRModal';
 import {
@@ -1363,7 +1364,7 @@ export function Dashboard() {
     });
   };
 
-  // Seed default availability (Mon-Fri, 10am-12pm + 1pm-3pm) for users with none
+  // Seed default availability (Mon-Fri 9–12 + 1–5, lunch off) for users with none
   useEffect(() => {
     if (!profile || loading) return;
     (async () => {
@@ -1374,12 +1375,7 @@ export function Dashboard() {
       if ((count ?? 0) > 0) return;
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
       if (tz) await supabase.from('profiles').update({ timezone: tz }).eq('id', profile.id);
-      const days = [1, 2, 3, 4, 5];
-      const rows = days.flatMap((d) => [
-        { host_id: profile.id, day_of_week: d, start_time: '10:00', end_time: '12:00', is_active: true },
-        { host_id: profile.id, day_of_week: d, start_time: '13:00', end_time: '15:00', is_active: true },
-      ]);
-      await supabase.from('availability').insert(rows);
+      await supabase.from('availability').insert(defaultAvailabilityRows(profile.id));
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id, loading]);

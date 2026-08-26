@@ -22,6 +22,7 @@ import {
 import { withoutPinOnItDemoFeedback } from '../lib/eventTypes';
 import { BUSINESS_TYPE_GROUPS, isBusinessType, isPlaceholderMeetingName, presetsForBusinessType, profilePatchForBusinessType, servicePatchForBusinessType, type BusinessType } from '../lib/progressiveDisclosure';
 import { enableConfirmationSms } from '../lib/reminderSetup';
+import { defaultAvailabilityRows } from '../lib/availabilityGrid';
 import { US_REGIONS } from '../lib/usSalesTax';
 import { WIZARD_STEPS as STEPS, type WizardStep as Step } from '../lib/wizardSteps';
 
@@ -1113,9 +1114,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
 
     const { data: existing } = await supabase.from('availability').select('id').eq('host_id', user.id).limit(1);
     if (!existing?.length) {
-      for (const day of [1, 2, 3, 4, 5]) {
-        await supabase.from('availability').insert({ host_id: user.id, day_of_week: day, start_time: '09:00', end_time: '17:00' });
-      }
+      await supabase.from('availability').insert(defaultAvailabilityRows(user.id));
     }
 
     await saveStep(stepIndex + 1);
