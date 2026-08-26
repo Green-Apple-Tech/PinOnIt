@@ -6,7 +6,7 @@ import { effectivePlan } from '../lib/plan';
 import { PageChecklist } from '../components/PageChecklist';
 import type { MessageTemplate, ReminderRule, Service } from '../lib/types';
 import { SUPPORTED_LANGUAGES, TEMPLATE_VARIABLES } from '../lib/types';
-import { formatErrorMessage, formatFunctionError } from '../lib/errors';
+import { formatErrorMessage } from '../lib/errors';
 import { toast } from '../components/Toast';
 import { backfillMissingReminderRules } from '../lib/reminderSetup';
 import {
@@ -19,7 +19,6 @@ import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } fr
 import { resolveDefaultReminderChannel, getWhatsappNumber } from '../lib/reminderChannels';
 import { VoicePersonalReminder, PersonalReminderDefaultsEditor } from '../components/VoicePersonalReminder';
 import { AlsoRemindPeople } from '../components/AlsoRemindPeople';
-import { SlackWebhookCard } from '../components/SlackWebhookCard';
 import { SMS_OPT_OUT_FOOTER } from '../lib/smsOptOut';
 import { SmsBookingConsent } from '../components/SmsConsentText';
 
@@ -272,13 +271,6 @@ export function RemindersPage({
   const [previewChannel, setPreviewChannel] = useState<Channel>('whatsapp');
 
   // Test SMS
-  const [showTestSms, setShowTestSms] = useState(Boolean(embedded));
-  const [testSmsPhone, setTestSmsPhone] = useState('');
-  const [testSmsSending, setTestSmsSending] = useState(false);
-  const [testWhatsappSending, setTestWhatsappSending] = useState(false);
-  const [testVoiceSending, setTestVoiceSending] = useState(false);
-  const [testSmsResult, setTestSmsResult] = useState<{ ok: boolean; message: string } | null>(null);
-
   // Advanced section
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [advancedTab, setAdvancedTab] = useState<'templates' | 'rules' | 'critical' | 'voice'>('templates');
@@ -361,10 +353,6 @@ export function RemindersPage({
       ]);
       setServices(svcRes.data ?? []);
       setLoading(false);
-      if (!testSmsPhone) {
-        const seed = storedPhone || (profile as { whatsapp_number?: string }).whatsapp_number || '';
-        if (seed) setTestSmsPhone(blurFormatPhone(seed));
-      }
 
       // Seed default 1-hour email reminder for brand-new users
       if (loadedTemplates.length === 0) {
@@ -616,62 +604,6 @@ export function RemindersPage({
   };
   const hasAnyReminders = templates.length > 0;
 
-  const handleTestMessage = async (channel: 'sms' | 'whatsapp' | 'voice') => {
-    const to = normalizePhoneE164(testSmsPhone);
-    if (!to) return;
-    if (channel === 'sms') setTestSmsSending(true);
-    else if (channel === 'whatsapp') setTestWhatsappSending(true);
-    else setTestVoiceSending(true);
-    setTestSmsResult(null);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const now = new Date();
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-reminder`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session?.access_token ?? ''}`,
-            Apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-          },
-          body: JSON.stringify({
-            test_sms: channel === 'sms',
-            test_whatsapp: channel === 'whatsapp',
-            test_voice: channel === 'voice',
-            to,
-            guest_name: 'Test Guest',
-            host_name: profile?.full_name ?? 'Your Host',
-            duration: '30',
-            date: now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }),
-            time: now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-          }),
-        }
-      );
-      const json = await res.json().catch(() => ({})) as { success?: boolean; error?: unknown };
-      const label = channel === 'whatsapp' ? 'WhatsApp' : channel === 'voice' ? 'voicemail' : 'SMS';
-      const sent = res.ok && json.success === true && !json.error;
-      if (!sent) {
-        setTestSmsResult({
-          ok: false,
-          message: formatFunctionError(json, `Failed to send ${label}. Check Twilio WhatsApp template / credentials.`),
-        });
-      } else {
-        setTestSmsResult({
-          ok: true,
-          message: channel === 'voice'
-            ? `Test call started to ${to}. Answer to hear the reminder voicemail.`
-            : `Test ${label} queued to ${to}. Check your phone — “queued” is not the same as delivered.`,
-        });
-      }
-    } catch (e) {
-      setTestSmsResult({ ok: false, message: String(e) });
-    }
-    setTestSmsSending(false);
-    setTestWhatsappSending(false);
-    setTestVoiceSending(false);
-  };
-
   if (loading) {
     return (
       <main className="p-6 md:p-8 max-w-3xl">
@@ -740,80 +672,13 @@ export function RemindersPage({
 
       <AlsoRemindPeople />
 
-      <SlackWebhookCard compact />
-
-      {isPro && (
-        <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-          <button
-            type="button"
-            onClick={() => { setShowTestSms((v) => !v); setTestSmsResult(null); }}
-            className="w-full flex items-center justify-between px-5 py-4 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors"
-          >
-            <span className="flex items-center gap-2">
-              <Smartphone className="h-4 w-4 text-slate-400" />
-              Test SMS, WhatsApp &amp; voicemail
-            </span>
-            {showTestSms ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
-          </button>
-          {showTestSms && (
-            <div className="border-t border-slate-200 dark:border-slate-800 px-5 py-4 space-y-3">
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Send a sample to this number now. SMS sends a text; voicemail places a Twilio call. WhatsApp uses an approved Twilio Utility template (not a freeform chat). If that template is missing, you will see an error instead of a false “sent”. Results show in{' '}
-                <Link to="/dashboard/settings?tab=activity" className="font-semibold underline">Settings → Activity</Link>.
-              </p>
-              <input
-                type="tel"
-                value={testSmsPhone}
-                onChange={(e) => { setTestSmsPhone(e.target.value); setTestSmsResult(null); }}
-                onBlur={(e) => { if (e.target.value.trim()) setTestSmsPhone(blurFormatPhone(e.target.value)); }}
-                placeholder={PHONE_PLACEHOLDER}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5864C6] transition"
-              />
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => void handleTestMessage('sms')}
-                  disabled={testSmsSending || testWhatsappSending || testVoiceSending || !testSmsPhone.trim()}
-                  className="px-4 py-2 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-1.5 shrink-0 hover:opacity-90" style={{ backgroundColor: '#5864C6' }}
-                >
-                  {testSmsSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />}
-                  {testSmsSending ? 'Sending…' : 'Test SMS'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleTestMessage('whatsapp')}
-                  disabled={testSmsSending || testWhatsappSending || testVoiceSending || !testSmsPhone.trim()}
-                  className="px-4 py-2 disabled:opacity-50 text-sm font-semibold rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 flex items-center gap-1.5 shrink-0 hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  {testWhatsappSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
-                  {testWhatsappSending ? 'Sending…' : 'Test WhatsApp'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleTestMessage('voice')}
-                  disabled={testSmsSending || testWhatsappSending || testVoiceSending || !testSmsPhone.trim()}
-                  className="px-4 py-2 disabled:opacity-50 text-sm font-semibold rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 flex items-center gap-1.5 shrink-0 hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  {testVoiceSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <PhoneCall className="h-4 w-4" />}
-                  {testVoiceSending ? 'Calling…' : 'Test voicemail'}
-                </button>
-              </div>
-              <p className="text-xs text-slate-400 dark:text-slate-500">{PHONE_HINT}</p>
-              <SmsBookingConsent className="text-xs text-gray-500 dark:text-slate-400 mt-1" />
-              {testSmsResult && (
-                <div className={`flex items-start gap-2 px-3 py-2.5 rounded-lg text-sm ${
-                  testSmsResult.ok
-                    ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200'
-                    : 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300'
-                }`}>
-                  {testSmsResult.ok ? <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" /> : <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />}
-                  <span className="whitespace-pre-wrap">{testSmsResult.message}</span>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+      <p className="text-sm text-slate-500 dark:text-slate-400">
+        Test SMS, WhatsApp, email, or Slack in{' '}
+        <Link to="/dashboard/settings?tab=integrations" className="font-semibold text-[#5864C6] hover:underline">
+          Settings → Integrations
+        </Link>
+        .
+      </p>
 
       <Link
         to="/dashboard/settings?tab=activity"

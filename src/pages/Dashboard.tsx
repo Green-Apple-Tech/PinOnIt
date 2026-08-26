@@ -13,6 +13,7 @@ import { CalendarDays, LogOut, X, Check, Sun, Moon, Copy, Share2, Mail, Link2, E
 import {
   MORE_TOOLS_HUB_PATH,
   buildSidebarNav,
+  isMoreToolsChildActive,
   navPathMatches,
 } from '../lib/dashboardNav';
 import { parseRevealedTools, revealTool } from '../lib/progressiveDisclosure';
@@ -745,7 +746,7 @@ function SharePanel({
         <Share2 className="h-4 w-4 text-brand-600" />
         <h2 className="font-semibold text-brand-900 text-sm">Your meeting link</h2>
       </div>
-      <p className="text-xs text-brand-700 mb-3">Share this link anywhere so people can schedule a meeting with you.</p>
+      <p className="text-xs text-brand-700 mb-3">Share this link anywhere so people can schedule a meeting with you. This page stays live — it does not expire.</p>
 
       {/* URL display row */}
       <div className="flex items-center gap-2 mb-2">
@@ -973,13 +974,19 @@ export function Dashboard() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createdUrl, setCreatedUrl] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [moreToolsOpen, setMoreToolsOpen] = useState(false);
+  const [moreToolsOpen, setMoreToolsOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const planName = effectivePlan(subscription, profile);
   const [checklistDismissed, setChecklistDismissed] = useState(() => localStorage.getItem('onboarding_checklist_dismissed') === '1');
   const [liveSlug, setLiveSlug] = useState<string | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
+
+  useEffect(() => {
+    if (isMoreToolsChildActive(location.pathname, location.search, location.hash)) {
+      setMoreToolsOpen(true);
+    }
+  }, [location.pathname, location.search, location.hash]);
 
   const isCalendlyOAuthSuccessReturn = () => {
     const params = new URLSearchParams(window.location.search);
@@ -1134,7 +1141,7 @@ export function Dashboard() {
 
     const isActivePro = (
       subscription?.plan === 'pro' && subscription?.status !== 'canceled'
-    ) || profile.plan === 'pro';
+    ) || profile.plan === 'pro' || profile.plan_override === 'pro';
     const established =
       profile.onboarding_completed === true
       || isActivePro
@@ -1388,8 +1395,7 @@ export function Dashboard() {
   };
 
   const uiMode = profile?.ui_mode === 'advanced' ? 'advanced' : 'simple';
-  const revealedTools = parseRevealedTools(profile?.revealed_tools);
-  const { primary: primaryNav, moreTools: moreToolsNav } = buildSidebarNav(uiMode, revealedTools);
+  const { primary: primaryNav, moreTools: moreToolsNav } = buildSidebarNav(uiMode);
   const mainNavItems: NavItem[] = [
     ...primaryNav.map((item) => ({
       to: item.to,
@@ -1464,7 +1470,6 @@ export function Dashboard() {
   ) => {
     const parentActive = isActive(item.to);
     const parentPadding = parentActive ? 'pl-[calc(0.75rem-3px)] pr-1' : 'pl-3 pr-1';
-    const childCount = item.children?.length ?? 0;
     return (
       <div key={item.to} className="space-y-0.5">
         <div
@@ -1476,7 +1481,10 @@ export function Dashboard() {
         >
           <Link
             to={item.to}
-            onClick={opts?.onNavigate}
+            onClick={() => {
+              setMoreToolsOpen(true);
+              opts?.onNavigate?.();
+            }}
             className="flex flex-1 items-center gap-3 py-2.5 min-w-0"
           >
             {item.icon ? <item.icon className="h-[18px] w-[18px] shrink-0" /> : null}
@@ -1498,11 +1506,7 @@ export function Dashboard() {
           }`}
         >
           <div className="overflow-hidden min-h-0">
-            <div
-              className={`ml-3 pl-2 border-l border-gray-200 dark:border-slate-800 space-y-0.5 ${
-                childCount > 8 ? 'max-h-72 overflow-y-auto' : ''
-              }`}
-            >
+            <div className="ml-3 pl-2 border-l border-gray-200 dark:border-slate-800 space-y-0.5">
               {item.children?.map((child) => renderNavLink(child, { ...opts, nested: true }))}
             </div>
           </div>

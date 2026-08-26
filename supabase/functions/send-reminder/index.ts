@@ -1064,6 +1064,59 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ success: true });
     }
 
+    // ── Test email ───────────────────────────────────────────────────────────
+    if (body.test_email) {
+      const hostId = await hostIdFromJwt(req, supabase);
+      if (!hostId) return jsonAuthError(corsHeaders, 'Sign in to send a test email');
+
+      const resendKey = Deno.env.get('RESEND_API_KEY');
+      if (!resendKey) {
+        return jsonResponse({ error: 'Email is not configured on this account.' }, 503);
+      }
+
+      const { data: hp } = await supabase
+        .from('profiles')
+        .select('email, notification_email, full_name')
+        .eq('id', hostId)
+        .maybeSingle();
+
+      const to =
+        (typeof body.to === 'string' && body.to.trim()) ||
+        (hp?.email as string | undefined)?.trim() ||
+        (hp?.notification_email as string | undefined)?.trim() ||
+        '';
+      if (!to) {
+        return jsonResponse({ error: 'No profile email found to send a test to.' }, 400);
+      }
+
+      const hostName =
+        (typeof body.host_name === 'string' && body.host_name.trim()) ||
+        (hp?.full_name as string | undefined) ||
+        'your host';
+      const guestName =
+        (typeof body.guest_name === 'string' && body.guest_name.trim()) || 'Test Guest';
+      const duration = body.duration ?? '30';
+      const date = body.date ?? 'your scheduled date';
+      const time = body.time ?? 'your scheduled time';
+      const subject = 'PinOnIt test email';
+      const msg = [
+        `PinOnIt test email: Hi ${guestName}, reminder: you have a ${duration} min meeting with ${hostName} on ${date} at ${time}.`,
+        '— PinOnIt',
+      ].join('\n\n');
+
+      const ok = await sendResendEmail([to], subject, msg, resendKey);
+      await insertMessageLog(supabase, {
+        host_id: hostId,
+        channel: 'email',
+        status: ok ? 'sent' : 'failed',
+        recipient: to,
+        subject: 'Test Email',
+        body: ok ? msg : `${msg}\n\nError: email send failed`,
+      });
+      if (!ok) return jsonResponse({ error: 'Failed to send test email' }, 502);
+      return jsonResponse({ success: true, to, channel: 'email' });
+    }
+
     // ── Test SMS / WhatsApp ──────────────────────────────────────────────────
     if (body.test_sms || body.test_whatsapp || body.test_voice) {
       const { to, guest_name, host_name, duration, date, time, meeting_link } = body;
