@@ -4,6 +4,8 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import type { Booking, Service } from '../lib/types';
 import { formatRecurrenceHostLabel, getSeriesRootId } from '../lib/recurring';
+import { parseBlockInput } from '../lib/bookingBlocks';
+import { toast } from '../components/Toast';
 import { CalendarConnections } from '../components/CalendarConnections';
 import {
   ChevronLeft,
@@ -27,6 +29,8 @@ import {
   Repeat,
   Mail,
   MessageSquare,
+  Ban,
+  Flag,
 } from 'lucide-react';
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -295,7 +299,7 @@ function formatHourLabel(h: number) {
   return h > 12 ? `${h - 12} PM` : `${h} AM`;
 }
 
-const CALENDAR_REMINDER_HINT_KEY = 'calendar_reminder_hint_dismissed';
+const CALENDAR_REMINDER_HINT_KEY = 'calendar_reminder_hint_v2';
 const EVENT_HOVER_HINT = 'Click for extra reminder · Right-click for Email / SMS / WhatsApp';
 
 function EventHoverHint() {
@@ -663,6 +667,47 @@ export function AppointmentsPage() {
     await supabase.from('bookings').update({ status: 'canceled' }).eq('id', id);
     setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'canceled' as const } : b));
     if (detailBooking?.id === id) setDetailBooking(null);
+  };
+
+  const blockGuestFromBooking = async (
+    booking: Booking,
+    reason: 'blocked' | 'spam',
+    as: 'email' | 'domain' = 'email',
+  ) => {
+    if (!profile?.id || !booking.guest_email) {
+      toast.error('This meeting has no email to block.');
+      return;
+    }
+    const parsed = parseBlockInput(booking.guest_email);
+    if (!parsed) {
+      toast.error('That email does not look valid.');
+      return;
+    }
+    const value =
+      as === 'domain'
+        ? (parsed.matchType === 'domain' ? parsed.value : parsed.value.slice(parsed.value.lastIndexOf('@') + 1))
+        : parsed.value;
+    const matchType = as === 'domain' ? 'domain' : parsed.matchType;
+    const { error } = await supabase.from('booking_blocks').upsert(
+      {
+        host_id: profile.id,
+        match_type: matchType,
+        value,
+        reason,
+      },
+      { onConflict: 'host_id,match_type,value' },
+    );
+    if (error) {
+      toast.error('Could not add that block.');
+      return;
+    }
+    const label = matchType === 'domain' ? `@${value}` : value;
+    toast.success(
+      reason === 'spam'
+        ? `${label} marked as spam — they cannot book again.`
+        : `${label} is blocked from booking.`,
+    );
+    setEventMenu(null);
   };
 
   const notifyRecurringCancellation = async (booking: Booking, serviceName: string) => {
@@ -1338,9 +1383,9 @@ export function AppointmentsPage() {
                   <BellRing className="h-5 w-5" style={{ color: '#5864C6' }} />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">Extra reminders</h2>
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">Quick reminders</h2>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
-                    Click an event to add extra reminders by email, SMS, or WhatsApp. Right-click for a shortcut that sets one for 1 hour before.
+                    Click on any event to add a quick reminder.
                   </p>
                 </div>
               </div>
@@ -1531,7 +1576,7 @@ export function AppointmentsPage() {
       {eventMenu && (
         <div
           className="fixed z-[60] min-w-[200px] py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl text-sm"
-          style={{ left: Math.min(eventMenu.x, window.innerWidth - 220), top: Math.min(eventMenu.y, window.innerHeight - 220) }}
+          style={{ left: Math.min(eventMenu.x, window.innerWidth - 240), top: Math.min(eventMenu.y, window.innerHeight - 320) }}
           onClick={(e) => e.stopPropagation()}
         >
           <p className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Extra reminder · 1h before</p>
@@ -1564,6 +1609,41 @@ export function AppointmentsPage() {
           >
             <Bell className="h-4 w-4 text-slate-400" /> Customize…
           </button>
+          {eventMenu.target.kind === 'booking' && eventMenu.target.booking.guest_email && (
+            <>
+              <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+              <button
+                type="button"
+                className="w-full flex items-center gap-2 px-3 py-2 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+                onClick={() => {
+                  if (eventMenu.target.kind !== 'booking') return;
+                  void blockGuestFromBooking(eventMenu.target.booking, 'blocked');
+                }}
+              >
+                <Ban className="h-4 w-4 text-slate-400" /> Block this email
+              </button>
+              <button
+                type="button"
+                className="w-full flex items-center gap-2 px-3 py-2 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+                onClick={() => {
+                  if (eventMenu.target.kind !== 'booking') return;
+                  void blockGuestFromBooking(eventMenu.target.booking, 'blocked', 'domain');
+                }}
+              >
+                <Globe className="h-4 w-4 text-slate-400" /> Block this domain
+              </button>
+              <button
+                type="button"
+                className="w-full flex items-center gap-2 px-3 py-2 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+                onClick={() => {
+                  if (eventMenu.target.kind !== 'booking') return;
+                  void blockGuestFromBooking(eventMenu.target.booking, 'spam');
+                }}
+              >
+                <Flag className="h-4 w-4 text-slate-400" /> Mark as spam
+              </button>
+            </>
+          )}
           {eventMenu.target.kind === 'booking' && eventMenu.target.booking.is_recurring && (
             <button
               type="button"
