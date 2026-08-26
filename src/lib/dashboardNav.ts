@@ -5,11 +5,11 @@ import {
   CalendarDays,
   Clock,
   FileText,
+  Gift,
   LayoutGrid,
   Mail,
   QrCode,
   Settings,
-  Share2,
   ShoppingBag,
   Users,
   type LucideIcon,
@@ -36,13 +36,12 @@ export type DashboardNavItem = {
   children?: DashboardNavItem[];
 };
 
-/** Simple-mode top of sidebar. Everything else sits in More Tools until revealed. */
+/** Simple-mode top of sidebar. Everything else stays under More Tools. */
 export const SIMPLE_PRIMARY_NAV: MoreToolsNavItem[] = [
   { label: 'Dashboard', icon: LayoutGrid, path: '/dashboard' },
   { label: 'Calendar', icon: CalendarCheck, path: '/dashboard/appointments' },
   { label: 'Availability', icon: Clock, path: '/dashboard/settings?tab=availability' },
   { label: 'Reminders', icon: Bell, path: '/dashboard/settings?tab=reminders' },
-  { label: 'Share', icon: Share2, path: '/dashboard#share' },
 ];
 
 /** Single source of truth for sidebar More Tools — add items here. */
@@ -67,6 +66,11 @@ export const MORE_TOOLS_NAV: MoreToolsNavItem[] = [
   { label: 'Event types', icon: CalendarDays, path: '/dashboard/services' },
   { label: 'Contacts', icon: Users, path: '/dashboard/contacts' },
   { label: 'Analytics', icon: BarChart3, path: '/dashboard/settings?tab=analytics', toolId: 'analytics' },
+  {
+    label: 'Referrals',
+    icon: Gift,
+    path: '/dashboard/settings?tab=referrals',
+  },
   { label: 'Settings', icon: Settings, path: '/dashboard/settings' },
 ];
 
@@ -89,7 +93,7 @@ export function navPathMatches(to: string, pathname: string, search = '', hash =
   if (query && !search.includes(query)) return false;
   if (itemHash) return hash === `#${itemHash}`;
   if (path === '/dashboard' && hash === '#share' && !query) return false;
-  if (path === '/dashboard/settings' && !query && /tab=(availability|reminders|analytics)/.test(search)) {
+  if (path === '/dashboard/settings' && !query && /tab=(availability|reminders|analytics|referrals)/.test(search)) {
     return false;
   }
   return true;
@@ -105,24 +109,14 @@ function toDashboardItem(item: MoreToolsNavItem): DashboardNavItem {
 
 export function buildSidebarNav(
   uiMode: UiMode,
-  revealed: RevealedToolId[],
+  _revealed: RevealedToolId[] = [],
 ): { primary: DashboardNavItem[]; moreTools: MoreToolsNavItem[] } {
-  const revealedSet = new Set(revealed);
   const primary = SIMPLE_PRIMARY_NAV.map(toDashboardItem);
-  const surfaced = REVEALABLE_NAV.filter((item) => item.toolId && revealedSet.has(item.toolId));
+  const extras = MORE_TOOLS_NAV.filter(
+    (item) => !SIMPLE_PRIMARY_NAV.some((p) => p.path === item.path),
+  );
   if (uiMode === 'advanced') {
-    const rest = MORE_TOOLS_NAV.filter(
-      (item) => !SIMPLE_PRIMARY_NAV.some((p) => p.path === item.path),
-    );
-    return { primary: [...primary, ...rest.map(toDashboardItem)], moreTools: [] };
+    return { primary: [...primary, ...extras.map(toDashboardItem)], moreTools: [] };
   }
-  const moreTools = MORE_TOOLS_NAV.filter((item) => {
-    if (SIMPLE_PRIMARY_NAV.some((p) => p.path === item.path)) return false;
-    if (item.toolId && revealedSet.has(item.toolId)) return false;
-    return true;
-  });
-  return {
-    primary: [...primary, ...surfaced.map(toDashboardItem)],
-    moreTools,
-  };
+  return { primary, moreTools: extras };
 }

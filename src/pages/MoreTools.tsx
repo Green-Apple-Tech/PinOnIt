@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import {
   QrCode, Mail, FileText, ArrowRight,
-  CalendarDays, Users, ShoppingBag, Bell, Sparkles,
+  CalendarDays, Users, ShoppingBag, Bell, Sparkles, Gift,
 } from 'lucide-react';
 
 function ToolCard({
@@ -158,6 +158,13 @@ export function MoreToolsPage() {
             description="Accept payments at booking time — Stripe, PayPal, Venmo, Cash App, or Zelle. No separate invoicing or payment links needed."
             buttonLabel="Open Paid Bookings"
             to="/dashboard/paid-booking"
+          />
+          <ToolCard
+            icon={Gift}
+            title="Referrals — save on Pro"
+            description="Share your referral link. When someone upgrades to Pro, you earn $1/month off your bill. Six referrals covers a full Pro plan."
+            buttonLabel="Open Referrals"
+            to="/dashboard/settings?tab=referrals"
           />
           <ToolCard
             icon={Users}

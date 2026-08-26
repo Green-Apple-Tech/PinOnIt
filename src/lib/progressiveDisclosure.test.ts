@@ -62,23 +62,24 @@ describe('profilePatchForBusinessType', () => {
 });
 
 describe('buildSidebarNav', () => {
-  it('keeps simple mode to the five core items plus More Tools leftovers', () => {
+  it('keeps simple mode to the four core items plus More Tools leftovers', () => {
     const { primary, moreTools } = buildSidebarNav('simple', []);
     expect(primary.map((i) => i.label)).toEqual([
       'Dashboard',
       'Calendar',
       'Availability',
       'Reminders',
-      'Share',
     ]);
+    expect(primary.map((i) => i.label)).not.toContain('Share');
     expect(moreTools.some((i) => i.label === 'Settings')).toBe(true);
     expect(moreTools.some((i) => i.label === 'Contacts')).toBe(true);
+    expect(moreTools.some((i) => i.label === 'Referrals')).toBe(true);
   });
 
-  it('surfaces paid booking in simple mode after it is revealed', () => {
+  it('keeps paid booking under More Tools in simple mode even after it is used', () => {
     const { primary, moreTools } = buildSidebarNav('simple', ['paid-booking']);
-    expect(primary.map((i) => i.label)).toContain('Paid Booking');
-    expect(moreTools.some((i) => i.label === 'Paid Booking')).toBe(false);
+    expect(primary.map((i) => i.label)).not.toContain('Paid Booking');
+    expect(moreTools.some((i) => i.label === 'Paid Booking')).toBe(true);
   });
 
   it('flattens every tool in advanced mode', () => {
@@ -86,6 +87,8 @@ describe('buildSidebarNav', () => {
     expect(moreTools).toEqual([]);
     expect(primary.some((i) => i.label === 'Settings')).toBe(true);
     expect(primary.some((i) => i.label === 'Quote/Invoice')).toBe(true);
+    expect(primary.some((i) => i.label === 'Paid Booking')).toBe(true);
+    expect(primary.map((i) => i.label)).not.toContain('Share');
   });
 });
 
@@ -115,9 +118,12 @@ describe('navPathMatches', () => {
     expect(navPathMatches('/dashboard#share', '/dashboard', '', '#share')).toBe(true);
   });
 
-  it('does not highlight Settings when an availability tab is open', () => {
+  it('does not highlight Settings when a specialty tab is open', () => {
     expect(navPathMatches('/dashboard/settings', '/dashboard/settings', '?tab=availability', '')).toBe(false);
+    expect(navPathMatches('/dashboard/settings', '/dashboard/settings', '?tab=reminders', '')).toBe(false);
+    expect(navPathMatches('/dashboard/settings', '/dashboard/settings', '?tab=referrals', '')).toBe(false);
     expect(navPathMatches('/dashboard/settings?tab=availability', '/dashboard/settings', '?tab=availability', '')).toBe(true);
+    expect(navPathMatches('/dashboard/settings?tab=referrals', '/dashboard/settings', '?tab=referrals', '')).toBe(true);
   });
 });
 
