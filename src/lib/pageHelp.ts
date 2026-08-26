@@ -76,7 +76,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
       'Add your phone and opt in if you want SMS.',
       'Turn on Booking Confirmation for email and/or SMS so they get a message the moment they book.',
       'Turn on a 24-hour or 1-hour reminder so they get a second ping.',
-      'In Advanced → Critical Alerts, enable voice alerts and auto-mark VIP emails or domains.',
+      'In Advanced → Critical Alerts: SMS & WhatsApp fire 1 hour and 15 min before; email 1 day and 4 hours before. Open the nested Advanced to add voice or change times.',
     ],
   },
   services: {

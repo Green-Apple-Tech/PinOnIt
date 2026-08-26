@@ -26,6 +26,13 @@ import {
   parseCriticalAutoInput,
   type CriticalAutoMatch,
 } from '../lib/criticalAutoMatch';
+import {
+  CRITICAL_OFFSET_CHOICES,
+  DEFAULT_CRITICAL_ALERT_SETTINGS,
+  formatCriticalOffset,
+  normalizeCriticalAlertSettings,
+  type CriticalAlertSettings,
+} from '../lib/criticalAlertSettings';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -200,6 +207,10 @@ export function RemindersPage({
 
   // Critical alerts
   const [criticalAlertsEnabled, setCriticalAlertsEnabled] = useState(profile?.critical_alerts_enabled !== false);
+  const [criticalAlertSettings, setCriticalAlertSettings] = useState<CriticalAlertSettings>(() =>
+    normalizeCriticalAlertSettings(profile?.critical_alert_settings),
+  );
+  const [criticalAdvancedOpen, setCriticalAdvancedOpen] = useState(false);
   const [criticalAutoMatches, setCriticalAutoMatches] = useState<CriticalAutoMatch[]>(() =>
     normalizeCriticalAutoMatches(profile?.critical_auto_matches),
   );
@@ -224,14 +235,16 @@ export function RemindersPage({
     const storedPhone = profile?.phone ?? '';
     setContactPhone(storedPhone ? blurFormatPhone(storedPhone) : '');
     setCriticalAlertsEnabled(profile?.critical_alerts_enabled !== false);
+    setCriticalAlertSettings(normalizeCriticalAlertSettings(profile?.critical_alert_settings));
     setCriticalAutoMatches(normalizeCriticalAutoMatches(profile?.critical_auto_matches));
-  }, [profile?.default_reminder_channel, profile?.phone, profile?.critical_alerts_enabled, profile?.critical_auto_matches]);
+  }, [profile?.default_reminder_channel, profile?.phone, profile?.critical_alerts_enabled, profile?.critical_alert_settings, profile?.critical_auto_matches]);
 
   const handleSaveCriticalAlerts = async () => {
     if (!user) return;
     setSavingCritical(true);
     await supabase.from('profiles').update({
       critical_alerts_enabled: criticalAlertsEnabled,
+      critical_alert_settings: criticalAlertSettings,
       critical_auto_matches: criticalAutoMatches,
     }).eq('id', user.id);
     setSavingCritical(false);
@@ -1253,7 +1266,7 @@ export function RemindersPage({
         >
           <span className="flex items-center gap-2">
             <Settings2 className="h-4 w-4 text-slate-400" />
-            Message Templates, Rules &amp; Voice defaults
+            Message Templates, Rules &amp; Critical Alerts
           </span>
           {showAdvanced ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
         </button>
@@ -1587,14 +1600,48 @@ export function RemindersPage({
                     </div>
                     <div>
                       <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Critical Meeting Alerts</h3>
-                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Voice call 5 and 1 minute before critical meetings. Mark meetings critical on Calendar, or auto-match below.</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                        Extra pings for meetings you mark critical (Calendar) or that match the rules below.
+                      </p>
                     </div>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/40 px-3.5 py-3 space-y-2">
+                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">Automatic schedule</p>
+                    <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-1.5">
+                      <li className="flex gap-2">
+                        <MessageSquare className="h-3.5 w-3.5 mt-0.5 shrink-0 text-[#5864C6]" />
+                        <span>
+                          <strong className="font-semibold text-slate-800 dark:text-slate-200">SMS &amp; WhatsApp</strong>
+                          {' — '}
+                          {criticalAlertSettings.sms_offsets.map(formatCriticalOffset).join(' and ')}
+                        </span>
+                      </li>
+                      <li className="flex gap-2">
+                        <Mail className="h-3.5 w-3.5 mt-0.5 shrink-0 text-[#5864C6]" />
+                        <span>
+                          <strong className="font-semibold text-slate-800 dark:text-slate-200">Email</strong>
+                          {' — '}
+                          {criticalAlertSettings.email_offsets.map(formatCriticalOffset).join(' and ')}
+                        </span>
+                      </li>
+                      <li className="flex gap-2">
+                        <Phone className="h-3.5 w-3.5 mt-0.5 shrink-0 text-slate-400" />
+                        <span>
+                          <strong className="font-semibold text-slate-800 dark:text-slate-200">Voice call</strong>
+                          {' — '}
+                          {criticalAlertSettings.voice_enabled
+                            ? criticalAlertSettings.voice_offsets.map(formatCriticalOffset).join(' and ')
+                            : 'off (turn on under Advanced below)'}
+                        </span>
+                      </li>
+                    </ul>
                   </div>
 
                   <label className="flex items-center justify-between gap-4 cursor-pointer p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
                     <div>
-                      <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Enable critical voice alerts</p>
-                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Phone call before critical meetings start.</p>
+                      <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Enable critical alerts</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">SMS, WhatsApp, and email on the schedule above.</p>
                     </div>
                     <button
                       type="button"
@@ -1675,26 +1722,103 @@ export function RemindersPage({
                     )}
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Call me at</label>
-                    {contactPhone ? (
-                      <p className="text-sm text-slate-800 dark:text-slate-200 font-mono">{contactPhone}</p>
-                    ) : (
-                      <p className="text-sm text-slate-400 italic">No phone number on file.</p>
+                  <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setCriticalAdvancedOpen((v) => !v)}
+                      className="w-full flex items-center justify-between gap-2 px-3.5 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                    >
+                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                        <Settings2 className="h-3.5 w-3.5" />
+                        Advanced — voice &amp; change times
+                      </span>
+                      {criticalAdvancedOpen ? <ChevronUp className="h-3.5 w-3.5 text-slate-400" /> : <ChevronDown className="h-3.5 w-3.5 text-slate-400" />}
+                    </button>
+
+                    {criticalAdvancedOpen && (
+                      <div className="px-3.5 pb-3.5 pt-1 space-y-4 border-t border-slate-100 dark:border-slate-800">
+                        <label className="flex items-center justify-between gap-4 cursor-pointer">
+                          <div>
+                            <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Add voice calls</p>
+                            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                              Optional phone call{criticalAlertSettings.voice_enabled ? ` (${criticalAlertSettings.voice_offsets.map(formatCriticalOffset).join(', ')})` : ''}.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setCriticalAlertSettings((s) => ({ ...s, voice_enabled: !s.voice_enabled }))}
+                            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none ${criticalAlertSettings.voice_enabled ? 'bg-brand-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                          >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${criticalAlertSettings.voice_enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                          </button>
+                        </label>
+
+                        {([
+                          { key: 'sms_offsets' as const, label: 'SMS times', show: true },
+                          { key: 'whatsapp_offsets' as const, label: 'WhatsApp times', show: true },
+                          { key: 'email_offsets' as const, label: 'Email times', show: true },
+                          { key: 'voice_offsets' as const, label: 'Voice times', show: criticalAlertSettings.voice_enabled },
+                        ] as const).filter((r) => r.show).map((row) => (
+                          <div key={row.key}>
+                            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">{row.label}</p>
+                            <div className="grid grid-cols-2 gap-2">
+                              {[0, 1].map((idx) => (
+                                <select
+                                  key={idx}
+                                  value={criticalAlertSettings[row.key][idx] ?? criticalAlertSettings[row.key][0] ?? DEFAULT_CRITICAL_ALERT_SETTINGS[row.key][idx]}
+                                  onChange={(e) => {
+                                    const next = Number(e.target.value);
+                                    setCriticalAlertSettings((s) => {
+                                      const arr = [...(s[row.key] || [])];
+                                      while (arr.length < 2) arr.push(DEFAULT_CRITICAL_ALERT_SETTINGS[row.key][arr.length] ?? -60);
+                                      arr[idx] = next;
+                                      return { ...s, [row.key]: arr };
+                                    });
+                                  }}
+                                  className="px-2.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#5864C6]"
+                                >
+                                  {CRITICAL_OFFSET_CHOICES.map((c) => (
+                                    <option key={c.value} value={c.value}>{c.label}</option>
+                                  ))}
+                                </select>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+
+                        <button
+                          type="button"
+                          onClick={() => setCriticalAlertSettings(normalizeCriticalAlertSettings(DEFAULT_CRITICAL_ALERT_SETTINGS))}
+                          className="text-xs font-medium text-slate-500 hover:text-[#5864C6] transition-colors"
+                        >
+                          Reset to defaults
+                        </button>
+
+                        {criticalAlertSettings.voice_enabled && (
+                          <div>
+                            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Call me at</label>
+                            {contactPhone ? (
+                              <p className="text-sm text-slate-800 dark:text-slate-200 font-mono">{contactPhone}</p>
+                            ) : (
+                              <p className="text-sm text-slate-400 italic">No phone number on file.</p>
+                            )}
+                            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                              Uses your profile phone number.{' '}
+                              <Link
+                                to="/dashboard/settings?tab=profile"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  goToProfileSettings();
+                                }}
+                                className="font-medium text-brand-500 hover:underline"
+                              >
+                                {contactPhone ? 'Update in Settings → Profile' : 'Add phone number →'}
+                              </Link>
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     )}
-                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                      Uses your profile phone number.{' '}
-                      <Link
-                        to="/dashboard/settings?tab=profile"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          goToProfileSettings();
-                        }}
-                        className="font-medium text-brand-500 hover:underline"
-                      >
-                        {contactPhone ? 'Update in Settings → Profile' : 'Add phone number →'}
-                      </Link>
-                    </p>
                   </div>
 
                   <div className="flex items-center gap-3 flex-wrap">
@@ -1707,14 +1831,16 @@ export function RemindersPage({
                       {savingCritical ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : savedCritical ? <Check className="h-3.5 w-3.5" /> : <Save className="h-3.5 w-3.5" />}
                       {savedCritical ? 'Saved!' : 'Save'}
                     </button>
-                    <button
-                      onClick={handleTestCall}
-                      disabled={testingCall || !contactPhone.trim()}
-                      className="flex items-center gap-1.5 px-4 py-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 text-slate-700 dark:text-slate-300 text-sm font-medium rounded-lg transition-all"
-                    >
-                      {testingCall ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Phone className="h-3.5 w-3.5" />}
-                      Test call now
-                    </button>
+                    {criticalAlertSettings.voice_enabled && (
+                      <button
+                        onClick={handleTestCall}
+                        disabled={testingCall || !contactPhone.trim()}
+                        className="flex items-center gap-1.5 px-4 py-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 text-slate-700 dark:text-slate-300 text-sm font-medium rounded-lg transition-all"
+                      >
+                        {testingCall ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Phone className="h-3.5 w-3.5" />}
+                        Test call now
+                      </button>
+                    )}
                     {testCallMsg && (
                       <p className={`text-xs font-medium ${testCallMsg.startsWith('Error') ? 'text-red-500' : ''}`} style={!testCallMsg.startsWith('Error') ? { color: '#5864C6' } : {}}>
                         {testCallMsg}
@@ -1723,6 +1849,7 @@ export function RemindersPage({
                   </div>
                 </div>
               )}
+
             </div>
           </div>
         )}

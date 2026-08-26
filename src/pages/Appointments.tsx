@@ -1326,7 +1326,7 @@ export function AppointmentsPage() {
                             <button
                               onClick={(e) => { e.stopPropagation(); handleToggleCritical(b); }}
                               className={`shrink-0 p-1.5 rounded transition-colors ${b.is_critical ? 'text-red-500 bg-red-50 dark:bg-red-900/20' : 'text-slate-300 dark:text-slate-600 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10'}`}
-                              title={b.is_critical ? 'Remove critical alert' : 'Mark as critical — sends SMS to you 5 and 1 min before'}
+                              title={b.is_critical ? 'Remove critical alert' : 'Mark as critical — SMS & WhatsApp 1h + 15m, email 1 day + 4h (voice optional)'}
                             >
                               <BellRing className="h-3.5 w-3.5" />
                             </button>

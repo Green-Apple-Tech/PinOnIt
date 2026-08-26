@@ -50,6 +50,13 @@ export interface Profile {
   critical_alerts_enabled: boolean;
   critical_alert_phone: string | null;
   critical_auto_matches?: { type: 'email' | 'domain' | 'name'; value: string }[] | null;
+  critical_alert_settings?: {
+    sms_offsets?: number[];
+    whatsapp_offsets?: number[];
+    email_offsets?: number[];
+    voice_enabled?: boolean;
+    voice_offsets?: number[];
+  } | null;
   voice_reminder_enabled: boolean;
   voice_message_template: string | null;
   personal_reminder_defaults?: {
