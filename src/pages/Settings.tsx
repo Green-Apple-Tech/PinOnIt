@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { TIMEZONES } from '../lib/types';
@@ -24,6 +24,7 @@ import { ColorSwatchRow } from '../components/ColorSwatchRow';
 import { toast } from '../components/Toast';
 import { SlackWebhookCard } from '../components/SlackWebhookCard';
 import { NotificationTestPanel } from '../components/NotificationTestPanel';
+import { AlsoRemindPeople } from '../components/AlsoRemindPeople';
 import { BookingBlocksSettings } from '../components/BookingBlocksSettings';
 import { readProfileCache, writeProfileCache } from '../lib/profileCache';
 import { AnalyticsPage } from './Analytics';
@@ -34,7 +35,7 @@ import { SmsBookingConsent } from '../components/SmsConsentText';
 import { SESSION_TIMEOUT_OPTIONS, sessionTimeoutOptionValue } from '../lib/sessionTimeout';
 
 type SettingsSection = 'general' | 'availability' | 'activity' | 'analytics' | 'billing';
-type SettingsTab = 'profile' | 'booking_page' | 'branding' | 'embed' | 'referrals' | 'integrations' | 'advanced';
+type SettingsTab = 'profile' | 'booking_page' | 'branding' | 'embed' | 'referrals' | 'coworkers' | 'integrations' | 'advanced';
 
 const REMINDER_CHANNEL_OPTIONS: { value: ReminderChannelPreference; label: string; icon: typeof Mail }[] = [
   { value: 'email', label: 'Email', icon: Mail },
@@ -43,7 +44,7 @@ const REMINDER_CHANNEL_OPTIONS: { value: ReminderChannelPreference; label: strin
   { value: 'voice', label: 'Voice Call', icon: PhoneCall },
 ];
 
-const GENERAL_TABS: SettingsTab[] = ['profile', 'booking_page', 'branding', 'embed', 'referrals', 'integrations', 'advanced'];
+const GENERAL_TABS: SettingsTab[] = ['profile', 'booking_page', 'branding', 'embed', 'referrals', 'coworkers', 'integrations', 'advanced'];
 
 // ── Color picker ──────────────────────────────────────────────────────────────
 
@@ -381,7 +382,7 @@ export function SettingsPage() {
   // Read ?tab= query param to allow deep-linking from redirects
   const initialSection = (): SettingsSection => {
     const p = new URLSearchParams(location.search).get('tab');
-    if (p === 'reminders') return 'general';
+    if (p === 'reminders' || p === 'coworkers') return 'general';
     if (p && GENERAL_TABS.includes(p as SettingsTab)) return 'general';
     if (p === 'analytics' || p === 'billing' || p === 'availability' || p === 'activity') return p;
     return 'general';
@@ -389,6 +390,7 @@ export function SettingsPage() {
 
   const initialTab = (): SettingsTab => {
     const p = new URLSearchParams(location.search).get('tab');
+    if (p === 'reminders') return 'coworkers';
     if (p && GENERAL_TABS.includes(p as SettingsTab)) return p as SettingsTab;
     return 'profile';
   };
@@ -852,6 +854,7 @@ export function SettingsPage() {
     { key: 'integrations', label: 'Integrations' },
     { key: 'embed', label: 'Embed' },
     { key: 'referrals', label: 'Referrals' },
+    { key: 'coworkers', label: 'Coworkers' },
     { key: 'advanced', label: 'Advanced' },
   ];
 
@@ -1533,6 +1536,18 @@ export function SettingsPage() {
           </div>
 
           <SaveBtn saving={saving} saved={saved} onClick={handleSaveBranding} />
+        </div>
+      )}
+
+      {/* COWORKERS */}
+      {tab === 'coworkers' && (
+        <div className="space-y-4">
+          <AlsoRemindPeople />
+          <p className="text-xs text-slate-500 dark:text-slate-400 px-1">
+            To copy someone on a specific meeting, open{' '}
+            <Link to="/dashboard/appointments" className="font-semibold text-brand-600 hover:underline">Calendar</Link>
+            , click the bell on the event, check their name, and tap <strong>Save for this event</strong>.
+          </p>
         </div>
       )}
 

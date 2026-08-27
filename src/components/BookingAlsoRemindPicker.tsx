@@ -67,8 +67,8 @@ export function BookingAlsoRemindPicker({
         <Users className="h-4 w-4 inline mr-1.5 text-brand-600" />
         <span className="font-semibold text-slate-800 dark:text-slate-100">Remind a coworker?</span>{' '}
         Add them in{' '}
-        <Link to="/dashboard/reminders" className="font-semibold text-brand-600 hover:underline">
-          Smart Reminders → Coworker roster
+        <Link to="/dashboard/settings?tab=coworkers" className="font-semibold text-brand-600 hover:underline">
+          Settings → Coworkers
         </Link>
         , then come back and check their name here.
       </div>

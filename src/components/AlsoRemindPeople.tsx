@@ -111,7 +111,11 @@ export function AlsoRemindPeople() {
         <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-white">Coworker roster</h2>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Save people who can receive reminder copies. Then on <strong className="font-semibold text-slate-700 dark:text-slate-300">Calendar</strong>, click the bell on any event and check their name.
+            Save people who can receive reminder copies. Manage them here or under{' '}
+            <Link to="/dashboard/settings?tab=coworkers" className="font-semibold text-brand-600 hover:underline">
+              Settings → Coworkers
+            </Link>
+            . Then on <strong className="font-semibold text-slate-700 dark:text-slate-300">Calendar</strong>, click the bell on any event and check their name.
           </p>
           <ol className="mt-2 text-xs text-slate-500 dark:text-slate-400 space-y-1 list-decimal list-inside">
             <li>Add a person below and choose <strong className="font-medium">Only meetings I pick</strong> (recommended).</li>

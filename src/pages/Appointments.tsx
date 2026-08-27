@@ -1471,7 +1471,7 @@ export function AppointmentsPage() {
             {/* Header */}
             <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-base font-bold text-slate-900 dark:text-white">Event reminders</h2>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">Extra reminder</h2>
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                   {reminderTarget.kind === 'booking'
                     ? `${(reminderTarget.booking as Booking & { services?: { name?: string } }).services?.name ?? 'Meeting'} · ${reminderTarget.booking.guest_name} · ${formatTime(reminderTarget.booking.start_time)}`
