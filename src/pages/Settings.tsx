@@ -863,7 +863,7 @@ export function SettingsPage() {
 
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Manage your profile, booking page, availability, activity, analytics, and billing.</p>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Manage your profile, booking page, coworkers, availability, activity, analytics, and billing.</p>
       </div>
 
       {/* Top-level section tabs */}
@@ -1542,12 +1542,13 @@ export function SettingsPage() {
       {/* COWORKERS */}
       {tab === 'coworkers' && (
         <div className="space-y-4">
-          <AlsoRemindPeople />
-          <p className="text-xs text-slate-500 dark:text-slate-400 px-1">
-            To copy someone on a specific meeting, open{' '}
-            <Link to="/dashboard/appointments" className="font-semibold text-brand-600 hover:underline">Calendar</Link>
-            , click the bell on the event, check their name, and tap <strong>Save for this event</strong>.
-          </p>
+          <div className="rounded-xl border border-brand-200 dark:border-brand-500/30 bg-brand-50/40 dark:bg-brand-500/5 px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
+            <strong className="text-slate-800 dark:text-slate-100">Coworkers</strong> receive copies of reminders (email, SMS, or WhatsApp).
+            Add people here once, then on{' '}
+            <Link to="/dashboard/appointments" className="font-semibold text-brand-600 hover:underline">Calendar</Link>{' '}
+            open any event’s bell icon and check who should get this meeting.
+          </div>
+          <AlsoRemindPeople variant="settings" />
         </div>
       )}
 

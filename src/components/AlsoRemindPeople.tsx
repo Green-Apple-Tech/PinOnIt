@@ -16,7 +16,12 @@ import {
   type AlsoScope,
 } from '../lib/reminderAlso';
 
-export function AlsoRemindPeople() {
+type Props = {
+  /** Hide Settings deep-link when already on Settings → Coworkers. */
+  variant?: 'default' | 'settings';
+};
+
+export function AlsoRemindPeople({ variant = 'default' }: Props) {
   const { user, profile, refreshProfile } = useAuth();
   const [people, setPeople] = useState<AlsoPerson[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -111,17 +116,31 @@ export function AlsoRemindPeople() {
         <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-white">Coworker roster</h2>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Save people who can receive reminder copies. Manage them here or under{' '}
-            <Link to="/dashboard/settings?tab=coworkers" className="font-semibold text-brand-600 hover:underline">
-              Settings → Coworkers
-            </Link>
-            . Then on <strong className="font-semibold text-slate-700 dark:text-slate-300">Calendar</strong>, click the bell on any event and check their name.
+            {variant === 'settings' ? (
+              <>
+                People saved here can receive reminder copies. On{' '}
+                <Link to="/dashboard/appointments" className="font-semibold text-brand-600 hover:underline">
+                  Calendar
+                </Link>
+                , click the bell on any event and check their name.
+              </>
+            ) : (
+              <>
+                Save people who can receive reminder copies. Manage them here or under{' '}
+                <Link to="/dashboard/settings?tab=coworkers" className="font-semibold text-brand-600 hover:underline">
+                  Settings → Coworkers
+                </Link>
+                . Then on <strong className="font-semibold text-slate-700 dark:text-slate-300">Calendar</strong>, click the bell on any event and check their name.
+              </>
+            )}
           </p>
+          {variant === 'settings' ? null : (
           <ol className="mt-2 text-xs text-slate-500 dark:text-slate-400 space-y-1 list-decimal list-inside">
             <li>Add a person below and choose <strong className="font-medium">Only meetings I pick</strong> (recommended).</li>
             <li>Open <Link to="/dashboard/appointments" className="font-semibold text-brand-600 hover:underline">Calendar</Link> → click the <strong className="font-medium">bell</strong> on the event.</li>
             <li>Check their name → <strong className="font-medium">Save for this event</strong>.</li>
           </ol>
+          )}
         </div>
       </div>
 

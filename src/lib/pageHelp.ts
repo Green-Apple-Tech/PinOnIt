@@ -73,10 +73,10 @@ const GUIDES: Record<string, PageHelpGuide> = {
     title: 'Smart Reminders',
     purpose: 'PinOnIt can text, email, WhatsApp, or call so people actually show up. Nothing sends until a reminder is turned on here.',
     steps: [
-      'Add your phone and opt in if you want SMS.',
-      'Turn on Booking Confirmation for email and/or SMS so they get a message the moment they book.',
-      'Turn on a 24-hour or 1-hour reminder so they get a second ping.',
-      'In Advanced → Critical Alerts: SMS & WhatsApp fire 1 hour and 15 min before; email 1 day and 4 hours before. Open the nested Advanced to add voice or change times.',
+      'Add coworkers under Settings → Coworkers (name, email/phone, channels).',
+      'On Calendar, click the bell on an event → Step 1: check who to copy → Save for this event.',
+      'Turn on Booking Confirmation and 24h / 1h guest reminders below.',
+      'Optional: Step 2 in the bell modal adds a one-off custom reminder for that event.',
     ],
   },
   services: {

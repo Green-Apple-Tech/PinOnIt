@@ -18,7 +18,7 @@ import {
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import { resolveDefaultReminderChannel, getWhatsappNumber } from '../lib/reminderChannels';
 import { VoicePersonalReminder, PersonalReminderDefaultsEditor, type VoicePersonalReminderHandle } from '../components/VoicePersonalReminder';
-import { AlsoRemindPeople } from '../components/AlsoRemindPeople';
+import { CoworkerReminderGuide } from '../components/CoworkerReminderGuide';
 import { SMS_OPT_OUT_FOOTER } from '../lib/smsOptOut';
 import { SmsBookingConsent } from '../components/SmsConsentText';
 import {
@@ -685,7 +685,11 @@ export function RemindersPage({
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Smart Reminders</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Remind yourself, your guests, and coworkers you pick per event. Add people to the roster below, then on Calendar click the bell on any meeting or synced event.
+          Remind yourself, your guests, and coworkers. Manage the roster in{' '}
+          <Link to="/dashboard/settings?tab=coworkers" className="font-semibold text-[#5864C6] hover:underline">
+            Settings → Coworkers
+          </Link>
+          , then pick who gets copied on each event from Calendar.
         </p>
         <button
           type="button"
@@ -697,7 +701,7 @@ export function RemindersPage({
         </button>
       </div>
 
-      <AlsoRemindPeople />
+      <CoworkerReminderGuide />
 
       <p className="text-sm text-slate-500 dark:text-slate-400">
         Test SMS, WhatsApp, email, or Slack in{' '}
