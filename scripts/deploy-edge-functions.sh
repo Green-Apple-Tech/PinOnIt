@@ -36,6 +36,7 @@ deploy gmail-contacts-sync
 deploy outlook-contacts-sync
 deploy send-quote
 deploy send-reminder
+deploy coordinate-sms
 deploy booking-reply
 deploy complete-reschedule
 deploy write-calendar-event

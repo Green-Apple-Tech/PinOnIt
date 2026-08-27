@@ -71,7 +71,7 @@ export function CoworkerReminderGuide() {
           <li className="flex gap-2">
             <span className="font-bold text-brand-600 shrink-0">3.</span>
             <span>
-              Check their name under <strong className="font-semibold text-slate-700 dark:text-slate-300">Remind coworkers</strong>, then tap{' '}
+              Check their name under <strong className="font-semibold text-slate-700 dark:text-slate-300">Advanced → Remind coworkers</strong>, then tap{' '}
               <strong className="font-semibold text-slate-700 dark:text-slate-300">Save for this event</strong>.
             </span>
           </li>

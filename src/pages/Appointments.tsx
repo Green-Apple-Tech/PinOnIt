@@ -13,6 +13,7 @@ import { CalendarConnections } from '../components/CalendarConnections';
 import {
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   CalendarDays,
   Clock,
   MapPin,
@@ -415,6 +416,7 @@ export function AppointmentsPage() {
   const [newReminderOffset, setNewReminderOffset] = useState(-60);
   const [newReminderMsg, setNewReminderMsg] = useState('');
   const [savingOverride, setSavingOverride] = useState(false);
+  const [showCoworkerAdvanced, setShowCoworkerAdvanced] = useState(false);
   const [eventMenu, setEventMenu] = useState<EventMenuState | null>(null);
   const [showReminderHint, setShowReminderHint] = useState(false);
   const [detailBooking, setDetailBooking] = useState<Booking | null>(null);
@@ -639,6 +641,11 @@ export function AppointmentsPage() {
       return;
     }
     setReminderTarget(target);
+    const alsoIds =
+      target.kind === 'booking'
+        ? parseAlsoRemindIds(target.booking.also_remind_ids)
+        : parseAlsoRemindIds(target.event.also_remind_ids);
+    setShowCoworkerAdvanced(alsoIds.length > 0);
     if (channel) setNewReminderChannel(channel);
     setLoadingOverrides(true);
     const q = supabase.from('event_reminder_overrides').select('*');
@@ -1471,7 +1478,7 @@ export function AppointmentsPage() {
             {/* Header */}
             <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-base font-bold text-slate-900 dark:text-white">Event reminders</h2>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">Extra reminder</h2>
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                   {reminderTarget.kind === 'booking'
                     ? `${(reminderTarget.booking as Booking & { services?: { name?: string } }).services?.name ?? 'Meeting'} · ${reminderTarget.booking.guest_name} · ${formatTime(reminderTarget.booking.start_time)}`
@@ -1483,62 +1490,16 @@ export function AppointmentsPage() {
               </button>
             </div>
 
-            <div className="p-5 space-y-5">
-              <section className="space-y-3">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-brand-600 dark:text-brand-400">
-                  Step 1 · Remind coworkers
-                </p>
-              {reminderTarget.kind === 'booking' ? (
-                <BookingAlsoRemindPicker
-                  bookingId={reminderTarget.booking.id}
-                  serviceId={reminderTarget.booking.service_id}
-                  alsoRemindIds={parseAlsoRemindIds(reminderTarget.booking.also_remind_ids)}
-                  onSaved={(ids) => {
-                    setBookings((prev) =>
-                      prev.map((b) => (b.id === reminderTarget.booking.id ? { ...b, also_remind_ids: ids } : b)),
-                    );
-                    setReminderTarget((t) =>
-                      t?.kind === 'booking' && t.booking.id === reminderTarget.booking.id
-                        ? { ...t, booking: { ...t.booking, also_remind_ids: ids } }
-                        : t,
-                    );
-                  }}
-                />
-              ) : (
-                <BookingAlsoRemindPicker
-                  calendarEventId={reminderTarget.event.id}
-                  alsoRemindIds={parseAlsoRemindIds(reminderTarget.event.also_remind_ids)}
-                  onSaved={(ids) => {
-                    setExternalEvents((prev) =>
-                      prev.map((e) => (e.id === reminderTarget.event.id ? { ...e, also_remind_ids: ids } : e)),
-                    );
-                    setReminderTarget((t) =>
-                      t?.kind === 'external' && t.event.id === reminderTarget.event.id
-                        ? { ...t, event: { ...t.event, also_remind_ids: ids } }
-                        : t,
-                    );
-                  }}
-                />
-              )}
-
-              </section>
-
-              <section className="space-y-4 border-t border-slate-100 dark:border-slate-800 pt-5">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  Step 2 · Custom reminder (optional)
-                </p>
-
+            <div className="p-5 space-y-4">
               {/* Info */}
               <div className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5">
                 {reminderTarget.kind === 'external' ? (
                   <>
-                    <p className="font-semibold text-slate-700 dark:text-slate-300 mb-1">When should reminders go out?</p>
-                    Add a time below (e.g. 1 hour before). Checked coworkers get a copy at that time — email, SMS, or WhatsApp per their roster settings.
+                    Extra reminders for this event only — email, SMS, or WhatsApp. Guest SMS/WhatsApp is sent only if they opted in; otherwise it goes to you.
                   </>
                 ) : (
                   <>
-                    <p className="font-semibold text-slate-700 dark:text-slate-300 mb-1">Optional: extra one-off reminder</p>
-                    PinOnIt already sends your normal guest reminders for this booking. Add another timing here if you want one more nudge. Checked coworkers get a copy too.
+                    PinOnIt already sends your normal guest reminders for this booking. Add another timing here if you want one more nudge.
                   </>
                 )}
               </div>
@@ -1624,7 +1585,54 @@ export function AppointmentsPage() {
                   Add Reminder
                 </button>
               </div>
-              </section>
+
+              {/* Advanced: coworkers */}
+              <div className="border-t border-slate-100 dark:border-slate-800 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setShowCoworkerAdvanced((v) => !v)}
+                  className="w-full flex items-center justify-between gap-2 py-2 text-left text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
+                >
+                  <span>Advanced · Remind coworkers</span>
+                  <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${showCoworkerAdvanced ? 'rotate-180' : ''}`} />
+                </button>
+                {showCoworkerAdvanced && (
+                  <div className="pt-2 pb-1">
+                    {reminderTarget.kind === 'booking' ? (
+                      <BookingAlsoRemindPicker
+                        bookingId={reminderTarget.booking.id}
+                        serviceId={reminderTarget.booking.service_id}
+                        alsoRemindIds={parseAlsoRemindIds(reminderTarget.booking.also_remind_ids)}
+                        onSaved={(ids) => {
+                          setBookings((prev) =>
+                            prev.map((b) => (b.id === reminderTarget.booking.id ? { ...b, also_remind_ids: ids } : b)),
+                          );
+                          setReminderTarget((t) =>
+                            t?.kind === 'booking' && t.booking.id === reminderTarget.booking.id
+                              ? { ...t, booking: { ...t.booking, also_remind_ids: ids } }
+                              : t,
+                          );
+                        }}
+                      />
+                    ) : (
+                      <BookingAlsoRemindPicker
+                        calendarEventId={reminderTarget.event.id}
+                        alsoRemindIds={parseAlsoRemindIds(reminderTarget.event.also_remind_ids)}
+                        onSaved={(ids) => {
+                          setExternalEvents((prev) =>
+                            prev.map((e) => (e.id === reminderTarget.event.id ? { ...e, also_remind_ids: ids } : e)),
+                          );
+                          setReminderTarget((t) =>
+                            t?.kind === 'external' && t.event.id === reminderTarget.event.id
+                              ? { ...t, event: { ...t.event, also_remind_ids: ids } }
+                              : t,
+                          );
+                        }}
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
