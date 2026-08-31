@@ -125,28 +125,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null };
   };
 
+  const startOAuthRedirect = async (
+    provider: 'google' | 'azure',
+    options: { redirectTo: string; scopes?: string; queryParams: Record<string, string> },
+  ) => {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: { ...options, skipBrowserRedirect: true },
+    });
+    if (error) return { error: error.message };
+    if (!data?.url) return { error: `Could not start ${provider === 'google' ? 'Google' : 'Microsoft'} sign-in. Try again.` };
+    window.location.assign(data.url);
+    return { error: null };
+  };
+
   const signInWithGoogle = async (intendedPath?: string) => {
     if (intendedPath) localStorage.setItem('auth_redirect', intendedPath);
     const base = import.meta.env.VITE_APP_URL ?? window.location.origin;
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${base}/auth/callback`, queryParams: { prompt: 'select_account' } },
+    return startOAuthRedirect('google', {
+      redirectTo: `${base}/auth/callback`,
+      queryParams: { prompt: 'select_account' },
     });
-    return { error: error?.message ?? null };
   };
 
   const signInWithMicrosoft = async (intendedPath?: string) => {
     if (intendedPath) localStorage.setItem('auth_redirect', intendedPath);
     const base = import.meta.env.VITE_APP_URL ?? window.location.origin;
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'azure',
-      options: {
-        redirectTo: `${base}/auth/callback`,
-        scopes: 'email profile openid User.Read',
-        queryParams: { prompt: 'select_account' },
-      },
+    return startOAuthRedirect('azure', {
+      redirectTo: `${base}/auth/callback`,
+      scopes: 'email profile openid User.Read',
+      queryParams: { prompt: 'select_account' },
     });
-    return { error: error?.message ?? null };
   };
 
   const signOut = async () => {

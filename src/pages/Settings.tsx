@@ -411,6 +411,7 @@ export function SettingsPage() {
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url ?? '');
   const [globalRequireTerms, setGlobalRequireTerms] = useState(profile?.global_require_terms ?? false);
   const [globalTermsText, setGlobalTermsText] = useState(profile?.global_terms_text ?? DEFAULT_TERMS_TEXT);
+  const [waiverTemplate, setWaiverTemplate] = useState(profile?.waiver_template ?? '');
 
   const [brandColor, setBrandColor] = useState(profile?.brand_color ?? '#5864C6');
   const [logoUrl, setLogoUrl] = useState(profile?.avatar_url ?? '');
@@ -479,6 +480,7 @@ export function SettingsPage() {
     setAvatarUrl(profile.avatar_url ?? '');
     setGlobalRequireTerms(profile.global_require_terms ?? false);
     setGlobalTermsText(profile.global_terms_text ?? DEFAULT_TERMS_TEXT);
+    setWaiverTemplate(profile.waiver_template ?? '');
     bookingFieldsHydrated.current = true;
   }, [profile]);
 
@@ -661,6 +663,7 @@ export function SettingsPage() {
         avatar_url: avatarUrl.trim() || null,
         global_require_terms: globalRequireTerms,
         global_terms_text: globalTermsText.trim() || DEFAULT_TERMS_TEXT,
+        waiver_template: waiverTemplate.trim() || null,
       };
 
       if (import.meta.env.DEV) {
@@ -687,6 +690,7 @@ export function SettingsPage() {
         avatar_url: avatarUrl.trim() || null,
         global_require_terms: globalRequireTerms,
         global_terms_text: globalTermsText.trim() || DEFAULT_TERMS_TEXT,
+        waiver_template: waiverTemplate.trim() || null,
       });
 
       await refreshProfile();
@@ -1405,6 +1409,20 @@ export function SettingsPage() {
                 />
               </div>
             )}
+          </div>
+
+          <div className="border-t border-slate-200 dark:border-slate-800 pt-4 space-y-2">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">My Waiver Template</h3>
+            <textarea
+              value={waiverTemplate}
+              onChange={(e) => setWaiverTemplate(e.target.value)}
+              rows={8}
+              placeholder="Paste attorney-reviewed waiver language for your state and activity"
+              className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition text-sm leading-relaxed"
+            />
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              This is used as your starting point each time you send a waiver — you can still edit it per document.
+            </p>
           </div>
 
           <SaveBtn saving={saving} saved={saved} onClick={handleSaveBookingPage} />

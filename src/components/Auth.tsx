@@ -30,17 +30,19 @@ function MicrosoftIcon() {
 }
 
 export function AuthForm() {
-  const { user, signUp, signIn, signInWithGoogle, signInWithMicrosoft, resetPassword } = useAuth();
+  const { user, loading, signUp, signIn, signInWithGoogle, signInWithMicrosoft, resetPassword } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const refCode = searchParams.get('ref');
   // Read intended destination from router state (set by ProtectedRoute) or fall back to dashboard
   const locationState = (window.history.state?.usr as { from?: { pathname: string } }) ?? {};
   const redirectTo = locationState.from?.pathname ?? '/dashboard';
+  const oauthInFlight = useRef(false);
+  const pendingOauth = useRef<'google' | 'microsoft' | null>(null);
 
   useEffect(() => {
-    // Only redirect on email/password auth — OAuth flows go through AuthCallback
-    if (user) navigate(redirectTo, { replace: true });
+    // Don't steal an in-flight OAuth redirect if a session event fires first
+    if (user && !oauthInFlight.current) navigate(redirectTo, { replace: true });
   }, [user, navigate, redirectTo]);
 
   useEffect(() => {
@@ -101,25 +103,45 @@ export function AuthForm() {
   };
 
   const resetOauthLoading = () => {
+    oauthInFlight.current = false;
+    pendingOauth.current = null;
     setOauthLoading(null);
     if (oauthTimeoutRef.current) clearTimeout(oauthTimeoutRef.current);
   };
 
-  const handleGoogle = async () => {
-    setOauthLoading('google');
+  const startOauth = async (provider: 'google' | 'microsoft') => {
+    if (oauthInFlight.current) return;
+    oauthInFlight.current = true;
+    setOauthLoading(provider);
     setError(null);
+    if (oauthTimeoutRef.current) clearTimeout(oauthTimeoutRef.current);
     oauthTimeoutRef.current = setTimeout(resetOauthLoading, 10000);
-    const { error } = await signInWithGoogle(redirectTo !== '/dashboard' ? redirectTo : undefined);
-    if (error) { setError(error); resetOauthLoading(); }
+    const intended = redirectTo !== '/dashboard' ? redirectTo : undefined;
+    const { error } = provider === 'google'
+      ? await signInWithGoogle(intended)
+      : await signInWithMicrosoft(intended);
+    if (error) {
+      setError(error);
+      resetOauthLoading();
+    }
   };
 
-  const handleMicrosoft = async () => {
-    setOauthLoading('microsoft');
-    setError(null);
-    oauthTimeoutRef.current = setTimeout(resetOauthLoading, 10000);
-    const { error } = await signInWithMicrosoft(redirectTo !== '/dashboard' ? redirectTo : undefined);
-    if (error) { setError(error); resetOauthLoading(); }
+  const handleOauth = (provider: 'google' | 'microsoft') => {
+    if (oauthInFlight.current || oauthLoading) return;
+    if (loading) {
+      pendingOauth.current = provider;
+      setOauthLoading(provider);
+      return;
+    }
+    void startOauth(provider);
   };
+
+  useEffect(() => {
+    if (loading || !pendingOauth.current) return;
+    const pending = pendingOauth.current;
+    pendingOauth.current = null;
+    void startOauth(pending);
+  }, [loading]);
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 px-4">
@@ -160,7 +182,8 @@ export function AuthForm() {
         {view !== 'forgot' && (
           <div className="space-y-3 mb-6">
             <button
-              onClick={handleGoogle}
+              type="button"
+              onClick={() => handleOauth('google')}
               disabled={!!oauthLoading}
               className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white font-semibold rounded-xl transition-all shadow-sm"
             >
@@ -169,7 +192,8 @@ export function AuthForm() {
             </button>
 
             <button
-              onClick={handleMicrosoft}
+              type="button"
+              onClick={() => handleOauth('microsoft')}
               disabled={!!oauthLoading}
               className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[#1e3a5f] hover:bg-[#17304f] disabled:opacity-60 text-white font-semibold rounded-xl transition-all shadow-sm"
             >

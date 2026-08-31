@@ -19,6 +19,7 @@ function keyFromLocation(pathname: string, search: string, hash: string): string
   if (pathname.startsWith('/dashboard/appointments')) return 'calendar';
   if (pathname.startsWith('/dashboard/services')) return 'services';
   if (pathname.startsWith('/dashboard/quotes')) return 'quotes';
+  if (pathname.startsWith('/dashboard/documents')) return 'documents';
   if (pathname.startsWith('/dashboard/paid-booking')) return 'paid-booking';
   if (pathname.startsWith('/dashboard/group-scheduling/polls')) return 'polls';
   if (pathname.includes('coordinate')) return 'coordinate';
@@ -87,6 +88,16 @@ const GUIDES: Record<string, PageHelpGuide> = {
       'Set the name, duration, and in-person / video / phone.',
       'Add a price if you want to get paid when they book.',
       'Save, then include it in your share link on the Dashboard.',
+    ],
+  },
+  documents: {
+    title: 'Documents',
+    purpose: "Send NDAs, invoices, contracts, receipts, and liability waivers for phone confirmation. Built to hold up if it's ever challenged — verified signatures, timestamps, and identity confirmation.",
+    steps: [
+      'Tap New document and pick NDA, invoice, contract, receipt, or waiver.',
+      'Add the recipient name, phone, and a short topic.',
+      'They get a text with a link. They enter an SMS code, then sign, initial, or confirm.',
+      'Copy the link from the list if you need to resend it another way.',
     ],
   },
   quotes: {

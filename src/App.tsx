@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { Component, lazy, Suspense, type ErrorInfo, type ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
 import { ThemeProvider } from './hooks/useTheme';
@@ -67,6 +67,15 @@ const GroupSchedulingPage = lazy(() =>
 const CoordinateMeetingsPage = lazy(() =>
   import('./pages/CoordinateMeetings').then((m) => ({ default: m.CoordinateMeetingsPage })),
 );
+const DocumentsPage = lazy(() =>
+  import('./pages/Documents').then((m) => ({ default: m.DocumentsPage })),
+);
+const CreateDocumentPage = lazy(() =>
+  import('./pages/CreateDocument').then((m) => ({ default: m.CreateDocumentPage })),
+);
+const DocumentConfirmPage = lazy(() =>
+  import('./pages/DocumentConfirm').then((m) => ({ default: m.DocumentConfirmPage })),
+);
 
 function DashboardFallback() {
   return (
@@ -74,6 +83,20 @@ function DashboardFallback() {
       <div className="animate-spin h-8 w-8 border-4 border-indigo-600 border-t-transparent rounded-full" />
     </div>
   );
+}
+
+class QuietErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error(error, info.componentStack);
+  }
+  render() {
+    if (this.state.hasError) return null;
+    return this.props.children;
+  }
 }
 
 function RefRedirect() {
@@ -105,6 +128,14 @@ function App() {
             <Route path="/booking/:bookingId/:action/:actionToken" element={<BookingActionPage />} />
             <Route path="/r/:token" element={<ReschedulePage />} />
             <Route
+              path="/d/:token"
+              element={
+                <Suspense fallback={<DashboardFallback />}>
+                  <DocumentConfirmPage />
+                </Suspense>
+              }
+            />
+            <Route
               path="/dashboard"
               element={
                 <ProtectedRoute>
@@ -135,7 +166,11 @@ function App() {
               <Route path="qr-code" element={<QRCreatorPage />} />
               <Route path="qr" element={<Navigate to="/dashboard/qr-code" replace />} />
               <Route path="quotes" element={<QuoteInvoicePage />} />
+              <Route path="documents" element={<DocumentsPage />} />
+              <Route path="documents/new" element={<CreateDocumentPage />} />
             </Route>
+            <Route path="/documents" element={<Navigate to="/dashboard/documents" replace />} />
+            <Route path="/documents/new" element={<Navigate to="/dashboard/documents/new" replace />} />
             {/* Single-use booking links */}
             <Route path="/s/:token" element={<BookPage />} />
             {/* Public quote / invoice / receipt */}
@@ -154,7 +189,9 @@ function App() {
             <Route path="/:slug" element={<BookPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
-          <AIChat />
+          <QuietErrorBoundary>
+            <AIChat />
+          </QuietErrorBoundary>
           <ToastContainer />
         </BrowserRouter>
       </AuthProvider>

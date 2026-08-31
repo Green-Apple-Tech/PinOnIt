@@ -89,6 +89,7 @@ export interface Profile {
   calendar_conflict_settings: CalendarConflictSettings | null;
   global_require_terms: boolean;
   global_terms_text: string;
+  waiver_template?: string | null;
   ui_mode?: 'simple' | 'advanced';
   revealed_tools?: string[] | null;
   business_type?: string | null;
@@ -444,6 +445,59 @@ export interface HostQuote {
   sent_via: string[];
   created_at: string;
   updated_at: string;
+}
+
+export type SmbDocumentType = 'nda' | 'invoice' | 'contract' | 'receipt' | 'waiver';
+export type DocumentConfirmationType = 'sign' | 'approve' | 'confirm_receipt';
+export type SmbDocumentStatus = 'pending' | 'viewed' | 'signed';
+
+export interface DocumentTemplate {
+  id: string;
+  name: string;
+  document_type: SmbDocumentType;
+  confirmation_type: DocumentConfirmationType;
+  summary_text: string;
+  full_text: string;
+  created_at: string;
+}
+
+export interface SmbDocument {
+  id: string;
+  token: string;
+  sender_id: string;
+  recipient_name: string;
+  recipient_phone: string;
+  document_type: SmbDocumentType;
+  template_id: string;
+  topic: string;
+  custom_text?: string | null;
+  status: SmbDocumentStatus;
+  created_at: string;
+  viewed_at: string | null;
+  signed_at: string | null;
+  signature_data: string | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  otp_verified: boolean;
+  otp_verified_at: string | null;
+}
+
+export interface PublicSmbDocument {
+  id: string;
+  token: string;
+  recipient_name: string;
+  document_type: SmbDocumentType;
+  template_id: string;
+  topic: string;
+  status: SmbDocumentStatus;
+  otp_verified: boolean;
+  created_at: string;
+  viewed_at: string | null;
+  signed_at: string | null;
+  confirmation_type: DocumentConfirmationType;
+  template_name: string;
+  summary_text: string;
+  full_text: string;
 }
 
 export const LOCATION_TYPES: Record<string, string> = {

@@ -11,4 +11,9 @@ describe('getPageHelp', () => {
   it('explains quotes on the quotes page', () => {
     expect(getPageHelp('/dashboard/quotes').title).toMatch(/quote/i);
   });
+
+  it('explains documents on the documents page', () => {
+    expect(getPageHelp('/dashboard/documents').title).toMatch(/document/i);
+    expect(getPageHelp('/dashboard/documents/new').purpose).toMatch(/challenged/i);
+  });
 });

@@ -3,6 +3,7 @@ import {
   Bell,
   CalendarCheck,
   CalendarDays,
+  ClipboardSignature,
   FileText,
   Gift,
   LayoutGrid,
@@ -53,6 +54,12 @@ export const MORE_TOOLS_NAV: MoreToolsNavItem[] = [
     activePaths: ['/dashboard/coordinate'],
   },
   { label: 'Quote/Invoice', icon: FileText, path: '/dashboard/quotes', toolId: 'quotes' },
+  {
+    label: 'Documents',
+    icon: ClipboardSignature,
+    path: '/dashboard/documents',
+    activePathPrefixes: ['/dashboard/documents'],
+  },
   { label: 'Paid Booking', icon: ShoppingBag, path: '/dashboard/paid-booking', toolId: 'paid-booking' },
   {
     label: 'QR Code Creator',
