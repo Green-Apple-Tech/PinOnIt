@@ -23,7 +23,6 @@ export function SlackWebhookCard({ compact = false }: { compact?: boolean }) {
   const [showPaste, setShowPaste] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
-  const [connecting, setConnecting] = useState(false);
   const [msg, setMsg] = useState('');
 
   const connected = isValidSlackWebhookUrl(profile?.slack_webhook_url ?? '');
@@ -31,35 +30,6 @@ export function SlackWebhookCard({ compact = false }: { compact?: boolean }) {
   useEffect(() => {
     setUrl(profile?.slack_webhook_url ?? '');
   }, [profile?.slack_webhook_url]);
-
-  const handleConnect = async () => {
-    setConnecting(true);
-    setMsg('');
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/slack-auth`,
-        {
-          headers: {
-            Authorization: `Bearer ${session?.access_token ?? ''}`,
-            Apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-          },
-        },
-      );
-      const json = await res.json().catch(() => ({})) as { url?: string; error?: string };
-      if (!res.ok || json.error || !json.url) {
-        setMsg(json.error || 'Could not start Slack Connect. Paste a webhook URL below instead.');
-        setShowPaste(true);
-        setConnecting(false);
-        return;
-      }
-      window.location.href = json.url;
-    } catch (e) {
-      setMsg(String(e));
-      setShowPaste(true);
-      setConnecting(false);
-    }
-  };
 
   const handleSave = async (nextUrl: string) => {
     if (!profile?.id) return;
@@ -170,13 +140,11 @@ export function SlackWebhookCard({ compact = false }: { compact?: boolean }) {
           ) : (
             <button
               type="button"
-              onClick={() => void handleConnect()}
-              disabled={connecting}
-              className="px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50 rounded-lg transition-colors flex items-center gap-1.5 hover:opacity-90"
+              onClick={() => setShowPaste(true)}
+              className="px-3 py-1.5 text-xs font-semibold text-white rounded-lg transition-colors hover:opacity-90"
               style={{ backgroundColor: '#5864C6' }}
             >
-              {connecting ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-              Connect Slack
+              Add webhook
             </button>
           )}
         </div>
@@ -202,7 +170,7 @@ export function SlackWebhookCard({ compact = false }: { compact?: boolean }) {
         className="mt-3 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 inline-flex items-center gap-1"
       >
         {showPaste ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-        {connected ? 'Replace webhook URL' : 'Or paste an Incoming Webhook URL'}
+        {connected ? 'Replace webhook URL' : 'Paste an Incoming Webhook URL'}
       </button>
 
       {showPaste && (

@@ -520,19 +520,7 @@ export function SettingsPage() {
       setSection(p);
     }
 
-    if (params.get('slack_connected')) {
-      toast.success('Slack connected. Booking alerts will post to your channel.');
-      void refreshProfile();
-      params.delete('slack_connected');
-      const qs = params.toString();
-      navigate(`/dashboard/settings${qs ? `?${qs}` : '?tab=integrations'}`, { replace: true });
-    } else if (params.get('slack_error')) {
-      toast.error(`Slack Connect failed: ${params.get('slack_error')}`);
-      params.delete('slack_error');
-      const qs = params.toString();
-      navigate(`/dashboard/settings${qs ? `?${qs}` : '?tab=integrations'}`, { replace: true });
-    }
-  }, [location.search, navigate, refreshProfile]);
+  }, [location.search, navigate]);
 
   // Sync notification/session fields when profile loads or after save refreshes profile
   useEffect(() => {
