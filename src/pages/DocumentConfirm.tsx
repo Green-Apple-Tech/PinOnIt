@@ -3,14 +3,27 @@ import { useParams } from 'react-router-dom';
 import { AlertCircle, CheckCircle, Lock, PenLine, RotateCcw } from 'lucide-react';
 import {
   LEGAL_DISCLAIMER,
+  defaultVerificationRequired,
+  documentNeedsRecipientAction,
   fetchClientIp,
   getDocumentByToken,
+  isMoneyDocumentType,
   recordDocumentEvent,
   sendDocumentOtp,
   topicCoverLine,
   verifyDocumentOtp,
 } from '../lib/documents';
-import type { PublicSmbDocument } from '../lib/types';
+import { quoteTotals } from '../lib/quoteMath';
+import type { HostQuoteLineItem, PublicSmbDocument } from '../lib/types';
+
+function money(amount: number, currency = 'USD') {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount || 0);
+}
+
+function verificationOn(doc: PublicSmbDocument) {
+  if (typeof doc.verification_required === 'boolean') return doc.verification_required;
+  return defaultVerificationRequired(doc.document_type);
+}
 
 function formatDate(iso: string) {
   return new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(new Date(iso));
@@ -70,7 +83,7 @@ export function DocumentConfirmPage() {
         });
       }
 
-      if (!data.otp_verified) {
+      if (verificationOn(data) && !data.otp_verified) {
         const otp = await sendDocumentOtp(consentToken);
         if (otp.data?.already_verified) {
           setOtpVerified(true);
@@ -81,6 +94,8 @@ export function DocumentConfirmPage() {
         } else {
           setOtpNotice('Enter the 6-digit code we texted you. It expires in 10 minutes.');
         }
+      } else if (!verificationOn(data)) {
+        setOtpVerified(true);
       }
       setLoading(false);
     })();
@@ -165,9 +180,10 @@ export function DocumentConfirmPage() {
 
   async function handleConfirm() {
     if (!token || !doc || !otpVerified) return;
-    const needsMark = doc.confirmation_type !== 'confirm_receipt';
+    const verified = verificationOn(doc);
+    const needsMark = verified && doc.confirmation_type !== 'confirm_receipt';
     if (needsMark && !hasMarked) return;
-    if (!agreed) return;
+    if (verified && !agreed) return;
     setError('');
     setSubmitting(true);
     const ip = await fetchClientIp();
@@ -220,15 +236,26 @@ export function DocumentConfirmPage() {
     );
   }
 
-  const confirmLabel =
-    doc?.confirmation_type === 'confirm_receipt'
+  const verifiedFlow = doc ? verificationOn(doc) : true;
+  const viewOnly = doc ? !documentNeedsRecipientAction(doc.document_type) && !verifiedFlow : false;
+  const confirmLabel = !verifiedFlow
+    ? doc?.document_type === 'invoice'
+      ? 'Approve'
+      : doc?.document_type === 'receipt'
+      ? 'Confirm receipt'
+      : 'Confirm'
+    : doc?.confirmation_type === 'confirm_receipt'
       ? 'Confirm receipt'
       : doc?.confirmation_type === 'approve'
       ? 'Approve with initials'
       : 'Sign & submit';
 
-  const needsCanvas = doc?.confirmation_type !== 'confirm_receipt';
+  const needsCanvas = verifiedFlow && doc?.confirmation_type !== 'confirm_receipt';
   const canvasHint = doc?.confirmation_type === 'approve' ? 'Draw your initials' : 'Draw your signature';
+  const lineItems: HostQuoteLineItem[] = Array.isArray(doc?.line_items) ? doc.line_items : [];
+  const taxPercent = Number(doc?.tax_percent) || 0;
+  const moneyTotals = quoteTotals(lineItems, taxPercent);
+  const showMoney = Boolean(doc && (isMoneyDocumentType(doc.document_type) || lineItems.length > 0));
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-10">
@@ -254,7 +281,8 @@ export function DocumentConfirmPage() {
             <>
               {doc && (
                 <p className="mt-3 text-sm text-slate-600 whitespace-pre-line">
-                  {topicCoverLine(doc.topic) ? `${topicCoverLine(doc.topic)}\n\n` : ''}
+                  {doc.document_type === 'nda' && topicCoverLine(doc.topic) ? `${topicCoverLine(doc.topic)}\n\n` : ''}
+                  {doc.topic && doc.document_type !== 'nda' && doc.document_type !== 'waiver' ? `${doc.topic}\n\n` : ''}
                   {doc.summary_text}
                 </p>
               )}
@@ -272,8 +300,54 @@ export function DocumentConfirmPage() {
               )}
             </>
           )}
+          {showMoney && (
+            <table className="w-full mt-6 text-sm">
+              <tbody>
+                {lineItems.map((item, i) => (
+                  <tr key={i} className="border-b border-slate-100">
+                    <td className="py-3 pr-4">{item.description || 'Item'}</td>
+                    <td className="py-3 text-right whitespace-nowrap">{money(item.amount, doc?.currency)}</td>
+                  </tr>
+                ))}
+                <tr>
+                  <td className="pt-4">Subtotal</td>
+                  <td className="pt-4 text-right">{money(moneyTotals.subtotal, doc?.currency)}</td>
+                </tr>
+                {taxPercent > 0 && (
+                  <tr>
+                    <td className="pt-2">Tax ({taxPercent}%)</td>
+                    <td className="pt-2 text-right">{money(moneyTotals.taxAmount, doc?.currency)}</td>
+                  </tr>
+                )}
+                <tr>
+                  <td className="pt-4 font-semibold">Total</td>
+                  <td className="pt-4 text-right font-semibold">{money(moneyTotals.total, doc?.currency)}</td>
+                </tr>
+              </tbody>
+            </table>
+          )}
+          {doc?.notes && (
+            <p className="mt-4 text-sm text-slate-600 whitespace-pre-wrap">{doc.notes}</p>
+          )}
+          {doc?.pay_elsewhere_url && (
+            <a
+              href={doc.pay_elsewhere_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3"
+            >
+              Pay {doc.pay_elsewhere_label || 'now'}
+            </a>
+          )}
         </div>
 
+        {viewOnly && (
+          <p className="text-sm text-slate-500 text-center px-2">
+            This quote is for your review. No signature or confirmation is required.
+          </p>
+        )}
+
+        {verifiedFlow && (
         <div className="bg-white rounded-2xl border border-slate-200 p-5">
           <h2 className="text-sm font-semibold">Verify your phone</h2>
           {otpVerified ? (
@@ -311,8 +385,9 @@ export function DocumentConfirmPage() {
             </form>
           )}
         </div>
+        )}
 
-        {otpVerified && (
+        {otpVerified && !viewOnly && (
           <>
             {needsCanvas && (
               <div className="bg-white rounded-2xl border border-slate-200 p-5">
@@ -348,6 +423,7 @@ export function DocumentConfirmPage() {
               </div>
             )}
 
+            {verifiedFlow && (
             <label className="flex items-start gap-3 bg-white rounded-2xl border border-slate-200 p-5 cursor-pointer">
               <input
                 type="checkbox"
@@ -359,6 +435,7 @@ export function DocumentConfirmPage() {
                 I have reviewed this document and I confirm the action above.
               </span>
             </label>
+            )}
 
             {error && (
               <div className="flex gap-2 text-sm text-red-600">
@@ -370,7 +447,7 @@ export function DocumentConfirmPage() {
             <button
               type="button"
               onClick={() => void handleConfirm()}
-              disabled={submitting || !agreed || (needsCanvas && !hasMarked)}
+              disabled={submitting || (verifiedFlow && !agreed) || (needsCanvas && !hasMarked)}
               className="w-full min-h-12 rounded-xl bg-indigo-600 text-white font-semibold disabled:opacity-40"
             >
               {submitting ? 'Submitting…' : confirmLabel}

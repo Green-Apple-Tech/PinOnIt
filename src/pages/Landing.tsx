@@ -9,6 +9,7 @@ import {
   DollarSign, Users,
   ChevronRight, Pause, Play,
   Calendar, Bell, Mail, MessageCircle, MessagesSquare, Phone,
+  ClipboardSignature, QrCode, BarChart3, Gift, ShoppingBag, Contact,
 } from 'lucide-react';
 import { OnboardingBot } from '../components/OnboardingBot';
 import { CALENDLY_EXCLUSIVES } from '../lib/whyPinonit';
@@ -494,6 +495,65 @@ export function Landing() {
       </section>
 
       <ScreenshotShowcase />
+
+      {/* ── 10 tools in one ── */}
+      <section className="py-20 bg-white dark:bg-slate-950">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <span className="inline-block px-4 py-1.5 bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-300 text-xs font-semibold rounded-full uppercase tracking-widest mb-4">
+              10 tools in one
+            </span>
+            <h2 className="text-4xl md:text-5xl font-bold text-slate-900 dark:text-white mb-4">
+              One login. Ten tools.
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 text-lg max-w-2xl mx-auto">
+              Scheduling plus the extras small businesses actually use — without a stack of apps.
+            </p>
+          </div>
+
+          <div className="rounded-3xl border-2 border-brand-200 dark:border-brand-500/30 bg-gradient-to-br from-brand-50 to-white dark:from-brand-900/20 dark:to-slate-900 p-8 md:p-10 mb-8">
+            <div className="flex items-start gap-4">
+              <div className="h-12 w-12 rounded-2xl bg-brand-600 text-white flex items-center justify-center shrink-0">
+                <ClipboardSignature className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400 mb-2">Doc Center</p>
+                <h3 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white">
+                  Send a legally-backed NDA over text — in 30 seconds
+                </h3>
+                <p className="mt-3 text-slate-600 dark:text-slate-300 leading-relaxed max-w-3xl">
+                  No app, no login, no downloads for the other person. Just their
+                  phone number. They get a text, tap the link, verify it&apos;s really them,
+                  and sign. Works for NDAs, contracts, invoices, and more — all with
+                  verified signatures and timestamps.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[
+              { icon: Calendar, title: 'Scheduling', desc: 'Booking page, event types, and Google / Outlook / Apple sync so you do not double-book.' },
+              { icon: Bell, title: 'Smart Reminders', desc: 'Email, SMS, WhatsApp, and voice — plus two-way text to cancel or reschedule.' },
+              { icon: Users, title: 'Group Scheduling', desc: 'Meeting polls for email, or SMS coordinate when you only have phone numbers.' },
+              { icon: ShoppingBag, title: 'Paid Booking', desc: 'A price-list storefront. Stripe, PayPal, Venmo, Cash App, or Zelle at booking time.' },
+              { icon: QrCode, title: 'QR Code Creator', desc: 'Print a code for cards, trucks, and shop windows that opens your booking page.' },
+              { icon: Mail, title: 'Email Signature', desc: 'A signature with your booking link so every email can get you a meeting.' },
+              { icon: BarChart3, title: 'Analytics', desc: 'A simple picture of how many meetings you are booking, by week or month.' },
+              { icon: Gift, title: 'Referrals', desc: 'Share your link. Each Pro signup knocks $1/mo off your bill — six covers Pro.' },
+              { icon: Contact, title: 'Contacts', desc: 'Import Gmail or Outlook, add people by hand, and see every booking with a client.' },
+            ].map(({ icon: Icon, title, desc }) => (
+              <div key={title} className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6">
+                <div className="h-10 w-10 rounded-xl bg-brand-50 dark:bg-brand-500/10 flex items-center justify-center mb-4">
+                  <Icon className="h-5 w-5 text-brand-600 dark:text-brand-400" />
+                </div>
+                <h3 className="font-bold text-slate-900 dark:text-white mb-2">{title}</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* ── 2. PinOnIt vs Calendly — exclusive features ── */}
       <section id="features" className="py-20 bg-gradient-to-b from-indigo-950 to-indigo-900 scroll-mt-16">

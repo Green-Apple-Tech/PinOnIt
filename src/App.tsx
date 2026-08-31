@@ -49,9 +49,6 @@ const MeetingPollsPage = lazy(() =>
 const QRCreatorPage = lazy(() =>
   import('./pages/QRCreator').then((m) => ({ default: m.QRCreatorPage })),
 );
-const QuoteInvoicePage = lazy(() =>
-  import('./pages/QuoteInvoice').then((m) => ({ default: m.QuoteInvoicePage })),
-);
 const QuoteViewPage = lazy(() =>
   import('./pages/QuoteView').then((m) => ({ default: m.QuoteViewPage })),
 );
@@ -165,7 +162,7 @@ function App() {
               <Route path="coordinate" element={<CoordinateMeetingsPage />} />
               <Route path="qr-code" element={<QRCreatorPage />} />
               <Route path="qr" element={<Navigate to="/dashboard/qr-code" replace />} />
-              <Route path="quotes" element={<QuoteInvoicePage />} />
+              <Route path="quotes" element={<Navigate to="/dashboard/documents/new?type=quote" replace />} />
               <Route path="documents" element={<DocumentsPage />} />
               <Route path="documents/new" element={<CreateDocumentPage />} />
             </Route>

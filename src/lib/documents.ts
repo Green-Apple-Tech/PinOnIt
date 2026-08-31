@@ -10,12 +10,31 @@ export function defaultWaiverText(saved?: string | null) {
 }
 
 export const SMB_DOCUMENT_TYPES: { id: SmbDocumentType; label: string; hint: string }[] = [
+  { id: 'quote', label: 'Quote', hint: 'Estimate before they say yes' },
+  { id: 'invoice', label: 'Invoice', hint: 'What they owe' },
+  { id: 'receipt', label: 'Receipt', hint: 'Confirm they received it' },
   { id: 'nda', label: 'NDA', hint: 'Keep talks confidential' },
-  { id: 'invoice', label: 'Invoice', hint: 'Approve the amount' },
   { id: 'contract', label: 'Contract', hint: 'Sign the terms' },
-  { id: 'receipt', label: 'Receipt', hint: 'Confirm you received it' },
   { id: 'waiver', label: 'Waiver', hint: 'Sign a liability waiver' },
 ];
+
+export const MONEY_DOCUMENT_TYPES: SmbDocumentType[] = ['quote', 'invoice', 'receipt'];
+
+export function isMoneyDocumentType(type: SmbDocumentType) {
+  return MONEY_DOCUMENT_TYPES.includes(type);
+}
+
+export function defaultVerificationRequired(type: SmbDocumentType) {
+  return type === 'nda' || type === 'contract' || type === 'waiver';
+}
+
+export function documentNeedsRecipientAction(type: SmbDocumentType) {
+  return type !== 'quote';
+}
+
+export function isSmbDocumentType(value: string): value is SmbDocumentType {
+  return SMB_DOCUMENT_TYPES.some((t) => t.id === value);
+}
 
 export const HOLD_UP_COPY =
   "Built to hold up if it's ever challenged — verified signatures, timestamps, and identity confirmation.";

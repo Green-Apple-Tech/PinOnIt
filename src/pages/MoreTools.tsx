@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  QrCode, Mail, ClipboardSignature, FileText, ArrowRight,
+  QrCode, Mail, ClipboardSignature, ArrowRight,
   CalendarDays, Users, ShoppingBag, Bell, Sparkles, Gift,
   ChevronDown, type LucideIcon,
 } from 'lucide-react';
@@ -42,19 +42,11 @@ const MAIN_TOOLS: ToolItem[] = [
 
 const INCLUDED_TOOLS: ToolItem[] = [
   {
-    id: 'quotes',
-    icon: FileText,
-    title: 'Quote/Invoice Text App',
-    description: 'Send quotes, invoices, and cash receipts by email or text. Add a PayPal, Venmo, or Cash App link so clients can pay anywhere.',
-    buttonLabel: 'Open Quote/Invoice',
-    to: '/dashboard/quotes',
-  },
-  {
     id: 'documents',
     icon: ClipboardSignature,
-    title: 'SMB Documents',
-    description: "Send NDAs, invoices, contracts, receipts, and liability waivers for phone-based confirmation. Built to hold up if it's ever challenged — verified signatures, timestamps, and identity confirmation.",
-    buttonLabel: 'Open Documents',
+    title: 'Doc Center',
+    description: 'Send quotes, invoices, receipts, NDAs, contracts, and liability waivers. Line items and a pay-elsewhere link when you need money; verified signatures when you need them to hold up.',
+    buttonLabel: 'Open Doc Center',
     to: '/dashboard/documents',
   },
   {

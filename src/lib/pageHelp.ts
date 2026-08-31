@@ -18,8 +18,7 @@ function keyFromLocation(pathname: string, search: string, hash: string): string
   }
   if (pathname.startsWith('/dashboard/appointments')) return 'calendar';
   if (pathname.startsWith('/dashboard/services')) return 'services';
-  if (pathname.startsWith('/dashboard/quotes')) return 'quotes';
-  if (pathname.startsWith('/dashboard/documents')) return 'documents';
+  if (pathname.startsWith('/dashboard/quotes') || pathname.startsWith('/dashboard/documents')) return 'documents';
   if (pathname.startsWith('/dashboard/paid-booking')) return 'paid-booking';
   if (pathname.startsWith('/dashboard/group-scheduling/polls')) return 'polls';
   if (pathname.includes('coordinate')) return 'coordinate';
@@ -91,23 +90,13 @@ const GUIDES: Record<string, PageHelpGuide> = {
     ],
   },
   documents: {
-    title: 'Documents',
-    purpose: "Send NDAs, invoices, contracts, receipts, and liability waivers for phone confirmation. Built to hold up if it's ever challenged — verified signatures, timestamps, and identity confirmation.",
+    title: 'Doc Center',
+    purpose: "Send quotes, invoices, receipts, NDAs, contracts, and liability waivers from one place. Built to hold up if it's ever challenged — verified signatures, timestamps, and identity confirmation when you turn verification on.",
     steps: [
-      'Tap New document and pick NDA, invoice, contract, receipt, or waiver.',
-      'Add the recipient name, phone, and a short topic.',
-      'They get a text with a link. They enter an SMS code, then sign, initial, or confirm.',
+      'Tap New document and pick a type. Quotes, invoices, and receipts include line items and tax.',
+      'Add the recipient name. Phone is required only when verification is on (default for NDAs, contracts, and waivers).',
+      'Leave verification off for a quote they can just view, or a one-tap invoice/receipt confirm — no OTP or signature.',
       'Copy the link from the list if you need to resend it another way.',
-    ],
-  },
-  quotes: {
-    title: 'Quote / Invoice',
-    purpose: 'Send a quote, invoice, or cash receipt by email or text. Tax and line items can start from your industry presets — change them on any quote.',
-    steps: [
-      'Pick Quote, Invoice, or Receipt.',
-      'Add the client name and email or phone.',
-      'Fill in line items and tax %. The total updates as you type.',
-      'Tap Send. They get a link they can open and pay if you added a pay link.',
     ],
   },
   'paid-booking': {

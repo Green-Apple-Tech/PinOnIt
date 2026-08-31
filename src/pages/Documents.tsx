@@ -64,9 +64,9 @@ export function DocumentsPage() {
     <main className="p-4 md:p-8 max-w-5xl pb-28 md:pb-8">
       <div className="mb-5 md:mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Documents</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Doc Center</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-slate-400 max-w-2xl">
-            Send NDAs, invoices, contracts, receipts, and liability waivers for phone-based confirmation. No login for the recipient.
+            Quotes, invoices, receipts, NDAs, contracts, and waivers — one place. No login for the recipient.
           </p>
           <p className="mt-2 text-sm text-gray-600 dark:text-slate-300 max-w-2xl">{HOLD_UP_COPY}</p>
         </div>
@@ -127,7 +127,11 @@ export function DocumentsPage() {
                       </span>
                     </div>
                     <p className="mt-1 text-sm text-gray-600 dark:text-slate-300 truncate">{doc.topic}</p>
-                    <p className="mt-0.5 text-xs text-gray-400">{formatWhen(doc.created_at)} · {doc.recipient_phone}</p>
+                    <p className="mt-0.5 text-xs text-gray-400">
+                      {formatWhen(doc.created_at)}
+                      {doc.recipient_phone ? ` · ${doc.recipient_phone}` : ''}
+                      {doc.recipient_email ? ` · ${doc.recipient_email}` : ''}
+                    </p>
                   </div>
                   <button
                     type="button"

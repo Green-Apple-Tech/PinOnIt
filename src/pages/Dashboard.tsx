@@ -1332,7 +1332,10 @@ export function Dashboard() {
       if (needQuotes || needPolls) {
         const [{ count: quoteCount }, { count: pollCount }] = await Promise.all([
           needQuotes
-            ? supabase.from('host_quotes').select('id', { count: 'exact', head: true }).eq('host_id', profile.id)
+            ? Promise.all([
+                supabase.from('host_quotes').select('id', { count: 'exact', head: true }).eq('host_id', profile.id),
+                supabase.from('documents').select('id', { count: 'exact', head: true }).eq('sender_id', profile.id).in('document_type', ['quote', 'invoice', 'receipt']),
+              ]).then(([a, b]) => ({ count: (a.count ?? 0) + (b.count ?? 0) }))
             : Promise.resolve({ count: 0 }),
           needPolls
             ? supabase.from('meeting_polls').select('id', { count: 'exact', head: true }).eq('host_id', profile.id)

@@ -4,7 +4,6 @@ import {
   CalendarCheck,
   CalendarDays,
   ClipboardSignature,
-  FileText,
   Gift,
   LayoutGrid,
   Mail,
@@ -53,12 +52,13 @@ export const MORE_TOOLS_NAV: MoreToolsNavItem[] = [
     activePathPrefixes: ['/dashboard/group-scheduling'],
     activePaths: ['/dashboard/coordinate'],
   },
-  { label: 'Quote/Invoice', icon: FileText, path: '/dashboard/quotes', toolId: 'quotes' },
   {
-    label: 'Documents',
+    label: 'Doc Center',
     icon: ClipboardSignature,
     path: '/dashboard/documents',
+    toolId: 'quotes',
     activePathPrefixes: ['/dashboard/documents'],
+    activePaths: ['/dashboard/quotes'],
   },
   { label: 'Paid Booking', icon: ShoppingBag, path: '/dashboard/paid-booking', toolId: 'paid-booking' },
   {

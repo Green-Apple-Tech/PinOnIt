@@ -1,37 +1,74 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, Copy, Loader2, MessageSquare } from 'lucide-react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, CheckCircle, Copy, Loader2, MessageSquare, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { PHONE_HINT, PHONE_PLACEHOLDER, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
+import { revealTool } from '../lib/progressiveDisclosure';
+import { quoteTotals } from '../lib/quoteMath';
 import {
   HOLD_UP_COPY,
   SMB_DOCUMENT_TYPES,
+  defaultVerificationRequired,
   defaultWaiverText,
+  documentTypeLabel,
   documentViewUrl,
+  isMoneyDocumentType,
+  isSmbDocumentType,
   newDocumentToken,
   sendDocumentLink,
   topicCoverLine,
 } from '../lib/documents';
-import type { DocumentTemplate, SmbDocumentType } from '../lib/types';
+import type { DocumentTemplate, HostQuoteLineItem, SmbDocumentType } from '../lib/types';
 
 const fieldClass =
   'mt-1 w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-3 text-base';
 
-type SmsStatus = 'sending' | 'sent' | 'failed';
+type SmsStatus = 'idle' | 'sending' | 'sent' | 'failed';
+
+function money(amount: number, currency = 'USD') {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount || 0);
+}
 
 export function CreateDocumentPage() {
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
+  const [searchParams] = useSearchParams();
+  const typeParam = searchParams.get('type');
+  const initialType: SmbDocumentType =
+    typeParam && isSmbDocumentType(typeParam) ? typeParam : 'nda';
+
   const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
-  const [documentType, setDocumentType] = useState<SmbDocumentType>('nda');
+  const [documentType, setDocumentType] = useState<SmbDocumentType>(initialType);
   const [recipientName, setRecipientName] = useState('');
+  const [recipientEmail, setRecipientEmail] = useState('');
   const [recipientPhone, setRecipientPhone] = useState('');
   const [topic, setTopic] = useState('');
   const [customText, setCustomText] = useState(() => defaultWaiverText());
+  const [verificationRequired, setVerificationRequired] = useState(() =>
+    defaultVerificationRequired(initialType),
+  );
+  const [items, setItems] = useState<HostQuoteLineItem[]>([{ description: '', amount: 0 }]);
+  const [taxPercent, setTaxPercent] = useState(0);
+  const [notes, setNotes] = useState('');
+  const [payUrl, setPayUrl] = useState('');
+  const [payLabel, setPayLabel] = useState('PayPal');
+  const [defaultsApplied, setDefaultsApplied] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState<{ token: string; smsStatus: SmsStatus; smsError?: string } | null>(null);
+  const [success, setSuccess] = useState<{
+    token: string;
+    smsStatus: SmsStatus;
+    smsError?: string;
+    phone?: string;
+  } | null>(null);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (typeParam && isSmbDocumentType(typeParam)) {
+      setDocumentType(typeParam);
+      setVerificationRequired(defaultVerificationRequired(typeParam));
+    }
+  }, [typeParam]);
 
   useEffect(() => {
     void supabase
@@ -42,23 +79,50 @@ export function CreateDocumentPage() {
 
   const selectedTemplate = templates.find((t) => t.document_type === documentType) ?? null;
   const isWaiver = documentType === 'waiver';
+  const isMoney = isMoneyDocumentType(documentType);
 
   useEffect(() => {
     if (!isWaiver) return;
     setCustomText(defaultWaiverText(profile?.waiver_template));
   }, [isWaiver, profile?.waiver_template]);
 
+  useEffect(() => {
+    if (defaultsApplied || !profile || !isMoney) return;
+    setDefaultsApplied(true);
+    if (profile.quote_line_defaults?.length) {
+      setItems(profile.quote_line_defaults.map((i) => ({
+        description: i.description,
+        amount: Number(i.amount) || 0,
+      })));
+    }
+    setTaxPercent(Number(profile.default_tax_percent) || 0);
+  }, [profile, defaultsApplied, isMoney]);
+
+  const { subtotal, taxAmount, total } = useMemo(
+    () => quoteTotals(items, taxPercent),
+    [items, taxPercent],
+  );
+
+  const handleTypeChange = (next: SmbDocumentType) => {
+    setDocumentType(next);
+    setVerificationRequired(defaultVerificationRequired(next));
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!user?.id || !selectedTemplate) return;
-    const topicText = topic.trim();
-    const phone = normalizePhoneE164(recipientPhone);
+    const topicText = topic.trim() || (isMoney ? documentTypeLabel(documentType) : '');
+    const phone = recipientPhone.trim() ? normalizePhoneE164(recipientPhone) : null;
     if (!topicText) {
       setError('Add a short topic describing what this document covers.');
       return;
     }
-    if (!phone) {
-      setError('Add a valid phone number.');
+    if (verificationRequired && !phone) {
+      setError('Add a valid phone number so the recipient can verify.');
+      return;
+    }
+    if (recipientPhone.trim() && !phone) {
+      setError('Add a valid phone number, or leave it blank.');
       return;
     }
     const waiverText = customText.trim();
@@ -70,16 +134,27 @@ export function CreateDocumentPage() {
     setSubmitting(true);
 
     const token = newDocumentToken();
+    const lineItems = isMoney
+      ? items.filter((i) => i.description.trim() || i.amount)
+      : [];
     const { error: err } = await supabase.from('documents').insert({
       token,
       sender_id: user.id,
       recipient_name: recipientName.trim(),
       recipient_phone: phone,
+      recipient_email: recipientEmail.trim() || null,
       document_type: selectedTemplate.document_type,
       template_id: selectedTemplate.id,
       topic: topicText,
       custom_text: isWaiver ? waiverText : null,
       status: 'pending',
+      verification_required: verificationRequired,
+      line_items: lineItems,
+      tax_percent: isMoney ? Number(taxPercent) || 0 : 0,
+      notes: isMoney ? notes.trim() || null : null,
+      pay_elsewhere_url: isMoney && documentType !== 'receipt' ? payUrl.trim() || null : null,
+      pay_elsewhere_label: isMoney && documentType !== 'receipt' ? payLabel.trim() || null : null,
+      currency: 'USD',
     });
 
     if (err) {
@@ -89,15 +164,21 @@ export function CreateDocumentPage() {
     }
 
     const link = documentViewUrl(token);
-    setSuccess({ token, smsStatus: 'sending' });
+    setSuccess({ token, smsStatus: phone ? 'sending' : 'idle', phone: recipientPhone || undefined });
     setSubmitting(false);
 
+    if (isMoney) {
+      await revealTool(user.id, 'quotes', profile?.revealed_tools);
+      await refreshProfile();
+    }
+
+    if (!phone) return;
     const sms = await sendDocumentLink(token, link);
     if (!sms.ok) {
-      setSuccess({ token, smsStatus: 'failed', smsError: sms.error });
+      setSuccess({ token, smsStatus: 'failed', smsError: sms.error, phone: recipientPhone });
       return;
     }
-    setSuccess({ token, smsStatus: 'sent' });
+    setSuccess({ token, smsStatus: 'sent', phone: recipientPhone });
   };
 
   if (success) {
@@ -110,20 +191,27 @@ export function CreateDocumentPage() {
           <p className="mt-2 text-sm text-gray-500 dark:text-slate-400">
             Share this link with <span className="font-medium text-gray-800 dark:text-slate-200">{recipientName}</span>.
           </p>
-          <div className={`mt-4 rounded-xl px-4 py-3 text-left text-sm ${
-            success.smsStatus === 'sent'
-              ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300'
-              : success.smsStatus === 'failed'
-              ? 'bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300'
-              : 'bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
-          }`}>
-            <span className="inline-flex items-start gap-2">
-              <MessageSquare className="h-4 w-4 mt-0.5 shrink-0" />
-              {success.smsStatus === 'sending' && `Sending SMS to ${recipientPhone}…`}
-              {success.smsStatus === 'sent' && `SMS sent to ${recipientPhone}.`}
-              {success.smsStatus === 'failed' && (success.smsError || 'SMS failed. Copy the link and share it manually.')}
-            </span>
-          </div>
+          {success.smsStatus !== 'idle' && (
+            <div className={`mt-4 rounded-xl px-4 py-3 text-left text-sm ${
+              success.smsStatus === 'sent'
+                ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300'
+                : success.smsStatus === 'failed'
+                ? 'bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300'
+                : 'bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+            }`}>
+              <span className="inline-flex items-start gap-2">
+                <MessageSquare className="h-4 w-4 mt-0.5 shrink-0" />
+                {success.smsStatus === 'sending' && `Sending SMS to ${success.phone}…`}
+                {success.smsStatus === 'sent' && `SMS sent to ${success.phone}.`}
+                {success.smsStatus === 'failed' && (success.smsError || 'SMS failed. Copy the link and share it manually.')}
+              </span>
+            </div>
+          )}
+          {success.smsStatus === 'idle' && (
+            <p className="mt-4 text-sm text-gray-500 dark:text-slate-400">
+              No phone on this send — copy the link and share it by email or text.
+            </p>
+          )}
           <p className="mt-4 text-xs font-mono break-all text-brand-600">{link}</p>
           <button
             type="button"
@@ -141,7 +229,7 @@ export function CreateDocumentPage() {
             to="/dashboard/documents"
             className="mt-3 block w-full min-h-11 rounded-xl border border-gray-200 dark:border-slate-700 text-sm font-medium text-gray-700 dark:text-slate-300 leading-[2.75rem] text-center"
           >
-            Back to documents
+            Back to Doc Center
           </Link>
         </div>
       </main>
@@ -152,7 +240,7 @@ export function CreateDocumentPage() {
     <main className="p-4 md:p-8 max-w-2xl pb-28 md:pb-8">
       <Link to="/dashboard/documents" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 dark:text-slate-400 dark:hover:text-white">
         <ArrowLeft className="h-4 w-4" />
-        Documents
+        Doc Center
       </Link>
       <h1 className="mt-3 text-xl md:text-2xl font-bold text-gray-900 dark:text-white">New document</h1>
       <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">{HOLD_UP_COPY}</p>
@@ -165,7 +253,7 @@ export function CreateDocumentPage() {
               <button
                 key={t.id}
                 type="button"
-                onClick={() => setDocumentType(t.id)}
+                onClick={() => handleTypeChange(t.id)}
                 className={`rounded-xl border px-2 py-3 text-center min-h-14 ${
                   documentType === t.id
                     ? 'border-brand-600 bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-300'
@@ -192,33 +280,192 @@ export function CreateDocumentPage() {
             />
           </label>
           <label className="block">
-            <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Phone</span>
+            <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Email (optional)</span>
+            <input
+              type="email"
+              inputMode="email"
+              value={recipientEmail}
+              onChange={(e) => setRecipientEmail(e.target.value)}
+              className={fieldClass}
+              placeholder="jane@email.com"
+              autoComplete="email"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs font-medium text-gray-600 dark:text-slate-400">
+              Phone {verificationRequired ? '' : '(optional)'}
+            </span>
             <input
               type="tel"
               inputMode="tel"
               value={recipientPhone}
               onChange={(e) => setRecipientPhone(e.target.value)}
               onBlur={() => setRecipientPhone(blurFormatPhone(recipientPhone))}
-              required
+              required={verificationRequired}
               className={fieldClass}
               placeholder={PHONE_PLACEHOLDER}
               autoComplete="tel"
             />
-            <p className="mt-1 text-xs text-gray-400">{PHONE_HINT}</p>
+            <p className="mt-1 text-xs text-gray-400">
+              {verificationRequired ? PHONE_HINT : 'Needed only if you want us to text the link, or if verification is on.'}
+            </p>
           </label>
           <label className="block">
             <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Topic</span>
             <input
               value={topic}
               onChange={(e) => setTopic(e.target.value.slice(0, 150))}
-              required
+              required={!isMoney}
               maxLength={150}
               className={fieldClass}
-              placeholder="Kitchen remodel deposit"
+              placeholder={isMoney ? 'Kitchen remodel' : 'Kitchen remodel deposit'}
             />
-            <p className="mt-1 text-xs text-gray-400">{topic.trim().length}/150 — shown on the confirmation page</p>
+            <p className="mt-1 text-xs text-gray-400">
+              {topic.trim().length}/150 — shown on the confirmation page
+              {isMoney ? '. Defaults to the document type if you leave it blank.' : ''}
+            </p>
           </label>
         </div>
+
+        <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-6">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={verificationRequired}
+              onChange={(e) => setVerificationRequired(e.target.checked)}
+              className="mt-1"
+            />
+            <span>
+              <span className="block text-sm font-semibold text-gray-900 dark:text-white">
+                Require phone verification
+              </span>
+              <span className="block mt-1 text-xs text-gray-500 dark:text-slate-400">
+                {verificationRequired
+                  ? 'They enter an SMS code, then sign or confirm. Default on for NDAs, contracts, and waivers.'
+                  : documentType === 'quote'
+                    ? 'They can view this quote with no OTP and no signature.'
+                    : 'They confirm with one tap — no OTP, no signature canvas.'}
+              </span>
+            </span>
+          </label>
+        </div>
+
+        {isMoney && (
+          <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-slate-400">Line items</span>
+              <button
+                type="button"
+                onClick={() => setItems((prev) => [...prev, { description: '', amount: 0 }])}
+                className="min-h-10 px-3 text-sm font-semibold text-brand-600 inline-flex items-center gap-1"
+              >
+                <Plus className="h-4 w-4" /> Add
+              </button>
+            </div>
+            <div className="space-y-3">
+              {items.map((item, i) => (
+                <div key={i} className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    value={item.description}
+                    onChange={(e) =>
+                      setItems((prev) => prev.map((row, idx) => (idx === i ? { ...row, description: e.target.value } : row)))
+                    }
+                    className={`${fieldClass} sm:flex-1`}
+                    placeholder="Lawn cleanup"
+                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="0.01"
+                      value={item.amount || ''}
+                      onChange={(e) =>
+                        setItems((prev) =>
+                          prev.map((row, idx) => (idx === i ? { ...row, amount: Number(e.target.value) || 0 } : row)),
+                        )
+                      }
+                      className={`${fieldClass} sm:w-32 sm:mt-0`}
+                      placeholder="0.00"
+                      aria-label="Amount"
+                    />
+                    {items.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setItems((prev) => prev.filter((_, idx) => idx !== i))}
+                        className="min-w-11 min-h-12 text-gray-400 hover:text-red-500"
+                        aria-label="Remove line"
+                      >
+                        <Trash2 className="h-5 w-5 mx-auto" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <label className="block">
+                <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Tax %</span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  step="0.01"
+                  value={taxPercent || ''}
+                  onChange={(e) => setTaxPercent(Number(e.target.value) || 0)}
+                  className={fieldClass}
+                  placeholder="0"
+                />
+              </label>
+              <div className="flex flex-col justify-end rounded-xl bg-gray-50 dark:bg-slate-800 px-3 py-3 text-sm">
+                <span className="text-xs text-gray-500">Tax amount</span>
+                <span className="font-semibold text-gray-900 dark:text-white">{money(taxAmount)}</span>
+              </div>
+            </div>
+            <div className="mt-3 space-y-1 text-sm text-gray-700 dark:text-slate-300">
+              <div className="flex justify-between"><span>Subtotal</span><span>{money(subtotal)}</span></div>
+              {taxPercent > 0 && (
+                <div className="flex justify-between"><span>Tax ({taxPercent}%)</span><span>{money(taxAmount)}</span></div>
+              )}
+              <div className="flex justify-between text-base font-semibold text-gray-900 dark:text-white pt-1">
+                <span>Total</span><span>{money(total)}</span>
+              </div>
+            </div>
+            <label className="block mt-5">
+              <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Note (optional)</span>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+                className={fieldClass}
+                placeholder="Due Friday. Cash, check, or PayPal."
+              />
+            </label>
+            {documentType !== 'receipt' && (
+              <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_140px]">
+                <label className="block">
+                  <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Pay somewhere else (optional)</span>
+                  <input
+                    value={payUrl}
+                    onChange={(e) => setPayUrl(e.target.value)}
+                    className={fieldClass}
+                    placeholder="https://paypal.me/yourname"
+                    inputMode="url"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Button label</span>
+                  <input
+                    value={payLabel}
+                    onChange={(e) => setPayLabel(e.target.value)}
+                    className={fieldClass}
+                    placeholder="PayPal"
+                  />
+                </label>
+              </div>
+            )}
+          </div>
+        )}
 
         {isWaiver ? (
           <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-6">
@@ -244,7 +491,7 @@ export function CreateDocumentPage() {
               Preview
             </p>
             <p className="text-sm text-gray-700 dark:text-slate-200 whitespace-pre-line">
-              {topicCoverLine(topic) ? `${topicCoverLine(topic)}\n\n` : ''}
+              {documentType === 'nda' && topicCoverLine(topic) ? `${topicCoverLine(topic)}\n\n` : ''}
               {selectedTemplate.summary_text}
             </p>
           </div>
@@ -260,7 +507,7 @@ export function CreateDocumentPage() {
           className="w-full min-h-12 rounded-xl bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-semibold inline-flex items-center justify-center gap-2"
         >
           {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-          {submitting ? 'Creating…' : 'Create & send SMS'}
+          {submitting ? 'Creating…' : recipientPhone.trim() ? 'Create & send SMS' : 'Create & copy link'}
         </button>
       </form>
     </main>

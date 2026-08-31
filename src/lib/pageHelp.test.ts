@@ -8,12 +8,9 @@ describe('getPageHelp', () => {
     expect(g.steps.length).toBeGreaterThan(1);
   });
 
-  it('explains quotes on the quotes page', () => {
-    expect(getPageHelp('/dashboard/quotes').title).toMatch(/quote/i);
-  });
-
-  it('explains documents on the documents page', () => {
-    expect(getPageHelp('/dashboard/documents').title).toMatch(/document/i);
+  it('explains Doc Center on the quotes and documents routes', () => {
+    expect(getPageHelp('/dashboard/quotes').title).toMatch(/doc center/i);
+    expect(getPageHelp('/dashboard/documents').title).toMatch(/doc center/i);
     expect(getPageHelp('/dashboard/documents/new').purpose).toMatch(/challenged/i);
   });
 });

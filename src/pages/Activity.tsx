@@ -50,13 +50,37 @@ export function ActivityPage() {
     if (!profile?.id) return;
     let cancelled = false;
     (async () => {
-      const [msgRes, quoteRes] = await Promise.all([
+      const [msgRes, quoteRes, docRes] = await Promise.all([
         supabase.from('message_log').select('*').eq('host_id', profile.id).order('created_at', { ascending: false }).limit(300),
         supabase.from('host_quotes').select('*').eq('host_id', profile.id).order('created_at', { ascending: false }).limit(100),
+        supabase.from('documents').select('*').eq('sender_id', profile.id).in('document_type', ['quote', 'invoice', 'receipt']).order('created_at', { ascending: false }).limit(100),
       ]);
       if (cancelled) return;
       setMessages((msgRes.data ?? []) as MessageLogEntry[]);
-      setQuotes((quoteRes.data ?? []) as HostQuote[]);
+      const hostQuotes = (quoteRes.data ?? []) as HostQuote[];
+      const moneyDocs = (docRes.data ?? []) as { id: string; token: string; recipient_name?: string; recipient_email?: string | null; recipient_phone?: string | null; document_type: string; created_at: string; status: string }[];
+      const migratedTokens = new Set(moneyDocs.map((d) => d.token));
+      const leftover = hostQuotes.filter((q) => !migratedTokens.has(q.token));
+      const fromDocs: HostQuote[] = moneyDocs.map((d) => ({
+        id: d.id,
+        host_id: profile.id,
+        token: d.token,
+        kind: d.document_type as HostQuote['kind'],
+        client_name: d.recipient_name ?? null,
+        client_email: d.recipient_email ?? null,
+        client_phone: d.recipient_phone ?? null,
+        line_items: [],
+        notes: null,
+        pay_elsewhere_url: null,
+        pay_elsewhere_label: null,
+        currency: 'USD',
+        tax_percent: 0,
+        status: d.status === 'signed' ? 'sent' : 'draft',
+        sent_via: [],
+        created_at: d.created_at,
+        updated_at: d.created_at,
+      }));
+      setQuotes([...fromDocs, ...leftover]);
       setLoading(false);
     })();
     return () => { cancelled = true; };
@@ -162,7 +186,7 @@ export function ActivityPage() {
 
       <p className="text-xs text-slate-400">
         Open a quote to edit it on{' '}
-        <Link to="/dashboard/quotes" className="font-semibold underline text-slate-600 dark:text-slate-300">Quote/Invoice</Link>
+        <Link to="/dashboard/documents" className="font-semibold underline text-slate-600 dark:text-slate-300">Doc Center</Link>
         . Reminder templates stay under{' '}
         <Link to="/dashboard/reminders" className="font-semibold underline text-slate-600 dark:text-slate-300">Smart Reminders</Link>.
       </p>

@@ -85,7 +85,7 @@ describe('buildSidebarNav', () => {
     const { primary, moreTools } = buildSidebarNav('advanced', []);
     expect(moreTools).toEqual([]);
     expect(primary.some((i) => i.label === 'Settings')).toBe(true);
-    expect(primary.some((i) => i.label === 'Quote/Invoice')).toBe(true);
+    expect(primary.some((i) => i.label === 'Doc Center')).toBe(true);
     expect(primary.some((i) => i.label === 'Paid Booking')).toBe(true);
     expect(primary.map((i) => i.label)).not.toContain('Share');
   });

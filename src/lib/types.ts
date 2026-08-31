@@ -447,7 +447,7 @@ export interface HostQuote {
   updated_at: string;
 }
 
-export type SmbDocumentType = 'nda' | 'invoice' | 'contract' | 'receipt' | 'waiver';
+export type SmbDocumentType = 'nda' | 'invoice' | 'contract' | 'receipt' | 'waiver' | 'quote';
 export type DocumentConfirmationType = 'sign' | 'approve' | 'confirm_receipt';
 export type SmbDocumentStatus = 'pending' | 'viewed' | 'signed';
 
@@ -466,7 +466,8 @@ export interface SmbDocument {
   token: string;
   sender_id: string;
   recipient_name: string;
-  recipient_phone: string;
+  recipient_phone: string | null;
+  recipient_email?: string | null;
   document_type: SmbDocumentType;
   template_id: string;
   topic: string;
@@ -480,6 +481,13 @@ export interface SmbDocument {
   user_agent: string | null;
   otp_verified: boolean;
   otp_verified_at: string | null;
+  verification_required?: boolean;
+  line_items?: HostQuoteLineItem[];
+  tax_percent?: number;
+  notes?: string | null;
+  pay_elsewhere_url?: string | null;
+  pay_elsewhere_label?: string | null;
+  currency?: string;
 }
 
 export interface PublicSmbDocument {
@@ -498,6 +506,13 @@ export interface PublicSmbDocument {
   template_name: string;
   summary_text: string;
   full_text: string;
+  verification_required?: boolean;
+  line_items?: HostQuoteLineItem[];
+  tax_percent?: number;
+  notes?: string | null;
+  pay_elsewhere_url?: string | null;
+  pay_elsewhere_label?: string | null;
+  currency?: string;
 }
 
 export const LOCATION_TYPES: Record<string, string> = {
