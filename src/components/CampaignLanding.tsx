@@ -4,7 +4,7 @@ import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
 import { usePageMeta } from '../lib/pageMeta';
 import { captureCampaignParams, signupHref } from '../lib/campaignAttribution';
-import type { CampaignCopy } from '../lib/campaignLandings';
+import { DOC_TYPE_SHORTCUTS, type CampaignCopy } from '../lib/campaignLandings';
 import { useEffect } from 'react';
 
 function dashboardHref(path: string): string {
@@ -12,6 +12,30 @@ function dashboardHref(path: string): string {
   if (path.startsWith('//') || path.includes('://') || path.includes('\\') || path.includes('@')) return '/dashboard';
   if (path.split('?')[0].includes('..')) return '/dashboard';
   return path;
+}
+
+export function DocTypeShortcutRow({
+  shortcuts = DOC_TYPE_SHORTCUTS,
+  loggedIn,
+  className = 'justify-center',
+}: {
+  shortcuts?: readonly { label: string; type: string }[];
+  loggedIn: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={`flex flex-wrap items-center gap-2 ${className}`}>
+      {shortcuts.map(({ label, type }) => (
+        <Link
+          key={type}
+          to={loggedIn ? dashboardHref(`/dashboard/documents/new?type=${type}`) : signupHref()}
+          className="inline-flex items-center justify-center min-h-11 px-3.5 rounded-full border border-brand-200 dark:border-brand-500/40 bg-white dark:bg-slate-900 text-sm font-semibold text-brand-700 dark:text-brand-300 hover:bg-brand-50 dark:hover:bg-brand-500/10"
+        >
+          {label}
+        </Link>
+      ))}
+    </div>
+  );
 }
 
 export function CampaignLanding({ copy }: { copy: CampaignCopy }) {
@@ -70,9 +94,14 @@ export function CampaignLanding({ copy }: { copy: CampaignCopy }) {
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight leading-[1.08] text-slate-900 dark:text-white mb-6">
             {copy.headline}
           </h1>
-          <p className={`text-lg sm:text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed ${copy.supportingLine ? 'mb-4' : 'mb-8'}`}>
+          <p className={`text-lg sm:text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed ${copy.typeShortcuts || copy.supportingLine ? 'mb-5' : 'mb-8'}`}>
             {copy.subhead}
           </p>
+          {copy.typeShortcuts?.length ? (
+            <div className={copy.supportingLine ? 'mb-5' : 'mb-8'}>
+              <DocTypeShortcutRow shortcuts={copy.typeShortcuts} loggedIn={!!user} />
+            </div>
+          ) : null}
           {copy.supportingLine ? (
             <p className="text-sm sm:text-base font-normal text-slate-500 dark:text-slate-400 max-w-xl mx-auto mb-8 leading-relaxed">
               {copy.supportingLine}

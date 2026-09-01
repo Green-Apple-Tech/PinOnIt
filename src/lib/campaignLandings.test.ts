@@ -7,8 +7,16 @@ describe('campaignCopy', () => {
     const nda = campaignCopy('nda');
     expect(nda?.headline).toMatch(/NDA/i);
     expect(nda?.supportingLine).toBe(NDA_SUPPORTING_LINE);
-    expect(nda?.subhead).toContain(DOC_HOLD_UP);
+    expect(nda?.subhead).not.toMatch(/They get a text, tap the link/i);
     expect(nda?.subhead).not.toMatch(/nothing guarantees legal enforceability/i);
+    expect(nda?.typeShortcuts?.map((s) => s.label)).toEqual([
+      'NDAs',
+      'contracts',
+      'invoices',
+      'waivers',
+      'receipts',
+      'quotes',
+    ]);
     expect(nda?.loggedInCtaTo).toBe('/dashboard/documents/new');
   });
 

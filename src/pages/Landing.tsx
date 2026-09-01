@@ -14,6 +14,8 @@ import {
 import { OnboardingBot } from '../components/OnboardingBot';
 import { CALENDLY_EXCLUSIVES } from '../lib/whyPinonit';
 import { NDA_HEADLINE, NDA_SUBHEAD } from '../lib/campaignLandings';
+import { HOLD_UP_COPY } from '../lib/documentCopy';
+import { DocTypeShortcutRow } from '../components/CampaignLanding';
 
 // ── Animated counter hook ────────────────────────────────────────────────────
 function useCounter(target: number, duration = 1800, start = false) {
@@ -525,6 +527,12 @@ export function Landing() {
                 </h3>
                 <p className="mt-3 text-slate-600 dark:text-slate-300 leading-relaxed max-w-3xl">
                   {NDA_SUBHEAD}
+                </p>
+                <div className="mt-4">
+                  <DocTypeShortcutRow loggedIn={!!user} className="justify-start" />
+                </div>
+                <p className="mt-4 text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-3xl">
+                  {HOLD_UP_COPY}
                 </p>
               </div>
             </div>

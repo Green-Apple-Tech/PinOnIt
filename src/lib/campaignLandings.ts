@@ -14,10 +14,19 @@ import { HOLD_UP_COPY, LEGAL_DISCLAIMER } from './documentCopy';
 export const NDA_HEADLINE = 'Send an NDA over text — verified and signed in 30 seconds';
 
 export const NDA_SUBHEAD =
-  `No app, no login, no downloads for the other person. Just their phone number. They get a text, tap the link, verify it's really them, and sign. Works for NDAs, contracts, invoices, waivers, and more — each backed by a verified signature, timestamp, and phone confirmation. ${HOLD_UP_COPY}`;
+  'No app, no login, no downloads for the other person. Just their phone number.';
 
 export const NDA_SUPPORTING_LINE =
   'Send a waiver, invoice, contract, receipt, or quote via instant SMS — they approve right from their phone, no app needed.';
+
+export const DOC_TYPE_SHORTCUTS = [
+  { label: 'NDAs', type: 'nda' },
+  { label: 'contracts', type: 'contract' },
+  { label: 'invoices', type: 'invoice' },
+  { label: 'waivers', type: 'waiver' },
+  { label: 'receipts', type: 'receipt' },
+  { label: 'quotes', type: 'quote' },
+] as const;
 
 export const REMINDERS_HEADLINE =
   'Reminders they actually get — text, WhatsApp, email, and a call';
@@ -37,6 +46,7 @@ export type CampaignCopy = {
   headline: string;
   subhead: string;
   supportingLine?: string;
+  typeShortcuts?: readonly { label: string; type: string }[];
   steps: CampaignStep[];
   secondaryUseCase: string;
   holdUp?: string;
@@ -54,6 +64,7 @@ export const CAMPAIGN_PAGES: Record<string, CampaignCopy> = {
     headline: NDA_HEADLINE,
     subhead: NDA_SUBHEAD,
     supportingLine: NDA_SUPPORTING_LINE,
+    typeShortcuts: DOC_TYPE_SHORTCUTS,
     steps: [
       { icon: FileText, title: 'Type the topic', desc: 'A short line for what the NDA covers — a deal, a hire, a conversation.' },
       { icon: Smartphone, title: 'Enter their number', desc: 'Just a phone. They do not create an account or download anything.' },
