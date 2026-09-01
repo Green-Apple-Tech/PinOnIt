@@ -452,9 +452,10 @@ export function Landing() {
               Doc Center
             </span>
           </p>
-          <h1 className="text-xl sm:text-2xl md:text-[1.75rem] font-semibold tracking-tight leading-snug text-slate-900 dark:text-white mb-8 max-w-3xl mx-auto">
-            <span className="block">Clients book your calendar in seconds—with SMS reminders.</span>
-            <span className="block mt-1.5">Send quotes, NDAs &amp; waivers by text, too. All for less.</span>
+          <h1 className="text-xl md:text-2xl font-medium leading-snug text-slate-900 dark:text-white mb-8 max-w-3xl mx-auto">
+            Clients book your calendar in seconds—with SMS reminders.
+            <br />
+            Send quotes, NDAs &amp; waivers by text, too. All for less.
           </h1>
 
           <div className="flex flex-wrap items-center justify-center gap-2 mb-10">
