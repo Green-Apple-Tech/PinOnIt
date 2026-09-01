@@ -31,6 +31,13 @@ kill_pid() {
 
 log "Scout2 overnight stop — 9:00 AM ET cutoff"
 
+# Unload the running collector first so KeepAlive cannot restart it.
+if launchctl print "gui/$(id -u)/com.pinonit.scout2.nightly" >/dev/null 2>&1; then
+  log "Unloading com.pinonit.scout2.nightly"
+  launchctl bootout "gui/$(id -u)/com.pinonit.scout2.nightly" 2>/dev/null || true
+  launchctl unload "$HOME/Library/LaunchAgents/com.pinonit.scout2.nightly.plist" 2>/dev/null || true
+fi
+
 if [[ -f "$WATCHDOG_PIDFILE" ]]; then
   WPID="$(tr -d '[:space:]' < "$WATCHDOG_PIDFILE" || true)"
   # Don't kill ourselves if we are the watchdog
