@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, lazy, Suspense } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
@@ -27,14 +27,15 @@ import { NotificationTestPanel } from '../components/NotificationTestPanel';
 import { AlsoRemindPeople } from '../components/AlsoRemindPeople';
 import { BookingBlocksSettings } from '../components/BookingBlocksSettings';
 import { readProfileCache, writeProfileCache } from '../lib/profileCache';
-import { AnalyticsPage } from './Analytics';
-import { BillingPage } from './Billing';
-import { AvailabilityPage } from './Availability';
-import { ActivityPage } from './Activity';
-import { ServicesPage } from './Services';
-import { ContactsPage } from './Contacts';
 import { SmsBookingConsent } from '../components/SmsConsentText';
 import { SESSION_TIMEOUT_OPTIONS, sessionTimeoutOptionValue } from '../lib/sessionTimeout';
+
+const AnalyticsPage = lazy(() => import('./Analytics').then((m) => ({ default: m.AnalyticsPage })));
+const BillingPage = lazy(() => import('./Billing').then((m) => ({ default: m.BillingPage })));
+const AvailabilityPage = lazy(() => import('./Availability').then((m) => ({ default: m.AvailabilityPage })));
+const ActivityPage = lazy(() => import('./Activity').then((m) => ({ default: m.ActivityPage })));
+const ServicesPage = lazy(() => import('./Services').then((m) => ({ default: m.ServicesPage })));
+const ContactsPage = lazy(() => import('./Contacts').then((m) => ({ default: m.ContactsPage })));
 
 type SettingsSection = 'general' | 'availability' | 'activity' | 'analytics' | 'billing' | 'event-types' | 'contacts';
 type SettingsTab = 'profile' | 'booking_page' | 'branding' | 'embed' | 'referrals' | 'coworkers' | 'integrations' | 'advanced';
@@ -885,20 +886,21 @@ export function SettingsPage() {
         ))}
       </div>
 
-      {/* Availability section */}
-      {section === 'availability' && <AvailabilityPage embedded />}
-
-      {section === 'event-types' && <ServicesPage embedded />}
-
-      {section === 'contacts' && <ContactsPage embedded />}
-
-      {section === 'activity' && <ActivityPage />}
-
-      {/* Analytics section */}
-      {section === 'analytics' && <AnalyticsPage embedded />}
-
-      {/* Billing section */}
-      {section === 'billing' && <BillingPage embedded />}
+      {/* Availability / tools / billing — lazy so General settings stays light */}
+      <Suspense
+        fallback={
+          <div className="py-16 flex justify-center">
+            <Loader2 className="h-6 w-6 animate-spin text-brand-600" />
+          </div>
+        }
+      >
+        {section === 'availability' && <AvailabilityPage embedded />}
+        {section === 'event-types' && <ServicesPage embedded />}
+        {section === 'contacts' && <ContactsPage embedded />}
+        {section === 'activity' && <ActivityPage />}
+        {section === 'analytics' && <AnalyticsPage embedded />}
+        {section === 'billing' && <BillingPage embedded />}
+      </Suspense>
 
       {/* General section */}
       {section === 'general' && (

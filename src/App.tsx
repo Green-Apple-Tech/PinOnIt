@@ -102,9 +102,30 @@ class QuietErrorBoundary extends Component<{ children: ReactNode }, { hasError: 
 
 function SettingsTabRedirect({ tab }: { tab: string }) {
   const [params] = useSearchParams();
-  const next = new URLSearchParams(params);
+  const next = new URLSearchParams();
+  for (const key of [
+    'new',
+    'edit',
+    'code',
+    'state',
+    'calendar_error',
+    'gmail_connected',
+    'outlook_connected',
+    'contacts_imported',
+    'contacts_error',
+  ]) {
+    const value = params.get(key);
+    if (value) next.set(key, value);
+  }
   next.set('tab', tab);
   return <Navigate to={`/dashboard/settings?${next.toString()}`} replace />;
+}
+
+/** Keep ?type= and other query params when sending old public URLs into the dashboard. */
+function PreserveSearchRedirect({ to }: { to: string }) {
+  const [params] = useSearchParams();
+  const qs = params.toString();
+  return <Navigate to={qs ? `${to}?${qs}` : to} replace />;
 }
 
 function RefRedirect() {
@@ -180,8 +201,8 @@ function App() {
               <Route path="documents" element={<DocumentsPage />} />
               <Route path="documents/new" element={<CreateDocumentPage />} />
             </Route>
-            <Route path="/documents" element={<Navigate to="/dashboard/documents" replace />} />
-            <Route path="/documents/new" element={<Navigate to="/dashboard/documents/new" replace />} />
+            <Route path="/documents" element={<PreserveSearchRedirect to="/dashboard/documents" />} />
+            <Route path="/documents/new" element={<PreserveSearchRedirect to="/dashboard/documents/new" />} />
             {/* Single-use booking links */}
             <Route path="/s/:token" element={<BookPage />} />
             {/* Public quote / invoice / receipt */}

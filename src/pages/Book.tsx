@@ -1930,7 +1930,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                           </p>
                           <p className="text-xs text-indigo-500 dark:text-indigo-400 mt-0.5">
                             <a
-                              href="/dashboard/services"
+                              href="/dashboard/settings?tab=event-types"
                               className="underline hover:text-indigo-700 dark:hover:text-indigo-300"
                               target="_blank"
                               rel="noopener noreferrer"

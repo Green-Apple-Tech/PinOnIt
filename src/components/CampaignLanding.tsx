@@ -7,6 +7,13 @@ import { captureCampaignParams, signupHref } from '../lib/campaignAttribution';
 import type { CampaignCopy } from '../lib/campaignLandings';
 import { useEffect } from 'react';
 
+function dashboardHref(path: string): string {
+  if (!path.startsWith('/dashboard')) return '/dashboard';
+  if (path.startsWith('//') || path.includes('://') || path.includes('\\') || path.includes('@')) return '/dashboard';
+  if (path.split('?')[0].includes('..')) return '/dashboard';
+  return path;
+}
+
 export function CampaignLanding({ copy }: { copy: CampaignCopy }) {
   const { theme, toggleTheme } = useTheme();
   const { user } = useAuth();
@@ -23,7 +30,7 @@ export function CampaignLanding({ copy }: { copy: CampaignCopy }) {
     image: 'https://pinonit.com/pinonit_logo.png',
   });
 
-  const ctaTo = user ? copy.loggedInCtaTo : signupHref();
+  const ctaTo = user ? dashboardHref(copy.loggedInCtaTo) : signupHref();
   const ctaLabel = user ? copy.loggedInCtaLabel : 'Start Free Trial';
 
   return (

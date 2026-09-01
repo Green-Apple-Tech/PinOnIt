@@ -1719,7 +1719,7 @@ export function Dashboard() {
               const slugDisplay = profile?.slug || liveSlug || '';
               const steps = [
                 { label: 'Connect your calendar', sub: 'Sync Google or Outlook to prevent double-bookings', done: hasCalendar, to: '/dashboard/settings?tab=availability' },
-                { label: 'Create your first event type', sub: 'Define a meeting type guests can book', done: hasService, to: '/dashboard/services' },
+                { label: 'Create your first event type', sub: 'Define a meeting type guests can book', done: hasService, to: '/dashboard/settings?tab=event-types' },
                 { label: 'Share your booking link', sub: hasSlug ? `pinonit.com/${slugDisplay}` : 'Set a custom username in Settings', done: hasSlug, to: hasSlug ? undefined : '/dashboard/settings?tab=booking_page' },
               ];
               const completedCount = steps.filter((s) => s.done).length;
@@ -1817,7 +1817,7 @@ export function Dashboard() {
               <div className="flex items-center justify-between mb-3 md:mb-4 gap-2">
                 <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">Meetings</h2>
                 <button
-                  onClick={() => navigate('/dashboard/services?new=one_on_one')}
+                  onClick={() => navigate('/dashboard/settings?tab=event-types&new=one_on_one')}
                   className="flex items-center gap-1.5 md:gap-2 px-3 md:px-5 py-2 md:py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-xs md:text-sm font-semibold rounded-full transition-all shadow-sm"
                 >
                   <Plus className="h-4 w-4" />
@@ -1853,7 +1853,7 @@ export function Dashboard() {
                     Create your first meeting type and share the link so people can book time with you.
                   </p>
                   <button
-                    onClick={() => navigate('/dashboard/services?new=one_on_one')}
+                    onClick={() => navigate('/dashboard/settings?tab=event-types&new=one_on_one')}
                     className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-full transition-all"
                   >
                     <Plus className="h-4 w-4" />
@@ -1931,7 +1931,7 @@ export function Dashboard() {
                               </button>
                             ) : (
                               <button
-                                onClick={() => navigate(`/dashboard/services?edit=${svc.id}`)}
+                                onClick={() => navigate(`/dashboard/settings?tab=event-types&edit=${svc.id}`)}
                                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg hover:opacity-80 transition-colors text-white"
                                 style={{ backgroundColor: '#5864C6' }}
                                 title="Edit meeting type"

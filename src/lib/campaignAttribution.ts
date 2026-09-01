@@ -35,10 +35,12 @@ export function captureCampaignParams(search: string, landingPath?: string): Cam
   const sp = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
   const next: CampaignParams = { ...readCampaignParams() };
   for (const key of CAMPAIGN_QUERY_KEYS) {
-    const value = sp.get(key)?.trim();
+    const value = sp.get(key)?.trim().slice(0, 200);
     if (value) next[key] = value;
   }
-  if (landingPath) next.landing = landingPath;
+  if (landingPath?.startsWith('/') && !landingPath.startsWith('//') && landingPath.length <= 80) {
+    next.landing = landingPath;
+  }
   if (canStore() && Object.keys(next).length > 0) {
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   }

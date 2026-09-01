@@ -58,4 +58,11 @@ describe('campaignAttribution', () => {
       '/signup?utm_source=ads&utm_medium=cpc&utm_campaign=reminders-sms',
     );
   });
+
+  it('caps UTM values and ignores protocol-relative landing paths', () => {
+    const long = 'x'.repeat(400);
+    captureCampaignParams(`?utm_source=${long}`, '//evil.example');
+    expect(readCampaignParams().utm_source).toHaveLength(200);
+    expect(readCampaignParams().landing).toBeUndefined();
+  });
 });

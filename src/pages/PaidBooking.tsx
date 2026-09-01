@@ -650,7 +650,7 @@ export function PaidBookingPage() {
                 <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                 <p>
                   Add a paid event type so clients can pay when they book.{' '}
-                  <Link to="/dashboard/services" className="font-semibold underline">Open Event types</Link>
+                  <Link to="/dashboard/settings?tab=event-types" className="font-semibold underline">Open Event types</Link>
                 </p>
               </div>
             )}
@@ -796,7 +796,7 @@ export function PaidBookingPage() {
                 <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-3">
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="text-sm font-bold text-slate-900 dark:text-white">Options on your list</h3>
-                    <Link to="/dashboard/services" className="text-xs font-semibold text-[#5864C6] underline">
+                    <Link to="/dashboard/settings?tab=event-types" className="text-xs font-semibold text-[#5864C6] underline">
                       Edit prices in Event types
                     </Link>
                   </div>
@@ -805,7 +805,7 @@ export function PaidBookingPage() {
                   ) : realServices.length === 0 ? (
                     <p className="text-sm text-slate-500">
                       No event types yet.{' '}
-                      <Link to="/dashboard/services" className="font-semibold text-[#5864C6] underline">Create one</Link>
+                      <Link to="/dashboard/settings?tab=event-types" className="font-semibold text-[#5864C6] underline">Create one</Link>
                     </p>
                   ) : (
                     <ul className="space-y-2">
