@@ -203,7 +203,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
     title: 'Docs defaults',
     purpose: 'Save the waiver, tax, and line items that new Doc Center sends start from.',
     steps: [
-      'Edit the waiver template and replace [Business Name] and [Activity/Service Description].',
+      'Edit the waiver template and keep [Recipient Name], [Business Name], and [Activity/Service Description] so they fill in when you send.',
       'Set a default tax percent and quote/invoice lines if you send those often.',
       'Save. New documents pick these up; you can still change any one send.',
     ],

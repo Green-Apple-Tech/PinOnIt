@@ -28,6 +28,7 @@ import { AlsoRemindPeople } from '../components/AlsoRemindPeople';
 import { BookingBlocksSettings } from '../components/BookingBlocksSettings';
 import { readProfileCache, writeProfileCache } from '../lib/profileCache';
 import { WAIVER_HOST_HINT } from '../lib/documentCopy';
+import { injectWaiverRecipientPlaceholder } from '../lib/documents';
 import { SmsBookingConsent } from '../components/SmsConsentText';
 import { SESSION_TIMEOUT_OPTIONS, sessionTimeoutOptionValue } from '../lib/sessionTimeout';
 
@@ -504,7 +505,7 @@ export function SettingsPage() {
     setAvatarUrl(profile.avatar_url ?? '');
     setGlobalRequireTerms(profile.global_require_terms ?? false);
     setGlobalTermsText(profile.global_terms_text ?? DEFAULT_TERMS_TEXT);
-    setWaiverTemplate(profile.waiver_template ?? '');
+    setWaiverTemplate(profile.waiver_template ? injectWaiverRecipientPlaceholder(profile.waiver_template) : '');
     setDocTaxPercent(Number(profile.default_tax_percent) || 0);
     setQuoteLines(profile.quote_line_defaults?.length ? profile.quote_line_defaults : [{ description: '', amount: 0 }]);
     bookingFieldsHydrated.current = true;
@@ -1558,7 +1559,7 @@ export function SettingsPage() {
               value={waiverTemplate}
               onChange={(e) => setWaiverTemplate(e.target.value)}
               rows={8}
-              placeholder="Starts from the PinOnIt waiver template. Replace [Business Name] and [Activity/Service Description], then have an attorney review it."
+              placeholder="Starts from the PinOnIt waiver template. Keep [Recipient Name], [Business Name], and [Activity/Service Description] so they fill in when you send, then have an attorney review it."
               className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition text-sm leading-relaxed"
             />
             <p className="text-xs text-slate-400 dark:text-slate-500">

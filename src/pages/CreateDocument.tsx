@@ -388,6 +388,9 @@ export function CreateDocumentPage() {
               placeholder="Jane Smith"
               autoComplete="name"
             />
+            <p className="mt-1 text-xs text-gray-400">
+              Fills [Recipient Name] in the document below as you type.
+            </p>
           </label>
           <label className="block">
             <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Email (optional)</span>
@@ -626,7 +629,7 @@ export function CreateDocumentPage() {
               </span>
               {isWaiver ? (
                 <p className="mt-2 mb-3 text-sm text-gray-600 dark:text-slate-300 leading-relaxed">
-                  {WAIVER_HOST_HINT} Activity and business name above fill the brackets. You can still edit this send, or save a default in{' '}
+                  {WAIVER_HOST_HINT} Recipient name, activity, and business name above fill the brackets. You can still edit this send, or save a default in{' '}
                   <Link to="/dashboard/settings?tab=docs" className="font-semibold text-brand-600 hover:text-brand-700">
                     Settings → Docs
                   </Link>

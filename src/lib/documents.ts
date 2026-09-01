@@ -3,8 +3,8 @@ import type { PublicSmbDocument, SmbDocumentType } from './types';
 
 export const WAIVER_STARTER_TEXT = `LIABILITY WAIVER AND RELEASE
 
-In consideration for participating in or receiving services related to
-[Activity/Service Description] provided by [Business Name], I acknowledge
+I, [Recipient Name], in consideration for participating in or receiving services related to
+[Activity/Service Description] provided by [Business Name], acknowledge
 and agree to the following:
 
 1. Assumption of Risk. I understand that the activity/service described
@@ -36,9 +36,22 @@ for gross negligence or intentional harm. Consult an attorney to confirm
 this waiver is appropriate and enforceable for your business, activity,
 and state before relying on it.`;
 
+const OLD_WAIVER_OPENING =
+  /In consideration for participating in or receiving services related to\s*\[Activity\/Service Description\] provided by \[Business Name\], I acknowledge\s*and agree to the following:/;
+
+const NEW_WAIVER_OPENING = `I, [Recipient Name], in consideration for participating in or receiving services related to
+[Activity/Service Description] provided by [Business Name], acknowledge
+and agree to the following:`;
+
+/** Upgrade the old starter opening so saved templates get a live [Recipient Name]. Custom attorney text is left alone. */
+export function injectWaiverRecipientPlaceholder(text: string) {
+  if (text.includes('[Recipient Name]')) return text;
+  return text.replace(OLD_WAIVER_OPENING, NEW_WAIVER_OPENING);
+}
+
 export function defaultWaiverText(saved?: string | null) {
   const trimmed = saved?.trim();
-  return trimmed || WAIVER_STARTER_TEXT;
+  return injectWaiverRecipientPlaceholder(trimmed || WAIVER_STARTER_TEXT);
 }
 
 export const NDA_STARTER_TEXT = `MUTUAL NON-DISCLOSURE AGREEMENT
@@ -86,6 +99,8 @@ This Agreement is entered into as of the date of electronic signature below, bet
 
 export const QUOTE_STARTER_TEXT = `QUOTE
 
+Prepared for: [Recipient Name].
+
 This quote is an estimate for: [Topic].
 
 The line items, tax, and total on this page are the proposed amounts. This is not an invoice and not a charge. Prices are valid for 30 days unless the sender states otherwise.
@@ -95,6 +110,8 @@ If you want to proceed, reply to the sender or approve this quote as instructed 
 Amounts and any pay-elsewhere links are between you and the sender.`;
 
 export const INVOICE_STARTER_TEXT = `INVOICE
+
+Prepared for: [Recipient Name].
 
 This invoice is for: [Topic].
 
@@ -106,6 +123,8 @@ An electronic approval through this page is a record that you reviewed this invo
 
 export const RECEIPT_STARTER_TEXT = `RECEIPT
 
+Prepared for: [Recipient Name].
+
 This receipt confirms goods or services related to: [Topic].
 
 The line items and total on this page describe what was provided. Confirming this receipt is an acknowledgement that you received those goods or services. It is not a new charge.
@@ -114,8 +133,8 @@ Keep a copy for your records. Any refund or dispute is between you and the sende
 
 export function defaultDocumentBody(type: SmbDocumentType, saved?: string | null) {
   const trimmed = saved?.trim();
+  if (type === 'waiver') return injectWaiverRecipientPlaceholder(trimmed || WAIVER_STARTER_TEXT);
   if (trimmed) return trimmed;
-  if (type === 'waiver') return WAIVER_STARTER_TEXT;
   if (type === 'nda') return NDA_STARTER_TEXT;
   if (type === 'contract') return CONTRACT_STARTER_TEXT;
   if (type === 'quote') return QUOTE_STARTER_TEXT;
@@ -140,6 +159,9 @@ export function fillDocumentPlaceholders(
   return text
     .replaceAll('[Topic]', topic)
     .replaceAll('[Recipient Name]', recipient)
+    .replaceAll('[Client Name]', recipient)
+    .replaceAll('[Customer Name]', recipient)
+    .replaceAll('[Customer]', recipient)
     .replaceAll('[Business Name]', business)
     .replaceAll('[Activity/Service Description]', activity);
 }
