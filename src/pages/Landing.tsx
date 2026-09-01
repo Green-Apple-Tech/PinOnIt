@@ -423,12 +423,6 @@ export function Landing() {
         </div>
       </div>
 
-      <div className="border-b border-brand-200 dark:border-brand-500/30 bg-brand-50 dark:bg-brand-500/10 px-6 py-3.5">
-        <p className="text-center text-sm sm:text-base font-semibold text-brand-800 dark:text-brand-100 max-w-3xl mx-auto leading-snug">
-          {HOLD_UP_COPY}
-        </p>
-      </div>
-
       {/* ── 1. HERO ── */}
       <section className="relative overflow-hidden pt-20 pb-24 px-6 text-center">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -473,6 +467,12 @@ export function Landing() {
                 {label}
               </span>
             ))}
+          </div>
+
+          <div className="mb-6 rounded-2xl border border-brand-200 dark:border-brand-500/30 bg-brand-50 dark:bg-brand-500/10 px-5 py-3.5">
+            <p className="text-center text-sm sm:text-base font-semibold text-brand-800 dark:text-brand-100 max-w-3xl mx-auto leading-snug">
+              {HOLD_UP_COPY}
+            </p>
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6">
