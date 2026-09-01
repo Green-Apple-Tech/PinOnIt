@@ -68,7 +68,7 @@ export function isSmbDocumentType(value: string): value is SmbDocumentType {
   return SMB_DOCUMENT_TYPES.some((t) => t.id === value);
 }
 
-export { HOLD_UP_COPY, LEGAL_DISCLAIMER } from './documentCopy';
+export { HOLD_UP_COPY, LEGAL_DISCLAIMER, WAIVER_HOST_HINT } from './documentCopy';
 
 export function topicCoverLine(topic: string) {
   const trimmed = topic.trim();

@@ -3,3 +3,6 @@ export const HOLD_UP_COPY =
 
 export const LEGAL_DISCLAIMER =
   'This does not guarantee legal enforceability or government certification — consult an attorney for legal advice.';
+
+export const WAIVER_HOST_HINT =
+  'This is a standard starting waiver. Rules vary by state, so have an attorney review it before you rely on it.';

@@ -453,12 +453,13 @@ export function Landing() {
             </span>
           </p>
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[1.08] text-slate-900 dark:text-white mb-6 max-w-4xl mx-auto">
-            Let clients book your time easily—with{' '}
-            <span className="text-brand-500">smart reminders.</span>
+            Clients book your calendar in seconds—with{' '}
+            <span className="text-brand-500">SMS reminders.</span>
           </h1>
 
           <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto mb-8 leading-relaxed">
-            PinOnIt is a calendar scheduler and super reminder app — email, SMS, WhatsApp, and voice — so you and your guests actually show up. Bookings write back to Google or Outlook, personal reminders land on your calendar, and sharing opens native apps on your phone.
+            Send quotes, NDAs &amp; waivers by text, too.{' '}
+            <strong className="font-black text-slate-900 dark:text-white">All for less.</strong>
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-2 mb-10">

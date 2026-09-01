@@ -27,6 +27,7 @@ import { NotificationTestPanel } from '../components/NotificationTestPanel';
 import { AlsoRemindPeople } from '../components/AlsoRemindPeople';
 import { BookingBlocksSettings } from '../components/BookingBlocksSettings';
 import { readProfileCache, writeProfileCache } from '../lib/profileCache';
+import { WAIVER_HOST_HINT } from '../lib/documentCopy';
 import { SmsBookingConsent } from '../components/SmsConsentText';
 import { SESSION_TIMEOUT_OPTIONS, sessionTimeoutOptionValue } from '../lib/sessionTimeout';
 
@@ -37,8 +38,24 @@ const ActivityPage = lazy(() => import('./Activity').then((m) => ({ default: m.A
 const ServicesPage = lazy(() => import('./Services').then((m) => ({ default: m.ServicesPage })));
 const ContactsPage = lazy(() => import('./Contacts').then((m) => ({ default: m.ContactsPage })));
 
-type SettingsSection = 'general' | 'availability' | 'activity' | 'analytics' | 'billing' | 'event-types' | 'contacts';
-type SettingsTab = 'profile' | 'booking_page' | 'branding' | 'embed' | 'referrals' | 'coworkers' | 'integrations' | 'advanced';
+type SettingsSection = 'general' | 'availability' | 'activity' | 'analytics' | 'billing' | 'event-types' | 'contacts' | 'docs' | 'branding' | 'integrations' | 'referrals';
+type SettingsTab = 'profile' | 'booking_page' | 'embed' | 'coworkers' | 'advanced';
+type QuoteLineDefault = { description: string; amount: number };
+
+const SECTION_TABS: SettingsSection[] = ['availability', 'activity', 'analytics', 'billing', 'event-types', 'contacts', 'docs', 'branding', 'integrations', 'referrals'];
+const TOP_LEVEL_SECTIONS: { key: SettingsSection; label: string }[] = [
+  { key: 'general', label: 'General' },
+  { key: 'availability', label: 'Availability' },
+  { key: 'event-types', label: 'Event types' },
+  { key: 'contacts', label: 'Contacts' },
+  { key: 'docs', label: 'Docs' },
+  { key: 'branding', label: 'Branding' },
+  { key: 'integrations', label: 'Integrations' },
+  { key: 'referrals', label: 'Referrals' },
+  { key: 'activity', label: 'Activity' },
+  { key: 'analytics', label: 'Analytics' },
+  { key: 'billing', label: 'Billing' },
+];
 
 const REMINDER_CHANNEL_OPTIONS: { value: ReminderChannelPreference; label: string; icon: typeof Mail }[] = [
   { value: 'email', label: 'Email', icon: Mail },
@@ -47,7 +64,7 @@ const REMINDER_CHANNEL_OPTIONS: { value: ReminderChannelPreference; label: strin
   { value: 'voice', label: 'Voice Call', icon: PhoneCall },
 ];
 
-const GENERAL_TABS: SettingsTab[] = ['profile', 'booking_page', 'branding', 'embed', 'referrals', 'coworkers', 'integrations', 'advanced'];
+const GENERAL_TABS: SettingsTab[] = ['profile', 'booking_page', 'embed', 'coworkers', 'advanced'];
 
 // ── Color picker ──────────────────────────────────────────────────────────────
 
@@ -387,7 +404,7 @@ export function SettingsPage() {
     const p = new URLSearchParams(location.search).get('tab');
     if (p === 'reminders' || p === 'coworkers') return 'general';
     if (p && GENERAL_TABS.includes(p as SettingsTab)) return 'general';
-    if (p === 'analytics' || p === 'billing' || p === 'availability' || p === 'activity' || p === 'event-types' || p === 'contacts') return p;
+    if (p && SECTION_TABS.includes(p as SettingsSection)) return p as SettingsSection;
     return 'general';
   };
 
@@ -415,6 +432,10 @@ export function SettingsPage() {
   const [globalRequireTerms, setGlobalRequireTerms] = useState(profile?.global_require_terms ?? false);
   const [globalTermsText, setGlobalTermsText] = useState(profile?.global_terms_text ?? DEFAULT_TERMS_TEXT);
   const [waiverTemplate, setWaiverTemplate] = useState(profile?.waiver_template ?? '');
+  const [docTaxPercent, setDocTaxPercent] = useState(Number(profile?.default_tax_percent) || 0);
+  const [quoteLines, setQuoteLines] = useState<QuoteLineDefault[]>(
+    profile?.quote_line_defaults?.length ? profile.quote_line_defaults : [{ description: '', amount: 0 }],
+  );
 
   const [brandColor, setBrandColor] = useState(profile?.brand_color ?? '#5864C6');
   const [logoUrl, setLogoUrl] = useState(profile?.avatar_url ?? '');
@@ -484,6 +505,8 @@ export function SettingsPage() {
     setGlobalRequireTerms(profile.global_require_terms ?? false);
     setGlobalTermsText(profile.global_terms_text ?? DEFAULT_TERMS_TEXT);
     setWaiverTemplate(profile.waiver_template ?? '');
+    setDocTaxPercent(Number(profile.default_tax_percent) || 0);
+    setQuoteLines(profile.quote_line_defaults?.length ? profile.quote_line_defaults : [{ description: '', amount: 0 }]);
     bookingFieldsHydrated.current = true;
   }, [profile]);
 
@@ -521,8 +544,8 @@ export function SettingsPage() {
     if (p && GENERAL_TABS.includes(p as SettingsTab)) {
       setSection('general');
       setTab(p as SettingsTab);
-    } else if (p === 'analytics' || p === 'billing' || p === 'availability' || p === 'activity' || p === 'event-types' || p === 'contacts') {
-      setSection(p);
+    } else if (p && SECTION_TABS.includes(p as SettingsSection)) {
+      setSection(p as SettingsSection);
     }
 
   }, [location.search, navigate]);
@@ -666,7 +689,6 @@ export function SettingsPage() {
         avatar_url: avatarUrl.trim() || null,
         global_require_terms: globalRequireTerms,
         global_terms_text: globalTermsText.trim() || DEFAULT_TERMS_TEXT,
-        waiver_template: waiverTemplate.trim() || null,
       };
 
       if (import.meta.env.DEV) {
@@ -693,7 +715,6 @@ export function SettingsPage() {
         avatar_url: avatarUrl.trim() || null,
         global_require_terms: globalRequireTerms,
         global_terms_text: globalTermsText.trim() || DEFAULT_TERMS_TEXT,
-        waiver_template: waiverTemplate.trim() || null,
       });
 
       await refreshProfile();
@@ -705,6 +726,44 @@ export function SettingsPage() {
       }
     } catch (err) {
       console.error('Save failed:', err);
+      const message = err instanceof Error ? err.message : String(err);
+      toast.error(`Save failed: ${message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveDocs = async () => {
+    if (!profile?.id) {
+      toast.error('Failed to save: profile not loaded');
+      return;
+    }
+    const cleanedLines = quoteLines
+      .map((line) => ({ description: line.description.trim(), amount: Number(line.amount) || 0 }))
+      .filter((line) => line.description);
+    setSaving(true);
+    setSaved(false);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          waiver_template: waiverTemplate.trim() || null,
+          default_tax_percent: Number(docTaxPercent) || 0,
+          quote_line_defaults: cleanedLines,
+        })
+        .eq('id', profile.id);
+      if (error) throw error;
+      writeProfileCache({
+        ...profile,
+        waiver_template: waiverTemplate.trim() || null,
+        default_tax_percent: Number(docTaxPercent) || 0,
+        quote_line_defaults: cleanedLines,
+      });
+      await refreshProfile();
+      toast.success('Doc defaults saved!');
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       toast.error(`Save failed: ${message}`);
     } finally {
@@ -845,10 +904,7 @@ export function SettingsPage() {
   const tabs: { key: SettingsTab; label: string }[] = [
     { key: 'profile', label: 'Profile' },
     { key: 'booking_page', label: 'Booking page' },
-    { key: 'branding', label: 'Branding' },
-    { key: 'integrations', label: 'Integrations' },
     { key: 'embed', label: 'Embed' },
-    { key: 'referrals', label: 'Referrals' },
     { key: 'coworkers', label: 'Coworkers' },
     { key: 'advanced', label: 'Advanced' },
   ];
@@ -858,20 +914,12 @@ export function SettingsPage() {
 
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Manage your profile, booking page, event types, contacts, coworkers, availability, activity, analytics, and billing.</p>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Profile, booking page, docs, branding, event types, contacts, availability, and billing.</p>
       </div>
 
       {/* Top-level section tabs */}
       <div className="flex gap-0.5 mb-6 border-b border-slate-200 dark:border-slate-800 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-        {([
-          { key: 'general', label: 'General' },
-          { key: 'availability', label: 'Availability' },
-          { key: 'event-types', label: 'Event types' },
-          { key: 'contacts', label: 'Contacts' },
-          { key: 'activity', label: 'Activity' },
-          { key: 'analytics', label: 'Analytics' },
-          { key: 'billing', label: 'Billing' },
-        ] as { key: SettingsSection; label: string }[]).map((s) => (
+        {TOP_LEVEL_SECTIONS.map((s) => (
           <button
             key={s.key}
             onClick={() => openSettingsSection(s.key, tab)}
@@ -902,11 +950,11 @@ export function SettingsPage() {
         {section === 'billing' && <BillingPage embedded />}
       </Suspense>
 
-      {/* General section */}
-      {section === 'general' && (
+      {/* General / docs / branding / integrations / referrals */}
+      {(section === 'general' || section === 'docs' || section === 'branding' || section === 'integrations' || section === 'referrals') && (
         <>
 
-      {/* Sub-tabs for general settings */}
+      {section === 'general' && (
       <div className="flex gap-0.5 mb-6 border-b border-slate-200 dark:border-slate-800 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
         {tabs.map((t) => (
           <button
@@ -920,9 +968,10 @@ export function SettingsPage() {
           </button>
         ))}
       </div>
+      )}
 
       {/* PROFILE */}
-      {tab === 'profile' && (
+      {section === 'general' && tab === 'profile' && (
         <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-4">
           <h2 className="text-lg font-semibold">Profile</h2>
           <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer">
@@ -1180,7 +1229,7 @@ export function SettingsPage() {
       )}
 
       {/* EMERGENCY ALERT CONTACTS */}
-      {tab === 'profile' && (
+      {section === 'general' && tab === 'profile' && (
         <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-4">
           <div className="flex items-center gap-2.5">
             <div className="h-8 w-8 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center shrink-0">
@@ -1262,7 +1311,7 @@ export function SettingsPage() {
       )}
 
       {/* VOICE REMINDERS */}
-      {tab === 'profile' && (
+      {section === 'general' && tab === 'profile' && (
         <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-5">
           <div className="flex items-center gap-2.5">
             <div className="h-8 w-8 rounded-lg bg-violet-50 dark:bg-violet-900/20 flex items-center justify-center shrink-0">
@@ -1330,7 +1379,7 @@ export function SettingsPage() {
 
 
       {/* BOOKING PAGE */}
-      {tab === 'booking_page' && (
+      {section === 'general' && tab === 'booking_page' && (
         <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-4">
           <h2 className="text-lg font-semibold">Booking page</h2>
           <div>
@@ -1421,8 +1470,90 @@ export function SettingsPage() {
             )}
           </div>
 
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Waiver language and quote/invoice defaults are on the{' '}
+            <button
+              type="button"
+              onClick={() => openSettingsSection('docs')}
+              className="font-semibold text-brand-600 hover:underline"
+            >
+              Docs
+            </button>
+            {' '}tab.
+          </p>
+
+          <SaveBtn saving={saving} saved={saved} onClick={handleSaveBookingPage} />
+        </div>
+      )}
+
+      {/* DOCS */}
+      {section === 'docs' && (
+        <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-6">
+          <div>
+            <h2 className="text-lg font-semibold">Docs</h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              Defaults for Doc Center. New waivers, quotes, invoices, and receipts start from these. You can still edit each send.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">Default tax %</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={docTaxPercent}
+              onChange={(e) => setDocTaxPercent(Number(e.target.value) || 0)}
+              className="w-32 px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
+            />
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Applied to new quotes, invoices, and receipts.</p>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Default quote / invoice lines</h3>
+            <p className="text-xs text-slate-400 dark:text-slate-500">Pre-filled when you create a quote, invoice, or receipt. Leave blank to start empty.</p>
+            {quoteLines.map((line, i) => (
+              <div key={i} className="flex gap-2">
+                <input
+                  type="text"
+                  value={line.description}
+                  onChange={(e) => setQuoteLines((prev) => prev.map((row, j) => j === i ? { ...row, description: e.target.value } : row))}
+                  placeholder="Line description"
+                  className="flex-1 px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition text-sm"
+                />
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={line.amount || ''}
+                  onChange={(e) => setQuoteLines((prev) => prev.map((row, j) => j === i ? { ...row, amount: Number(e.target.value) || 0 } : row))}
+                  placeholder="0"
+                  className="w-28 px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setQuoteLines((prev) => prev.length === 1 ? [{ description: '', amount: 0 }] : prev.filter((_, j) => j !== i))}
+                  className="px-2 text-slate-400 hover:text-red-500"
+                  aria-label="Remove line"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => setQuoteLines((prev) => [...prev, { description: '', amount: 0 }])}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:text-brand-700"
+            >
+              <Plus className="h-4 w-4" /> Add line
+            </button>
+          </div>
+
           <div className="border-t border-slate-200 dark:border-slate-800 pt-4 space-y-2">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">My Waiver Template</h3>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Waiver template</h3>
+            <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              {WAIVER_HOST_HINT} Save this page to use it as your default when you send a waiver. You can still edit it per document.
+            </p>
             <textarea
               value={waiverTemplate}
               onChange={(e) => setWaiverTemplate(e.target.value)}
@@ -1435,12 +1566,12 @@ export function SettingsPage() {
             </p>
           </div>
 
-          <SaveBtn saving={saving} saved={saved} onClick={handleSaveBookingPage} />
+          <SaveBtn saving={saving} saved={saved} onClick={handleSaveDocs} />
         </div>
       )}
 
       {/* BRANDING */}
-      {tab === 'branding' && (
+      {section === 'branding' && (
         <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-6">
           <div>
             <h2 className="text-lg font-semibold mb-1">Branding</h2>
@@ -1556,7 +1687,7 @@ export function SettingsPage() {
       )}
 
       {/* COWORKERS */}
-      {tab === 'coworkers' && (
+      {section === 'general' && tab === 'coworkers' && (
         <div className="space-y-4">
           <div className="rounded-xl border border-brand-200 dark:border-brand-500/30 bg-brand-50/40 dark:bg-brand-500/5 px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
             <strong className="text-slate-800 dark:text-slate-100">Coworkers</strong> receive copies of reminders (email, SMS, or WhatsApp).
@@ -1569,12 +1700,12 @@ export function SettingsPage() {
       )}
 
       {/* INTEGRATIONS */}
-      {tab === 'integrations' && (
+      {section === 'integrations' && (
         <IntegrationsTab userId={user?.id} />
       )}
 
       {/* EMBED */}
-      {tab === 'embed' && (
+      {section === 'general' && tab === 'embed' && (
         <div className="space-y-6">
           {!slug && (
             <div className="p-5 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-center">
@@ -1583,7 +1714,7 @@ export function SettingsPage() {
                 Go to the <strong className="text-slate-700 dark:text-slate-300">Booking page</strong> tab and choose a name for your link. Then come back here to get your embed code.
               </p>
               <button
-                onClick={() => setTab('booking_page')}
+                onClick={() => openSettingsSection('general', 'booking_page')}
                 className="px-4 py-2 text-white text-sm font-semibold rounded-lg transition-colors hover:opacity-90"
                 style={{ backgroundColor: '#5864C6' }}
               >
@@ -1657,11 +1788,11 @@ export function SettingsPage() {
       )}
 
       {/* REFERRALS */}
-      {tab === 'referrals' && (
+      {section === 'referrals' && (
         <ReferralsTab userId={user?.id ?? null} profile={profile} />
       )}
 
-      {tab === 'advanced' && profile?.id && (
+      {section === 'general' && tab === 'advanced' && profile?.id && (
         <BookingBlocksSettings hostId={profile.id} />
       )}
 

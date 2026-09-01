@@ -18,6 +18,10 @@ function keyFromLocation(pathname: string, search: string, hash: string): string
     if (tab === 'activity') return 'activity';
     if (tab === 'event-types') return 'services';
     if (tab === 'contacts') return 'contacts';
+    if (tab === 'docs') return 'settings-docs';
+    if (tab === 'branding') return 'settings-branding';
+    if (tab === 'integrations') return 'settings-integrations';
+    if (tab === 'referrals') return 'settings-referrals';
     return 'settings';
   }
   if (pathname.startsWith('/dashboard/appointments')) return 'calendar';
@@ -189,17 +193,52 @@ const GUIDES: Record<string, PageHelpGuide> = {
     purpose: 'Your account, booking URL, advanced mode, and other preferences.',
     steps: [
       'General → set your name and booking username.',
+      'Docs → save waiver language and quote/invoice defaults.',
+      'Branding, Integrations, and Referrals each have their own tab at the top.',
       'Turn on Advanced mode if you want every tool in the sidebar.',
       'Settings → General → Advanced to block an email or domain from booking, or mark it as spam.',
-      'Use the tabs for Event types, Contacts, Availability, Billing, and Analytics.',
+    ],
+  },
+  'settings-docs': {
+    title: 'Docs defaults',
+    purpose: 'Save the waiver, tax, and line items that new Doc Center sends start from.',
+    steps: [
+      'Edit the waiver template and replace [Business Name] and [Activity/Service Description].',
+      'Set a default tax percent and quote/invoice lines if you send those often.',
+      'Save. New documents pick these up; you can still change any one send.',
+    ],
+  },
+  'settings-branding': {
+    title: 'Branding',
+    purpose: 'Your logo, colors, and white-label look. Guests never see Pin on It branding.',
+    steps: [
+      'Upload a logo and pick a brand color.',
+      'Save, then preview your booking page.',
+    ],
+  },
+  'settings-integrations': {
+    title: 'Integrations',
+    purpose: 'Connect calendars, Slack, Zoom, and other tools.',
+    steps: [
+      'Connect Google or Outlook so busy times block bookings.',
+      'Add Slack if you want reminder copies in a channel.',
+    ],
+  },
+  'settings-referrals': {
+    title: 'Referrals',
+    purpose: 'Share PinOnIt and track who signed up from your link.',
+    steps: [
+      'Copy your referral link.',
+      'Share it with people who might need scheduling and documents.',
     ],
   },
   activity: {
     title: 'Activity',
-    purpose: 'A log of messages PinOnIt sent — reminders, quotes, and similar.',
+    purpose: 'A log of messages PinOnIt sent and every Doc Center send — pending, viewed, or signed.',
     steps: [
-      'Scroll to see what went out and whether it failed.',
-      'If something failed, check the phone/email on the contact and try again.',
+      'Use Documents to see NDAs, waivers, contracts, invoices, quotes, and receipts.',
+      'Status updates when the recipient views or signs.',
+      'If a message failed, check the phone/email and try again.',
     ],
   },
   'more-tools': {
@@ -207,7 +246,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
     purpose: 'Every extra PinOnIt tool in one place. In simple mode these stay tucked away until you need them.',
     steps: [
       'Open any card to use that tool.',
-      'Send SMS NDA/Waiver sits in the main sidebar; Event types, Contacts, Analytics, and Referrals live under Settings.',
+      'Send SMS NDA/Waiver sits in the main sidebar; Event types, Contacts, Docs, Branding, Analytics, and Referrals live under Settings.',
       'Paid booking, Doc Center, and the rest stay here so the main menu stays simple.',
       'Turn on Advanced mode in Settings if you want every tool listed in the sidebar.',
     ],

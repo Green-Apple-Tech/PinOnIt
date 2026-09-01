@@ -13,6 +13,11 @@ describe('getPageHelp', () => {
     expect(getPageHelp('/dashboard/settings', '?tab=contacts').title).toMatch(/contact/i);
   });
 
+  it('explains the Docs settings tab', () => {
+    expect(getPageHelp('/dashboard/settings', '?tab=docs').title).toMatch(/docs/i);
+    expect(getPageHelp('/dashboard/settings', '?tab=docs').purpose).toMatch(/waiver/i);
+  });
+
   it('explains Doc Center on the quotes and documents routes', () => {
     expect(getPageHelp('/dashboard/quotes').title).toMatch(/doc center/i);
     expect(getPageHelp('/dashboard/documents').title).toMatch(/doc center/i);

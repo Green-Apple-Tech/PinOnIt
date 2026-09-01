@@ -715,7 +715,7 @@ export function RemindersPage({
         to="/dashboard/settings?tab=activity"
         className="flex items-center justify-between gap-3 px-5 py-4 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900/50"
       >
-        <span>Message, test, and quote activity lives in Settings → Activity</span>
+        <span>Message, test, and document activity lives in Settings → Activity</span>
         <ArrowRight className="h-4 w-4 text-slate-400 shrink-0" />
       </Link>
 

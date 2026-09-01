@@ -3,23 +3,24 @@ import { Link } from 'react-router-dom';
 import { FileText, Loader2, Mail, MessageSquare, PhoneCall, Smartphone } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
-import type { HostQuote, MessageLogEntry } from '../lib/types';
+import { documentTypeLabel } from '../lib/documents';
+import type { HostQuote, MessageLogEntry, SmbDocument } from '../lib/types';
 
-type Filter = 'all' | 'messages' | 'quotes';
+type Filter = 'all' | 'messages' | 'documents';
 
 function ChannelGlyph({ channel, className }: { channel: string; className?: string }) {
   const Icon: ElementType =
     channel === 'sms' ? Smartphone
       : channel === 'whatsapp' ? MessageSquare
       : channel === 'voice' ? PhoneCall
-      : channel === 'quote' ? FileText
+      : channel === 'document' ? FileText
       : Mail;
   const style = channel === 'whatsapp' ? { color: '#5864C6' } : undefined;
   const colorClass =
     channel === 'email' ? 'text-blue-400'
       : channel === 'voice' ? 'text-violet-400'
       : channel === 'sms' ? 'text-amber-400'
-      : channel === 'quote' ? 'text-brand-500'
+      : channel === 'document' ? 'text-brand-500'
       : '';
   return <Icon className={`${className ?? ''} ${colorClass}`} style={style} />;
 }
@@ -28,15 +29,23 @@ function sourceLabel(entry: MessageLogEntry): string {
   const subj = (entry.subject ?? '').toLowerCase();
   const body = (entry.body ?? '').toLowerCase();
   if (subj.includes('test') || body.includes('pinonit test')) return 'Test';
-  if (subj.includes('quote') || subj.includes('invoice') || subj.includes('receipt')) return 'Quotes';
+  if (
+    subj.includes('quote') || subj.includes('invoice') || subj.includes('receipt')
+    || subj.includes('nda') || subj.includes('waiver') || subj.includes('contract')
+  ) return 'Documents';
   if (subj.includes('slack')) return 'Slack';
   return 'Reminders';
 }
 
 function statusClass(status: string) {
-  if (status === 'sent' || status === 'delivered') return { backgroundColor: '#5864C620', color: '#5864C6' };
+  if (status === 'sent' || status === 'delivered' || status === 'signed' || status === 'viewed') return { backgroundColor: '#5864C620', color: '#5864C6' };
   if (status === 'failed') return undefined;
   return undefined;
+}
+
+function documentStatusLabel(status: string) {
+  if (status === 'pending') return 'sent';
+  return status;
 }
 
 export function ActivityPage() {
@@ -44,6 +53,7 @@ export function ActivityPage() {
   const [loading, setLoading] = useState(true);
   const [messages, setMessages] = useState<MessageLogEntry[]>([]);
   const [quotes, setQuotes] = useState<HostQuote[]>([]);
+  const [docs, setDocs] = useState<SmbDocument[]>([]);
   const [filter, setFilter] = useState<Filter>('all');
 
   useEffect(() => {
@@ -53,34 +63,12 @@ export function ActivityPage() {
       const [msgRes, quoteRes, docRes] = await Promise.all([
         supabase.from('message_log').select('*').eq('host_id', profile.id).order('created_at', { ascending: false }).limit(300),
         supabase.from('host_quotes').select('*').eq('host_id', profile.id).order('created_at', { ascending: false }).limit(100),
-        supabase.from('documents').select('*').eq('sender_id', profile.id).in('document_type', ['quote', 'invoice', 'receipt']).order('created_at', { ascending: false }).limit(100),
+        supabase.from('documents').select('*').eq('sender_id', profile.id).order('created_at', { ascending: false }).limit(200),
       ]);
       if (cancelled) return;
       setMessages((msgRes.data ?? []) as MessageLogEntry[]);
-      const hostQuotes = (quoteRes.data ?? []) as HostQuote[];
-      const moneyDocs = (docRes.data ?? []) as { id: string; token: string; recipient_name?: string; recipient_email?: string | null; recipient_phone?: string | null; document_type: string; created_at: string; status: string }[];
-      const migratedTokens = new Set(moneyDocs.map((d) => d.token));
-      const leftover = hostQuotes.filter((q) => !migratedTokens.has(q.token));
-      const fromDocs: HostQuote[] = moneyDocs.map((d) => ({
-        id: d.id,
-        host_id: profile.id,
-        token: d.token,
-        kind: d.document_type as HostQuote['kind'],
-        client_name: d.recipient_name ?? null,
-        client_email: d.recipient_email ?? null,
-        client_phone: d.recipient_phone ?? null,
-        line_items: [],
-        notes: null,
-        pay_elsewhere_url: null,
-        pay_elsewhere_label: null,
-        currency: 'USD',
-        tax_percent: 0,
-        status: d.status === 'signed' ? 'sent' : 'draft',
-        sent_via: [],
-        created_at: d.created_at,
-        updated_at: d.created_at,
-      }));
-      setQuotes([...fromDocs, ...leftover]);
+      setQuotes((quoteRes.data ?? []) as HostQuote[]);
+      setDocs((docRes.data ?? []) as SmbDocument[]);
       setLoading(false);
     })();
     return () => { cancelled = true; };
@@ -97,21 +85,34 @@ export function ActivityPage() {
       status: entry.status,
       source: sourceLabel(entry),
     }));
-    const quoteRows = quotes.map((q) => ({
-      id: `quote-${q.id}`,
-      kind: 'quote' as const,
-      at: q.updated_at || q.created_at,
-      channel: 'quote',
-      title: q.client_name || q.client_email || q.client_phone || 'No client name',
-      detail: `${q.kind}${q.sent_via?.length ? ` · ${(q.sent_via).join(', ')}` : ''}`,
-      status: q.status,
-      source: 'Quotes',
+    const docRows = docs.map((d) => ({
+      id: `doc-${d.id}`,
+      kind: 'document' as const,
+      at: d.created_at,
+      channel: 'document',
+      title: d.recipient_name || d.recipient_email || d.recipient_phone || 'No recipient name',
+      detail: `${documentTypeLabel(d.document_type)} · ${documentStatusLabel(d.status)}`,
+      status: documentStatusLabel(d.status),
+      source: 'Doc Center',
     }));
-    const merged = [...msgRows, ...quoteRows].sort((a, b) => +new Date(b.at) - +new Date(a.at));
+    const migratedTokens = new Set(docs.map((d) => d.token));
+    const leftoverQuoteRows = quotes
+      .filter((q) => !migratedTokens.has(q.token))
+      .map((q) => ({
+        id: `quote-${q.id}`,
+        kind: 'document' as const,
+        at: q.updated_at || q.created_at,
+        channel: 'document',
+        title: q.client_name || q.client_email || q.client_phone || 'No client name',
+        detail: `${q.kind}${q.sent_via?.length ? ` · ${q.sent_via.join(', ')}` : ''}`,
+        status: q.status,
+        source: 'Doc Center',
+      }));
+    const merged = [...msgRows, ...docRows, ...leftoverQuoteRows].sort((a, b) => +new Date(b.at) - +new Date(a.at));
     if (filter === 'messages') return merged.filter((r) => r.kind === 'message');
-    if (filter === 'quotes') return merged.filter((r) => r.kind === 'quote');
+    if (filter === 'documents') return merged.filter((r) => r.kind === 'document');
     return merged;
-  }, [messages, quotes, filter]);
+  }, [messages, quotes, docs, filter]);
 
   if (loading) {
     return (
@@ -126,7 +127,7 @@ export function ActivityPage() {
       <div>
         <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Activity</h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          One place for reminder sends, tests, and quote/invoice deliveries from every tool.
+          One place for reminder sends, tests, and every Doc Center send — NDAs, waivers, contracts, invoices, quotes, and receipts. Status updates when they view or sign.
         </p>
       </div>
 
@@ -134,7 +135,7 @@ export function ActivityPage() {
         {([
           { id: 'all' as const, label: 'All' },
           { id: 'messages' as const, label: 'Messages' },
-          { id: 'quotes' as const, label: 'Quotes & invoices' },
+          { id: 'documents' as const, label: 'Documents' },
         ]).map((f) => (
           <button
             key={f.id}
@@ -165,7 +166,7 @@ export function ActivityPage() {
               </div>
               <div className="flex flex-col items-end gap-1 shrink-0">
                 <span
-                  className={`text-xs px-2 py-0.5 rounded-full ${row.status === 'failed' ? 'bg-red-500/10 text-red-400' : row.status !== 'sent' && row.status !== 'delivered' ? 'bg-slate-100 dark:bg-slate-800 text-slate-500' : ''}`}
+                  className={`text-xs px-2 py-0.5 rounded-full ${row.status === 'failed' ? 'bg-red-500/10 text-red-400' : row.status === 'sent' || row.status === 'delivered' || row.status === 'viewed' || row.status === 'signed' ? '' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}
                   style={statusClass(row.status)}
                 >
                   {row.status}
@@ -178,14 +179,14 @@ export function ActivityPage() {
           ))}
           {rows.length === 0 && (
             <p className="px-5 py-10 text-center text-slate-400 text-sm">
-              Nothing logged yet. Reminder tests and quote sends will show up here.
+              Nothing logged yet. Reminder tests and Doc Center sends will show up here.
             </p>
           )}
         </div>
       </div>
 
       <p className="text-xs text-slate-400">
-        Open a quote to edit it on{' '}
+        Open a document on{' '}
         <Link to="/dashboard/documents" className="font-semibold underline text-slate-600 dark:text-slate-300">Doc Center</Link>
         . Reminder templates stay under{' '}
         <Link to="/dashboard/reminders" className="font-semibold underline text-slate-600 dark:text-slate-300">Smart Reminders</Link>.

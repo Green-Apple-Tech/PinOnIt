@@ -8,6 +8,7 @@ import { revealTool } from '../lib/progressiveDisclosure';
 import { quoteTotals } from '../lib/quoteMath';
 import {
   HOLD_UP_COPY,
+  WAIVER_HOST_HINT,
   SMB_DOCUMENT_TYPES,
   defaultVerificationRequired,
   defaultWaiverText,
@@ -513,6 +514,13 @@ export function CreateDocumentPage() {
               <span className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-slate-400">
                 Waiver language
               </span>
+              <p className="mt-2 mb-3 text-sm text-gray-600 dark:text-slate-300 leading-relaxed">
+                {WAIVER_HOST_HINT} Fill in [Business Name] and [Activity/Service Description]. You can edit this send below, or save a default in{' '}
+                <Link to="/dashboard/settings?tab=docs" className="font-semibold text-brand-600 hover:text-brand-700">
+                  Settings → Docs
+                </Link>
+                .
+              </p>
               <textarea
                 value={customText}
                 onChange={(e) => setCustomText(e.target.value)}
@@ -521,9 +529,6 @@ export function CreateDocumentPage() {
                 className={`${fieldClass} min-h-[16rem] font-mono text-sm leading-relaxed`}
               />
             </label>
-            <p className="mt-2 text-xs text-gray-400">
-              Fill in [Business Name] and [Activity/Service Description]. Have an attorney review this for your state and activity before you rely on it.
-            </p>
           </div>
         ) : selectedTemplate ? (
           <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-6">
