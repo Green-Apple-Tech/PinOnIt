@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import { effectivePlan, isActivePlan } from '../lib/plan';
 import { supabase } from '../lib/supabase';
 import { TIMEZONES } from '../lib/types';

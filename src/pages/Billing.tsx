@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase';
 import { syncStripeSubscription } from '../lib/stripe';
 import { effectivePlan, isActivePlan, isComplimentaryPro } from '../lib/plan';
 import {
-  Check, Zap, Loader2, AlertCircle, ArrowRight,
+  Check, Zap, Loader2, AlertCircle,
   DollarSign, TrendingUp, Copy, Users, ChevronDown,
   Shield, Info, X,
 } from 'lucide-react';

@@ -325,7 +325,7 @@ function PaymentTab({
 }
 
 export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
-  const { profile, subscription, refreshProfile } = useAuth();
+  const { profile, refreshProfile } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
