@@ -69,7 +69,7 @@ const COMP_ROWS: CompRow[] = [
   { feature: 'Bookings write to Google / Outlook', pinonit: true, calendly: false, acuity: false },
   { feature: 'Remind coworkers / assistant', pinonit: true, calendly: false, acuity: false },
   { feature: 'Two-way SMS cancel/reschedule', pinonit: true, calendly: false, acuity: false },
-  { feature: 'Quotes / invoices / receipts', pinonit: true, calendly: false, acuity: false },
+  { feature: 'NDAs, waivers, contracts, invoices', pinonit: true, calendly: false, acuity: false },
   { feature: 'Paid Booking storefront', pinonit: true, calendly: false, acuity: false },
   { feature: 'QR code generator', pinonit: true, calendly: false, acuity: false },
   { feature: 'Email signature generator', pinonit: true, calendly: false, acuity: false },
@@ -89,7 +89,7 @@ const COMP_ROWS: CompRow[] = [
   { feature: 'PayPal payments',   pinonit: 'Pro', calendly: false, acuity: false },
 ];
 
-const SCREENSHOT_V = '20260826';
+const SCREENSHOT_V = '20260901';
 
 const SCREENSHOTS = [
   {
@@ -131,6 +131,22 @@ const SCREENSHOTS = [
     tag: 'Public Booking Page',
     color: 'from-orange-500 to-orange-600',
     image: `/screenshots/booking-page.png?v=${SCREENSHOT_V}`,
+  },
+  {
+    title: 'QR Code Creator',
+    emoji: '📲',
+    desc: 'Print a booking QR for cards, trucks, and shop windows. Scan to book — no app, no account.',
+    tag: 'QR Codes',
+    color: 'from-cyan-500 to-sky-700',
+    image: `/screenshots/qr-code.png?v=${SCREENSHOT_V}`,
+  },
+  {
+    title: 'Email Signature',
+    emoji: '✍️',
+    desc: 'A professional signature with your booking link built in, so every email can get you a meeting.',
+    tag: 'Email Signature',
+    color: 'from-rose-500 to-pink-700',
+    image: `/screenshots/email-signature.png?v=${SCREENSHOT_V}`,
   },
   {
     title: 'Group Scheduling',
@@ -187,8 +203,8 @@ function ScreenshotShowcase() {
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3">
             Everything you need to schedule — and actually show up
           </h2>
-          <p className="text-gray-500 dark:text-slate-400 text-lg max-w-xl mx-auto">
-            Reminders, calendar write-back, booking pages, and mobile-native sharing — in one subscription.
+          <p className="text-gray-500 dark:text-slate-400 text-lg max-w-2xl mx-auto">
+            Reminders, Doc Center, QR codes, email signatures, calendar write-back, and booking pages — in one subscription.
           </p>
         </div>
 
@@ -407,6 +423,12 @@ export function Landing() {
         </div>
       </div>
 
+      <div className="border-b border-brand-200 dark:border-brand-500/30 bg-brand-50 dark:bg-brand-500/10 px-6 py-3.5">
+        <p className="text-center text-sm sm:text-base font-semibold text-brand-800 dark:text-brand-100 max-w-3xl mx-auto leading-snug">
+          {HOLD_UP_COPY}
+        </p>
+      </div>
+
       {/* ── 1. HERO ── */}
       <section className="relative overflow-hidden pt-20 pb-24 px-6 text-center">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -414,12 +436,21 @@ export function Landing() {
         </div>
 
         <div className="relative max-w-4xl mx-auto">
-          <p className="inline-flex items-center gap-2 px-3 py-1.5 mb-6 rounded-full bg-brand-100 dark:bg-brand-500/20 text-brand-600 dark:text-brand-200 text-xs font-bold uppercase tracking-widest">
-            <Calendar className="h-3.5 w-3.5" />
-            Calendar scheduler
+          <p className="inline-flex flex-wrap items-center justify-center gap-2 px-3 py-1.5 mb-6 rounded-full bg-brand-100 dark:bg-brand-500/20 text-brand-600 dark:text-brand-200 text-xs font-bold uppercase tracking-widest">
+            <span className="inline-flex items-center gap-1.5">
+              <Calendar className="h-3.5 w-3.5" />
+              Calendar scheduler
+            </span>
             <span className="text-slate-300 dark:text-slate-600">·</span>
-            <Bell className="h-3.5 w-3.5" />
-            Super reminder app
+            <span className="inline-flex items-center gap-1.5">
+              <Bell className="h-3.5 w-3.5" />
+              Super reminder app
+            </span>
+            <span className="text-slate-300 dark:text-slate-600">·</span>
+            <span className="inline-flex items-center gap-1.5">
+              <ClipboardSignature className="h-3.5 w-3.5" />
+              Doc Center
+            </span>
           </p>
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[1.08] text-slate-900 dark:text-white mb-6 max-w-4xl mx-auto">
             Let clients book your time easily—with{' '}
@@ -516,6 +547,9 @@ export function Landing() {
           </div>
 
           <div className="rounded-3xl border-2 border-brand-200 dark:border-brand-500/30 bg-gradient-to-br from-brand-50 to-white dark:from-brand-900/20 dark:to-slate-900 p-8 md:p-10 mb-8">
+            <p className="text-sm sm:text-base font-semibold text-brand-800 dark:text-brand-200 leading-snug max-w-3xl mb-6">
+              {HOLD_UP_COPY}
+            </p>
             <div className="flex items-start gap-4">
               <div className="h-12 w-12 rounded-2xl bg-brand-600 text-white flex items-center justify-center shrink-0">
                 <ClipboardSignature className="h-6 w-6" />
@@ -531,9 +565,6 @@ export function Landing() {
                 <div className="mt-4">
                   <DocTypeShortcutRow loggedIn={!!user} className="justify-start" />
                 </div>
-                <p className="mt-4 text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-3xl">
-                  {HOLD_UP_COPY}
-                </p>
               </div>
             </div>
           </div>
@@ -763,7 +794,8 @@ export function Landing() {
                 'Critical alerts + voice reminders',
                 'Personal “remind me…” with calendar write-back',
                 'Bookings sync to Google / Outlook',
-                'Quotes, invoices, Paid Booking storefront',
+                'Doc Center: NDAs, waivers, invoices, quotes',
+                'Paid Booking storefront',
                 'Calendly import + referral credits',
               ].map((f) => (
                 <li key={f} className="flex items-start gap-2.5">

@@ -18,6 +18,7 @@ describe('campaignCopy', () => {
       'quotes',
     ]);
     expect(nda?.loggedInCtaTo).toBe('/dashboard/documents/new');
+    expect(nda?.topBanner).toBe(DOC_HOLD_UP);
   });
 
   it('serves reminders copy as a templated campaign page', () => {

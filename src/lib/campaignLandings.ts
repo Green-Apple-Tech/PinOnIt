@@ -47,6 +47,7 @@ export type CampaignCopy = {
   subhead: string;
   supportingLine?: string;
   typeShortcuts?: readonly { label: string; type: string }[];
+  topBanner?: string;
   steps: CampaignStep[];
   secondaryUseCase: string;
   holdUp?: string;
@@ -65,6 +66,7 @@ export const CAMPAIGN_PAGES: Record<string, CampaignCopy> = {
     subhead: NDA_SUBHEAD,
     supportingLine: NDA_SUPPORTING_LINE,
     typeShortcuts: DOC_TYPE_SHORTCUTS,
+    topBanner: HOLD_UP_COPY,
     steps: [
       { icon: FileText, title: 'Type the topic', desc: 'A short line for what the NDA covers — a deal, a hire, a conversation.' },
       { icon: Smartphone, title: 'Enter their number', desc: 'Just a phone. They do not create an account or download anything.' },

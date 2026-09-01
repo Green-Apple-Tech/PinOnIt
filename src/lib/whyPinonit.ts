@@ -70,8 +70,8 @@ export const CALENDLY_EXCLUSIVES: ExclusiveFeature[] = [
   {
     id: 'quotes',
     icon: '🧾',
-    title: 'Quotes, invoices, receipts',
-    desc: 'Send a quote, invoice, or receipt by email, SMS, or WhatsApp. Completely outside Calendly’s product.',
+    title: 'NDAs, waivers, contracts, invoices',
+    desc: 'Send an NDA, waiver, contract, invoice, quote, or receipt over SMS. They verify and sign on their phone. Calendly has none of this.',
     tag: 'Not on Calendly',
   },
   {
@@ -146,7 +146,7 @@ export const WHY_PINONIT = {
     { id: 'coworkers', label: 'Remind coworkers / assistant', pinonit: true, calendly: false },
     { id: 'twoway', label: 'Two-way SMS cancel/reschedule', pinonit: true, calendly: false },
     { id: 'sms', label: 'SMS reminders', pinonit: true, calendly: 'One-way, $16+/mo' },
-    { id: 'quotes', label: 'Quotes / invoices / receipts', pinonit: true, calendly: false },
+    { id: 'quotes', label: 'NDAs, waivers, contracts, invoices', pinonit: true, calendly: false },
     { id: 'storefront', label: 'Paid Booking storefront', pinonit: true, calendly: false },
     { id: 'qr', label: 'QR code generator', pinonit: true, calendly: false },
     { id: 'signature', label: 'Email signature generator', pinonit: true, calendly: false },

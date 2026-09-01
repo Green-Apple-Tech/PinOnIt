@@ -83,6 +83,14 @@ export function CampaignLanding({ copy }: { copy: CampaignCopy }) {
         </div>
       </nav>
 
+      {copy.topBanner ? (
+        <div className="border-b border-brand-200 dark:border-brand-500/30 bg-brand-50 dark:bg-brand-500/10 px-6 py-3.5">
+          <p className="text-center text-sm sm:text-base font-semibold text-brand-800 dark:text-brand-100 max-w-3xl mx-auto leading-snug">
+            {copy.topBanner}
+          </p>
+        </div>
+      ) : null}
+
       <section className="relative overflow-hidden pt-16 pb-12 px-6 text-center">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 h-[500px] w-[800px] rounded-full bg-brand-500/5 blur-3xl" />
@@ -146,7 +154,7 @@ export function CampaignLanding({ copy }: { copy: CampaignCopy }) {
           <p className="text-lg font-semibold text-slate-900 dark:text-white leading-relaxed">
             {copy.secondaryUseCase}
           </p>
-          {copy.holdUp ? (
+          {copy.holdUp && copy.holdUp !== copy.topBanner ? (
             <p className="mt-6 text-base text-slate-600 dark:text-slate-300 leading-relaxed">{copy.holdUp}</p>
           ) : null}
           <Link
