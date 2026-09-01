@@ -260,7 +260,7 @@ export function AnalyticsPage({ embedded }: { embedded?: boolean }) {
                   <BarChart2 className="h-7 w-7 text-brand-600 dark:text-brand-400" />
                 </div>
                 <h2 className="text-base font-bold text-gray-900 dark:text-white mb-1">No bookings to chart yet</h2>
-                <p className="text-sm text-gray-500 dark:text-slate-400 max-w-xs mb-4">Share your booking link. After 10 meetings, Analytics also appears in your sidebar.</p>
+                <p className="text-sm text-gray-500 dark:text-slate-400 max-w-xs mb-4">Share your booking link. After 10 meetings, Analytics also appears under Settings.</p>
                 <Link to="/dashboard#share" className="inline-flex text-sm font-semibold text-brand-600 hover:underline">Share your link →</Link>
               </div>
             )

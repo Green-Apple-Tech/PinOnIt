@@ -98,7 +98,7 @@ function formatPhone(raw: string): string {
   return `+${digits}`;
 }
 
-export function ContactsPage() {
+export function ContactsPage({ embedded = false }: { embedded?: boolean }) {
   const { profile } = useAuth();
 
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -246,7 +246,11 @@ export function ContactsPage() {
     }
 
     if (cleanUrl && mounted) {
-      window.history.replaceState({}, '', window.location.pathname);
+      const keep = new URLSearchParams();
+      const tab = params.get('tab');
+      if (tab) keep.set('tab', tab);
+      const qs = keep.toString();
+      window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
     }
 
     return () => { mounted = false };
@@ -971,8 +975,11 @@ export function ContactsPage() {
     const pastBookings = selected.bookings.filter((b) => new Date(b.start_time) < now);
     const futureBookings = selected.bookings.filter((b) => new Date(b.start_time) >= now);
 
+    const Wrapper = embedded ? 'div' : 'main';
+    const wrapClass = embedded ? 'w-full' : 'p-6 md:p-8 max-w-2xl';
+
     return (
-      <main className="p-6 md:p-8 max-w-2xl">
+      <Wrapper className={wrapClass}>
         <button
           onClick={() => { closeInviteMenus(); setEditingContact(false); setSelected(null); }}
           className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white transition-colors mb-6"
@@ -1198,13 +1205,16 @@ export function ContactsPage() {
             ))}
           </div>
         </div>
-      </main>
+      </Wrapper>
     );
   }
 
   // ── List view ────────────────────────────────────────────────────────────────
+  const ListWrapper = embedded ? 'div' : 'main';
+  const listClass = embedded ? 'w-full' : 'p-6 md:p-8 max-w-3xl';
+
   return (
-    <main className="p-6 md:p-8 max-w-3xl">
+    <ListWrapper className={listClass}>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
         <div>
@@ -1705,6 +1715,6 @@ export function ContactsPage() {
           </p>
         </>
       )}
-    </main>
+    </ListWrapper>
   );
 }

@@ -1,3 +1,5 @@
+import { HOLD_UP_COPY } from './documentCopy';
+
 export type PageHelpGuide = {
   title: string;
   purpose: string;
@@ -14,6 +16,8 @@ function keyFromLocation(pathname: string, search: string, hash: string): string
     if (tab === 'analytics') return 'analytics';
     if (tab === 'billing') return 'billing';
     if (tab === 'activity') return 'activity';
+    if (tab === 'event-types') return 'services';
+    if (tab === 'contacts') return 'contacts';
     return 'settings';
   }
   if (pathname.startsWith('/dashboard/appointments')) return 'calendar';
@@ -91,7 +95,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
   },
   documents: {
     title: 'Doc Center',
-    purpose: "Send quotes, invoices, receipts, NDAs, contracts, and liability waivers from one place. Built to hold up if it's ever challenged — verified signatures, timestamps, and identity confirmation when you turn verification on.",
+    purpose: `Send quotes, invoices, receipts, NDAs, contracts, and liability waivers from one place. ${HOLD_UP_COPY}`,
     steps: [
       'Tap New document and pick a type. Quotes, invoices, and receipts include line items and tax.',
       'Add the recipient name. Phone is required only when verification is on (default for NDAs, contracts, and waivers).',
@@ -187,7 +191,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
       'General → set your name and booking username.',
       'Turn on Advanced mode if you want every tool in the sidebar.',
       'Settings → General → Advanced to block an email or domain from booking, or mark it as spam.',
-      'Use the tabs for Availability, Billing, and Analytics.',
+      'Use the tabs for Event types, Contacts, Availability, Billing, and Analytics.',
     ],
   },
   activity: {
@@ -203,7 +207,8 @@ const GUIDES: Record<string, PageHelpGuide> = {
     purpose: 'Every extra PinOnIt tool in one place. In simple mode these stay tucked away until you need them.',
     steps: [
       'Open any card to use that tool.',
-      'Paid booking, quotes, and the rest stay here so the main menu stays simple.',
+      'Send SMS NDA/Waiver sits in the main sidebar; Event types, Contacts, Analytics, and Referrals live under Settings.',
+      'Paid booking, Doc Center, and the rest stay here so the main menu stays simple.',
       'Turn on Advanced mode in Settings if you want every tool listed in the sidebar.',
     ],
   },

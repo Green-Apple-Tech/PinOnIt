@@ -79,6 +79,24 @@ export function DocumentsPage() {
         </Link>
       </div>
 
+      <div className="flex flex-wrap gap-2 mb-6">
+        {[
+          { to: '/dashboard/documents/new?type=nda', label: 'Send NDA' },
+          { to: '/dashboard/documents/new?type=waiver', label: 'Send Waiver' },
+          { to: '/dashboard/documents/new?type=invoice', label: 'Send Invoice/Quote' },
+          { to: '/dashboard/documents/new?type=contract', label: 'Send Contract' },
+          { to: '/dashboard/documents/new?type=receipt', label: 'Send Receipt' },
+        ].map((btn) => (
+          <Link
+            key={btn.to}
+            to={btn.to}
+            className="inline-flex items-center justify-center min-h-11 px-3.5 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-semibold text-gray-700 dark:text-slate-200 hover:border-brand-400 hover:text-brand-700 dark:hover:text-brand-300"
+          >
+            {btn.label}
+          </Link>
+        ))}
+      </div>
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         {[
           ['Sent', stats.total],

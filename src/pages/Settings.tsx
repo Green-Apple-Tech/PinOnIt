@@ -31,10 +31,12 @@ import { AnalyticsPage } from './Analytics';
 import { BillingPage } from './Billing';
 import { AvailabilityPage } from './Availability';
 import { ActivityPage } from './Activity';
+import { ServicesPage } from './Services';
+import { ContactsPage } from './Contacts';
 import { SmsBookingConsent } from '../components/SmsConsentText';
 import { SESSION_TIMEOUT_OPTIONS, sessionTimeoutOptionValue } from '../lib/sessionTimeout';
 
-type SettingsSection = 'general' | 'availability' | 'activity' | 'analytics' | 'billing';
+type SettingsSection = 'general' | 'availability' | 'activity' | 'analytics' | 'billing' | 'event-types' | 'contacts';
 type SettingsTab = 'profile' | 'booking_page' | 'branding' | 'embed' | 'referrals' | 'coworkers' | 'integrations' | 'advanced';
 
 const REMINDER_CHANNEL_OPTIONS: { value: ReminderChannelPreference; label: string; icon: typeof Mail }[] = [
@@ -384,7 +386,7 @@ export function SettingsPage() {
     const p = new URLSearchParams(location.search).get('tab');
     if (p === 'reminders' || p === 'coworkers') return 'general';
     if (p && GENERAL_TABS.includes(p as SettingsTab)) return 'general';
-    if (p === 'analytics' || p === 'billing' || p === 'availability' || p === 'activity') return p;
+    if (p === 'analytics' || p === 'billing' || p === 'availability' || p === 'activity' || p === 'event-types' || p === 'contacts') return p;
     return 'general';
   };
 
@@ -518,7 +520,7 @@ export function SettingsPage() {
     if (p && GENERAL_TABS.includes(p as SettingsTab)) {
       setSection('general');
       setTab(p as SettingsTab);
-    } else if (p === 'analytics' || p === 'billing' || p === 'availability' || p === 'activity') {
+    } else if (p === 'analytics' || p === 'billing' || p === 'availability' || p === 'activity' || p === 'event-types' || p === 'contacts') {
       setSection(p);
     }
 
@@ -855,7 +857,7 @@ export function SettingsPage() {
 
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Manage your profile, booking page, coworkers, availability, activity, analytics, and billing.</p>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Manage your profile, booking page, event types, contacts, coworkers, availability, activity, analytics, and billing.</p>
       </div>
 
       {/* Top-level section tabs */}
@@ -863,6 +865,8 @@ export function SettingsPage() {
         {([
           { key: 'general', label: 'General' },
           { key: 'availability', label: 'Availability' },
+          { key: 'event-types', label: 'Event types' },
+          { key: 'contacts', label: 'Contacts' },
           { key: 'activity', label: 'Activity' },
           { key: 'analytics', label: 'Analytics' },
           { key: 'billing', label: 'Billing' },
@@ -883,6 +887,10 @@ export function SettingsPage() {
 
       {/* Availability section */}
       {section === 'availability' && <AvailabilityPage embedded />}
+
+      {section === 'event-types' && <ServicesPage embedded />}
+
+      {section === 'contacts' && <ContactsPage embedded />}
 
       {section === 'activity' && <ActivityPage />}
 

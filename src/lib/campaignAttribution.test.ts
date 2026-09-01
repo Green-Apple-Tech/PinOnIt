@@ -47,4 +47,15 @@ describe('campaignAttribution', () => {
     expect(readCampaignParams().utm_campaign).toBe('nda-launch');
     expect(campaignQueryString()).toContain('utm_campaign=nda-launch');
   });
+
+  it('preserves UTMs captured on the reminders campaign landing', () => {
+    captureCampaignParams(
+      '?utm_source=ads&utm_campaign=reminders-sms&utm_medium=cpc',
+      '/reminders',
+    );
+    expect(readCampaignParams().landing).toBe('/reminders');
+    expect(signupHref()).toBe(
+      '/signup?utm_source=ads&utm_medium=cpc&utm_campaign=reminders-sms',
+    );
+  });
 });

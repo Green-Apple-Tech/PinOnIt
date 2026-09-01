@@ -1,5 +1,5 @@
 import { Component, lazy, Suspense, useEffect, type ErrorInfo, type ReactNode } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation, useSearchParams } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
 import { ThemeProvider } from './hooks/useTheme';
 import { AuthForm } from './components/Auth';
@@ -35,9 +35,6 @@ function CampaignParamCapture() {
 const Dashboard = lazy(() =>
   import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })),
 );
-const ServicesPage = lazy(() =>
-  import('./pages/Services').then((m) => ({ default: m.ServicesPage })),
-);
 const AppointmentsPage = lazy(() =>
   import('./pages/Appointments').then((m) => ({ default: m.AppointmentsPage })),
 );
@@ -49,9 +46,6 @@ const SettingsPage = lazy(() =>
 );
 const EmailSignaturePage = lazy(() =>
   import('./pages/EmailSignature').then((m) => ({ default: m.EmailSignaturePage })),
-);
-const ContactsPage = lazy(() =>
-  import('./pages/Contacts').then((m) => ({ default: m.ContactsPage })),
 );
 const MeetingPollsPage = lazy(() =>
   import('./pages/MeetingPolls').then((m) => ({ default: m.MeetingPollsPage })),
@@ -106,6 +100,13 @@ class QuietErrorBoundary extends Component<{ children: ReactNode }, { hasError: 
   }
 }
 
+function SettingsTabRedirect({ tab }: { tab: string }) {
+  const [params] = useSearchParams();
+  const next = new URLSearchParams(params);
+  next.set('tab', tab);
+  return <Navigate to={`/dashboard/settings?${next.toString()}`} replace />;
+}
+
 function RefRedirect() {
   const { code } = useParams<{ code: string }>();
   return <Navigate to={`/signup?ref=${code}`} replace />;
@@ -122,6 +123,7 @@ function App() {
             {/* Fixed paths must come before the /:slug wildcard */}
             <Route path="/" element={<Landing />} />
             <Route path="/nda" element={<CampaignLandingPage slug="nda" />} />
+            <Route path="/reminders" element={<CampaignLandingPage slug="reminders" />} />
             <Route path="/why-pinonit" element={<WhyPinOnItPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
@@ -154,12 +156,12 @@ function App() {
                 </ProtectedRoute>
               }
             >
-              <Route path="services" element={<ServicesPage />} />
+              <Route path="services" element={<SettingsTabRedirect tab="event-types" />} />
               <Route path="availability" element={<Navigate to="/dashboard/settings?tab=availability" replace />} />
               <Route path="reminders" element={<RemindersPage />} />
               <Route path="activity" element={<Navigate to="/dashboard/settings?tab=activity" replace />} />
               <Route path="appointments" element={<AppointmentsPage />} />
-              <Route path="contacts" element={<ContactsPage />} />
+              <Route path="contacts" element={<SettingsTabRedirect tab="contacts" />} />
               <Route path="messaging" element={<Navigate to="/dashboard/reminders" replace />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="billing" element={<Navigate to="/dashboard/settings?tab=billing" replace />} />

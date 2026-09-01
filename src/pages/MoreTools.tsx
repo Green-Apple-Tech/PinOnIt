@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   QrCode, Mail, ClipboardSignature, ArrowRight,
-  CalendarDays, Users, ShoppingBag, Bell, Sparkles, Gift,
+  CalendarDays, Users, ShoppingBag, Bell, Sparkles,
   ChevronDown, type LucideIcon,
 } from 'lucide-react';
 
@@ -74,28 +74,12 @@ const INCLUDED_TOOLS: ToolItem[] = [
     to: '/dashboard/paid-booking',
   },
   {
-    id: 'referrals',
-    icon: Gift,
-    title: 'Referrals — save on Pro',
-    description: 'Share your referral link. When someone upgrades to Pro, you earn $1/month off your bill. Six referrals covers a full Pro plan.',
-    buttonLabel: 'Open Referrals',
-    to: '/dashboard/settings?tab=referrals',
-  },
-  {
     id: 'group',
     icon: Users,
     title: 'Group Scheduling',
     description: 'Run meeting polls, coordinate via SMS with phone-only invitees, and find a time that works for everyone.',
     buttonLabel: 'Open Group Scheduling',
     to: '/dashboard/group-scheduling',
-  },
-  {
-    id: 'contacts',
-    icon: Users,
-    title: 'Contacts',
-    description: 'Import from Gmail or Outlook, add people by hand, and see every booking with a client in one place.',
-    buttonLabel: 'Open Contacts',
-    to: '/dashboard/contacts',
   },
   {
     id: 'appointments',

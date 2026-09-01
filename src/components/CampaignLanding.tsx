@@ -23,8 +23,8 @@ export function CampaignLanding({ copy }: { copy: CampaignCopy }) {
     image: 'https://pinonit.com/pinonit_logo.png',
   });
 
-  const ctaTo = user ? '/dashboard/documents/new' : signupHref();
-  const ctaLabel = user ? 'Open Doc Center' : 'Start Free Trial';
+  const ctaTo = user ? copy.loggedInCtaTo : signupHref();
+  const ctaLabel = user ? copy.loggedInCtaLabel : 'Start Free Trial';
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
@@ -63,9 +63,14 @@ export function CampaignLanding({ copy }: { copy: CampaignCopy }) {
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight leading-[1.08] text-slate-900 dark:text-white mb-6">
             {copy.headline}
           </h1>
-          <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto mb-8 leading-relaxed">
+          <p className={`text-lg sm:text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed ${copy.supportingLine ? 'mb-4' : 'mb-8'}`}>
             {copy.subhead}
           </p>
+          {copy.supportingLine ? (
+            <p className="text-sm sm:text-base font-normal text-slate-500 dark:text-slate-400 max-w-xl mx-auto mb-8 leading-relaxed">
+              {copy.supportingLine}
+            </p>
+          ) : null}
           <Link
             to={ctaTo}
             className="inline-flex items-center gap-2 px-8 py-4 bg-brand-500 hover:bg-brand-600 text-white font-bold text-lg rounded-full transition-colors shadow-lg shadow-brand-500/25"
@@ -105,16 +110,20 @@ export function CampaignLanding({ copy }: { copy: CampaignCopy }) {
           <p className="text-lg font-semibold text-slate-900 dark:text-white leading-relaxed">
             {copy.secondaryUseCase}
           </p>
-          <p className="mt-6 text-base text-slate-600 dark:text-slate-300 leading-relaxed">{copy.holdUp}</p>
+          {copy.holdUp ? (
+            <p className="mt-6 text-base text-slate-600 dark:text-slate-300 leading-relaxed">{copy.holdUp}</p>
+          ) : null}
           <Link
             to={ctaTo}
             className="mt-8 inline-flex items-center gap-2 px-8 py-4 bg-brand-500 hover:bg-brand-600 text-white font-bold text-lg rounded-full transition-colors"
           >
             {ctaLabel} <ArrowRight className="h-5 w-5" />
           </Link>
-          <p className="mt-6 text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-xl mx-auto">
-            {copy.disclaimer}
-          </p>
+          {copy.disclaimer ? (
+            <p className="mt-6 text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-xl mx-auto">
+              {copy.disclaimer}
+            </p>
+          ) : null}
         </div>
       </section>
     </div>

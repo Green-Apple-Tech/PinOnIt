@@ -9,7 +9,7 @@ import {
   DollarSign, Users,
   ChevronRight, Pause, Play,
   Calendar, Bell, Mail, MessageCircle, MessagesSquare, Phone,
-  ClipboardSignature, QrCode, BarChart3, Gift, ShoppingBag, Contact,
+  ClipboardSignature, QrCode, ShoppingBag,
 } from 'lucide-react';
 import { OnboardingBot } from '../components/OnboardingBot';
 import { CALENDLY_EXCLUSIVES } from '../lib/whyPinonit';
@@ -378,20 +378,16 @@ export function Landing() {
       {/* ── App pill bar ── */}
       <div className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 py-3">
         <p className="text-center text-lg sm:text-2xl font-black uppercase tracking-wide sm:tracking-[0.16em] text-[#ff4d1a] px-4">
-          10 tools in one
+          6 tools in one
         </p>
         <div className="mt-1.5 flex flex-wrap items-center justify-center gap-2 px-4">
           {[
             { num: '1', label: 'Scheduling' },
             { num: '2', label: 'Smart Reminders' },
             { num: '3', label: 'Doc Center' },
-            { num: '4', label: 'Group Scheduling' },
-            { num: '5', label: 'Paid Booking' },
-            { num: '6', label: 'QR Code Creator' },
-            { num: '7', label: 'Email Signature' },
-            { num: '8', label: 'Analytics' },
-            { num: '9', label: 'Referrals' },
-            { num: '10', label: 'Contacts' },
+            { num: '4', label: 'Paid Booking' },
+            { num: '5', label: 'QR Code Creator' },
+            { num: '6', label: 'Email Signature' },
           ].map(({ num, label }) => (
             <div key={num} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full shadow-sm">
               <span className="h-[18px] w-[18px] rounded-full bg-brand-500 text-white text-[10px] font-black flex items-center justify-center shrink-0">{num}</span>
@@ -502,15 +498,15 @@ export function Landing() {
 
       <ScreenshotShowcase />
 
-      {/* ── 10 tools in one ── */}
+      {/* ── 6 tools in one ── */}
       <section className="py-20 bg-white dark:bg-slate-950">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-12">
             <span className="inline-block px-4 py-1.5 bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-300 text-xs font-semibold rounded-full uppercase tracking-widest mb-4">
-              10 tools in one
+              6 tools in one
             </span>
             <h2 className="text-4xl md:text-5xl font-bold text-slate-900 dark:text-white mb-4">
-              One login. Ten tools.
+              One login. Six tools.
             </h2>
             <p className="text-slate-500 dark:text-slate-400 text-lg max-w-2xl mx-auto">
               Scheduling plus the extras small businesses actually use — without a stack of apps.
@@ -538,13 +534,9 @@ export function Landing() {
             {[
               { icon: Calendar, title: 'Scheduling', desc: 'Booking page, event types, and Google / Outlook / Apple sync so you do not double-book.' },
               { icon: Bell, title: 'Smart Reminders', desc: 'Email, SMS, WhatsApp, and voice — plus two-way text to cancel or reschedule.' },
-              { icon: Users, title: 'Group Scheduling', desc: 'Meeting polls for email, or SMS coordinate when you only have phone numbers.' },
               { icon: ShoppingBag, title: 'Paid Booking', desc: 'A price-list storefront. Stripe, PayPal, Venmo, Cash App, or Zelle at booking time.' },
               { icon: QrCode, title: 'QR Code Creator', desc: 'Print a code for cards, trucks, and shop windows that opens your booking page.' },
               { icon: Mail, title: 'Email Signature', desc: 'A signature with your booking link so every email can get you a meeting.' },
-              { icon: BarChart3, title: 'Analytics', desc: 'A simple picture of how many meetings you are booking, by week or month.' },
-              { icon: Gift, title: 'Referrals', desc: 'Share your link. Each Pro signup knocks $1/mo off your bill — six covers Pro.' },
-              { icon: Contact, title: 'Contacts', desc: 'Import Gmail or Outlook, add people by hand, and see every booking with a client.' },
             ].map(({ icon: Icon, title, desc }) => (
               <div key={title} className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6">
                 <div className="h-10 w-10 rounded-xl bg-brand-50 dark:bg-brand-500/10 flex items-center justify-center mb-4">

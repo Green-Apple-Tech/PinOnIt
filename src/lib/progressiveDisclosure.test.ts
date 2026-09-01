@@ -68,11 +68,15 @@ describe('buildSidebarNav', () => {
       'Dashboard',
       'Calendar',
       'Smart Reminders',
+      'Send SMS NDA/Waiver',
     ]);
     expect(primary.map((i) => i.label)).not.toContain('Share');
     expect(moreTools.some((i) => i.label === 'Settings')).toBe(true);
-    expect(moreTools.some((i) => i.label === 'Contacts')).toBe(true);
-    expect(moreTools.some((i) => i.label === 'Referrals')).toBe(true);
+    expect(moreTools.some((i) => i.label === 'Doc Center')).toBe(true);
+    expect(moreTools.some((i) => i.label === 'Contacts')).toBe(false);
+    expect(moreTools.some((i) => i.label === 'Referrals')).toBe(false);
+    expect(moreTools.some((i) => i.label === 'Event types')).toBe(false);
+    expect(moreTools.some((i) => i.label === 'Analytics')).toBe(false);
   });
 
   it('keeps paid booking under More Tools in simple mode even after it is used', () => {
@@ -84,6 +88,7 @@ describe('buildSidebarNav', () => {
   it('flattens every tool in advanced mode', () => {
     const { primary, moreTools } = buildSidebarNav('advanced', []);
     expect(moreTools).toEqual([]);
+    expect(primary.some((i) => i.label === 'Send SMS NDA/Waiver')).toBe(true);
     expect(primary.some((i) => i.label === 'Settings')).toBe(true);
     expect(primary.some((i) => i.label === 'Doc Center')).toBe(true);
     expect(primary.some((i) => i.label === 'Paid Booking')).toBe(true);
@@ -117,9 +122,9 @@ describe('navPathMatches', () => {
     expect(navPathMatches('/dashboard#share', '/dashboard', '', '#share')).toBe(true);
   });
 
-  it('does not highlight Settings when a specialty tab is open', () => {
-    expect(navPathMatches('/dashboard/settings', '/dashboard/settings', '?tab=availability', '')).toBe(false);
-    expect(navPathMatches('/dashboard/settings', '/dashboard/settings', '?tab=referrals', '')).toBe(false);
+  it('highlights Settings when a settings tab is open', () => {
+    expect(navPathMatches('/dashboard/settings', '/dashboard/settings', '?tab=availability', '')).toBe(true);
+    expect(navPathMatches('/dashboard/settings', '/dashboard/settings', '?tab=referrals', '')).toBe(true);
     expect(navPathMatches('/dashboard/settings?tab=availability', '/dashboard/settings', '?tab=availability', '')).toBe(true);
     expect(navPathMatches('/dashboard/settings?tab=referrals', '/dashboard/settings', '?tab=referrals', '')).toBe(true);
   });

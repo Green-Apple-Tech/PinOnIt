@@ -1,11 +1,29 @@
 import type { LucideIcon } from 'lucide-react';
-import { FileText, MessageSquare, PenLine, Smartphone } from 'lucide-react';
-import { HOLD_UP_COPY, LEGAL_DISCLAIMER } from './documents';
+import {
+  Bell,
+  FileText,
+  Mail,
+  MessageCircle,
+  MessageSquare,
+  PenLine,
+  Phone,
+  Smartphone,
+} from 'lucide-react';
+import { HOLD_UP_COPY, LEGAL_DISCLAIMER } from './documentCopy';
 
 export const NDA_HEADLINE = 'Send an NDA over text — verified and signed in 30 seconds';
 
 export const NDA_SUBHEAD =
-  "No app, no login, no downloads for the other person. Just their phone number. They get a text, tap the link, verify it's really them, and sign. Works for NDAs, contracts, invoices, waivers, and more — each backed by a verified signature, timestamp, and phone confirmation. Built to hold up if it's ever challenged — though nothing guarantees legal enforceability, so always have an attorney review anything that matters.";
+  `No app, no login, no downloads for the other person. Just their phone number. They get a text, tap the link, verify it's really them, and sign. Works for NDAs, contracts, invoices, waivers, and more — each backed by a verified signature, timestamp, and phone confirmation. ${HOLD_UP_COPY}`;
+
+export const NDA_SUPPORTING_LINE =
+  'Send a waiver, invoice, contract, receipt, or quote via instant SMS — they approve right from their phone, no app needed.';
+
+export const REMINDERS_HEADLINE =
+  'Reminders they actually get — text, WhatsApp, email, and a call';
+
+export const REMINDERS_SUBHEAD =
+  'A booking is worthless if nobody shows. PinOnIt sends Smart Reminders on the channel people answer: SMS, WhatsApp, email, and voice. Every appointment gets a ping. Critical ones get extras. You can remind yourself about a call or an errand the same way — type it or say it.';
 
 export type CampaignStep = {
   title: string;
@@ -18,12 +36,15 @@ export type CampaignCopy = {
   eyebrow: string;
   headline: string;
   subhead: string;
+  supportingLine?: string;
   steps: CampaignStep[];
   secondaryUseCase: string;
-  holdUp: string;
-  disclaimer: string;
+  holdUp?: string;
+  disclaimer?: string;
   metaTitle: string;
   metaDescription: string;
+  loggedInCtaTo: string;
+  loggedInCtaLabel: string;
 };
 
 export const CAMPAIGN_PAGES: Record<string, CampaignCopy> = {
@@ -32,6 +53,7 @@ export const CAMPAIGN_PAGES: Record<string, CampaignCopy> = {
     eyebrow: 'Doc Center',
     headline: NDA_HEADLINE,
     subhead: NDA_SUBHEAD,
+    supportingLine: NDA_SUPPORTING_LINE,
     steps: [
       { icon: FileText, title: 'Type the topic', desc: 'A short line for what the NDA covers — a deal, a hire, a conversation.' },
       { icon: Smartphone, title: 'Enter their number', desc: 'Just a phone. They do not create an account or download anything.' },
@@ -44,7 +66,30 @@ export const CAMPAIGN_PAGES: Record<string, CampaignCopy> = {
     disclaimer: LEGAL_DISCLAIMER,
     metaTitle: 'Send an NDA over text | PinOnIt Doc Center',
     metaDescription:
-      'Send a legally-backed NDA over text in 30 seconds. No app or login for the other person — they verify by SMS and sign on their phone. Also waivers, contracts, invoices, and receipts.',
+      'Send an NDA over text in 30 seconds. No app or login for the other person — they verify by SMS and sign on their phone. Also waivers, contracts, invoices, and receipts.',
+    loggedInCtaTo: '/dashboard/documents/new',
+    loggedInCtaLabel: 'Open Doc Center',
+  },
+  reminders: {
+    slug: 'reminders',
+    eyebrow: 'Smart Reminders',
+    headline: REMINDERS_HEADLINE,
+    subhead: REMINDERS_SUBHEAD,
+    steps: [
+      { icon: Bell, title: 'Book it or add it', desc: 'A client picks a time, or you tell PinOnIt to remind you about a call, a follow-up, or an errand.' },
+      { icon: Mail, title: 'Choose the channel', desc: 'Email, SMS, WhatsApp, voice — or stack them when the meeting actually matters.' },
+      { icon: MessageCircle, title: 'They get the ping', desc: 'Timed reminders before the appointment. Critical meetings get extra SMS or WhatsApp at 1 hour and 15 minutes.' },
+      { icon: Phone, title: 'They can reply', desc: 'Guests can text 2 to reschedule. You stay off phone tag; they still show up.' },
+    ],
+    secondaryUseCase:
+      'Same reminders for PinOnIt bookings and for anything you add yourself. Coworkers and assistants can get copied in when you need a backup.',
+    holdUp:
+      'Four channels, timed automatically, with extra alerts when missing it would cost you the hour.',
+    metaTitle: 'Smart Reminders | PinOnIt',
+    metaDescription:
+      'SMS, WhatsApp, email, and voice reminders so bookings and appointments actually get shown up to. No extra apps for your clients.',
+    loggedInCtaTo: '/dashboard/reminders',
+    loggedInCtaLabel: 'Open Smart Reminders',
   },
 };
 

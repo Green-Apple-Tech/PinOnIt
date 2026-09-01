@@ -68,11 +68,7 @@ export function isSmbDocumentType(value: string): value is SmbDocumentType {
   return SMB_DOCUMENT_TYPES.some((t) => t.id === value);
 }
 
-export const HOLD_UP_COPY =
-  "Built to hold up if it's ever challenged — verified signatures, timestamps, and identity confirmation.";
-
-export const LEGAL_DISCLAIMER =
-  'This does not guarantee legal enforceability or government certification — consult an attorney for legal advice.';
+export { HOLD_UP_COPY, LEGAL_DISCLAIMER } from './documentCopy';
 
 export function topicCoverLine(topic: string) {
   const trimmed = topic.trim();

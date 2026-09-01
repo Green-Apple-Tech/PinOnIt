@@ -324,7 +324,7 @@ function PaymentTab({
   );
 }
 
-export function ServicesPage() {
+export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
   const { profile, subscription, refreshProfile } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [services, setServices] = useState<Service[]>([]);
@@ -477,10 +477,26 @@ export function ServicesPage() {
     if (!loading) {
       if (newType) {
         const valid: MeetingType[] = ['one_on_one', 'group', 'one_off'];
-        if (valid.includes(newType)) { openNew(newType); setSearchParams({}, { replace: true }); }
+        if (valid.includes(newType)) {
+          openNew(newType);
+          setSearchParams((prev) => {
+            const next = new URLSearchParams(prev);
+            next.delete('new');
+            next.delete('edit');
+            return next;
+          }, { replace: true });
+        }
       } else if (editId) {
         const svc = services.find((s) => s.id === editId);
-        if (svc) { openEdit(svc); setSearchParams({}, { replace: true }); }
+        if (svc) {
+          openEdit(svc);
+          setSearchParams((prev) => {
+            const next = new URLSearchParams(prev);
+            next.delete('new');
+            next.delete('edit');
+            return next;
+          }, { replace: true });
+        }
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -710,8 +726,11 @@ export function ServicesPage() {
   const drawerOpen = editingId !== null;
   const editingSvc = editingId && editingId !== 'new' ? services.find((s) => s.id === editingId) : null;
 
+  const Wrapper = embedded ? 'div' : 'main';
+  const wrapperClass = embedded ? 'w-full' : 'p-6 md:p-8 max-w-3xl';
+
   return (
-    <main className="p-6 md:p-8 max-w-3xl">
+    <Wrapper className={wrapperClass}>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -1679,6 +1698,6 @@ export function ServicesPage() {
           onClose={() => { setQrService(null); setQrUrl(null); }}
         />
       )}
-    </main>
+    </Wrapper>
   );
 }

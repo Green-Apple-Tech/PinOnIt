@@ -1,14 +1,12 @@
 import {
-  BarChart3,
   Bell,
   CalendarCheck,
-  CalendarDays,
   ClipboardSignature,
-  Gift,
   LayoutGrid,
   Mail,
   QrCode,
   Settings,
+  Shield,
   ShoppingBag,
   Users,
   type LucideIcon,
@@ -42,6 +40,15 @@ export const SIMPLE_PRIMARY_NAV: MoreToolsNavItem[] = [
   { label: 'Smart Reminders', icon: Bell, path: '/dashboard/reminders' },
 ];
 
+/** Always-visible shortcuts, inserted above More Tools. */
+export const FEATURED_NAV: MoreToolsNavItem[] = [
+  {
+    label: 'Send SMS NDA/Waiver',
+    icon: Shield,
+    path: '/dashboard/documents/new',
+  },
+];
+
 /** Single source of truth for sidebar More Tools — add items here. */
 export const MORE_TOOLS_NAV: MoreToolsNavItem[] = [
   {
@@ -57,7 +64,6 @@ export const MORE_TOOLS_NAV: MoreToolsNavItem[] = [
     icon: ClipboardSignature,
     path: '/dashboard/documents',
     toolId: 'quotes',
-    activePathPrefixes: ['/dashboard/documents'],
     activePaths: ['/dashboard/quotes'],
   },
   { label: 'Paid Booking', icon: ShoppingBag, path: '/dashboard/paid-booking', toolId: 'paid-booking' },
@@ -68,14 +74,6 @@ export const MORE_TOOLS_NAV: MoreToolsNavItem[] = [
     activePaths: ['/dashboard/qr'],
   },
   { label: 'Email Signature', icon: Mail, path: '/dashboard/signature' },
-  { label: 'Event types', icon: CalendarDays, path: '/dashboard/services' },
-  { label: 'Contacts', icon: Users, path: '/dashboard/contacts' },
-  { label: 'Analytics', icon: BarChart3, path: '/dashboard/settings?tab=analytics', toolId: 'analytics' },
-  {
-    label: 'Referrals',
-    icon: Gift,
-    path: '/dashboard/settings?tab=referrals',
-  },
   { label: 'Settings', icon: Settings, path: '/dashboard/settings' },
 ];
 
@@ -98,9 +96,6 @@ export function navPathMatches(to: string, pathname: string, search = '', hash =
   if (query && !search.includes(query)) return false;
   if (itemHash) return hash === `#${itemHash}`;
   if (path === '/dashboard' && hash === '#share' && !query) return false;
-  if (path === '/dashboard/settings' && !query && /tab=(availability|analytics|referrals)/.test(search)) {
-    return false;
-  }
   return true;
 }
 
@@ -122,9 +117,9 @@ export function buildSidebarNav(
   uiMode: UiMode,
   _revealed: RevealedToolId[] = [],
 ): { primary: DashboardNavItem[]; moreTools: MoreToolsNavItem[] } {
-  const primary = SIMPLE_PRIMARY_NAV.map(toDashboardItem);
+  const primary = [...SIMPLE_PRIMARY_NAV, ...FEATURED_NAV].map(toDashboardItem);
   const extras = MORE_TOOLS_NAV.filter(
-    (item) => !SIMPLE_PRIMARY_NAV.some((p) => p.path === item.path),
+    (item) => !SIMPLE_PRIMARY_NAV.some((p) => p.path === item.path) && !FEATURED_NAV.some((p) => p.path === item.path),
   );
   if (uiMode === 'advanced') {
     return { primary: [...primary, ...extras.map(toDashboardItem)], moreTools: [] };
