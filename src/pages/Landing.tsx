@@ -498,7 +498,7 @@ export function Landing() {
               <Bell className="h-3.5 w-3.5" /> Super reminder app
             </span>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3">
-              Four channels — plus critical alerts when it really matters
+              Reminders on the channels people actually answer
             </h2>
             <p className="text-gray-500 dark:text-slate-400 text-lg max-w-2xl mx-auto">
               Remind yourself and your guests on the channel they actually answer. Critical meetings get extra SMS/WhatsApp at 1 hour and 15 minutes, email at 1 day and 4 hours, and optional voice calls.
