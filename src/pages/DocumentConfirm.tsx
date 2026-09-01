@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import { AlertCircle, CheckCircle, Lock, PenLine, RotateCcw } from 'lucide-react';
 import {
+  CONTRACT_HOST_HINT,
   LEGAL_DISCLAIMER,
   defaultVerificationRequired,
   documentNeedsRecipientAction,
@@ -293,6 +294,12 @@ export function DocumentConfirmPage() {
                   {doc.topic && doc.document_type !== 'nda' && doc.document_type !== 'waiver' ? `${doc.topic}\n\n` : ''}
                   {doc.summary_text}
                 </p>
+              )}
+              {doc?.document_type === 'contract' && (
+                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-900 leading-relaxed">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">Warning</p>
+                  <p className="mt-1">{CONTRACT_HOST_HINT}</p>
+                </div>
               )}
               <button
                 type="button"

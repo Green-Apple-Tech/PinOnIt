@@ -8,6 +8,7 @@ import { revealTool } from '../lib/progressiveDisclosure';
 import { quoteTotals } from '../lib/quoteMath';
 import {
   HOLD_UP_COPY,
+  CONTRACT_HOST_HINT,
   WAIVER_HOST_HINT,
   SMB_DOCUMENT_TYPES,
   defaultDocumentBody,
@@ -631,6 +632,16 @@ export function CreateDocumentPage() {
                   </Link>
                   .
                 </p>
+              ) : documentType === 'contract' ? (
+                <>
+                  <div className="mt-2 mb-3 rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-950/30 px-3 py-2.5 text-sm text-amber-900 dark:text-amber-200 leading-relaxed">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-300">Warning</p>
+                    <p className="mt-1">{CONTRACT_HOST_HINT}</p>
+                  </div>
+                  <p className="mt-1 mb-3 text-sm text-gray-600 dark:text-slate-300 leading-relaxed">
+                    This is what they see and sign. Topic and recipient name fill in from the fields above.
+                  </p>
+                </>
               ) : (
                 <p className="mt-2 mb-3 text-sm text-gray-600 dark:text-slate-300 leading-relaxed">
                   This is what they see and sign. Topic and recipient name fill in from the fields above.

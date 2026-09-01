@@ -82,9 +82,7 @@ This Agreement is entered into as of the date of electronic signature below, bet
 
 6. Electronic signature. An electronic signature or confirmation through this page is intended to have the same effect as a handwritten signature.
 
-7. Entire agreement. This Agreement, together with any amounts and notes shown on this page, is the entire agreement for the scope above.
-
-This is a general-purpose starting template, not legal advice. Contract terms vary by state and by industry. Consult an attorney before relying on this for your situation.`;
+7. Entire agreement. This Agreement, together with any amounts and notes shown on this page, is the entire agreement for the scope above.`;
 
 export const QUOTE_STARTER_TEXT = `QUOTE
 
@@ -191,7 +189,7 @@ export function isSmbDocumentType(value: string): value is SmbDocumentType {
   return SMB_DOCUMENT_TYPES.some((t) => t.id === value);
 }
 
-export { HOLD_UP_COPY, LEGAL_DISCLAIMER, WAIVER_HOST_HINT } from './documentCopy';
+export { HOLD_UP_COPY, LEGAL_DISCLAIMER, WAIVER_HOST_HINT, CONTRACT_HOST_HINT } from './documentCopy';
 
 export function topicCoverLine(topic: string) {
   const trimmed = topic.trim();
