@@ -6,6 +6,7 @@ import {
   defaultVerificationRequired,
   documentNeedsRecipientAction,
   fetchClientIp,
+  fillDocumentPlaceholders,
   getDocumentByToken,
   isMoneyDocumentType,
   recordDocumentEvent,
@@ -40,7 +41,7 @@ export function DocumentConfirmPage() {
   const [otpBusy, setOtpBusy] = useState(false);
   const [otpNotice, setOtpNotice] = useState('');
   const [otpError, setOtpError] = useState('');
-  const [fullTextOpen, setFullTextOpen] = useState(false);
+  const [fullTextOpen, setFullTextOpen] = useState(true);
   const [agreed, setAgreed] = useState(false);
   const [hasMarked, setHasMarked] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -256,6 +257,13 @@ export function DocumentConfirmPage() {
   const taxPercent = Number(doc?.tax_percent) || 0;
   const moneyTotals = quoteTotals(lineItems, taxPercent);
   const showMoney = Boolean(doc && (isMoneyDocumentType(doc.document_type) || lineItems.length > 0));
+  const fullBody = doc
+    ? fillDocumentPlaceholders(doc.full_text, {
+        topic: doc.topic,
+        recipientName: doc.recipient_name,
+        activityDescription: doc.topic,
+      })
+    : '';
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-10">
@@ -273,9 +281,9 @@ export function DocumentConfirmPage() {
           <p className="text-xs uppercase tracking-widest text-slate-400">{doc?.template_name}</p>
           <h1 className="mt-1 text-lg font-bold">For {doc?.recipient_name}</h1>
           {doc && doc.document_type === 'waiver' ? (
-            <p className="mt-3 text-sm text-slate-600 whitespace-pre-line">
+            <p className="mt-3 text-sm text-slate-700 whitespace-pre-line leading-relaxed">
               {doc.topic ? `This waiver covers: ${doc.topic}\n\n` : ''}
-              {doc.full_text}
+              {fullBody}
             </p>
           ) : (
             <>
@@ -294,9 +302,9 @@ export function DocumentConfirmPage() {
                 {fullTextOpen ? 'Hide full text' : 'Read full text'}
               </button>
               {fullTextOpen && doc && (
-                <p className="mt-3 text-xs text-slate-500 whitespace-pre-line font-mono bg-slate-50 rounded-xl p-3 max-h-64 overflow-y-auto">
-                  {doc.full_text}
-                </p>
+                <div className="mt-3 text-sm text-slate-700 whitespace-pre-line leading-relaxed bg-slate-50 rounded-xl p-4">
+                  {fullBody}
+                </div>
               )}
             </>
           )}

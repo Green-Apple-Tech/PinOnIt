@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, Copy, Loader2, MessageSquare, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -10,15 +10,18 @@ import {
   HOLD_UP_COPY,
   WAIVER_HOST_HINT,
   SMB_DOCUMENT_TYPES,
+  defaultDocumentBody,
   defaultVerificationRequired,
   defaultWaiverText,
+  documentBodyIsEditable,
   documentTypeLabel,
   documentViewUrl,
+  fillDocumentPlaceholders,
+  businessNameOptions,
   isMoneyDocumentType,
   isSmbDocumentType,
   newDocumentToken,
   sendDocumentLink,
-  topicCoverLine,
 } from '../lib/documents';
 import type { DocumentTemplate, HostQuoteLineItem, SmbDocumentType } from '../lib/types';
 
@@ -44,6 +47,9 @@ export function CreateDocumentPage() {
   const [recipientEmail, setRecipientEmail] = useState('');
   const [recipientPhone, setRecipientPhone] = useState('');
   const [topic, setTopic] = useState('');
+  const [businessName, setBusinessName] = useState('');
+  const [activityOptions, setActivityOptions] = useState<string[]>([]);
+  const businessNameHydrated = useRef(false);
   const [customText, setCustomText] = useState(() => defaultWaiverText());
   const [verificationRequired, setVerificationRequired] = useState(() =>
     defaultVerificationRequired(initialType),
@@ -85,11 +91,46 @@ export function CreateDocumentPage() {
   const selectedTemplate = templates.find((t) => t.document_type === documentType) ?? null;
   const isWaiver = documentType === 'waiver';
   const isMoney = isMoneyDocumentType(documentType);
+  const bodyEditable = documentBodyIsEditable(documentType);
+  const knownBusinessNames = useMemo(
+    () => businessNameOptions([
+      profile?.paid_booking_settings?.display_name,
+      profile?.full_name,
+    ]),
+    [profile?.paid_booking_settings?.display_name, profile?.full_name],
+  );
 
   useEffect(() => {
-    if (!isWaiver) return;
-    setCustomText(defaultWaiverText(profile?.waiver_template));
-  }, [isWaiver, profile?.waiver_template]);
+    if (businessNameHydrated.current) return;
+    if (!knownBusinessNames[0]) return;
+    setBusinessName(knownBusinessNames[0]);
+    businessNameHydrated.current = true;
+  }, [knownBusinessNames]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    void supabase
+      .from('services')
+      .select('name')
+      .eq('host_id', user.id)
+      .eq('is_active', true)
+      .then(({ data }) => {
+        const names = (data ?? [])
+          .map((row) => String((row as { name?: string }).name ?? '').trim())
+          .filter(Boolean);
+        setActivityOptions([...new Set(names)]);
+      });
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (isWaiver) {
+      setCustomText(defaultWaiverText(profile?.waiver_template));
+      return;
+    }
+    if (bodyEditable) {
+      setCustomText(selectedTemplate?.full_text?.trim() || defaultDocumentBody(documentType));
+    }
+  }, [documentType, isWaiver, bodyEditable, profile?.waiver_template, selectedTemplate?.full_text]);
 
   useEffect(() => {
     if (defaultsApplied || !profile || !isMoney) return;
@@ -108,6 +149,16 @@ export function CreateDocumentPage() {
     [items, taxPercent],
   );
 
+  const filledBody = useMemo(
+    () => fillDocumentPlaceholders(customText || selectedTemplate?.full_text || defaultDocumentBody(documentType), {
+      topic,
+      recipientName,
+      businessName,
+      activityDescription: topic,
+    }),
+    [customText, selectedTemplate?.full_text, documentType, topic, recipientName, businessName],
+  );
+
   const handleTypeChange = (next: SmbDocumentType) => {
     setDocumentType(next);
     setVerificationRequired(defaultVerificationRequired(next));
@@ -119,7 +170,13 @@ export function CreateDocumentPage() {
     const topicText = topic.trim() || (isMoney ? documentTypeLabel(documentType) : '');
     const phone = recipientPhone.trim() ? normalizePhoneE164(recipientPhone) : null;
     if (!topicText) {
-      setError('Add a short topic describing what this document covers.');
+      setError(isWaiver
+        ? 'Add the activity or service this waiver covers.'
+        : 'Add a short topic describing what this document covers.');
+      return;
+    }
+    if (isWaiver && !businessName.trim()) {
+      setError('Add the business name that appears on this waiver.');
       return;
     }
     if (verificationRequired && !phone) {
@@ -133,6 +190,10 @@ export function CreateDocumentPage() {
     const waiverText = customText.trim();
     if (isWaiver && !waiverText) {
       setError('Paste or type the liability waiver language for this send.');
+      return;
+    }
+    if (bodyEditable && !customText.trim()) {
+      setError('Add the document text for this send.');
       return;
     }
     setError('');
@@ -151,7 +212,14 @@ export function CreateDocumentPage() {
       document_type: selectedTemplate.document_type,
       template_id: selectedTemplate.id,
       topic: topicText,
-      custom_text: isWaiver ? waiverText : null,
+      custom_text: bodyEditable
+        ? fillDocumentPlaceholders(customText.trim(), {
+            topic: topicText,
+            recipientName: recipientName.trim(),
+            businessName: businessName.trim(),
+            activityDescription: topicText,
+          })
+        : null,
       status: 'pending',
       verification_required: verificationRequired,
       line_items: lineItems,
@@ -352,20 +420,61 @@ export function CreateDocumentPage() {
             </p>
           </label>
           <label className="block">
-            <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Topic</span>
+            <span className="text-xs font-medium text-gray-600 dark:text-slate-400">
+              {isWaiver ? 'Activity / service description' : 'Topic'}
+            </span>
             <input
               value={topic}
               onChange={(e) => setTopic(e.target.value.slice(0, 150))}
               required={!isMoney}
               maxLength={150}
+              list="document-activity-options"
               className={fieldClass}
-              placeholder={isMoney ? 'Kitchen remodel' : 'Kitchen remodel deposit'}
+              placeholder={isWaiver ? 'e.g. kitchen remodel, zip-line tour' : isMoney ? 'Kitchen remodel' : 'Kitchen remodel deposit'}
             />
+            <datalist id="document-activity-options">
+              {activityOptions.map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
             <p className="mt-1 text-xs text-gray-400">
-              {topic.trim().length}/150 — shown on the confirmation page
+              {topic.trim().length}/150
+              {isWaiver
+                ? ' — fills [Activity/Service Description] in the waiver'
+                : ' — shown on the confirmation page'}
               {isMoney ? '. Defaults to the document type if you leave it blank.' : ''}
             </p>
           </label>
+          {isWaiver && (
+            <label className="block">
+              <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Business name</span>
+              <input
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value.slice(0, 120))}
+                required
+                maxLength={120}
+                className={fieldClass}
+                placeholder="Your business name"
+              />
+              {knownBusinessNames.filter((name) => name !== businessName).length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {knownBusinessNames.filter((name) => name !== businessName).map((name) => (
+                    <button
+                      key={name}
+                      type="button"
+                      onClick={() => setBusinessName(name)}
+                      className="px-3 py-1.5 rounded-full border border-gray-200 dark:border-slate-700 text-xs font-semibold text-gray-600 dark:text-slate-300"
+                    >
+                      Use {name}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <p className="mt-1 text-xs text-gray-400">
+                Auto-filled from your account. Type a DBA or tap another name if you send as a different business.
+              </p>
+            </label>
+          )}
         </div>
 
         <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-6">
@@ -508,36 +617,50 @@ export function CreateDocumentPage() {
           </div>
         )}
 
-        {isWaiver ? (
+        {bodyEditable ? (
           <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-6">
             <label className="block">
               <span className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-slate-400">
-                Waiver language
+                {isWaiver ? 'Waiver language' : 'Full document text'}
               </span>
-              <p className="mt-2 mb-3 text-sm text-gray-600 dark:text-slate-300 leading-relaxed">
-                {WAIVER_HOST_HINT} Fill in [Business Name] and [Activity/Service Description]. You can edit this send below, or save a default in{' '}
-                <Link to="/dashboard/settings?tab=docs" className="font-semibold text-brand-600 hover:text-brand-700">
-                  Settings → Docs
-                </Link>
-                .
+              {isWaiver ? (
+                <p className="mt-2 mb-3 text-sm text-gray-600 dark:text-slate-300 leading-relaxed">
+                  {WAIVER_HOST_HINT} Activity and business name above fill the brackets. You can still edit this send, or save a default in{' '}
+                  <Link to="/dashboard/settings?tab=docs" className="font-semibold text-brand-600 hover:text-brand-700">
+                    Settings → Docs
+                  </Link>
+                  .
+                </p>
+              ) : (
+                <p className="mt-2 mb-3 text-sm text-gray-600 dark:text-slate-300 leading-relaxed">
+                  This is what they see and sign. Topic and recipient name fill in from the fields above.
+                </p>
+              )}
+              <p className="mt-1 mb-3 text-sm text-gray-800 dark:text-slate-100 whitespace-pre-line leading-relaxed rounded-xl border border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-950 px-3 py-3">
+                {filledBody}
               </p>
+              <span className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Edit full text</span>
               <textarea
                 value={customText}
                 onChange={(e) => setCustomText(e.target.value)}
                 required
-                rows={12}
-                className={`${fieldClass} min-h-[16rem] font-mono text-sm leading-relaxed`}
+                rows={8}
+                className={`${fieldClass} min-h-[10rem] font-mono text-sm leading-relaxed`}
               />
             </label>
           </div>
         ) : selectedTemplate ? (
           <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-6">
             <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-slate-400 mb-2">
-              Preview
+              Full text they will see
             </p>
-            <p className="text-sm text-gray-700 dark:text-slate-200 whitespace-pre-line">
-              {documentType === 'nda' && topicCoverLine(topic) ? `${topicCoverLine(topic)}\n\n` : ''}
-              {selectedTemplate.summary_text}
+            <p className="text-sm text-gray-700 dark:text-slate-200 whitespace-pre-line leading-relaxed">
+              {fillDocumentPlaceholders(selectedTemplate.full_text || defaultDocumentBody(documentType), {
+                topic,
+                recipientName,
+                businessName,
+                activityDescription: topic,
+              })}
             </p>
           </div>
         ) : null}
