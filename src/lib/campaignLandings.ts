@@ -2,6 +2,11 @@ import type { LucideIcon } from 'lucide-react';
 import { FileText, MessageSquare, PenLine, Smartphone } from 'lucide-react';
 import { HOLD_UP_COPY, LEGAL_DISCLAIMER } from './documents';
 
+export const NDA_HEADLINE = 'Send an NDA over text — verified and signed in 30 seconds';
+
+export const NDA_SUBHEAD =
+  "No app, no login, no downloads for the other person. Just their phone number. They get a text, tap the link, verify it's really them, and sign. Works for NDAs, contracts, invoices, waivers, and more — each backed by a verified signature, timestamp, and phone confirmation. Built to hold up if it's ever challenged — though nothing guarantees legal enforceability, so always have an attorney review anything that matters.";
+
 export type CampaignStep = {
   title: string;
   desc: string;
@@ -25,9 +30,8 @@ export const CAMPAIGN_PAGES: Record<string, CampaignCopy> = {
   nda: {
     slug: 'nda',
     eyebrow: 'Doc Center',
-    headline: 'Send a legally-backed NDA over text — in 30 seconds',
-    subhead:
-      "No app, no login, no downloads for the other person. Just their phone number. They get a text, tap the link, verify it's really them with a one-time code, and sign — right from their phone.",
+    headline: NDA_HEADLINE,
+    subhead: NDA_SUBHEAD,
     steps: [
       { icon: FileText, title: 'Type the topic', desc: 'A short line for what the NDA covers — a deal, a hire, a conversation.' },
       { icon: Smartphone, title: 'Enter their number', desc: 'Just a phone. They do not create an account or download anything.' },

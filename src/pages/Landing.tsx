@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { OnboardingBot } from '../components/OnboardingBot';
 import { CALENDLY_EXCLUSIVES } from '../lib/whyPinonit';
+import { NDA_HEADLINE, NDA_SUBHEAD } from '../lib/campaignLandings';
 
 // ── Animated counter hook ────────────────────────────────────────────────────
 function useCounter(target: number, duration = 1800, start = false) {
@@ -524,13 +525,10 @@ export function Landing() {
               <div>
                 <p className="text-xs font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400 mb-2">Doc Center</p>
                 <h3 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white">
-                  Send a legally-backed NDA over text — in 30 seconds
+                  {NDA_HEADLINE}
                 </h3>
                 <p className="mt-3 text-slate-600 dark:text-slate-300 leading-relaxed max-w-3xl">
-                  No app, no login, no downloads for the other person. Just their
-                  phone number. They get a text, tap the link, verify it&apos;s really them,
-                  and sign. Works for NDAs, contracts, invoices, and more — all with
-                  verified signatures and timestamps.
+                  {NDA_SUBHEAD}
                 </p>
               </div>
             </div>
