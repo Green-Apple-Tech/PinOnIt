@@ -52,6 +52,8 @@ export function AuthCallback() {
     const code = extractParam('code');
 
     const handleSession = async (userId: string) => {
+      const { persistSignupAttribution } = await import('../lib/campaignAttribution');
+      await persistSignupAttribution(userId);
       const { completed, wizardActive } = await checkOnboardingCompleted(userId);
       const redirect = getPostLoginRedirect();
       if (!completed) {

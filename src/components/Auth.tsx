@@ -74,8 +74,12 @@ export function AuthForm() {
       if (error) { setError(error); }
       else {
         // If signed up via referral link, record it
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user?.id) {
+          const { persistSignupAttribution } = await import('../lib/campaignAttribution');
+          await persistSignupAttribution(session.user.id);
+        }
         if (refCode) {
-          const { data: { session } } = await supabase.auth.getSession();
           if (session?.access_token) {
             fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/referral-signup`, {
               method: 'POST',

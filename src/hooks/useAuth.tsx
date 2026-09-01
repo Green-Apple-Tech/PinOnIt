@@ -6,6 +6,7 @@ import { allocateUniqueSlug, slugFromEmail } from '../lib/profileSlug';
 import type { User } from '@supabase/supabase-js';
 import { pickBestSubscription } from '../lib/plan';
 import type { Profile, Subscription } from '../lib/types';
+import { persistSignupAttribution } from '../lib/campaignAttribution';
 
 interface AuthContextType {
   user: User | null;
@@ -58,11 +59,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const merged = { ...data, ...patch } as Profile;
         setProfile(merged);
         writeProfileCache(merged);
+        void persistSignupAttribution(userId);
         return;
       }
 
       setProfile(data);
       writeProfileCache(data);
+      void persistSignupAttribution(userId);
     } else {
       setProfile(null);
     }

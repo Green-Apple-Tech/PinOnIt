@@ -35,6 +35,7 @@ export interface Profile {
   stripe_customer_id: string | null;
   referral_code: string | null;
   referred_by: string | null;
+  signup_attribution?: Record<string, string> | null;
   brand_color: string;
   booking_page_header: string;
   phone: string | null;

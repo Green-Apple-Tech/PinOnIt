@@ -482,7 +482,7 @@ export function CreateDocumentPage() {
               />
             </label>
             <p className="mt-2 text-xs text-gray-400">
-              Replace the starter text with language reviewed for your state and activity. This is what the recipient reads and signs — not the template default.
+              Fill in [Business Name] and [Activity/Service Description]. Have an attorney review this for your state and activity before you rely on it.
             </p>
           </div>
         ) : selectedTemplate ? (

@@ -377,15 +377,20 @@ export function Landing() {
       {/* ── App pill bar ── */}
       <div className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 py-3">
         <p className="text-center text-lg sm:text-2xl font-black uppercase tracking-wide sm:tracking-[0.16em] text-[#ff4d1a] px-4">
-          5 apps in 1
+          10 tools in one
         </p>
         <div className="mt-1.5 flex flex-wrap items-center justify-center gap-2 px-4">
           {[
-            { num: '1', label: 'Calendar Scheduler' },
-            { num: '2', label: 'Super Reminders' },
-            { num: '3', label: 'Email · SMS · WhatsApp · Voice' },
-            { num: '4', label: 'QR Booking' },
-            { num: '5', label: 'Email Signatures' },
+            { num: '1', label: 'Scheduling' },
+            { num: '2', label: 'Smart Reminders' },
+            { num: '3', label: 'Doc Center' },
+            { num: '4', label: 'Group Scheduling' },
+            { num: '5', label: 'Paid Booking' },
+            { num: '6', label: 'QR Code Creator' },
+            { num: '7', label: 'Email Signature' },
+            { num: '8', label: 'Analytics' },
+            { num: '9', label: 'Referrals' },
+            { num: '10', label: 'Contacts' },
           ].map(({ num, label }) => (
             <div key={num} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full shadow-sm">
               <span className="h-[18px] w-[18px] rounded-full bg-brand-500 text-white text-[10px] font-black flex items-center justify-center shrink-0">{num}</span>

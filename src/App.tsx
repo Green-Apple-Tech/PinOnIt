@@ -1,5 +1,5 @@
-import { Component, lazy, Suspense, type ErrorInfo, type ReactNode } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { Component, lazy, Suspense, useEffect, type ErrorInfo, type ReactNode } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
 import { ThemeProvider } from './hooks/useTheme';
 import { AuthForm } from './components/Auth';
@@ -21,6 +21,16 @@ import { PollVotePage } from './pages/PollVote';
 import { StatusPage } from './pages/Status';
 import { NotFoundPage } from './pages/NotFound';
 import { SessionManager } from './components/SessionManager';
+import { CampaignLandingPage } from './pages/CampaignLandingPage';
+import { captureCampaignParams } from './lib/campaignAttribution';
+
+function CampaignParamCapture() {
+  const { search, pathname } = useLocation();
+  useEffect(() => {
+    captureCampaignParams(search, pathname);
+  }, [search, pathname]);
+  return null;
+}
 
 const Dashboard = lazy(() =>
   import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })),
@@ -107,9 +117,11 @@ function App() {
       <AuthProvider>
         <BrowserRouter>
           <SessionManager />
+          <CampaignParamCapture />
           <Routes>
             {/* Fixed paths must come before the /:slug wildcard */}
             <Route path="/" element={<Landing />} />
+            <Route path="/nda" element={<CampaignLandingPage slug="nda" />} />
             <Route path="/why-pinonit" element={<WhyPinOnItPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
