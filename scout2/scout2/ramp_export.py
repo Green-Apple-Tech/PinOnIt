@@ -184,6 +184,9 @@ def export_batch(
     niche = (niche or "").strip()
     if not niche:
         raise SystemExit("--niche is required")
+    mixed = niche.lower() in {"all", "mixed", "*"}
+    select_niche = None if mixed else niche
+    batch_niche = "mixed" if mixed else niche
 
     if schedule:
         plist = write_launchd_plist(niche=niche)
@@ -198,34 +201,34 @@ def export_batch(
 
     send_date = send_date or today_local()
     sb = get_client()
-    existing = existing_batch_for_date(sb, niche, send_date)
+    existing = existing_batch_for_date(sb, batch_niche, send_date)
     if existing and not force:
         raise SystemExit(
-            f"Already exported for niche={niche!r} date={send_date.isoformat()} "
+            f"Already exported for niche={batch_niche!r} date={send_date.isoformat()} "
             f"(day {existing.get('day_number')}, tab={existing.get('tab_name')}). "
             "Pass --force to override."
         )
 
-    day_number = next_day_number(sb, niche)
+    day_number = next_day_number(sb, batch_niche)
     if existing and force:
         sb.table(SEND_BATCHES).delete().eq("id", existing["id"]).execute()
         day_number = int(existing["day_number"])
 
     target = target_for_day(day_number)
-    rows = select_export_rows(sb, niche=niche, limit=target)
+    rows = select_export_rows(sb, niche=select_niche, limit=target)
     shortfall = max(0, target - len(rows))
     warning = None
     if shortfall:
         warning = (
             f"Ready pool short by {shortfall}: target={target}, got={len(rows)}. "
-            f"Scraper needs ~{shortfall} more ready {niche} leads."
+            f"Scraper needs ~{shortfall} more ready {batch_niche} leads."
         )
     if not rows:
         return {
             "exported": 0,
             "day_number": day_number,
             "send_date": send_date.isoformat(),
-            "niche": niche,
+            "niche": batch_niche,
             "target_count": target,
             "actual_count": 0,
             "warning": warning or "no ready leads matched filters",
@@ -235,7 +238,7 @@ def export_batch(
     import asyncio
 
     rows = asyncio.run(enrich_export_rows(rows))
-    tab = ramp_tab_name(niche, day_number, send_date)
+    tab = ramp_tab_name(batch_niche, day_number, send_date)
     sh, url = _open_campaign_spreadsheet()
     _write_new_tab(sh, tab, rows)
 
@@ -245,7 +248,7 @@ def export_batch(
             {
                 "day_number": day_number,
                 "send_date": send_date.isoformat(),
-                "niche": niche,
+                "niche": batch_niche,
                 "target_count": target,
                 "actual_count": len(rows),
                 "tab_name": tab,
@@ -277,7 +280,7 @@ def export_batch(
         "batch_id": batch_id,
         "day_number": day_number,
         "send_date": send_date.isoformat(),
-        "niche": niche,
+        "niche": batch_niche,
         "target_count": target,
         "actual_count": len(rows),
         "tab_name": tab,

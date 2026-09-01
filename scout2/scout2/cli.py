@@ -17,7 +17,7 @@ from .discover_cc import discover
 from .extract import run_extract
 from .fingerprint import run_fingerprint
 from .score import run_score
-from .export_sheet import campaign_stats, export_sheet
+from .export_sheet import campaign_stats, export_sheet, sync_campaign_inventory
 from .ramp_export import export_batch, list_batches
 from .sheets_sync import sheets_configured, sync_leads_to_sheets
 from .sync_results import sync_gmass_results
@@ -258,6 +258,12 @@ def sheets_sync_cmd() -> None:
     rprint(sync_leads_to_sheets())
 
 
+@app.command("campaign-inventory")
+def campaign_inventory_cmd() -> None:
+    """Rewrite Campaigns → All emails with every lead that has an email (all niches)."""
+    rprint(sync_campaign_inventory())
+
+
 @app.command("export-sheet")
 def export_sheet_cmd(
     niche: Optional[str] = typer.Option(
@@ -273,7 +279,11 @@ def export_sheet_cmd(
 
 @app.command("export-batch")
 def export_batch_cmd(
-    niche: str = typer.Option(..., "--niche", help="Niche to ramp, e.g. landscaping"),
+    niche: str = typer.Option(
+        ...,
+        "--niche",
+        help="Niche to ramp, e.g. landscaping. Use 'all' for a mixed-industry batch.",
+    ),
     send_date: Optional[str] = typer.Option(
         None,
         "--date",

@@ -198,16 +198,13 @@ function splitWithOverlay_(ss, headers, overlayRows) {
   TABS.forEach(function (t) {
     rewriteTab_(ss, t, headers, buckets[t]);
   });
-  const old = ss.getSheetByName(OLD_TAB);
-  if (old) {
-    old.clear();
-    old.getRange(1, 1, 2, 1).setValues([
-      ['Moved'],
-      ['Leads are split into: Calendly users, Emails and phones, Emails, Phones, Blanks. This tab is unused.'],
-    ]);
-  }
+  const mixed = Object.keys(map).map(function (d) {
+    return valuesFromRecord_(headers, map[d]);
+  });
+  rewriteTab_(ss, OLD_TAB, headers, mixed);
   const counts = {};
   TABS.forEach(function (t) { counts[t] = buckets[t].length; });
+  counts[OLD_TAB] = mixed.length;
   return counts;
 }
 

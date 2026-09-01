@@ -123,6 +123,14 @@ python -m scout2.cli stats
 
 `export-sheet` opens **`GOOGLE_CAMPAIGN_SHEET_ID`** (share that sheet with the service account). One tab per niche for ad-hoc dumps. Rows are `status=ready` with `employees_bucket` set, a real email, and `mx_valid=true`. Domains in `config/exclude_domains.txt` are dropped. After a successful write, those leads become `exported` and will not go out again.
 
+**Two spreadsheets:** the working **Scout2** sheet (`GOOGLE_SHEETS_ID`) keeps every lead in five tabs (all niches). **Scout2 Campaigns** is GMass. Early warmup used `--niche landscaping` only, so Campaigns looked like “just landscapers.” Restore the full mix (does **not** mark rows exported):
+
+```bash
+python -m scout2.cli campaign-inventory
+```
+
+That rewrites the **All emails** tab (~every address in Supabase). Leave `landscaping` / `landscaping-day*` send tabs alone. Daily ramp can mix industries with `./batch.sh all` (or `export-batch --niche all`).
+
 ### Ramp batches (daily GMass warmup)
 
 ```bash

@@ -143,13 +143,21 @@ def _ensure_ws(sh, title: str):
 def _rewrite_ws(ws, leads: list[dict]) -> None:
     from gspread.utils import rowcol_to_a1
 
+    need = max(2000, len(leads) + 20)
+    if ws.row_count < need or ws.col_count < len(HEADERS):
+        ws.resize(rows=need, cols=max(ws.col_count, len(HEADERS)))
     ws.clear()
     ws.update("A1", [HEADERS], value_input_option="USER_ENTERED")
     if not leads:
         return
     values = [_row(lead) for lead in leads]
-    end = rowcol_to_a1(1 + len(values), len(HEADERS))
-    ws.update(f"A2:{end}", values, value_input_option="USER_ENTERED")
+    chunk = 2000
+    for i in range(0, len(values), chunk):
+        part = values[i : i + chunk]
+        start_row = 2 + i
+        end = rowcol_to_a1(start_row + len(part) - 1, len(HEADERS))
+        start = rowcol_to_a1(start_row, 1)
+        ws.update(f"{start}:{end}", part, value_input_option="USER_ENTERED")
 
 
 def _records_from_ws(ws) -> list[dict]:
@@ -182,22 +190,12 @@ def _reorganize_gspread(sh, rows: list[dict]) -> dict:
         ws = _ensure_ws(sh, tab)
         _rewrite_ws(ws, buckets[tab])
         counts[tab] = len(buckets[tab])
-    try:
-        old = sh.worksheet(OLD_TAB)
-        old.clear()
-        old.update(
-            "A1",
-            [
-                ["Moved"],
-                [
-                    "Leads are split into: Calendly users, Emails and phones, "
-                    "Emails, Phones, Blanks. This tab is unused."
-                ],
-            ],
-            value_input_option="USER_ENTERED",
-        )
-    except Exception:
-        pass
+    # Always keep the mixed Scout2 Leads tab filled. Clearing it is what made
+    # the sheet look empty / landscapers-only after the 5-tab split.
+    mixed = list(merged.values())
+    old_ws = _ensure_ws(sh, OLD_TAB)
+    _rewrite_ws(old_ws, mixed)
+    counts[OLD_TAB] = len(mixed)
     return counts
 
 

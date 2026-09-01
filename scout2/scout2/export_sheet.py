@@ -294,6 +294,97 @@ def export_sheet(*, niche: str | None = None, limit: int = 25) -> dict:
     }
 
 
+INVENTORY_TAB = "All emails"
+_RAMP_TAB = re.compile(r".+-day\d{2}-\d{8}$", re.I)
+
+
+def is_protected_campaign_tab(title: str) -> bool:
+    """Leave GMass send tabs alone (ramp days + the first landscaping dump)."""
+    name = (title or "").strip()
+    if _RAMP_TAB.match(name):
+        return True
+    return name.lower() == "landscaping"
+
+
+def leads_with_email(rows: list[dict]) -> list[dict]:
+    out: list[dict] = []
+    seen: set[str] = set()
+    for lead in rows:
+        email = (lead.get("email") or "").strip().lower()
+        if not email or "@" not in email:
+            continue
+        if email in seen:
+            continue
+        seen.add(email)
+        out.append(lead)
+    out.sort(
+        key=lambda r: (
+            (r.get("niche") or "").strip().lower(),
+            (r.get("email") or "").strip().lower(),
+        )
+    )
+    return out
+
+
+def _rewrite_campaign_tab(sh, tab_name: str, rows: list[dict]) -> int:
+    values = [campaign_row(lead) for lead in rows]
+    existing = {ws.title: ws for ws in sh.worksheets()}
+    if tab_name in existing:
+        ws = existing[tab_name]
+    else:
+        ws = sh.add_worksheet(
+            title=tab_name[:100],
+            rows=max(200, len(values) + 10),
+            cols=len(CAMPAIGN_HEADERS),
+        )
+        try:
+            sh.reorder_worksheets([ws] + [w for w in sh.worksheets() if w.id != ws.id])
+        except Exception:
+            pass
+    _ensure_header(ws)
+    ws.resize(rows=max(200, len(values) + 10), cols=len(CAMPAIGN_HEADERS))
+    if len(ws.get_all_values()) > 1:
+        ws.batch_clear(["A2:Z"])
+    if values:
+        ws.update(
+            "A2",
+            values,
+            value_input_option="USER_ENTERED",
+        )
+    return len(values)
+
+
+def sync_campaign_inventory() -> dict:
+    """Write every lead-with-email onto Campaigns → All emails. Does not mark exported.
+
+    Scout2 Campaigns was GMass-only and landscaping-only (export-sheet / export-batch
+    --niche landscaping). The working Scout2 sheet still has the full mix; this puts
+    that mix back on the campaign spreadsheet without touching send-batch tabs.
+    """
+    from .db import fetch_all
+
+    sb = get_client()
+    rows = leads_with_email(fetch_all(sb))
+    sh, url = _open_campaign_spreadsheet()
+    written = _rewrite_campaign_tab(sh, INVENTORY_TAB, rows)
+    niches = {}
+    for lead in rows:
+        n = (lead.get("niche") or "(none)").strip() or "(none)"
+        niches[n] = niches.get(n, 0) + 1
+    return {
+        "sheet_url": url,
+        "tab": INVENTORY_TAB,
+        "emails": written,
+        "niches": len(niches),
+        "marked_exported": False,
+        "left_alone": [
+            ws.title
+            for ws in sh.worksheets()
+            if is_protected_campaign_tab(ws.title)
+        ],
+    }
+
+
 def campaign_stats(sb=None) -> dict:
     sb = sb or get_client()
     by_status: dict[str, int] = {}

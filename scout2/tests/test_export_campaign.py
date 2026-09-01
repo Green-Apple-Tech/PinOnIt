@@ -8,7 +8,11 @@ from scout2.derived import (
     greeting_from_email,
 )
 from scout2.exclude import is_excluded_domain, load_exclude_hosts
-from scout2.export_sheet import is_exportable_lead
+from scout2.export_sheet import (
+    is_exportable_lead,
+    is_protected_campaign_tab,
+    leads_with_email,
+)
 from scout2.sync_results import outcomes_from_records
 
 
@@ -116,6 +120,28 @@ class ExportFilterTests(unittest.TestCase):
         self.assertEqual(row[2], "Jim")
         self.assertEqual(row[3], "Green Lawns")
         self.assertEqual(row[-4:], ["", "", "", ""])
+
+
+class CampaignInventoryTests(unittest.TestCase):
+    def test_protects_gmass_send_tabs(self):
+        self.assertTrue(is_protected_campaign_tab("landscaping"))
+        self.assertTrue(is_protected_campaign_tab("landscaping-day03-20260831"))
+        self.assertFalse(is_protected_campaign_tab("All emails"))
+        self.assertFalse(is_protected_campaign_tab("plumbing"))
+
+    def test_dedupes_emails_and_keeps_every_niche(self):
+        rows = leads_with_email(
+            [
+                {"email": "a@barber.com", "niche": "barbershop"},
+                {"email": "A@barber.com", "niche": "barbershop"},
+                {"email": "b@plumb.com", "niche": "plumbing"},
+                {"email": "", "niche": "landscaping"},
+                {"email": "not-an-email", "niche": "hvac"},
+            ]
+        )
+        emails = [r["email"].lower() for r in rows]
+        self.assertEqual(emails, ["a@barber.com", "b@plumb.com"])
+        self.assertEqual({r["niche"] for r in rows}, {"barbershop", "plumbing"})
 
 
 class GmassSyncTests(unittest.TestCase):
