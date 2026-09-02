@@ -91,7 +91,7 @@ export function ActivityPage() {
       at: d.created_at,
       channel: 'document',
       title: d.recipient_name || d.recipient_email || d.recipient_phone || 'No recipient name',
-      detail: `${documentTypeLabel(d.document_type)} · ${documentStatusLabel(d.status)}`,
+      detail: `${documentTypeLabel(d.document_type, d.document_type_custom)} · ${documentStatusLabel(d.status)}`,
       status: documentStatusLabel(d.status),
       source: 'Doc Center',
     }));

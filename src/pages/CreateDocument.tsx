@@ -39,11 +39,12 @@ export function CreateDocumentPage() {
   const { user, profile, refreshProfile } = useAuth();
   const [searchParams] = useSearchParams();
   const typeParam = searchParams.get('type');
-  const typeFromQuery = typeParam && isSmbDocumentType(typeParam) ? typeParam : null;
-  const initialType: SmbDocumentType = typeFromQuery ?? 'nda';
+  const initialType: SmbDocumentType =
+    typeParam && isSmbDocumentType(typeParam) ? typeParam : 'nda';
 
   const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
   const [documentType, setDocumentType] = useState<SmbDocumentType>(initialType);
+  const [customTypeLabel, setCustomTypeLabel] = useState('');
   const [recipientName, setRecipientName] = useState('');
   const [recipientEmail, setRecipientEmail] = useState('');
   const [recipientPhone, setRecipientPhone] = useState('');
@@ -70,15 +71,11 @@ export function CreateDocumentPage() {
     phone?: string;
   } | null>(null);
   const [copied, setCopied] = useState(false);
-  const [showTypePicker, setShowTypePicker] = useState(!typeFromQuery);
 
   useEffect(() => {
     if (typeParam && isSmbDocumentType(typeParam)) {
       setDocumentType(typeParam);
       setVerificationRequired(defaultVerificationRequired(typeParam));
-      setShowTypePicker(false);
-    } else {
-      setShowTypePicker(true);
     }
   }, [typeParam]);
 
@@ -168,8 +165,13 @@ export function CreateDocumentPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!user?.id || !selectedTemplate) return;
-    const topicText = topic.trim() || (isMoney ? documentTypeLabel(documentType) : '');
+    const typeLabel = documentTypeLabel(documentType, customTypeLabel);
+    const topicText = topic.trim() || (isMoney ? typeLabel : '');
     const phone = recipientPhone.trim() ? normalizePhoneE164(recipientPhone) : null;
+    if (documentType === 'other' && !customTypeLabel.trim()) {
+      setError('Enter a custom document type.');
+      return;
+    }
     if (!topicText) {
       setError(isWaiver
         ? 'Add the activity or service this waiver covers.'
@@ -211,6 +213,7 @@ export function CreateDocumentPage() {
       recipient_phone: phone,
       recipient_email: recipientEmail.trim() || null,
       document_type: selectedTemplate.document_type,
+      document_type_custom: documentType === 'other' ? customTypeLabel.trim() : null,
       template_id: selectedTemplate.id,
       topic: topicText,
       custom_text: bodyEditable
@@ -320,62 +323,39 @@ export function CreateDocumentPage() {
       <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">{HOLD_UP_COPY}</p>
 
       <form onSubmit={(e) => void handleSubmit(e)} className="mt-6 space-y-5">
-        {showTypePicker ? (
-          <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-6">
-            <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-slate-400 mb-3">Type</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-6 space-y-4">
+          <label className="block">
+            <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Document Type</span>
+            <select
+              value={documentType}
+              onChange={(e) => handleTypeChange(e.target.value as SmbDocumentType)}
+              className={fieldClass}
+            >
               {SMB_DOCUMENT_TYPES.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => handleTypeChange(t.id)}
-                  className={`rounded-xl border px-2 py-3 text-center min-h-14 ${
-                    documentType === t.id
-                      ? 'border-brand-600 bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-300'
-                      : 'border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-400'
-                  }`}
-                >
-                  <div className="text-sm font-semibold">{t.label}</div>
-                  <div className="text-[11px] mt-0.5 leading-snug hidden sm:block">{t.hint}</div>
-                </button>
+                <option key={t.id} value={t.id}>
+                  {t.label}
+                </option>
               ))}
-            </div>
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-6">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-slate-400">Sending</p>
-                <p className="mt-1 text-base font-semibold text-gray-900 dark:text-white">{documentTypeLabel(documentType)}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowTypePicker(true)}
-                className="text-sm font-semibold text-brand-600 hover:text-brand-700"
-              >
-                Change type
-              </button>
-            </div>
-            {(documentType === 'invoice' || documentType === 'quote') && (
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                {(['invoice', 'quote'] as const).map((id) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => handleTypeChange(id)}
-                    className={`rounded-xl border px-3 py-2.5 text-sm font-semibold min-h-11 ${
-                      documentType === id
-                        ? 'border-brand-600 bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-300'
-                        : 'border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-400'
-                    }`}
-                  >
-                    {documentTypeLabel(id)}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+            </select>
+            <p className="mt-1 text-xs text-gray-400">
+              Identifies what you are sending. Templates for each type can be refined later.
+            </p>
+          </label>
+          {documentType === 'other' && (
+            <label className="block">
+              <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Custom document type</span>
+              <input
+                value={customTypeLabel}
+                onChange={(e) => setCustomTypeLabel(e.target.value)}
+                required
+                maxLength={80}
+                className={fieldClass}
+                placeholder="e.g. Equipment checkout form"
+                autoComplete="off"
+              />
+            </label>
+          )}
+        </div>
 
         <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-6 space-y-4">
           <label className="block">

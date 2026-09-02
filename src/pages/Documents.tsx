@@ -66,7 +66,7 @@ export function DocumentsPage() {
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Doc Center</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-slate-400 max-w-2xl">
-            Quotes, invoices, receipts, NDAs, contracts, and waivers — one place. No login for the recipient.
+            Invoices, quotes, NDAs, waivers, work orders, and more — one place. No login for the recipient.
           </p>
           <p className="mt-2 text-sm text-gray-600 dark:text-slate-300 max-w-2xl">{HOLD_UP_COPY}</p>
         </div>
@@ -137,7 +137,7 @@ export function DocumentsPage() {
                         {doc.recipient_name}
                       </span>
                       <span className="text-[11px] uppercase tracking-wide text-gray-400">
-                        {documentTypeLabel(doc.document_type)}
+                        {documentTypeLabel(doc.document_type, doc.document_type_custom)}
                       </span>
                       <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${meta.className}`}>
                         <Icon className="h-3 w-3" />

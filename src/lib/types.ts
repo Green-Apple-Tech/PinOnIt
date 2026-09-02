@@ -450,7 +450,36 @@ export interface HostQuote {
   updated_at: string;
 }
 
-export type SmbDocumentType = 'nda' | 'invoice' | 'contract' | 'receipt' | 'waiver' | 'quote';
+export type SmbDocumentType =
+  | 'nda'
+  | 'invoice'
+  | 'contract'
+  | 'receipt'
+  | 'waiver'
+  | 'quote'
+  | 'work_order'
+  | 'change_order'
+  | 'service_agreement'
+  | 'scope_of_work'
+  | 'consent_form'
+  | 'cancellation_policy'
+  | 'credit_card_authorization'
+  | 'recurring_service_authorization'
+  | 'property_access_authorization'
+  | 'key_access_receipt'
+  | 'inspection_acknowledgment'
+  | 'completion_sign_off'
+  | 'delivery_acceptance'
+  | 'damage_condition_report'
+  | 'rental_agreement'
+  | 'photo_video_release'
+  | 'parent_minor_consent'
+  | 'emergency_authorization'
+  | 'walkthrough'
+  | 'showing_acknowledgment'
+  | 'repair_confirmation'
+  | 'maintenance_approval'
+  | 'other';
 export type DocumentConfirmationType = 'sign' | 'approve' | 'confirm_receipt';
 export type SmbDocumentStatus = 'pending' | 'viewed' | 'signed';
 
@@ -472,6 +501,8 @@ export interface SmbDocument {
   recipient_phone: string | null;
   recipient_email?: string | null;
   document_type: SmbDocumentType;
+  /** When document_type is `other`, the sender’s custom label. */
+  document_type_custom?: string | null;
   template_id: string;
   topic: string;
   custom_text?: string | null;
@@ -498,6 +529,7 @@ export interface PublicSmbDocument {
   token: string;
   recipient_name: string;
   document_type: SmbDocumentType;
+  document_type_custom?: string | null;
   template_id: string;
   topic: string;
   status: SmbDocumentStatus;

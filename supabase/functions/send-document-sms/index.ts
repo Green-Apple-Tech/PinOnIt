@@ -83,7 +83,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: doc, error } = await supabase
     .from('documents')
-    .select('id, recipient_name, recipient_phone, topic, document_type, token')
+    .select('id, recipient_name, recipient_phone, topic, document_type, document_type_custom, token')
     .eq('token', token)
     .eq('sender_id', hostId)
     .maybeSingle();
@@ -93,7 +93,10 @@ Deno.serve(async (req: Request) => {
   const to = normalizePhoneE164(doc.recipient_phone);
   if (!to) return json({ ok: false, error: 'Recipient phone number is not valid' });
 
-  const kind = doc.document_type || 'document';
+  const kind =
+    doc.document_type === 'other' && doc.document_type_custom?.trim()
+      ? doc.document_type_custom.trim()
+      : String(doc.document_type || 'document').replaceAll('_', ' ');
   const topicBit = doc.topic ? ` regarding ${doc.topic}` : '';
   const sms = await sendTwilioSms(
     to,

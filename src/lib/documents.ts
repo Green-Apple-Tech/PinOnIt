@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import type { PublicSmbDocument, SmbDocumentType } from './types';
+import { GENERIC_DOCUMENT_STARTER_TEXT } from './documentTypes';
 
 export const WAIVER_STARTER_TEXT = `LIABILITY WAIVER AND RELEASE
 
@@ -140,7 +141,7 @@ export function defaultDocumentBody(type: SmbDocumentType, saved?: string | null
   if (type === 'quote') return QUOTE_STARTER_TEXT;
   if (type === 'invoice') return INVOICE_STARTER_TEXT;
   if (type === 'receipt') return RECEIPT_STARTER_TEXT;
-  return WAIVER_STARTER_TEXT;
+  return GENERIC_DOCUMENT_STARTER_TEXT;
 }
 
 export function fillDocumentPlaceholders(
@@ -180,36 +181,18 @@ export function businessNameOptions(names: Array<string | null | undefined>) {
   return out;
 }
 
-export function documentBodyIsEditable(type: SmbDocumentType) {
-  return type === 'nda' || type === 'contract' || type === 'waiver';
-}
-
-export const SMB_DOCUMENT_TYPES: { id: SmbDocumentType; label: string; hint: string }[] = [
-  { id: 'quote', label: 'Quote', hint: 'Estimate before they say yes' },
-  { id: 'invoice', label: 'Invoice', hint: 'What they owe' },
-  { id: 'receipt', label: 'Receipt', hint: 'Confirm they received it' },
-  { id: 'nda', label: 'NDA', hint: 'Keep talks confidential' },
-  { id: 'contract', label: 'Contract', hint: 'Sign the terms' },
-  { id: 'waiver', label: 'Waiver', hint: 'Sign a liability waiver' },
-];
-
-export const MONEY_DOCUMENT_TYPES: SmbDocumentType[] = ['quote', 'invoice', 'receipt'];
-
-export function isMoneyDocumentType(type: SmbDocumentType) {
-  return MONEY_DOCUMENT_TYPES.includes(type);
-}
-
-export function defaultVerificationRequired(type: SmbDocumentType) {
-  return type === 'nda' || type === 'contract' || type === 'waiver';
-}
-
-export function documentNeedsRecipientAction(type: SmbDocumentType) {
-  return type !== 'quote';
-}
-
-export function isSmbDocumentType(value: string): value is SmbDocumentType {
-  return SMB_DOCUMENT_TYPES.some((t) => t.id === value);
-}
+export {
+  SMB_DOCUMENT_TYPES,
+  MONEY_DOCUMENT_TYPES,
+  GENERIC_DOCUMENT_STARTER_TEXT,
+  isMoneyDocumentType,
+  isSmbDocumentType,
+  documentTypeMeta,
+  documentTypeLabel,
+  defaultVerificationRequired,
+  documentBodyIsEditable,
+  documentNeedsRecipientAction,
+} from './documentTypes';
 
 export { HOLD_UP_COPY, LEGAL_DISCLAIMER, WAIVER_HOST_HINT, CONTRACT_HOST_HINT } from './documentCopy';
 
@@ -217,10 +200,6 @@ export function topicCoverLine(topic: string) {
   const trimmed = topic.trim();
   if (!trimmed) return '';
   return `This agreement covers confidential discussions regarding: ${trimmed}`;
-}
-
-export function documentTypeLabel(type: SmbDocumentType) {
-  return SMB_DOCUMENT_TYPES.find((t) => t.id === type)?.label ?? type;
 }
 
 export function documentViewUrl(token: string) {

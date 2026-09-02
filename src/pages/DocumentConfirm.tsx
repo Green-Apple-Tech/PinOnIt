@@ -10,6 +10,7 @@ import {
   fillDocumentPlaceholders,
   getDocumentByToken,
   isMoneyDocumentType,
+  documentTypeLabel,
   recordDocumentEvent,
   sendDocumentOtp,
   topicCoverLine,
@@ -224,13 +225,14 @@ export function DocumentConfirmPage() {
   }
 
   if (submitted && doc) {
+    const typeLabel = documentTypeLabel(doc.document_type, doc.document_type_custom);
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
         <div className="max-w-sm text-center">
           <CheckCircle className="h-12 w-12 mx-auto text-emerald-500" />
           <h1 className="mt-4 text-xl font-bold text-slate-900">Confirmed</h1>
           <p className="mt-2 text-sm text-slate-500">
-            You have confirmed this {doc.document_type}.
+            You have confirmed this {typeLabel}.
             {doc.signed_at && <span className="block mt-1">{formatDate(doc.signed_at)}</span>}
           </p>
         </div>
@@ -279,8 +281,11 @@ export function DocumentConfirmPage() {
 
       <main className="max-w-lg mx-auto px-4 pt-6 space-y-4">
         <div className="bg-white rounded-2xl border border-slate-200 p-5">
-          <p className="text-xs uppercase tracking-widest text-slate-400">{doc?.template_name}</p>
-          <h1 className="mt-1 text-lg font-bold">For {doc?.recipient_name}</h1>
+          <p className="text-xs uppercase tracking-widest text-slate-400">Document type</p>
+          <p className="mt-1 text-base font-semibold text-slate-900">
+            {doc ? documentTypeLabel(doc.document_type, doc.document_type_custom) : 'Document'}
+          </p>
+          <h1 className="mt-3 text-lg font-bold">For {doc?.recipient_name}</h1>
           {doc && doc.document_type === 'waiver' ? (
             <p className="mt-3 text-sm text-slate-700 whitespace-pre-line leading-relaxed">
               {doc.topic ? `This waiver covers: ${doc.topic}\n\n` : ''}
