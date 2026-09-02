@@ -115,7 +115,6 @@ function toDashboardItem(item: MoreToolsNavItem): DashboardNavItem {
 
 export function buildSidebarNav(
   uiMode: UiMode,
-  _revealed: RevealedToolId[] = [],
 ): { primary: DashboardNavItem[]; moreTools: MoreToolsNavItem[] } {
   const primary = [...SIMPLE_PRIMARY_NAV, ...FEATURED_NAV].map(toDashboardItem);
   const extras = MORE_TOOLS_NAV.filter(

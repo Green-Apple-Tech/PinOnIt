@@ -899,7 +899,7 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
                             <div className="flex-1 min-w-0">
                               {link.label && <p className="font-semibold text-gray-800 dark:text-slate-200 truncate">{link.label}</p>}
                               <p className="font-mono text-gray-400 dark:text-slate-500 truncate">{url}</p>
-                              <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-0.5">{formatSingleUseExpiryLabel(link.expires_at, link.used, link.created_at)}</p>
+                              <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-0.5">{formatSingleUseExpiryLabel(link.expires_at, link.used)}</p>
                             </div>
                             {!link.used && (
                               <div className="flex gap-1 shrink-0">

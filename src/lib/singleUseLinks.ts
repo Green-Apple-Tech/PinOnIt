@@ -78,7 +78,6 @@ export function computeSingleUseExpiresAtForProfile(profile: {
 export function formatSingleUseExpiryLabel(
   expiresAt: string | null,
   used: boolean,
-  _createdAt?: string | null,
 ): string {
   if (used) return 'Used';
   if (!expiresAt) return '1 use';

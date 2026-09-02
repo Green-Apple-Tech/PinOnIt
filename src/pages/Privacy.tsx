@@ -19,6 +19,8 @@ const sections: Section[] = [
         PinOnIt ("<strong>we</strong>", "<strong>us</strong>", or "<strong>our</strong>") is a scheduling and meeting management platform operated by Miami Expeditions LLC, doing business as PinOnIt. This Privacy Policy explains how we collect, use, and protect your personal information when you use{' '}
         <a href="https://pinonit.com" className="text-brand-600 dark:text-brand-400 hover:underline">pinonit.com</a>{' '}
         and any related services (collectively, the "<strong>Service</strong>"). By using the Service, you agree to the practices described in this policy.
+        <br /><br />
+        <strong>We do not sell your personal information.</strong> We do not use your data for third-party advertising, and we do not allow data brokers to access your information. We collect only what we need to operate PinOnIt and share it only with infrastructure providers that process data on our behalf to deliver the Service (for example, email delivery, SMS, payments, and hosting)—not for their own marketing or resale.
       </p>
     ),
   },
@@ -45,15 +47,19 @@ const sections: Section[] = [
     title: 'How We Use Your Information',
     content: (
       <div className="space-y-3">
-        <p>We use the information we collect to:</p>
+        <p>We use the information we collect solely to operate and improve PinOnIt for you and your guests:</p>
         <ul className="space-y-2 pl-4">
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Provide and operate the scheduling service, including creating and managing booking links and calendar events.</span></li>
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Send booking confirmations and automated reminders via email, SMS, or WhatsApp as configured by you.</span></li>
+          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Deliver Doc Center documents (waivers, NDAs, contracts, quotes, invoices) and related verification or signature flows.</span></li>
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Detect calendar conflicts and prevent double-bookings by checking your connected calendar's availability.</span></li>
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Process payments and manage your subscription plan.</span></li>
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Respond to support requests and communicate service updates.</span></li>
-          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Improve the Service through aggregated, anonymized usage analysis. We do not sell your personal data.</span></li>
+          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Improve reliability and security through aggregated, anonymized usage analysis.</span></li>
         </ul>
+        <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mt-3">
+          We do not sell, rent, or trade your personal information. We do not share your data with advertisers, data brokers, or unrelated third parties for their own purposes.
+        </p>
       </div>
     ),
   },
@@ -203,7 +209,7 @@ const sections: Section[] = [
     title: 'Third-Party Services',
     content: (
       <div className="space-y-3">
-        <p>We use the following third-party services to operate the platform. Each has its own privacy policy governing their data practices:</p>
+        <p>We use trusted third-party services to operate PinOnIt. They process data <strong>only on our instructions</strong> to provide specific functions (payments, SMS, email, calendar sync, hosting). They are not permitted to use your personal information for their own marketing or to sell it. Each has its own privacy policy governing their data practices:</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
           {[
             { name: 'Stripe', role: 'Payment processing', url: 'https://stripe.com/privacy' },
@@ -387,7 +393,7 @@ const sections: Section[] = [
 export function PrivacyPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white flex flex-col">
-      <div className="flex-1 max-w-3xl mx-auto w-full px-6 py-16">
+      <div className="flex-1 max-w-3xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-16">
         <Link
           to="/"
           className="inline-flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors mb-10"
@@ -401,11 +407,11 @@ export function PrivacyPage() {
             <div className="h-10 w-10 bg-brand-50 dark:bg-brand-500/10 rounded-xl flex items-center justify-center">
               <Shield className="h-5 w-5 text-brand-600 dark:text-brand-400" />
             </div>
-            <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
               Privacy Policy
             </h1>
           </div>
-          <p className="text-sm text-slate-400 dark:text-slate-500">Last updated: July 7, 2026</p>
+          <p className="text-sm text-slate-400 dark:text-slate-500">Last updated: September 2, 2026</p>
           <p className="mt-4 text-sm leading-relaxed text-slate-600 dark:text-slate-400 p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl">
             PinOnIt is a DBA (Doing Business As) of Miami Expeditions LLC. This website and the PinOnIt appointment scheduling platform are owned and operated by Miami Expeditions LLC.
           </p>

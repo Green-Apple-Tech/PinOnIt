@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowLeft, FileText, Zap, CreditCard, Users, Ban, AlertTriangle, Scale, Mail, Gift, Gavel, ShieldAlert, Umbrella, Plug, BookOpen, HardDrive, Globe, MessageSquare } from 'lucide-react';
+import { ArrowLeft, FileText, Zap, CreditCard, Users, Ban, AlertTriangle, Scale, Mail, Gift, Gavel, ShieldAlert, Umbrella, Plug, BookOpen, HardDrive, Globe, MessageSquare, ClipboardSignature, Bell, Sparkles } from 'lucide-react';
 import { Footer } from '../components/Footer';
 import { SMS_BOOKING_CONSENT_CTA, SMS_OPTIONAL_POLICY_SENTENCE } from '../lib/smsCompliance';
 import { SUPPORT_EMAIL } from '../lib/contactEmail';
@@ -16,7 +16,7 @@ const sections: Section[] = [
     title: 'Acceptance of Terms',
     content: (
       <p>
-        By accessing or using PinOnIt ("<strong>the Service</strong>"), you agree to be bound by these Terms of Service ("<strong>Terms</strong>") and our{' '}
+        By accessing or using PinOnIt ("<strong>the Service</strong>") — including creating an account, starting a free trial, or clicking a button that indicates acceptance — you agree to be bound by these Terms of Service ("<strong>Terms</strong>") and our{' '}
         <Link to="/privacy" className="text-brand-600 dark:text-brand-400 hover:underline">Privacy Policy</Link>.
         If you do not agree to these Terms, do not use the Service. These Terms constitute a legally binding agreement between you and Miami Expeditions LLC, doing business as PinOnIt.
       </p>
@@ -41,7 +41,7 @@ const sections: Section[] = [
     ),
   },
   {
-    icon: Zap,
+    icon: Sparkles,
     title: 'PinOnIt Pro — trial then $6/mo',
     content: (
       <div className="space-y-4">
@@ -117,11 +117,49 @@ const sections: Section[] = [
     ),
   },
   {
+    icon: Bell,
+    title: 'Reminders & Notifications',
+    content: (
+      <div className="space-y-3">
+        <p>
+          PinOnIt sends booking confirmations, reminders, and related notices by email, SMS, WhatsApp, or voice when you configure them. We work to deliver messages promptly and reliably, but <strong>we do not guarantee</strong> that any reminder will be sent, received, read, or acted on at a particular time.
+        </p>
+        <ul className="space-y-2 pl-4">
+          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Delivery depends on third-party networks, carriers, device settings, spam filters, and recipient availability. Delays, failures, and undelivered messages can occur even when our systems appear to be operating normally.</span></li>
+          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>You remain responsible for your appointments, deadlines, and client communications. Use PinOnIt as a supplement to—not a replacement for—your own scheduling practices.</span></li>
+          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span>Software bugs, maintenance, outages, or integration errors may occasionally affect reminders or other features. While uncommon, technical errors are always possible.</span></li>
+        </ul>
+      </div>
+    ),
+  },
+  {
+    icon: ClipboardSignature,
+    title: 'Doc Center — Waivers, NDAs, Contracts & Invoices',
+    content: (
+      <div className="space-y-3">
+        <p>
+          PinOnIt Doc Center helps you send waivers, NDAs, contracts, quotes, invoices, and receipts for review or signature by text or link. The Service is designed to support a <strong>strong evidentiary record</strong> (for example, SMS verification, timestamps, and capture of signature or approval on the recipient&apos;s device). <strong>We do not guarantee</strong> that any document will be enforceable, admissible in court, or sufficient for your particular situation.
+        </p>
+        <ul className="space-y-2 pl-4">
+          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Not legal advice:</strong> PinOnIt is not a law firm and does not provide legal advice. Templates and tools are for convenience only. You are solely responsible for the content of documents you send and for determining whether they meet your legal, regulatory, or industry requirements.</span></li>
+          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>No guarantee of outcome:</strong> We make no promise that a waiver, NDA, contract, quote, invoice, or signature collected through PinOnIt will be upheld in any dispute, audit, or proceeding. Enforceability depends on many factors outside our control, including applicable law, document content, and how the document is used.</span></li>
+          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Your content:</strong> You represent that you have the right to send each document and that its terms are accurate. You indemnify PinOnIt for claims arising from documents you create or send through the Service.</span></li>
+          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Record integrity:</strong> We strive to preserve accurate logs of delivery, viewing, verification, and signature events, but we do not warrant that records are complete, tamper-proof, or error-free. Maintain your own backups of important agreements when appropriate.</span></li>
+        </ul>
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Consult a qualified attorney before relying on any template or electronic signature workflow for high-risk or regulated transactions.
+        </p>
+      </div>
+    ),
+  },
+  {
     icon: Gift,
     title: 'Referral Program',
     content: (
       <div className="space-y-3">
-        <p>PinOnIt operates a referral program that allows Pro subscribers to earn credits and cash rewards by referring new users. The key terms are:</p>
+        <p>
+          PinOnIt offers a referral program that rewards you when people you refer subscribe to Pro. Program details, eligibility, and payout rules may change; the following applies unless we notify you otherwise.
+        </p>
         <ul className="space-y-2 pl-4">
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Credit:</strong> You earn $1/month in credit for each referred user who becomes and remains an active Pro subscriber.</span></li>
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Plan offset:</strong> Credits first offset your own Pro subscription cost (up to $6/month). Once your plan is fully covered, additional referral earnings accumulate as cash credits.</span></li>
@@ -143,7 +181,7 @@ const sections: Section[] = [
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Billing cycle:</strong> Pro subscriptions are billed monthly on the anniversary of your subscription start date.</span></li>
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>No refunds:</strong> All subscription payments are non-refundable. If you cancel, you retain access until the end of your current billing period.</span></li>
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Cancellation:</strong> You may cancel your subscription at any time from your Billing settings. Cancellation takes effect at the end of the current billing period.</span></li>
-          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Free trials:</strong> New accounts may start a 14-day Pro trial with no credit card. A 60-day Pro trial is available when you add a payment method ($0 is charged at signup). When a 60-day trial ends, your subscription bills automatically at the standard monthly rate unless you cancel first. The 14-day no-card trial does not store a card and does not auto-charge; add a card before it ends to keep Pro.</span></li>
+          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Free trials:</strong> New accounts may start a 14-day Pro trial with no credit card after agreeing to these Terms and our Privacy Policy. A 60-day Pro trial is available when you add a payment method ($0 is charged at signup). When a 60-day trial ends, your subscription bills automatically at the standard monthly rate unless you cancel first. The 14-day no-card trial does not store a card and does not auto-charge; add a card before it ends to keep Pro.</span></li>
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Failed payments:</strong> If a payment fails, we will attempt to retry. Continued failure may result in your account becoming read-only until you reactivate.</span></li>
         </ul>
       </div>
@@ -190,7 +228,7 @@ const sections: Section[] = [
     title: 'Disclaimer of Warranties',
     content: (
       <p className="uppercase text-xs leading-relaxed">
-        The Service is provided "as is" and "as available" without warranties of any kind, either express or implied, including but not limited to warranties of merchantability or fitness for a particular purpose. We do not warrant that the Service will be error-free, uninterrupted, or that scheduled meetings, reminders, or calendar syncs will function without failure or delay. We are not responsible for errors, outages, or data loss caused by third-party calendar providers (Google, Microsoft), messaging providers (Twilio, WhatsApp), or payment providers (Stripe).
+        The Service is provided "as is" and "as available" without warranties of any kind, either express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, non-infringement, or that use of the Service will achieve any particular legal, business, or financial result. We do not warrant that the Service will be error-free, uninterrupted, secure, or that scheduled meetings, reminders, calendar syncs, Doc Center deliveries, signatures, or payment flows will function without failure or delay. We are not responsible for errors, outages, or data loss caused by third-party calendar providers (Google, Microsoft), messaging providers (Twilio, WhatsApp), email providers, or payment providers (Stripe, PayPal).
       </p>
     ),
   },
@@ -199,7 +237,7 @@ const sections: Section[] = [
     title: 'Limitation of Liability',
     content: (
       <p className="uppercase text-xs leading-relaxed">
-        To the fullest extent permitted by law, Miami Expeditions LLC (dba PinOnIt) and its members, managers, employees, and affiliates shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to: missed meetings, failed reminders, calendar sync errors, double-bookings, data loss, lost business, or service interruptions — even if we have been advised of the possibility of such damages. Our total aggregate liability to you for any claim arising out of or relating to these Terms or the Service shall not exceed the greater of (a) the total amount you paid us in the 12 months preceding the claim or (b) $10 USD.
+        To the fullest extent permitted by law, Miami Expeditions LLC (dba PinOnIt) and its members, managers, employees, and affiliates shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to: missed meetings, failed or delayed reminders, undelivered messages, calendar sync errors, double-bookings, lost or disputed contracts, waivers, NDAs, invoices, or signatures, data loss, lost business, or service interruptions — even if we have been advised of the possibility of such damages. Our total aggregate liability to you for any claim arising out of or relating to these Terms or the Service shall not exceed the greater of (a) the total amount you paid us in the 12 months preceding the claim or (b) $10 USD.
       </p>
     ),
   },
@@ -318,7 +356,7 @@ const sections: Section[] = [
 export function TermsPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white flex flex-col">
-      <div className="flex-1 max-w-3xl mx-auto w-full px-6 py-16">
+      <div className="flex-1 max-w-3xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-16">
         <Link
           to="/"
           className="inline-flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors mb-10"
@@ -332,11 +370,11 @@ export function TermsPage() {
             <div className="h-10 w-10 bg-brand-50 dark:bg-brand-500/10 rounded-xl flex items-center justify-center">
               <FileText className="h-5 w-5 text-brand-600 dark:text-brand-400" />
             </div>
-            <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
               Terms of Service
             </h1>
           </div>
-          <p className="text-sm text-slate-400 dark:text-slate-500">Last updated: July 7, 2026</p>
+          <p className="text-sm text-slate-400 dark:text-slate-500">Last updated: September 2, 2026</p>
           <p className="mt-4 text-sm leading-relaxed text-slate-600 dark:text-slate-400 p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl">
             These Terms govern the PinOnIt platform, a DBA of Miami Expeditions LLC.
           </p>

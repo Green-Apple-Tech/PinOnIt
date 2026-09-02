@@ -97,6 +97,8 @@ export interface Profile {
   default_tax_percent?: number | null;
   quote_line_defaults?: { description: string; amount: number }[] | null;
   business_region?: string | null;
+  platform_terms_accepted_at?: string | null;
+  platform_terms_version?: string | null;
   created_at: string;
   updated_at: string;
 }

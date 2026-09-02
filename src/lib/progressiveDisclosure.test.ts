@@ -63,7 +63,7 @@ describe('profilePatchForBusinessType', () => {
 
 describe('buildSidebarNav', () => {
   it('keeps simple mode to the four core items plus More Tools leftovers', () => {
-    const { primary, moreTools } = buildSidebarNav('simple', []);
+    const { primary, moreTools } = buildSidebarNav('simple');
     expect(primary.map((i) => i.label)).toEqual([
       'Dashboard',
       'Calendar',
@@ -80,13 +80,13 @@ describe('buildSidebarNav', () => {
   });
 
   it('keeps paid booking under More Tools in simple mode even after it is used', () => {
-    const { primary, moreTools } = buildSidebarNav('simple', ['paid-booking']);
+    const { primary, moreTools } = buildSidebarNav('simple');
     expect(primary.map((i) => i.label)).not.toContain('Paid Booking');
     expect(moreTools.some((i) => i.label === 'Paid Booking')).toBe(true);
   });
 
   it('flattens every tool in advanced mode', () => {
-    const { primary, moreTools } = buildSidebarNav('advanced', []);
+    const { primary, moreTools } = buildSidebarNav('advanced');
     expect(moreTools).toEqual([]);
     expect(primary.some((i) => i.label === 'Send SMS NDA/Waiver')).toBe(true);
     expect(primary.some((i) => i.label === 'Settings')).toBe(true);

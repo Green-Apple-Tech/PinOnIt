@@ -77,7 +77,9 @@ export function AuthForm() {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user?.id) {
           const { persistSignupAttribution } = await import('../lib/campaignAttribution');
+          const { recordPlatformTermsAcceptance } = await import('../lib/platformLegal');
           await persistSignupAttribution(session.user.id);
+          void recordPlatformTermsAcceptance(session.user.id);
         }
         if (refCode) {
           if (session?.access_token) {
@@ -327,11 +329,12 @@ export function AuthForm() {
         </div>
 
         {view === 'signup' && (
-          <p className="mt-5 text-center text-xs text-slate-400 dark:text-slate-500">
-            By signing up you agree to our{' '}
+          <p className="mt-5 text-center text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
+            By creating an account, you agree to our{' '}
             <Link to="/terms" className="underline underline-offset-2 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Terms of Service</Link>
             {' '}and{' '}
             <Link to="/privacy" className="underline underline-offset-2 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Privacy Policy</Link>.
+            Starting a free trial also constitutes acceptance of those terms.
           </p>
         )}
       </div>

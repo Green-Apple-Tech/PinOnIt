@@ -5,6 +5,8 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { syncStripeSubscription } from '../lib/stripe';
 import { effectivePlan, isActivePlan, isComplimentaryPro } from '../lib/plan';
+import { recordPlatformTermsAcceptance } from '../lib/platformLegal';
+import { TrialTermsNotice } from '../components/TrialTermsNotice';
 import {
   Check, Zap, Loader2, AlertCircle,
   DollarSign, TrendingUp, Copy, Users, ChevronDown,
@@ -134,6 +136,7 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
         setCheckoutLoading(false);
         return;
       }
+      if (user) void recordPlatformTermsAcceptance(user.id);
       const body: Record<string, unknown> = {
         price_id: PRICE_ID,
         app_url: window.location.origin,
@@ -172,6 +175,7 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
     setCheckoutError(null);
     setCheckoutLoading(true);
     try {
+      void recordPlatformTermsAcceptance(user.id);
       const { hasStripeBilling, startLocalTrial } = await import('../lib/localTrial');
       if (!(await hasStripeBilling(user.id))) {
         const { error } = await startLocalTrial();
@@ -224,7 +228,7 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
     : 0;
 
   return (
-    <div className={embedded ? 'space-y-4 max-w-2xl' : 'p-6 md:p-8 max-w-2xl space-y-4'}>
+    <div className={embedded ? 'space-y-4 max-w-2xl' : 'p-4 sm:p-6 md:p-8 max-w-2xl space-y-4'}>
 
       {/* Success banner */}
       {successBanner && (
@@ -245,7 +249,7 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
       )}
 
       {/* ── Current plan card ─────────────────────────────────────────────────── */}
-      <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+      <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-6 shadow-sm">
         <div className="flex items-start justify-between gap-4 mb-5">
           <div>
             <h2 className="text-lg font-bold text-gray-900 mb-1.5">Current plan</h2>
@@ -324,6 +328,7 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
             >
               Restart 14-day trial (no card)
             </button>
+            <TrialTermsNotice className="mt-4" />
           </>
         ) : (
           <>
@@ -363,6 +368,7 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
                 >
                   60 days free — card on file (Calendly switchers)
                 </button>
+                <TrialTermsNotice className="mt-4" />
               </>
             ) : (
               <>

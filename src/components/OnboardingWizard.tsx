@@ -27,6 +27,8 @@ import { enableConfirmationSms } from '../lib/reminderSetup';
 import { defaultAvailabilityRows } from '../lib/availabilityGrid';
 import { US_REGIONS } from '../lib/usSalesTax';
 import { WIZARD_STEPS as STEPS, type WizardStep as Step } from '../lib/wizardSteps';
+import { TrialTermsNotice } from './TrialTermsNotice';
+import { recordPlatformTermsAcceptance } from '../lib/platformLegal';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -481,6 +483,8 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep, openCa
 
   const activateCalendlyTrial = useCallback(async () => {
     if (trialActivated || !user) return;
+    const { error: termsError } = await recordPlatformTermsAcceptance(user.id);
+    if (termsError) console.warn('Terms acceptance not recorded:', termsError);
     const { hasStripeBilling, startLocalTrial } = await import('../lib/localTrial');
     if (await hasStripeBilling(user.id)) {
       setTrialActivated(true);
@@ -822,6 +826,8 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep, openCa
     setTrialCheckoutError('');
     setTrialCheckoutLoading(true);
     try {
+      const { error: termsError } = await recordPlatformTermsAcceptance(user.id);
+      if (termsError) console.warn('Terms acceptance not recorded:', termsError);
       const { hasStripeBilling, startLocalTrial } = await import('../lib/localTrial');
       if (!(await hasStripeBilling(user.id))) {
         const { error } = await startLocalTrial();
@@ -845,6 +851,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep, openCa
       if (!session) { setTrialCheckoutError('Please sign in first.'); setTrialCheckoutLoading(false); return; }
 
       if (user) {
+        void recordPlatformTermsAcceptance(user.id);
         await supabase.from('profiles').update({ onboarding_step: resumeStep }).eq('id', user.id);
       }
 
@@ -1202,7 +1209,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep, openCa
                 <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-indigo-100 dark:bg-indigo-900/30 mb-4">
                   <Gift className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
                 </div>
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Start your free 60-day trial</h2>
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Start your free 60-day trial</h2>
                 <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm max-w-sm mx-auto">
                   Your card will not be charged until <strong className="text-slate-700 dark:text-slate-200">{firstChargeDate60}</strong>. Cancel any time before then and you will never be billed.
                 </p>
@@ -1254,6 +1261,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep, openCa
                 {trialCheckoutLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gift className="h-4 w-4" />}
                 Start Free Trial — No Charge Today
               </button>
+              <TrialTermsNotice className="mt-3" />
             </div>
           );
         }
@@ -1266,7 +1274,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep, openCa
                 <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-brand-100 dark:bg-brand-900/30 mb-4">
                   <Zap className="h-8 w-8 text-brand-600 dark:text-brand-400" />
                 </div>
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Start your free trial</h2>
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Start your free trial</h2>
                 <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm max-w-sm mx-auto">
                   Full Pro for 14 days — <strong className="text-slate-700 dark:text-slate-200">no credit card</strong>. Want 60 days? Add a card below. $0 today; billing starts when the trial ends.
                 </p>
@@ -1309,6 +1317,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep, openCa
                 {trialCheckoutLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gift className="h-4 w-4" />}
                 60 days with card — $0 today
               </button>
+              <TrialTermsNotice className="mt-4" />
             </div>
           );
         }
