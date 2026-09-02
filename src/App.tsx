@@ -8,6 +8,7 @@ import { AuthCallback } from './components/AuthCallback';
 import { AIChat } from './components/AIChat';
 import { ToastContainer } from './components/Toast';
 import { Landing } from './pages/Landing';
+import { CalendlyAlternative } from './pages/CalendlyAlternative';
 import { WhyPinOnItPage } from './pages/WhyPinOnIt';
 import { BookPage } from './pages/Book';
 import { ReschedulePage } from './pages/Reschedule';
@@ -143,6 +144,7 @@ function App() {
           <Routes>
             {/* Fixed paths must come before the /:slug wildcard */}
             <Route path="/" element={<Landing />} />
+            <Route path="/calendly-alternative" element={<CalendlyAlternative />} />
             <Route path="/nda" element={<CampaignLandingPage slug="nda" />} />
             <Route path="/reminders" element={<CampaignLandingPage slug="reminders" />} />
             <Route path="/why-pinonit" element={<WhyPinOnItPage />} />
