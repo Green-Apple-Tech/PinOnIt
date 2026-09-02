@@ -343,6 +343,25 @@ function IntegrationsTab({ userId }: { userId: string | undefined }) {
         </div>
       </div>
 
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <Calendar className="h-4 w-4 text-slate-400" />
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Switching tools</h3>
+        </div>
+        <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 p-4">
+          <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Import from Calendly</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+            Pull in your event types, availability, and profile from Calendly or paste your public Calendly URL.
+          </p>
+          <Link
+            to="/dashboard?onboarding=1&calendly_import=1"
+            className="mt-3 inline-flex text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+          >
+            Import your setup →
+          </Link>
+        </div>
+      </div>
+
       {/* Video conferencing */}
       <div>
         <div className="flex items-center gap-2 mb-3">

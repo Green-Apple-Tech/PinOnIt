@@ -1034,6 +1034,7 @@ export function Dashboard() {
   // Don't open from ?onboarding=1 until we know this isn't a returning host (avoids a first-time flash).
   const [showWizard, setShowWizard] = useState(() => shouldReopenWizardForCalendly());
   const [wizardUserRequested, setWizardUserRequested] = useState(false);
+  const [wizardOpenCalendlyImport, setWizardOpenCalendlyImport] = useState(false);
   const [wizardChecked, setWizardChecked] = useState(false);
   const [wizardInitialStep, setWizardInitialStep] = useState<number | undefined>(() => {
     if (shouldReopenWizardForCalendly()) return 0;
@@ -1141,9 +1142,16 @@ export function Dashboard() {
 
   // Clean the ?onboarding=1 param from URL without navigation
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('onboarding') === '1') {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('calendly_import') === '1') {
+      setWizardOpenCalendlyImport(true);
+      setWizardUserRequested(true);
+      setShowWizard(true);
+    }
+    if (params.get('onboarding') === '1' || params.get('calendly_import') === '1') {
       const url = new URL(window.location.href);
       url.searchParams.delete('onboarding');
+      url.searchParams.delete('calendly_import');
       window.history.replaceState({}, '', url.toString());
     }
   }, []);
@@ -1989,10 +1997,12 @@ export function Dashboard() {
 
       {showWizard && (
         <OnboardingWizard
-          key={`${wizardSession}-${wizardInitialStep ?? 'start'}`}
+          key={`${wizardSession}-${wizardInitialStep ?? 'start'}-${wizardOpenCalendlyImport ? 'cal' : 'std'}`}
           isModal
+          openCalendlyImport={wizardOpenCalendlyImport}
           onClose={() => {
             setShowWizard(false);
+            setWizardOpenCalendlyImport(false);
             setWizardInitialStep(undefined);
             // Belt-and-suspenders: ensure completed is persisted even if wizard's own handler failed
             markOnboardingCompletedLocal();

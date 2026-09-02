@@ -10,6 +10,7 @@ import {
   ArrowRight, ArrowLeft, Check, X, Loader2, Copy, ExternalLink, Pencil,
   Calendar, Mail, Video, Globe, Zap, Sparkles,
   Users, Gift, AlertCircle, MapPin, Clock,
+  ClipboardSignature, Receipt,
 } from 'lucide-react';
 import { ColorSwatchRow, BRAND_SWATCHES } from './ColorSwatchRow';
 import {
@@ -102,6 +103,8 @@ interface WizardProps {
   onClose?: () => void;
   isModal?: boolean;
   initialStep?: number;
+  /** Open welcome step on Calendly import (Settings link or ?calendly_import=1). */
+  openCalendlyImport?: boolean;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -241,7 +244,7 @@ function ProviderIcon({ provider, size = 20 }: { provider: string; size?: number
 
 // ── Main Wizard ───────────────────────────────────────────────────────────────
 
-export function OnboardingWizard({ onClose, isModal = false, initialStep }: WizardProps) {
+export function OnboardingWizard({ onClose, isModal = false, initialStep, openCalendlyImport = false }: WizardProps) {
   const { user, profile, subscription, refreshProfile } = useAuth();
   const navigate = useNavigate();
 
@@ -255,7 +258,12 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
   const [saving, setSaving] = useState(false);
 
   // Welcome step
-  const [fromCalendly, setFromCalendly] = useState<boolean | null>(null);
+  const [welcomeIntent, setWelcomeIntent] = useState<'intent' | 'calendly'>(() =>
+    openCalendlyImport ? 'calendly' : 'intent',
+  );
+  const [fromCalendly, setFromCalendly] = useState<boolean | null>(() =>
+    openCalendlyImport ? true : null,
+  );
   const [calendlyUrl, setCalendlyUrl] = useState('');
   const [scraping, setScraping] = useState(false);
   const [scrapeError, setScrapeError] = useState('');
@@ -610,6 +618,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
     if (!calendlyOk) return;
     calendlyImportRan.current = true;
     setFromCalendly(true);
+    setWelcomeIntent('calendly');
     setCalendlyConnected(true);
     void runCalendlyImport({ oauthOnly: true });
     const url = new URL(window.location.href);
@@ -912,6 +921,29 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
     } finally {
       setSaving(false);
     }
+  };
+
+  const openCalendlyImportFlow = () => {
+    setWelcomeIntent('calendly');
+    setFromCalendly(true);
+  };
+
+  const handleIntentBooking = async () => {
+    setFromCalendly(false);
+    setWelcomeIntent('intent');
+    if (isAlreadyPro) {
+      await saveStep(STEPS.indexOf('welcome') + 1);
+      goNext();
+      return;
+    }
+    setShowTrialOffer(true);
+  };
+
+  const handleIntentDocuments = async (path: string) => {
+    if (!user) return;
+    await clearWizardActive();
+    if (onClose) onClose();
+    navigate(path);
   };
 
   // ── OAuth calendar connect — saves wizard position before redirect ────────────
@@ -1281,43 +1313,119 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep }: Wiza
           );
         }
 
-        return (
-          <div>
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-indigo-100 dark:bg-indigo-900/30 mb-4">
-                <Sparkles className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
+        if (welcomeIntent === 'intent' && !showTrialOffer) {
+          return (
+            <div>
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">What do you want to send first?</h2>
+                <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm max-w-sm mx-auto">
+                  Pick one — we&apos;ll take you to the right setup.
+                </p>
               </div>
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Welcome to PinOnIt!</h2>
-              <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm max-w-sm mx-auto">
-                Let's get your scheduling page set up in just a few minutes.
+
+              <div className="space-y-3 mb-6">
+                <button
+                  type="button"
+                  onClick={() => void handleIntentBooking()}
+                  className="w-full p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-600 bg-white dark:bg-slate-900 text-left transition-all group"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="h-12 w-12 rounded-xl bg-brand-50 dark:bg-brand-500/10 flex items-center justify-center shrink-0">
+                      <Calendar className="h-6 w-6 text-brand-600 dark:text-brand-400" />
+                    </div>
+                    <div>
+                      <p className="text-base font-bold text-slate-900 dark:text-white">A booking link</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Set up your booking page and share a link by text.</p>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => void handleIntentDocuments('/dashboard/documents/new')}
+                  className="w-full p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-600 bg-white dark:bg-slate-900 text-left transition-all"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="h-12 w-12 rounded-xl bg-brand-50 dark:bg-brand-500/10 flex items-center justify-center shrink-0">
+                      <ClipboardSignature className="h-6 w-6 text-brand-600 dark:text-brand-400" />
+                    </div>
+                    <div>
+                      <p className="text-base font-bold text-slate-900 dark:text-white">A waiver or NDA</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Pick a template and send it for a signature by text.</p>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => void handleIntentDocuments('/dashboard/documents/new?type=quote')}
+                  className="w-full p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-600 bg-white dark:bg-slate-900 text-left transition-all"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="h-12 w-12 rounded-xl bg-brand-50 dark:bg-brand-500/10 flex items-center justify-center shrink-0">
+                      <Receipt className="h-6 w-6 text-brand-600 dark:text-brand-400" />
+                    </div>
+                    <div>
+                      <p className="text-base font-bold text-slate-900 dark:text-white">A quote or invoice</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Build line items and send for approval by text.</p>
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              <p className="text-center">
+                <button
+                  type="button"
+                  onClick={openCalendlyImportFlow}
+                  className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+                >
+                  Switching from Calendly or another tool? Import your setup →
+                </button>
               </p>
             </div>
+          );
+        }
 
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 text-center">
-              Are you switching from Calendly?
-            </p>
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              {[
-                { val: true, label: 'Switching from Calendly?', icon: '📅', desc: 'Import your events. 60 days Pro with a card on file — $0 today, billing starts after day 60.' },
-                { val: false, label: 'Starting fresh', icon: '🚀', desc: 'Your 14-day Pro trial starts automatically. Add a card anytime for 60 days ($0 today).' },
-              ].map(opt => (
+        return (
+          <div>
+            {(welcomeIntent === 'calendly' || fromCalendly === true) && (
+              <div className="mb-4">
                 <button
-                  key={String(opt.val)}
-                  onClick={() => setFromCalendly(opt.val)}
-                  className={`p-4 rounded-2xl border-2 text-left transition-all ${
-                    fromCalendly === opt.val
-                      ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/20'
-                      : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700'
-                  }`}
+                  type="button"
+                  onClick={() => {
+                    setWelcomeIntent('intent');
+                    setFromCalendly(null);
+                    setScrapeError('');
+                  }}
+                  className="text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1"
                 >
-                  <span className="text-2xl">{opt.icon}</span>
-                  <p className="text-sm font-semibold text-slate-900 dark:text-white mt-2">{opt.label}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{opt.desc}</p>
+                  <ArrowLeft className="h-4 w-4" /> Back to setup options
                 </button>
-              ))}
-            </div>
+              </div>
+            )}
 
-            {fromCalendly === true && (() => {
+            {welcomeIntent !== 'calendly' && fromCalendly !== true && (
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-indigo-100 dark:bg-indigo-900/30 mb-4">
+                  <Sparkles className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Welcome to PinOnIt!</h2>
+                <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm max-w-sm mx-auto">
+                  Let&apos;s get your scheduling page set up in just a few minutes.
+                </p>
+              </div>
+            )}
+
+            {(welcomeIntent === 'calendly' || fromCalendly === true) && (
+              <div className="text-center mb-6">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">Import from Calendly</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
+                  Connect your account or paste your profile URL to pull in event types and availability.
+                </p>
+              </div>
+            )}
+
+            {(welcomeIntent === 'calendly' || fromCalendly === true) && (() => {
               const hasImportPreview =
                 !scraping &&
                 !scrapeError &&
