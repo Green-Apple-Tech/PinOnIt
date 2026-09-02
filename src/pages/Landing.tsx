@@ -7,8 +7,8 @@ import { usePageMeta } from '../lib/pageMeta';
 import {
   ArrowRight, Check,
   Sun, Moon, Menu, X,
-  Calendar, Bell, Mail, ClipboardSignature, QrCode, ShoppingBag,
-  FileText, Receipt,
+  Calendar, Bell, Mail, ClipboardSignature, QrCode,
+  Receipt,
 } from 'lucide-react';
 import { OnboardingBot } from '../components/OnboardingBot';
 import { SmsPhoneMockup } from '../components/landing/SmsPhoneMockup';
@@ -17,9 +17,10 @@ import { LandingPricingCard } from '../components/landing/LandingPricingCard';
 import { LandingFaq } from '../components/landing/LandingFaq';
 
 const HOME_META = {
-  title: 'Run your business by text — booking, waivers, NDAs, invoices by SMS | PinOnIt',
+  title: 'Your mini office by text | PinOnIt',
+  ogTitle: 'Your mini office by text',
   description:
-    'Send a booking link, waiver, NDA, quote, or invoice as a text. Your customer taps and replies — no app, no DocuSign, no scanner. A Calendly alternative for small business, $6/mo.',
+    'Booking + Sign by Text — waivers, NDAs, addendums, quotes, invoices. One simple app. $8.99/mo.',
   url: 'https://pinonit.com/',
   image: 'https://pinonit.com/pinonit_logo.png',
 };
@@ -34,43 +35,48 @@ const HERO_MESSAGES = [
 const TEXT_ACTION_CARDS = [
   {
     icon: Calendar,
-    title: 'Book a meeting or appointment',
-    you: 'Send your booking link by text; they pick a time in your calendar.',
+    title: 'Easy Booking',
+    you: 'Send your booking link by text; clients pick a time on your calendar.',
     theySee: 'Tap to grab a time: pinonit.com/pedro',
   },
   {
     icon: ClipboardSignature,
-    title: 'Sign a waiver',
-    you: 'Liability waivers, consent forms, intake forms — signed with a finger on their phone.',
+    title: 'Sign by Text',
+    you: 'Waivers, NDAs, addendums, or simple contracts — signed with a finger after an SMS code.',
     theySee: 'Please sign before Saturday: pinonit.com/d/…',
   },
   {
-    icon: FileText,
-    title: 'Sign an NDA or contract',
-    you: 'Verified with an SMS code, then signed or initialed right on their phone.',
-    theySee: 'Your NDA is ready. Code sent — tap to sign.',
+    icon: Bell,
+    title: 'Super Reminders',
+    you: 'Remind yourself — or have PinOnIt remind your customer, co-worker, spouse, or anyone else.',
+    theySee: 'Reminder: 10am tomorrow. Reply C to cancel or R to reschedule.',
   },
   {
     icon: Receipt,
-    title: 'Send a quote, invoice, or receipt',
-    you: 'Line items, tax, notes, and a pay link if you want one. One tap to approve.',
+    title: 'Business Documents',
+    you: 'Invoices, receipts, quotes, and everyday docs in seconds.',
     theySee: 'Quote for $450 — tap to approve.',
   },
   {
-    icon: Bell,
-    title: 'Automatic reminders',
-    you: 'SMS, WhatsApp, or voice reminders so fewer people no-show. Customers can cancel or reschedule by replying.',
-    theySee: 'Reminder: 10am tomorrow. Reply C to cancel or R to reschedule.',
+    icon: QrCode,
+    title: 'QR Codes',
+    you: 'Create a QR instantly for your booking page, link, or business.',
+    theySee: 'Scan to book — no app needed.',
+  },
+  {
+    icon: Mail,
+    title: 'Signature Creator',
+    you: 'Create and save your signature for documents and email.',
+    theySee: 'Your brand, ready to send.',
   },
 ];
 
 const OLD_VS_TEXT = [
-  { old: 'Email a PDF, wait days', new: 'A text they see in minutes' },
-  { old: '“Download our app”', new: 'Nothing to install' },
-  { old: 'DocuSign account + monthly fee', new: 'Signing is included' },
-  { old: 'Print, sign, scan, send back', new: 'Sign with a finger, done' },
-  { old: 'Chasing no-shows by phone', new: 'Automatic reminders, reply-to-reschedule' },
-  { old: 'Five tools, five logins', new: 'One dashboard, one $6/mo plan' },
+  { old: 'Email a PDF, wait days', new: 'Sign by Text in minutes' },
+  { old: 'Print, sign, scan, send back', new: 'Finger sign on their phone' },
+  { old: 'Text-tag to schedule', new: 'Send your booking link once' },
+  { old: 'Five tools, five logins', new: 'One app — $8.99/mo' },
+  { old: 'Chasing no-shows by phone', new: 'Super Reminders that reply back' },
 ];
 
 const TRADE_CHIPS = [
@@ -81,12 +87,12 @@ const TRADE_CHIPS = [
 ];
 
 const SIX_TOOLS = [
-  { icon: Calendar, title: 'Scheduling page', desc: 'Your own booking page and links, synced to your calendar.' },
-  { icon: Bell, title: 'Smart reminders', desc: 'SMS, WhatsApp, and voice.' },
-  { icon: ClipboardSignature, title: 'Doc Center', desc: 'Waivers, NDAs, contracts, quotes, invoices, receipts.' },
-  { icon: ShoppingBag, title: 'Paid booking', desc: 'Take payment when they book.' },
-  { icon: QrCode, title: 'QR code creator', desc: 'Put your booking link on a truck, a mirror, a business card.' },
-  { icon: Mail, title: 'Email signature', desc: 'A clean signature with a “Schedule a meeting” button.' },
+  { icon: Calendar, title: 'Easy Booking', desc: 'Your booking page and links, synced to your calendar.' },
+  { icon: ClipboardSignature, title: 'Sign by Text', desc: 'Waivers, NDAs, addendums, simple contracts.' },
+  { icon: Bell, title: 'Super Reminders', desc: 'You, your customers, or anyone else — by SMS.' },
+  { icon: Receipt, title: 'Business Documents', desc: 'Quotes, invoices, receipts — send in seconds.' },
+  { icon: QrCode, title: 'QR Codes', desc: 'Booking page, link, or business — instant.' },
+  { icon: Mail, title: 'Signature Creator', desc: 'Save a signature for docs and email.' },
 ];
 
 export function Landing() {
@@ -152,24 +158,24 @@ export function Landing() {
         </div>
         <div className="relative max-w-6xl mx-auto grid lg:grid-cols-2 gap-10 lg:gap-12 items-center">
           <div className="text-center lg:text-left">
-            <p className="inline-flex flex-wrap items-center justify-center lg:justify-start gap-x-2 gap-y-1 px-3 py-1.5 mb-5 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300">
-              Booking · Waivers · NDAs · Quotes · Invoices · Reminders — all by SMS
+            <p className="inline-flex flex-wrap items-center justify-center lg:justify-start gap-x-2 gap-y-1 px-3 py-1.5 mb-5 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 tracking-wide">
+              BOOK IT · REMIND IT · SEND IT · SIGN IT · PIN IT
             </p>
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white leading-tight mb-4">
-              Run your business by text.
+              One simple app for the stuff you need to get done.
             </h1>
             <p className="text-lg md:text-xl font-medium text-slate-600 dark:text-slate-300 leading-snug mb-8 max-w-xl mx-auto lg:mx-0">
-              Send a booking link, waiver, NDA, quote, invoice, or receipt as a simple text. Your customer taps, replies, done — about 10 seconds. No app to download. No DocuSign. No scanner.
+              <strong className="text-slate-900 dark:text-white">Sign by Text</strong> and <strong className="text-slate-900 dark:text-white">easy booking</strong> — plus reminders, invoices, QR codes, and more. No pile of apps. Just PinOnIt.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 mb-3">
               <Link to="/signup" className="w-full sm:w-auto px-8 py-4 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-full text-base transition-all shadow-lg shadow-brand-200/60 dark:shadow-none inline-flex items-center justify-center gap-2">
                 Start free <ArrowRight className="h-4 w-4" />
               </Link>
               <a href="#demo" className="w-full sm:w-auto px-8 py-4 border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold rounded-full text-base hover:bg-slate-50 dark:hover:bg-slate-800 transition-all inline-flex items-center justify-center">
-                See the 10-second demo
+                See how it works
               </a>
             </div>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Free trial, then one plan at $6/mo. Everything included.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Free trial, then $8.99/mo. Cancel anytime.</p>
           </div>
           <div>
             <SmsPhoneMockup messages={HERO_MESSAGES} caption="Real flow. No app on her phone." />
@@ -185,7 +191,7 @@ export function Landing() {
           </h2>
           <div className="grid md:grid-cols-3 gap-8 mb-8">
             {[
-              { n: '1', title: 'You send it', body: 'Pick a template in PinOnIt — booking link, waiver, NDA, quote, invoice, receipt — and hit send. One tap.' },
+              { n: '1', title: 'You send it', body: 'Pick booking, Sign by Text (waiver, NDA, addendum…), quote, or invoice — and hit send. One tap.' },
               { n: '2', title: 'They get a text', body: 'A normal SMS lands on their phone. No link to an app store, no account to create.' },
               { n: '3', title: 'They tap, reply, done', body: 'Sign with a finger, confirm with a code, or just reply. Every step is timestamped for you.' },
             ].map((step) => (
@@ -204,7 +210,7 @@ export function Landing() {
       <section className="py-20 px-6 bg-white dark:bg-slate-950">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-2xl md:text-3xl font-bold text-center text-slate-900 dark:text-white mb-12">
-            Five things your customers can do by text
+            Booking. Reminders. Documents. Signatures. QR codes.
           </h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {TEXT_ACTION_CARDS.map(({ icon: Icon, title, you, theySee }) => (
@@ -347,7 +353,7 @@ export function Landing() {
           >
             Start free <ArrowRight className="h-5 w-5" />
           </Link>
-          <p className="mt-5 text-brand-100 text-sm">$6/mo after your trial. Nothing to install — for you or your customers.</p>
+          <p className="mt-5 text-brand-100 text-sm">$8.99/mo after your trial. Nothing to install — for you or your customers.</p>
         </div>
       </section>
 

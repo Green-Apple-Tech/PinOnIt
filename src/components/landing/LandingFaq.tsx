@@ -8,7 +8,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'Do I need DocuSign or anything else?',
-    a: 'No. Waivers, NDAs, contracts, quotes, invoices, and receipts are all sent and signed inside PinOnIt.',
+    a: 'No. Sign by Text covers waivers, NDAs, addendums, contracts, quotes, invoices, and receipts — all inside PinOnIt.',
   },
   {
     q: 'What does my customer actually see?',
@@ -23,8 +23,8 @@ const FAQ_ITEMS = [
     a: 'Yes — Google Calendar, plus import from Calendly if you\'re switching.',
   },
   {
-    q: 'Is it really $6 a month?',
-    a: 'Yes. One plan, everything included, free trial first.',
+    q: 'Is it really $8.99 a month?',
+    a: 'Yes. One plan — booking, Sign by Text, reminders, docs, QR codes, and more. Free trial first.',
   },
 ];
 

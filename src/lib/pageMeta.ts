@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 
 const DEFAULTS = {
-  title: 'PinOnIt — Calendar scheduling & super reminders. Never miss a meeting again.',
+  title: 'Your mini office by text | PinOnIt',
   description:
-    'PinOnIt is a Calendly alternative for small business: WhatsApp and voice reminders, two-way SMS to cancel or reschedule, quotes, a paid storefront, QR codes, and SMS group scheduling.',
+    'Booking + Sign by Text — waivers, NDAs, addendums, quotes, invoices. One simple app. $8.99/mo.',
   url: 'https://pinonit.com',
   image: 'https://pinonit.com/pinonit_logo.png',
 };
@@ -32,6 +32,8 @@ export function usePageMeta(opts: {
   description: string;
   url: string;
   image: string;
+  /** Short title for iMessage / social cards (falls back to title). */
+  ogTitle?: string;
 }) {
   useEffect(() => {
     const prev = document.title;
@@ -39,26 +41,29 @@ export function usePageMeta(opts: {
     upsertMeta('meta[name="description"]', { name: 'description', content: opts.description });
     upsertMeta('meta[name="keywords"]', {
       name: 'keywords',
-      content: 'Calendly alternative for small business, WhatsApp reminders, two-way SMS reschedule, voice alerts, quotes, paid booking storefront, PinOnIt vs Calendly',
+      content:
+        'run business by text, SMS booking, waiver by text, NDA by SMS, invoice by text, Calendly alternative, Doc Center, PinOnIt',
     });
-    upsertMeta('meta[property="og:title"]', { property: 'og:title', content: opts.title });
+    // iMessage truncates hard — prefer a short og/twitter title when provided
+    const shareTitle = opts.ogTitle ?? opts.title;
+    upsertMeta('meta[property="og:title"]', { property: 'og:title', content: shareTitle });
     upsertMeta('meta[property="og:description"]', { property: 'og:description', content: opts.description });
     upsertMeta('meta[property="og:url"]', { property: 'og:url', content: opts.url });
     upsertMeta('meta[property="og:image"]', { property: 'og:image', content: opts.image });
     upsertMeta('meta[property="og:type"]', { property: 'og:type', content: 'website' });
     upsertMeta('meta[name="twitter:card"]', { name: 'twitter:card', content: 'summary_large_image' });
-    upsertMeta('meta[name="twitter:title"]', { name: 'twitter:title', content: opts.title });
+    upsertMeta('meta[name="twitter:title"]', { name: 'twitter:title', content: shareTitle });
     upsertMeta('meta[name="twitter:description"]', { name: 'twitter:description', content: opts.description });
     upsertMeta('meta[name="twitter:image"]', { name: 'twitter:image', content: opts.image });
     upsertLink('canonical', opts.url);
     return () => {
       document.title = prev || DEFAULTS.title;
       upsertMeta('meta[name="description"]', { name: 'description', content: DEFAULTS.description });
-      upsertMeta('meta[property="og:title"]', { property: 'og:title', content: DEFAULTS.title });
+      upsertMeta('meta[property="og:title"]', { property: 'og:title', content: 'Your mini office by text' });
       upsertMeta('meta[property="og:description"]', { property: 'og:description', content: DEFAULTS.description });
       upsertMeta('meta[property="og:url"]', { property: 'og:url', content: DEFAULTS.url });
       upsertMeta('meta[property="og:image"]', { property: 'og:image', content: DEFAULTS.image });
       upsertLink('canonical', DEFAULTS.url);
     };
-  }, [opts.title, opts.description, opts.url, opts.image]);
+  }, [opts.title, opts.description, opts.url, opts.image, opts.ogTitle]);
 }

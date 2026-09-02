@@ -11,6 +11,8 @@ import {
   CONTRACT_HOST_HINT,
   WAIVER_HOST_HINT,
   SMB_DOCUMENT_TYPES,
+  DOCUMENT_UPLOAD_BUCKET,
+  DOCUMENT_UPLOAD_MAX_BYTES,
   defaultDocumentBody,
   defaultVerificationRequired,
   defaultWaiverText,
@@ -21,6 +23,7 @@ import {
   businessNameOptions,
   isMoneyDocumentType,
   isSmbDocumentType,
+  isUploadDocumentType,
   newDocumentToken,
   sendDocumentLink,
 } from '../lib/documents';
@@ -35,6 +38,12 @@ function money(amount: number, currency = 'USD') {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount || 0);
 }
 
+function formatBytes(n: number) {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export function CreateDocumentPage() {
   const { user, profile, refreshProfile } = useAuth();
   const [searchParams] = useSearchParams();
@@ -45,6 +54,7 @@ export function CreateDocumentPage() {
   const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
   const [documentType, setDocumentType] = useState<SmbDocumentType>(initialType);
   const [customTypeLabel, setCustomTypeLabel] = useState('');
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [recipientName, setRecipientName] = useState('');
   const [recipientEmail, setRecipientEmail] = useState('');
   const [recipientPhone, setRecipientPhone] = useState('');
@@ -88,6 +98,7 @@ export function CreateDocumentPage() {
 
   const selectedTemplate = templates.find((t) => t.document_type === documentType) ?? null;
   const isWaiver = documentType === 'waiver';
+  const isUpload = isUploadDocumentType(documentType);
   const isMoney = isMoneyDocumentType(documentType);
   const bodyEditable = documentBodyIsEditable(documentType);
   const knownBusinessNames = useMemo(
@@ -160,16 +171,41 @@ export function CreateDocumentPage() {
   const handleTypeChange = (next: SmbDocumentType) => {
     setDocumentType(next);
     setVerificationRequired(defaultVerificationRequired(next));
+    if (next !== 'upload') setUploadFile(null);
+    if (next !== 'other') setCustomTypeLabel('');
+  };
+
+  const handleUploadPick = (file: File | null) => {
+    setError('');
+    if (!file) {
+      setUploadFile(null);
+      return;
+    }
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      setError('Upload a PDF only (export Word to PDF first).');
+      setUploadFile(null);
+      return;
+    }
+    if (file.size > DOCUMENT_UPLOAD_MAX_BYTES) {
+      setError(`PDF must be ${formatBytes(DOCUMENT_UPLOAD_MAX_BYTES)} or smaller.`);
+      setUploadFile(null);
+      return;
+    }
+    setUploadFile(file);
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!user?.id || !selectedTemplate) return;
     const typeLabel = documentTypeLabel(documentType, customTypeLabel);
-    const topicText = topic.trim() || (isMoney ? typeLabel : '');
+    const topicText = topic.trim() || (isMoney ? typeLabel : isUpload ? (uploadFile?.name.replace(/\.pdf$/i, '') || 'Document') : '');
     const phone = recipientPhone.trim() ? normalizePhoneE164(recipientPhone) : null;
     if (documentType === 'other' && !customTypeLabel.trim()) {
       setError('Enter a custom document type.');
+      return;
+    }
+    if (isUpload && !uploadFile) {
+      setError('Choose a PDF to send for signature.');
       return;
     }
     if (!topicText) {
@@ -182,7 +218,7 @@ export function CreateDocumentPage() {
       setError('Add the business name that appears on this waiver.');
       return;
     }
-    if (verificationRequired && !phone) {
+    if ((verificationRequired || isUpload) && !phone) {
       setError('Add a valid phone number so the recipient can verify.');
       return;
     }
@@ -203,6 +239,27 @@ export function CreateDocumentPage() {
     setSubmitting(true);
 
     const token = newDocumentToken();
+    let filePath: string | null = null;
+    let fileName: string | null = null;
+    let fileSize: number | null = null;
+
+    if (isUpload && uploadFile) {
+      filePath = `${user.id}/${token}.pdf`;
+      fileName = uploadFile.name.slice(0, 200);
+      fileSize = uploadFile.size;
+      const { error: upErr } = await supabase.storage
+        .from(DOCUMENT_UPLOAD_BUCKET)
+        .upload(filePath, uploadFile, {
+          contentType: 'application/pdf',
+          upsert: false,
+        });
+      if (upErr) {
+        setError(upErr.message || 'Could not upload the PDF. Try again.');
+        setSubmitting(false);
+        return;
+      }
+    }
+
     const lineItems = isMoney
       ? items.filter((i) => i.description.trim() || i.amount)
       : [];
@@ -225,16 +282,22 @@ export function CreateDocumentPage() {
           })
         : null,
       status: 'pending',
-      verification_required: verificationRequired,
+      verification_required: isUpload ? true : verificationRequired,
       line_items: lineItems,
       tax_percent: isMoney ? Number(taxPercent) || 0 : 0,
       notes: isMoney ? notes.trim() || null : null,
       pay_elsewhere_url: isMoney && documentType !== 'receipt' ? payUrl.trim() || null : null,
       pay_elsewhere_label: isMoney && documentType !== 'receipt' ? payLabel.trim() || null : null,
       currency: 'USD',
+      file_path: filePath,
+      file_name: fileName,
+      file_size_bytes: fileSize,
     });
 
     if (err) {
+      if (filePath) {
+        await supabase.storage.from(DOCUMENT_UPLOAD_BUCKET).remove([filePath]);
+      }
       setError(err.message);
       setSubmitting(false);
       return;
@@ -355,6 +418,24 @@ export function CreateDocumentPage() {
               />
             </label>
           )}
+          {isUpload && (
+            <label className="block">
+              <span className="text-xs font-medium text-gray-600 dark:text-slate-400">PDF to sign</span>
+              <input
+                type="file"
+                accept="application/pdf,.pdf"
+                onChange={(e) => handleUploadPick(e.target.files?.[0] ?? null)}
+                className={`${fieldClass} file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-brand-700`}
+              />
+              <p className="mt-1 text-xs text-gray-400">
+                PDF only, up to {formatBytes(DOCUMENT_UPLOAD_MAX_BYTES)}. Word docs: export as PDF first.
+                {uploadFile ? ` Selected: ${uploadFile.name} (${formatBytes(uploadFile.size)}).` : ''}
+              </p>
+              <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
+                They get a text, enter a 2FA code, then sign with their finger — same simple flow as NDA/waiver.
+              </p>
+            </label>
+          )}
         </div>
 
         <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-6 space-y-4">
@@ -386,7 +467,7 @@ export function CreateDocumentPage() {
           </label>
           <label className="block">
             <span className="text-xs font-medium text-gray-600 dark:text-slate-400">
-              Phone {verificationRequired ? '' : '(optional)'}
+              Phone {(verificationRequired || isUpload) ? '' : '(optional)'}
             </span>
             <input
               type="tel"
@@ -394,27 +475,27 @@ export function CreateDocumentPage() {
               value={recipientPhone}
               onChange={(e) => setRecipientPhone(e.target.value)}
               onBlur={() => setRecipientPhone(blurFormatPhone(recipientPhone))}
-              required={verificationRequired}
+              required={verificationRequired || isUpload}
               className={fieldClass}
               placeholder={PHONE_PLACEHOLDER}
               autoComplete="tel"
             />
             <p className="mt-1 text-xs text-gray-400">
-              {verificationRequired ? PHONE_HINT : 'Needed only if you want us to text the link, or if verification is on.'}
+              {(verificationRequired || isUpload) ? PHONE_HINT : 'Needed only if you want us to text the link, or if verification is on.'}
             </p>
           </label>
           <label className="block">
             <span className="text-xs font-medium text-gray-600 dark:text-slate-400">
-              {isWaiver ? 'Activity / service description' : 'Topic'}
+              {isWaiver ? 'Activity / service description' : isUpload ? 'Topic (optional)' : 'Topic'}
             </span>
             <input
               value={topic}
               onChange={(e) => setTopic(e.target.value.slice(0, 150))}
-              required={!isMoney}
+              required={!isMoney && !isUpload}
               maxLength={150}
               list="document-activity-options"
               className={fieldClass}
-              placeholder={isWaiver ? 'e.g. kitchen remodel, zip-line tour' : isMoney ? 'Kitchen remodel' : 'Kitchen remodel deposit'}
+              placeholder={isWaiver ? 'e.g. kitchen remodel, zip-line tour' : isMoney ? 'Kitchen remodel' : isUpload ? 'Optional note (defaults to file name)' : 'Kitchen remodel deposit'}
             />
             <datalist id="document-activity-options">
               {activityOptions.map((name) => (
@@ -425,6 +506,8 @@ export function CreateDocumentPage() {
               {topic.trim().length}/150
               {isWaiver
                 ? ' — fills [Activity/Service Description] in the waiver'
+                : isUpload
+                ? ' — shown above the PDF'
                 : ' — shown on the confirmation page'}
               {isMoney ? '. Defaults to the document type if you leave it blank.' : ''}
             </p>
@@ -462,10 +545,11 @@ export function CreateDocumentPage() {
         </div>
 
         <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-6">
-          <label className="flex items-start gap-3 cursor-pointer">
+          <label className={`flex items-start gap-3 ${isUpload ? 'cursor-default' : 'cursor-pointer'}`}>
             <input
               type="checkbox"
-              checked={verificationRequired}
+              checked={isUpload ? true : verificationRequired}
+              disabled={isUpload}
               onChange={(e) => setVerificationRequired(e.target.checked)}
               className="mt-1"
             />
@@ -474,7 +558,9 @@ export function CreateDocumentPage() {
                 Require phone verification
               </span>
               <span className="block mt-1 text-xs text-gray-500 dark:text-slate-400">
-                {verificationRequired
+                {isUpload
+                  ? 'Always on for uploaded PDFs — SMS code, then finger signature.'
+                  : verificationRequired
                   ? 'They enter an SMS code, then sign or confirm. Default on for NDAs, contracts, and waivers.'
                   : documentType === 'quote'
                     ? 'They can view this quote with no OTP and no signature.'

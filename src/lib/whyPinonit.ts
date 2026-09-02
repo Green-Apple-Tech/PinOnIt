@@ -120,7 +120,7 @@ export const CALENDLY_EXCLUSIVES: ExclusiveFeature[] = [
     id: 'referral',
     icon: '💵',
     title: 'Referral program: $1/mo credit',
-    desc: 'Refer 6 people and Pro is free. Refer more and PinOnIt pays you $1/month per person.',
+    desc: 'Refer 9 people and Pro is covered. Refer more and PinOnIt pays you $1/month per person.',
     tag: 'Not on Calendly',
   },
 ];
@@ -128,15 +128,15 @@ export const CALENDLY_EXCLUSIVES: ExclusiveFeature[] = [
 export const WHY_PINONIT = {
   seoTitle: 'Calendly alternative for small business | PinOnIt',
   seoDescription:
-    'PinOnIt is the Calendly alternative for small business: WhatsApp and voice reminders, two-way SMS to cancel or reschedule, quotes, a paid storefront, QR codes, and SMS group scheduling — from $6/mo.',
+    'PinOnIt is the Calendly alternative for small business: Sign by Text, easy booking, WhatsApp and voice reminders, two-way SMS, quotes, QR codes — from $8.99/mo.',
   ogImage: 'https://pinonit.com/og-why-pinonit.png',
   canonical: 'https://pinonit.com/why-pinonit',
   heroHeadline: 'Calendly books meetings. PinOnIt runs your business.',
   heroSubhead:
-    'WhatsApp reminders, critical alerts, calendar write-back to Google/Outlook, personal “remind me…”, two-way SMS, and a paid storefront — things Calendly does not do. $6/mo after trial.',
+    'Sign by Text, easy booking, WhatsApp reminders, calendar write-back, two-way SMS, and a paid storefront — things Calendly does not do. $8.99/mo after trial.',
   exclusiveHeadline: 'What Calendly genuinely doesn’t do',
   exclusiveSubhead: 'These are not “Calendly charges extra.” These are missing.',
-  priceLine: '$6/mo after trial · cancel anytime',
+  priceLine: '$8.99/mo after trial · cancel anytime',
   trialCta: 'Start 14-day trial',
   features: [
     { id: 'whatsapp', label: 'WhatsApp reminders', pinonit: true, calendly: false },
@@ -156,7 +156,7 @@ export const WHY_PINONIT = {
     { id: 'referral', label: 'Referral credit', pinonit: '$1/mo', calendly: false },
     { id: 'deposits', label: 'Deposits at booking', pinonit: true, calendly: '$16+/mo' },
     { id: 'types', label: 'Unlimited event types', pinonit: true, calendly: '$16+/mo' },
-    { id: 'price', label: 'Monthly price', pinonit: '$6', calendly: '$16+' },
+    { id: 'price', label: 'Monthly price', pinonit: '$8.99', calendly: '$16+' },
   ] satisfies WhyFeature[],
   scenarios: [
     {

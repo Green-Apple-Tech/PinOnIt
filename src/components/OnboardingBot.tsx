@@ -201,7 +201,7 @@ export function OnboardingBot() {
 
     if (question.id === 'paying' && option.includes('Calendly')) {
       setCalloutMessage(
-        "💡 PinOnIt has everything Calendly offers — plus SMS reminders, group scheduling, and paid bookings — starting at $6/month vs Calendly's $20+. No brainer."
+        "💡 PinOnIt has everything Calendly offers — plus SMS reminders, group scheduling, and paid bookings — starting at $8.99/month vs Calendly's $16+. No brainer."
       );
       if (advanceTimer.current) clearTimeout(advanceTimer.current);
       advanceTimer.current = setTimeout(() => {

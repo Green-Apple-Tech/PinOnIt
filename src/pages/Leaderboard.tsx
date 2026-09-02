@@ -63,7 +63,7 @@ export function LeaderboardPage() {
             Top referrers
           </h1>
           <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-            Every Pro referral earns $1 off your monthly bill. Refer 6 and your plan is free. Refer 7+ and we pay <em>you</em>.
+            Every Pro referral earns $1 off your monthly bill. Refer 9 and your plan is free. Refer 10+ and we pay <em>you</em>.
           </p>
         </div>
 

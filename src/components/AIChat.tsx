@@ -31,7 +31,7 @@ const KNOWLEDGE_BASE: Record<string, string> = {
   'confirm': 'Confirmation links are included in every automated message. Guests tap to confirm their appointment, which updates the booking status instantly.',
   'reschedule': 'Guests can reschedule by clicking the reschedule link in their messages. This redirects them to your booking page to pick a new time.',
   'slug': 'Your booking page URL slug is set in Settings. It becomes pinonit.com/your-slug. Choose something memorable and professional.',
-  'price': 'Pin on It Pro is $8/month -- half the price of Calendly Standard ($16/month). You get automated reminders, AI translation, paid bookings, QR booking codes, and more included. No extra charges for features that should be standard.',
+  'price': 'Pin on It Pro is $8.99/month -- about half the price of Calendly Standard ($16/month). You get automated reminders, AI translation, paid bookings, QR booking codes, and more included. No extra charges for features that should be standard.',
 };
 
 function getAIResponse(input: string): string {

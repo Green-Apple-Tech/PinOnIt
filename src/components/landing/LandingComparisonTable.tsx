@@ -21,7 +21,7 @@ export function LandingComparisonTable({ rows = LANDING_COMP_ROWS }: { rows?: La
           <div className="p-4 text-sm font-semibold text-slate-500 dark:text-slate-400">Feature</div>
           <div className="p-4 text-center">
             <span className="font-bold text-indigo-600 dark:text-indigo-500 text-sm">PinOnIt</span>
-            <div className="text-indigo-600 text-xs font-semibold mt-0.5">from $6/mo</div>
+            <div className="text-indigo-600 text-xs font-semibold mt-0.5">from $8.99/mo</div>
           </div>
           <div className="p-4 text-center">
             <span className="font-semibold text-slate-500 dark:text-slate-400 text-sm">Calendly</span>

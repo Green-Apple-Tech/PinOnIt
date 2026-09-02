@@ -132,6 +132,16 @@ The line items and total on this page describe what was provided. Confirming thi
 
 Keep a copy for your records. Any refund or dispute is between you and the sender.`;
 
+export const QUICK_ADDENDUM_STARTER_TEXT = `QUICK ADDENDUM
+
+Prepared for: [Recipient Name]
+
+This addendum from [Business Name] regards: [Activity/Service Description].
+
+By signing, you confirm you have reviewed this addendum and agree to the terms described. This addendum is intended to supplement any related agreement between the parties. Keep a copy for your records.
+
+This is a general-purpose starting template. It is not legal advice. Consult an attorney for high-risk or regulated transactions.`;
+
 export function defaultDocumentBody(type: SmbDocumentType, saved?: string | null) {
   const trimmed = saved?.trim();
   if (type === 'waiver') return injectWaiverRecipientPlaceholder(trimmed || WAIVER_STARTER_TEXT);
@@ -141,6 +151,7 @@ export function defaultDocumentBody(type: SmbDocumentType, saved?: string | null
   if (type === 'quote') return QUOTE_STARTER_TEXT;
   if (type === 'invoice') return INVOICE_STARTER_TEXT;
   if (type === 'receipt') return RECEIPT_STARTER_TEXT;
+  if (type === 'quick_addendum') return QUICK_ADDENDUM_STARTER_TEXT;
   return GENERIC_DOCUMENT_STARTER_TEXT;
 }
 
@@ -184,14 +195,18 @@ export function businessNameOptions(names: Array<string | null | undefined>) {
 export {
   SMB_DOCUMENT_TYPES,
   MONEY_DOCUMENT_TYPES,
+  DOCUMENT_UPLOAD_MAX_BYTES,
+  DOCUMENT_UPLOAD_BUCKET,
   GENERIC_DOCUMENT_STARTER_TEXT,
   isMoneyDocumentType,
+  isUploadDocumentType,
   isSmbDocumentType,
   documentTypeMeta,
   documentTypeLabel,
   defaultVerificationRequired,
   documentBodyIsEditable,
   documentNeedsRecipientAction,
+  documentFilePublicUrl,
 } from './documentTypes';
 
 export { HOLD_UP_COPY, LEGAL_DISCLAIMER, WAIVER_HOST_HINT, CONTRACT_HOST_HINT } from './documentCopy';

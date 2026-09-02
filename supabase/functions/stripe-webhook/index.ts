@@ -198,7 +198,7 @@ Deno.serve(async (req: Request) => {
   }
 });
 
-const PRO_PRICE_CENTS = 600;
+const PRO_PRICE_CENTS = 899;
 const PAYOUT_THRESHOLD_CENTS = 1000;
 
 async function handleConversion(

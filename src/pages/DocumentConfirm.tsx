@@ -6,6 +6,7 @@ import {
   LEGAL_DISCLAIMER,
   defaultVerificationRequired,
   documentNeedsRecipientAction,
+  documentFilePublicUrl,
   fetchClientIp,
   fillDocumentPlaceholders,
   getDocumentByToken,
@@ -286,12 +287,34 @@ export function DocumentConfirmPage() {
             {doc ? documentTypeLabel(doc.document_type, doc.document_type_custom) : 'Document'}
           </p>
           <h1 className="mt-3 text-lg font-bold">For {doc?.recipient_name}</h1>
-          {doc && doc.document_type === 'waiver' ? (
+          {doc?.file_path && (
+            <div className="mt-4 space-y-2">
+              <div className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
+                <iframe
+                  title={doc.file_name || 'Document PDF'}
+                  src={`${documentFilePublicUrl(doc.file_path) ?? ''}#view=FitH`}
+                  className="w-full h-[28rem] bg-white"
+                />
+              </div>
+              <a
+                href={documentFilePublicUrl(doc.file_path) ?? '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex text-sm font-medium text-indigo-600"
+              >
+                Open PDF{doc.file_name ? ` (${doc.file_name})` : ''}
+              </a>
+              {doc.topic ? (
+                <p className="text-sm text-slate-600">{doc.topic}</p>
+              ) : null}
+            </div>
+          )}
+          {doc && !doc.file_path && doc.document_type === 'waiver' ? (
             <p className="mt-3 text-sm text-slate-700 whitespace-pre-line leading-relaxed">
               {doc.topic ? `This waiver covers: ${doc.topic}\n\n` : ''}
               {fullBody}
             </p>
-          ) : (
+          ) : !doc?.file_path ? (
             <>
               {doc && (
                 <p className="mt-3 text-sm text-slate-600 whitespace-pre-line">
@@ -319,7 +342,7 @@ export function DocumentConfirmPage() {
                 </div>
               )}
             </>
-          )}
+          ) : null}
           {showMoney && (
             <table className="w-full mt-6 text-sm">
               <tbody>

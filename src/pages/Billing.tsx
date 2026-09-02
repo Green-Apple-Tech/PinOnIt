@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { syncStripeSubscription } from '../lib/stripe';
 import { effectivePlan, isActivePlan, isComplimentaryPro } from '../lib/plan';
+import { PRO_PRICE, STRIPE_PRO_PRICE_ID } from '../lib/pricing';
 import { recordPlatformTermsAcceptance } from '../lib/platformLegal';
 import { TrialTermsNotice } from '../components/TrialTermsNotice';
 import {
@@ -13,8 +14,7 @@ import {
   Shield, Info, X,
 } from 'lucide-react';
 
-const PRICE_ID = 'price_1TZHhhIVv38UYFOXMXT2EV8v';
-const PRO_PRICE = 6;
+const PRICE_ID = STRIPE_PRO_PRICE_ID;
 
 function GuaranteeBadge() {
   const [show, setShow] = useState(false);
@@ -238,7 +238,7 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
             <p className="text-sm font-semibold text-emerald-800">
               {isComplimentaryPro(profile)
                 ? "You're on Pro — complimentary, no payment needed."
-                : "You're on Pro — $6/mo, cancel anytime in Billing."}
+                : "You're on Pro — $8.99/mo, cancel anytime in Billing."}
             </p>
             <p className="text-xs text-emerald-600 mt-0.5">All Pro features are now active on your account.</p>
           </div>

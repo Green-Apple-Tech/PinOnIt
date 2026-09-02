@@ -81,6 +81,8 @@ export function DocumentsPage() {
 
       <div className="flex flex-wrap gap-2 mb-6">
         {[
+          { to: '/dashboard/documents/new?type=upload', label: 'Upload PDF to sign' },
+          { to: '/dashboard/documents/new?type=quick_addendum', label: 'Quick Addendum' },
           { to: '/dashboard/documents/new?type=nda', label: 'Send NDA' },
           { to: '/dashboard/documents/new?type=waiver', label: 'Send Waiver' },
           { to: '/dashboard/documents/new?type=invoice', label: 'Send Invoice/Quote' },
@@ -138,6 +140,7 @@ export function DocumentsPage() {
                       </span>
                       <span className="text-[11px] uppercase tracking-wide text-gray-400">
                         {documentTypeLabel(doc.document_type, doc.document_type_custom)}
+                        {doc.file_name ? ` · ${doc.file_name}` : ''}
                       </span>
                       <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${meta.className}`}>
                         <Icon className="h-3 w-3" />

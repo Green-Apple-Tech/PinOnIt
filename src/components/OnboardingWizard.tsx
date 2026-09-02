@@ -29,6 +29,7 @@ import { US_REGIONS } from '../lib/usSalesTax';
 import { WIZARD_STEPS as STEPS, type WizardStep as Step } from '../lib/wizardSteps';
 import { TrialTermsNotice } from './TrialTermsNotice';
 import { recordPlatformTermsAcceptance } from '../lib/platformLegal';
+import { STRIPE_PRO_PRICE_ID } from '../lib/pricing';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -861,7 +862,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep, openCa
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
           body: JSON.stringify({
-            price_id: 'price_1TZHhhIVv38UYFOXMXT2EV8v',
+            price_id: STRIPE_PRO_PRICE_ID,
             app_url: window.location.origin,
             trial_period_days: trialDays,
             wizard_step: resumeStep,
@@ -1244,7 +1245,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep, openCa
                   className="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600"
                 />
                 <span className="text-xs text-slate-600 dark:text-slate-400">
-                  I agree to be charged $6/mo after my 60-day trial ends on {firstChargeDate60}, unless I cancel before then.
+                  I agree to be charged $8.99/mo after my 60-day trial ends on {firstChargeDate60}, unless I cancel before then.
                 </span>
               </label>
 

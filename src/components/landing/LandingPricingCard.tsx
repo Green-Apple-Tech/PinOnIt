@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { LANDING_PRICING_BULLETS_TEXT_FIRST } from '../../lib/landingComparisonData';
+import { PRO_PRICE_LABEL } from '../../lib/pricing';
 
 type Props = {
   variant: 'legacy' | 'text-first';
@@ -24,7 +25,7 @@ export function LandingPricingCard({ variant }: Props) {
       <div className="relative rounded-2xl border-2 border-brand-500 bg-brand-500 shadow-xl shadow-brand-200/50 dark:shadow-none p-8 flex flex-col">
         <div className="mb-6 text-center">
           <div className="flex items-baseline justify-center gap-1.5">
-            <span className="text-5xl font-extrabold text-white">$6</span>
+            <span className="text-5xl font-extrabold text-white">{PRO_PRICE_LABEL}</span>
             <span className="text-brand-200 text-sm">/mo</span>
           </div>
           <p className="mt-3 text-sm text-brand-50 font-medium">
@@ -57,7 +58,7 @@ export function LandingPricingCard({ variant }: Props) {
       <div className="mb-6">
         <h3 className="text-2xl font-extrabold text-white">PinOnIt Pro</h3>
         <div className="mt-2 flex items-baseline gap-1.5">
-          <span className="text-5xl font-extrabold text-white">$6</span>
+          <span className="text-5xl font-extrabold text-white">{PRO_PRICE_LABEL}</span>
           <span className="line-through text-brand-200 text-sm">$16</span>
           <span className="text-brand-200 text-sm">/month after trial</span>
         </div>

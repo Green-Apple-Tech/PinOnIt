@@ -42,11 +42,11 @@ const sections: Section[] = [
   },
   {
     icon: Sparkles,
-    title: 'PinOnIt Pro — trial then $6/mo',
+    title: 'PinOnIt Pro — trial then $8.99/mo',
     content: (
       <div className="space-y-4">
         <p className="text-sm text-slate-600 dark:text-slate-400">
-          Every account includes a <strong>14-day full-access trial</strong> (no credit card required). After the trial, Pro is <strong>$6/month</strong> unless you cancel. Calendly switchers can get <strong>60 days</strong> with a card on file ($0 today).
+          Every account includes a <strong>14-day full-access trial</strong> (no credit card required). After the trial, Pro is <strong>$8.99/month</strong> unless you cancel. Calendly switchers can get <strong>60 days</strong> with a card on file ($0 today).
         </p>
         <ul className="space-y-1.5 text-xs text-slate-500 dark:text-slate-400">
           <li className="flex gap-1.5"><span className="text-indigo-600">✓</span> SMS, WhatsApp, voice, and calendar write-back</li>
@@ -162,7 +162,7 @@ const sections: Section[] = [
         </p>
         <ul className="space-y-2 pl-4">
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Credit:</strong> You earn $1/month in credit for each referred user who becomes and remains an active Pro subscriber.</span></li>
-          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Plan offset:</strong> Credits first offset your own Pro subscription cost (up to $6/month). Once your plan is fully covered, additional referral earnings accumulate as cash credits.</span></li>
+          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Plan offset:</strong> Credits first offset your own Pro subscription cost (up to $8.99/month). Once your plan is fully covered, additional referral earnings accumulate as cash credits.</span></li>
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Payout threshold:</strong> Cash credits are eligible for payout once your accumulated balance reaches a minimum of $10.</span></li>
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Conditions:</strong> Credits are only earned while the referred user maintains an active paid Pro subscription. Credits are forfeited if the referred user cancels or downgrades.</span></li>
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Abuse:</strong> Self-referrals, fake accounts, and referral fraud will result in immediate account termination and forfeiture of all credits.</span></li>

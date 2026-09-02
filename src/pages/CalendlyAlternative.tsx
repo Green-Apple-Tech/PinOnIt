@@ -61,7 +61,7 @@ type CompRow = { section?: string; feature?: string; pinonit?: boolean | string;
 const COMP_ROWS: CompRow[] = [
   { section: 'Pricing' },
   { feature: 'Starting price',    pinonit: 'Free',        calendly: 'Free',         acuity: '$16/mo' },
-  { feature: 'Pro / Paid plan',   pinonit: '$6/mo',       calendly: '$16/mo',       acuity: '$20/mo' },
+  { feature: 'Pro / Paid plan',   pinonit: '$8.99/mo',       calendly: '$16/mo',       acuity: '$20/mo' },
   { feature: 'Referral earnings', pinonit: '$1/mo/user',  calendly: false,          acuity: false },
   { section: 'Calendly does not do this' },
   { feature: 'WhatsApp reminders', pinonit: true, calendly: false, acuity: false },
@@ -609,7 +609,7 @@ export function CalendlyAlternative() {
               <span className="text-indigo-400">Plus What Calendly Doesn&apos;t.</span>
             </h2>
             <p className="text-indigo-200 text-lg max-w-2xl mx-auto">
-              Not “Calendly charges extra.” These are missing. PinOnIt starts at $6/month.
+              Not “Calendly charges extra.” These are missing. PinOnIt starts at $8.99/month.
             </p>
           </div>
 
@@ -649,7 +649,7 @@ export function CalendlyAlternative() {
               <ArrowRight className="h-5 w-5" />
             </Link>
             <p className="text-indigo-300/60 text-sm mt-3">
-              14-day Pro trial · $6/mo after · Cancel anytime
+              14-day Pro trial · $8.99/mo after · Cancel anytime
             </p>
           </div>
         </div>
@@ -667,7 +667,7 @@ export function CalendlyAlternative() {
             </h2>
             <div className="inline-flex items-center gap-3 px-5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm shadow-sm">
               <span className="line-through text-slate-400">Calendly charges $16/mo.</span>
-              <span className="font-bold text-indigo-600 dark:text-indigo-500">You pay $6. That's $120/year back in your pocket.</span>
+              <span className="font-bold text-indigo-600 dark:text-indigo-500">You pay $8.99. Still less than half of Calendly.</span>
             </div>
           </div>
 
@@ -698,7 +698,7 @@ export function CalendlyAlternative() {
                 <div className="p-4 text-sm font-semibold text-slate-500 dark:text-slate-400">Feature</div>
                 <div className="p-4 text-center">
                   <span className="font-bold text-indigo-600 dark:text-indigo-500 text-sm">PinOnIt</span>
-                  <div className="text-indigo-600 text-xs font-semibold mt-0.5">from $6/mo</div>
+                  <div className="text-indigo-600 text-xs font-semibold mt-0.5">from $8.99/mo</div>
                 </div>
                 <div className="p-4 text-center">
                   <span className="font-semibold text-slate-500 dark:text-slate-400 text-sm">Calendly</span>
@@ -789,7 +789,7 @@ export function CalendlyAlternative() {
             <div className="mb-6">
               <h3 className="text-2xl font-extrabold text-white">PinOnIt Pro</h3>
               <div className="mt-2 flex items-baseline gap-1.5">
-                <span className="text-5xl font-extrabold text-white">$6</span>
+                <span className="text-5xl font-extrabold text-white">$8.99</span>
                 <span className="line-through text-brand-200 text-sm">$16</span>
                 <span className="text-brand-200 text-sm">/month after trial</span>
               </div>
@@ -964,7 +964,7 @@ export function CalendlyAlternative() {
             {[
               { icon: Link2,       n: '01', title: 'Get your unique link',      desc: 'Every account gets a permanent referral link instantly — no approval, no minimum.' },
               { icon: Users,       n: '02', title: 'Share with your network',   desc: 'Post on LinkedIn, add to your email footer, or share directly with colleagues.' },
-              { icon: DollarSign,  n: '03', title: 'Earn $1/mo per subscriber forever', desc: 'Each time someone you referred pays their $6/mo, $1 flows to you. Automatically. Every single month.' },
+              { icon: DollarSign,  n: '03', title: 'Earn $1/mo per subscriber forever', desc: 'Each time someone you referred pays their $8.99/mo, $1 flows to you. Automatically. Every single month.' },
             ].map((step) => (
               <div key={step.n} className="relative text-center">
                 <div className="hidden sm:block absolute top-10 left-[calc(50%+28px)] right-[calc(-50%+28px)] h-px bg-gradient-to-r from-indigo-300 to-transparent dark:from-indigo-700 pointer-events-none last:hidden" />
@@ -1020,7 +1020,7 @@ export function CalendlyAlternative() {
           >
             Create Your Free Account <ArrowRight className="h-5 w-5" />
           </Link>
-          <p className="mt-5 text-brand-200 text-sm">14-day trial · $6/mo after · Cancel anytime</p>
+          <p className="mt-5 text-brand-200 text-sm">14-day trial · $8.99/mo after · Cancel anytime</p>
         </div>
       </section>
 

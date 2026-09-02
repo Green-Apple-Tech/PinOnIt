@@ -9,7 +9,7 @@ export type LandingCompRow = {
 export const LANDING_COMP_ROWS: LandingCompRow[] = [
   { section: 'Pricing' },
   { feature: 'Starting price', pinonit: 'Free', calendly: 'Free', acuity: '$16/mo' },
-  { feature: 'Pro / Paid plan', pinonit: '$6/mo', calendly: '$16/mo', acuity: '$20/mo' },
+  { feature: 'Pro / Paid plan', pinonit: '$8.99/mo', calendly: '$16/mo', acuity: '$20/mo' },
   { feature: 'Referral earnings', pinonit: '$1/mo/user', calendly: false, acuity: false },
   { section: 'Calendly does not do this' },
   { feature: 'WhatsApp reminders', pinonit: true, calendly: false, acuity: false },
@@ -39,10 +39,10 @@ export const LANDING_COMP_ROWS: LandingCompRow[] = [
 ];
 
 export const LANDING_PRICING_BULLETS_TEXT_FIRST = [
-  'Scheduling page (your booking page and links, synced to your calendar)',
-  'Smart reminders (SMS, WhatsApp, and voice)',
-  'Doc Center (waivers, NDAs, contracts, quotes, invoices, receipts)',
-  'Paid booking (take payment when they book)',
-  'QR code creator (truck, mirror, business card)',
-  'Email signature (Schedule a meeting button)',
+  'Easy Booking (your page + links, synced to your calendar)',
+  'Sign by Text (waivers, NDAs, addendums, simple contracts)',
+  'Super Reminders (you, customers, or anyone — by SMS)',
+  'Business Documents (quotes, invoices, receipts)',
+  'QR Codes + Signature Creator',
+  'Paid booking when you want a deposit',
 ];

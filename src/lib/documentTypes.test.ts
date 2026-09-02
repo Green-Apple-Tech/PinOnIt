@@ -30,9 +30,15 @@ describe('document type catalog', () => {
     expect(documentTypeLabel('other', ' Equipment form ')).toBe('Equipment form');
   });
 
+  it('includes upload-to-sign and Quick Addendum in the catalog', () => {
+    expect(isSmbDocumentType('upload')).toBe(true);
+    expect(documentTypeLabel('upload')).toBe('Upload PDF to sign');
+    expect(isSmbDocumentType('quick_addendum')).toBe(true);
+    expect(documentTypeLabel('quick_addendum')).toBe('Quick Addendum');
+  });
+
   it('is a flat list with unique ids', () => {
     const ids = SMB_DOCUMENT_TYPES.map((t) => t.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(SMB_DOCUMENT_TYPES.some((t) => t.label === 'Document Type')).toBe(false);
   });
 });

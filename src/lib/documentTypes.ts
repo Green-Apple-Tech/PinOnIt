@@ -23,6 +23,7 @@ export const SMB_DOCUMENT_TYPES: DocumentTypeOption[] = [
   { id: 'scope_of_work', label: 'Scope of Work', hint: 'Confirm what is included', confirmationType: 'approve' },
   { id: 'nda', label: 'NDA', hint: 'Keep talks confidential', confirmationType: 'sign' },
   { id: 'waiver', label: 'Waiver / Liability Release', hint: 'Sign a liability waiver', confirmationType: 'sign' },
+  { id: 'quick_addendum', label: 'Quick Addendum', hint: 'Short add-on to sign by text', confirmationType: 'sign' },
   { id: 'consent_form', label: 'Consent Form', hint: 'Record consent', confirmationType: 'sign' },
   { id: 'cancellation_policy', label: 'Cancellation Policy', hint: 'Acknowledge cancel terms', confirmationType: 'approve' },
   { id: 'credit_card_authorization', label: 'Credit Card Authorization', hint: 'Authorize card charges', confirmationType: 'sign' },
@@ -43,10 +44,18 @@ export const SMB_DOCUMENT_TYPES: DocumentTypeOption[] = [
   { id: 'maintenance_approval', label: 'Maintenance Approval', hint: 'Approve maintenance', confirmationType: 'approve' },
   /** Kept for existing Doc Center / deep links — same catalog, not an industry filter. */
   { id: 'contract', label: 'Contract', hint: 'Sign the terms', confirmationType: 'sign' },
+  { id: 'upload', label: 'Upload PDF to sign', hint: 'Your PDF + SMS code + finger sign', confirmationType: 'sign' },
   { id: 'other', label: 'Other', hint: 'Custom document type', confirmationType: 'approve' },
 ];
 
 export const MONEY_DOCUMENT_TYPES: SmbDocumentType[] = ['quote', 'invoice', 'receipt'];
+
+export const DOCUMENT_UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
+export const DOCUMENT_UPLOAD_BUCKET = 'document-files';
+
+export function isUploadDocumentType(type: SmbDocumentType) {
+  return type === 'upload';
+}
 
 export function isMoneyDocumentType(type: SmbDocumentType) {
   return MONEY_DOCUMENT_TYPES.includes(type);
@@ -70,15 +79,21 @@ export function documentTypeLabel(type: SmbDocumentType, custom?: string | null)
 }
 
 export function defaultVerificationRequired(type: SmbDocumentType) {
-  return type === 'nda' || type === 'contract' || type === 'waiver';
+  return type === 'nda' || type === 'contract' || type === 'waiver' || type === 'upload' || type === 'quick_addendum';
 }
 
 export function documentBodyIsEditable(type: SmbDocumentType) {
-  return type === 'nda' || type === 'contract' || type === 'waiver';
+  return type === 'nda' || type === 'contract' || type === 'waiver' || type === 'quick_addendum';
 }
 
 export function documentNeedsRecipientAction(type: SmbDocumentType) {
   return type !== 'quote';
+}
+
+export function documentFilePublicUrl(filePath: string) {
+  const base = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  if (!base || !filePath) return null;
+  return `${base.replace(/\/$/, '')}/storage/v1/object/public/${DOCUMENT_UPLOAD_BUCKET}/${filePath}`;
 }
 
 /** Simple shared body for types that only identify the document for now. */

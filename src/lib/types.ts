@@ -479,7 +479,9 @@ export type SmbDocumentType =
   | 'showing_acknowledgment'
   | 'repair_confirmation'
   | 'maintenance_approval'
-  | 'other';
+  | 'other'
+  | 'upload'
+  | 'quick_addendum';
 export type DocumentConfirmationType = 'sign' | 'approve' | 'confirm_receipt';
 export type SmbDocumentStatus = 'pending' | 'viewed' | 'signed';
 
@@ -522,6 +524,9 @@ export interface SmbDocument {
   pay_elsewhere_url?: string | null;
   pay_elsewhere_label?: string | null;
   currency?: string;
+  file_path?: string | null;
+  file_name?: string | null;
+  file_size_bytes?: number | null;
 }
 
 export interface PublicSmbDocument {
@@ -548,6 +553,9 @@ export interface PublicSmbDocument {
   pay_elsewhere_url?: string | null;
   pay_elsewhere_label?: string | null;
   currency?: string;
+  file_path?: string | null;
+  file_name?: string | null;
+  file_size_bytes?: number | null;
 }
 
 export const LOCATION_TYPES: Record<string, string> = {
