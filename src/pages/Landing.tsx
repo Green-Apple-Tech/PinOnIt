@@ -162,7 +162,7 @@ export function Landing() {
               BOOK IT · REMIND IT · SEND IT · SIGN IT · PIN IT
             </p>
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white leading-tight mb-4">
-              One simple app for the stuff you need to get done.
+              Run your business by text.
             </h1>
             <p className="text-lg md:text-xl font-medium text-slate-600 dark:text-slate-300 leading-snug mb-8 max-w-xl mx-auto lg:mx-0">
               <strong className="text-slate-900 dark:text-white">Sign by Text</strong> and <strong className="text-slate-900 dark:text-white">easy booking</strong> — plus reminders, invoices, QR codes, and more. No pile of apps. Just PinOnIt.
