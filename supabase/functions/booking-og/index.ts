@@ -11,7 +11,7 @@ import {
 
 const APP_ORIGIN = (Deno.env.get('APP_URL') || DEFAULT_BOOKING_ORIGIN).replace(/\/$/, '');
 const SPA_TTL_MS = 5 * 60 * 1000;
-const OG_TTL_MS = 5 * 60 * 1000;
+const PAGE_TTL_MS = 5 * 60 * 1000;
 
 const RESERVED = new Set([
   '',
@@ -40,13 +40,10 @@ const RESERVED = new Set([
   'book',
 ]);
 
-const CRAWLER_UA =
-  /facebookexternalhit|facebot|twitterbot|slackbot|linkedinbot|whatsapp|telegrambot|discordbot|applebot|googlebot|bingbot|pinterest|embed\/|preview|iframely|embedly|crawler|bot\b/i;
-
 const SLUG_RE = /^[a-z0-9][a-z0-9_-]{0,62}$/i;
 
 let spaCache: { html: string; exp: number } | null = null;
-const ogCache = new Map<string, { html: string; exp: number }>();
+const pageCache = new Map<string, { html: string; exp: number }>();
 
 function escapeHtml(s: string) {
   return s
@@ -62,45 +59,41 @@ function slugFromRequest(req: Request): string {
   if (q) return q.replace(/^\/+|\/+$/g, '').split('/')[0] ?? '';
   const parts = url.pathname.split('/').filter(Boolean);
   const fn = parts.indexOf('booking-og');
-  const after = fn >= 0 ? parts.slice(fn + 1) : parts;
+  const after = (fn >= 0 ? parts.slice(fn + 1) : parts).filter((p) => p !== 'index.html');
   return (after[0] ?? '').trim();
 }
 
-function crawlerHtml(meta: { title: string; description: string; url: string; image: string }): string {
-  const t = escapeHtml(meta.title);
-  const d = escapeHtml(meta.description);
-  const u = escapeHtml(meta.url);
-  const i = escapeHtml(meta.image);
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <title>${t} | PinOnIt</title>
-  <meta name="description" content="${d}" />
-  <meta property="og:type" content="website" />
-  <meta property="og:title" content="${t}" />
-  <meta property="og:description" content="${d}" />
-  <meta property="og:url" content="${u}" />
-  <meta property="og:image" content="${i}" />
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="${t}" />
-  <meta name="twitter:description" content="${d}" />
-  <meta name="twitter:image" content="${i}" />
-  <link rel="canonical" href="${u}" />
-</head>
-<body>
-  <p><a href="${u}">${t}</a></p>
-</body>
-</html>`;
+function replaceMeta(html: string, attr: 'property' | 'name', key: string, content: string): string {
+  const re = new RegExp(`<meta\\s[^>]*${attr}=["']${key}["'][^>]*>`, 'i');
+  const tag = `<meta ${attr}="${key}" content="${escapeHtml(content)}" />`;
+  if (re.test(html)) return html.replace(re, tag);
+  return html.replace(/<\/head>/i, `    ${tag}\n  </head>`);
 }
 
-function htmlResponse(body: string, cacheControl: string) {
+function injectShareTags(
+  html: string,
+  meta: { title: string; description: string; url: string; image: string },
+): string {
+  let out = html.replace(/<title>[^<]*<\/title>/i, `<title>${escapeHtml(meta.title)} | PinOnIt</title>`);
+  out = replaceMeta(out, 'property', 'og:title', meta.title);
+  out = replaceMeta(out, 'property', 'og:description', meta.description);
+  out = replaceMeta(out, 'property', 'og:url', meta.url);
+  out = replaceMeta(out, 'property', 'og:image', meta.image);
+  out = replaceMeta(out, 'name', 'twitter:title', meta.title);
+  out = replaceMeta(out, 'name', 'twitter:description', meta.description);
+  out = replaceMeta(out, 'name', 'twitter:image', meta.image);
+  out = replaceMeta(out, 'name', 'description', meta.description);
+  return out;
+}
+
+function htmlPage(body: string, cacheControl: string) {
   return new Response(body, {
     status: 200,
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
+      'Content-Disposition': 'inline; filename="index.html"',
+      'X-Content-Type-Options': 'nosniff',
       'Cache-Control': cacheControl,
-      Vary: 'User-Agent',
     },
   });
 }
@@ -140,27 +133,21 @@ Deno.serve(async (req: Request) => {
     return new Response('ok', { headers: { 'Access-Control-Allow-Origin': '*' } });
   }
 
-  const ua = req.headers.get('user-agent') ?? '';
-  const isCrawler = CRAWLER_UA.test(ua);
-
-  // Humans only need the SPA shell. Client JS fills OG; skip DB and extra work.
-  if (!isCrawler) {
-    const html = await spaHtml();
-    if (html) {
-      return htmlResponse(html, 'private, max-age=30');
-    }
+  const slug = slugFromRequest(req).toLowerCase();
+  const cacheKey = slug || '_';
+  const cached = pageCache.get(cacheKey);
+  if (cached && cached.exp > Date.now()) {
+    return htmlPage(cached.html, 'public, max-age=120');
   }
 
-  const slug = slugFromRequest(req).toLowerCase();
+  const shell = await spaHtml();
+  if (!shell) {
+    return new Response('Booking page unavailable', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+  }
+
   const canonical = slug && !RESERVED.has(slug)
     ? bookingShareCanonical(slug, APP_ORIGIN)
     : `${APP_ORIGIN}/`;
-
-  const cacheKey = slug || '_';
-  const cached = ogCache.get(cacheKey);
-  if (cached && cached.exp > Date.now()) {
-    return htmlResponse(cached.html, 'public, max-age=300');
-  }
 
   let host: BookingShareHost | null = null;
   if (slug && !RESERVED.has(slug) && SLUG_RE.test(slug)) {
@@ -173,11 +160,12 @@ Deno.serve(async (req: Request) => {
     url: canonical,
     image: host ? bookingShareImage(host, APP_ORIGIN) : DEFAULT_BOOKING_OG_IMAGE,
   };
-  const html = crawlerHtml(meta);
-  ogCache.set(cacheKey, { html, exp: Date.now() + OG_TTL_MS });
-  if (ogCache.size > 500) {
-    const first = ogCache.keys().next().value;
-    if (first) ogCache.delete(first);
+
+  const html = injectShareTags(shell, meta);
+  pageCache.set(cacheKey, { html, exp: Date.now() + PAGE_TTL_MS });
+  if (pageCache.size > 500) {
+    const first = pageCache.keys().next().value;
+    if (first) pageCache.delete(first);
   }
-  return htmlResponse(html, 'public, max-age=300');
+  return htmlPage(html, 'public, max-age=120');
 });

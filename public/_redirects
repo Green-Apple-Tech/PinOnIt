@@ -22,6 +22,6 @@
 /acceptable-use  /index.html  200
 /leaderboard  /index.html  200
 /status  /index.html  200
-/:slug/services  https://adlusgtlwgcfyxgeoias.supabase.co/functions/v1/booking-og/:slug  200
-/:slug  https://adlusgtlwgcfyxgeoias.supabase.co/functions/v1/booking-og/:slug  200
+/:slug/services  https://adlusgtlwgcfyxgeoias.supabase.co/functions/v1/booking-og/:slug/index.html  200
+/:slug  https://adlusgtlwgcfyxgeoias.supabase.co/functions/v1/booking-og/:slug/index.html  200
 /* /index.html  200
