@@ -441,6 +441,7 @@ export function SettingsPage() {
   const [fullName, setFullName] = useState(
     profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || ''
   );
+  const [businessName, setBusinessName] = useState(profile?.business_name ?? '');
   const [bio, setBio] = useState(profile?.bio ?? '');
   const [timezone, setTimezone] = useState(profile?.timezone ?? 'America/New_York');
 
@@ -527,6 +528,7 @@ export function SettingsPage() {
     setWaiverTemplate(profile.waiver_template ? injectWaiverRecipientPlaceholder(profile.waiver_template) : '');
     setDocTaxPercent(Number(profile.default_tax_percent) || 0);
     setQuoteLines(profile.quote_line_defaults?.length ? profile.quote_line_defaults : [{ description: '', amount: 0 }]);
+    setBusinessName(profile.business_name ?? '');
     bookingFieldsHydrated.current = true;
   }, [profile]);
 
@@ -851,6 +853,7 @@ export function SettingsPage() {
 
       const payload = {
         full_name: fullName.trim(),
+        business_name: businessName.trim() || null,
         bio: bio.trim(),
         timezone,
         show_wizard_button: showWizardButton,
@@ -1055,6 +1058,20 @@ export function SettingsPage() {
             <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">Full name</label>
             <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)}
               className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition" />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">Business name</label>
+            <input
+              type="text"
+              value={businessName}
+              onChange={(e) => setBusinessName(e.target.value.slice(0, 120))}
+              maxLength={120}
+              placeholder="Your company or DBA (shown on documents)"
+              className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
+            />
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+              Used on Doc Center sends (“This document from …”). Prefer your company name over your personal name.
+            </p>
           </div>
           <div>
             <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">Bio</label>

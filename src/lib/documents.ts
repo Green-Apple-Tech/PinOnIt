@@ -192,6 +192,21 @@ export function businessNameOptions(names: Array<string | null | undefined>) {
   return out;
 }
 
+/** Prefer dedicated business name, then Paid Booking display name, then personal name. */
+export function resolveHostBusinessName(profile: {
+  business_name?: string | null;
+  full_name?: string | null;
+  paid_booking_settings?: { display_name?: string | null } | null;
+} | null | undefined): string {
+  return (
+    businessNameOptions([
+      profile?.business_name,
+      profile?.paid_booking_settings?.display_name,
+      profile?.full_name,
+    ])[0] ?? ''
+  );
+}
+
 export {
   SMB_DOCUMENT_TYPES,
   MONEY_DOCUMENT_TYPES,

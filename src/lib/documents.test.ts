@@ -12,6 +12,7 @@ import {
   WAIVER_STARTER_TEXT,
   fillDocumentPlaceholders,
   injectWaiverRecipientPlaceholder,
+  resolveHostBusinessName,
 } from './documents';
 
 describe('contract starter vs host hint', () => {
@@ -109,5 +110,25 @@ and agree to the following:`;
     });
     expect(filled).toContain('I, Bob smith, in consideration');
     expect(filled).toContain('provided by peter');
+  });
+});
+
+describe('resolveHostBusinessName', () => {
+  it('prefers business_name over paid booking display_name and full_name', () => {
+    expect(
+      resolveHostBusinessName({
+        business_name: 'Acme Co',
+        full_name: 'Peter',
+        paid_booking_settings: { display_name: 'Storefront' },
+      }),
+    ).toBe('Acme Co');
+    expect(
+      resolveHostBusinessName({
+        business_name: null,
+        full_name: 'Peter',
+        paid_booking_settings: { display_name: 'Storefront' },
+      }),
+    ).toBe('Storefront');
+    expect(resolveHostBusinessName({ business_name: '', full_name: 'Peter' })).toBe('Peter');
   });
 });

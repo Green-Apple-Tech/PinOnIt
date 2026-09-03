@@ -99,6 +99,8 @@ export interface Profile {
   business_region?: string | null;
   platform_terms_accepted_at?: string | null;
   platform_terms_version?: string | null;
+  /** Company / DBA name for Doc Center “[Business Name]” and public branding. */
+  business_name?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -556,6 +558,8 @@ export interface PublicSmbDocument {
   file_path?: string | null;
   file_name?: string | null;
   file_size_bytes?: number | null;
+  /** Sender company name for leftover [Business Name] placeholders. */
+  sender_business_name?: string | null;
 }
 
 export const LOCATION_TYPES: Record<string, string> = {

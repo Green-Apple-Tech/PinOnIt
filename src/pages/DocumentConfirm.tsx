@@ -265,6 +265,7 @@ export function DocumentConfirmPage() {
     ? fillDocumentPlaceholders(doc.full_text, {
         topic: doc.topic,
         recipientName: doc.recipient_name,
+        businessName: doc.sender_business_name,
         activityDescription: doc.topic,
       })
     : '';

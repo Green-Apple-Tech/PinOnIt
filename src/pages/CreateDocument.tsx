@@ -27,6 +27,7 @@ import {
   documentViewUrl,
   fillDocumentPlaceholders,
   businessNameOptions,
+  resolveHostBusinessName,
   isMoneyDocumentType,
   isSmbDocumentType,
   isUploadDocumentType,
@@ -131,18 +132,20 @@ export function CreateDocumentPage() {
   const bodyEditable = documentBodyIsEditable(documentType);
   const knownBusinessNames = useMemo(
     () => businessNameOptions([
+      profile?.business_name,
       profile?.paid_booking_settings?.display_name,
       profile?.full_name,
     ]),
-    [profile?.paid_booking_settings?.display_name, profile?.full_name],
+    [profile?.business_name, profile?.paid_booking_settings?.display_name, profile?.full_name],
   );
 
   useEffect(() => {
     if (businessNameHydrated.current) return;
-    if (!knownBusinessNames[0]) return;
-    setBusinessName(knownBusinessNames[0]);
+    const resolved = resolveHostBusinessName(profile);
+    if (!resolved) return;
+    setBusinessName(resolved);
     businessNameHydrated.current = true;
-  }, [knownBusinessNames]);
+  }, [profile, knownBusinessNames]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -244,8 +247,8 @@ export function CreateDocumentPage() {
         : 'Add a short topic describing what this document covers.');
       return;
     }
-    if (isWaiver && !businessName.trim()) {
-      setError('Add the business name that appears on this waiver.');
+    if (!businessName.trim()) {
+      setError('Add your business name — it appears as “from …” on the document. You can also save it in Settings → Profile.');
       return;
     }
     if (verificationRequired && !phone) {
@@ -293,6 +296,16 @@ export function CreateDocumentPage() {
     const lineItems = isMoney
       ? items.filter((i) => i.description.trim() || i.amount)
       : [];
+    const bodyForSave = fillDocumentPlaceholders(
+      (bodyEditable ? customText.trim() : selectedTemplate.full_text?.trim() || defaultDocumentBody(documentType)) || '',
+      {
+        topic: topicText,
+        recipientName: recipientName.trim(),
+        businessName: businessName.trim(),
+        activityDescription: topicText,
+      },
+    );
+
     const { error: err } = await supabase.from('documents').insert({
       token,
       sender_id: user.id,
@@ -303,14 +316,7 @@ export function CreateDocumentPage() {
       document_type_custom: documentType === 'other' ? customTypeLabel.trim() : null,
       template_id: selectedTemplate.id,
       topic: topicText,
-      custom_text: bodyEditable
-        ? fillDocumentPlaceholders(customText.trim(), {
-            topic: topicText,
-            recipientName: recipientName.trim(),
-            businessName: businessName.trim(),
-            activityDescription: topicText,
-          })
-        : null,
+      custom_text: isUpload ? null : (bodyForSave || null),
       status: 'pending',
       verification_required: verificationRequired,
       line_items: lineItems,
@@ -331,6 +337,12 @@ export function CreateDocumentPage() {
       setError(err.message);
       setSubmitting(false);
       return;
+    }
+
+    // Persist business name on the profile when the host hasn't set one yet.
+    if (user.id && businessName.trim() && !profile?.business_name?.trim()) {
+      await supabase.from('profiles').update({ business_name: businessName.trim() }).eq('id', user.id);
+      await refreshProfile();
     }
 
     const link = documentViewUrl(token);
@@ -578,7 +590,7 @@ export function CreateDocumentPage() {
               {isMoney ? '. Defaults to the document type if you leave it blank.' : ''}
             </p>
           </label>
-          {isWaiver && (
+          {!isUpload && (
             <label className="block">
               <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Business name</span>
               <input
@@ -587,7 +599,7 @@ export function CreateDocumentPage() {
                 required
                 maxLength={120}
                 className={fieldClass}
-                placeholder="Your business name"
+                placeholder="Your company or DBA"
               />
               {knownBusinessNames.filter((name) => name !== businessName).length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
@@ -604,7 +616,7 @@ export function CreateDocumentPage() {
                 </div>
               )}
               <p className="mt-1 text-xs text-gray-400">
-                Auto-filled from your account. Type a DBA or tap another name if you send as a different business.
+                Shown as “from …” on the document. Save a default in Settings → Profile. Prefer company name over your personal name.
               </p>
             </label>
           )}
