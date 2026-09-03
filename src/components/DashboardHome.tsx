@@ -19,7 +19,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { documentsNewPath } from '../lib/documentActions';
 import { documentTypeLabel } from '../lib/documents';
-import type { Booking, SmbDocument } from '../lib/types';
+import type { SmbDocument } from '../lib/types';
 
 type ReminderRow = {
   id: string;
@@ -27,9 +27,17 @@ type ReminderRow = {
   due_at: string;
 };
 
+export type DashboardBookingGlance = {
+  id: string;
+  status: string;
+  start_time: string;
+  guest_name: string | null;
+  guest_email?: string | null;
+};
+
 type Props = {
   hostId: string;
-  bookings: Booking[];
+  bookings: DashboardBookingGlance[];
   onOpenWizard?: () => void;
   showWizardButton?: boolean;
 };

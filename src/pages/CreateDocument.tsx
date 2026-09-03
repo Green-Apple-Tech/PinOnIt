@@ -156,7 +156,6 @@ export function CreateDocumentPage() {
   const typeSelectValue = libraryFileId ? `${LIBRARY_FILE_PREFIX}${libraryFileId}` : documentType;
   const recipientName = `${recipientFirstName.trim()} ${recipientLastName.trim()}`.trim();
   const scopeAlreadyAccepted = Boolean(profile?.sign_by_text_scope_accepted_at);
-  const needsScopeAck = !scopeAlreadyAccepted;
   const knownBusinessNames = useMemo(
     () => businessNameOptions([
       profile?.business_name,

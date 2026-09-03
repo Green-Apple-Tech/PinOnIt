@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, type CSSProperties, type ElementType } from 'react';
+import { useState, useEffect, useCallback, useRef, type CSSProperties } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
@@ -12,7 +12,7 @@ import {
   Bell, Plus, Trash2, X, Check, Loader2, Mail, MessageSquare,
   Languages, Clock, ChevronDown, ChevronUp, Eye, Settings2,
   MoreVertical, AlertTriangle, Smartphone, Pencil, Zap,
-  ArrowRight, BellRing, Phone, Save, PhoneCall,
+  ArrowRight, BellRing, Phone, Save,
 } from 'lucide-react';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import { resolveDefaultReminderChannel, getWhatsappNumber } from '../lib/reminderChannels';
@@ -21,7 +21,6 @@ import { AlsoRemindPeople } from '../components/AlsoRemindPeople';
 import { SmsIcon as SmsSvg, WhatsappIcon as WhatsappSvg, EmailIcon as EmailSvg, VoiceIcon as VoiceSvg } from '../components/ChannelBadges';
 import { SMS_OPT_OUT_FOOTER } from '../lib/smsOptOut';
 import { SmsBookingConsent } from '../components/SmsConsentText';
-import { ChannelMark } from '../components/ChannelMark';
 import {
   normalizeCriticalAutoMatches,
   parseCriticalAutoInput,

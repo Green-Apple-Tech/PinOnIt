@@ -9,7 +9,7 @@ import { useTheme } from '../hooks/useTheme';
 import { supabase } from '../lib/supabase';
 import { syncStripeSubscription } from '../lib/stripe';
 import { effectivePlan, isActivePlan } from '../lib/plan';
-import type { Booking, Service } from '../lib/types';
+import type { Service } from '../lib/types';
 import { LogOut, X, Check, Sun, Moon, Link2, Video, Phone, MapPin, ChevronRight, Loader2, Plus, ChevronLeft, LayoutGrid, Menu, Sparkles, Wrench as Tool, ChevronDown } from 'lucide-react';
 import {
   MORE_TOOLS_HUB_PATH,
@@ -17,7 +17,7 @@ import {
   isDashboardNavActive,
   isMoreToolsSectionActive,
 } from '../lib/dashboardNav';
-import { DashboardHome } from '../components/DashboardHome';
+import { DashboardHome, type DashboardBookingGlance } from '../components/DashboardHome';
 import { parseRevealedTools, revealTool } from '../lib/progressiveDisclosure';
 import { defaultAvailabilityRows } from '../lib/availabilityGrid';
 import { PageHelpButton } from '../components/PageHelp';
@@ -26,7 +26,6 @@ import {
   EXAMPLE_PAID_CONSULTATION_NAME,
   isExamplePaidConsultation,
 } from '../lib/eventTypes';
-
 type NavItem = {
   to: string;
   icon: typeof LayoutGrid;
@@ -340,7 +339,7 @@ export function Dashboard() {
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [bookings, setBookings] = useState<DashboardBookingGlance[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [calendarCount, setCalendarCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -610,13 +609,16 @@ export function Dashboard() {
       const [bookRes, svcRes, calRes] = await Promise.all([
         supabase
           .from('bookings')
-          .select('*, services(name, color, duration_minutes, location, location_type)')
+          .select('id, status, start_time, guest_name, guest_email, services(name)')
           .eq('host_id', profile.id)
-          .order('start_time', { ascending: true }),
+          .eq('status', 'confirmed')
+          .gte('start_time', new Date().toISOString())
+          .order('start_time', { ascending: true })
+          .limit(8),
         supabase.from('services').select('*').eq('host_id', profile.id),
         supabase.from('connected_calendars').select('id', { count: 'exact', head: true }).eq('host_id', profile.id),
       ]);
-      setBookings(bookRes.data ?? []);
+      setBookings((bookRes.data as DashboardBookingGlance[]) ?? []);
       setServices(svcRes.data ?? []);
       setCalendarCount(calRes.count ?? 0);
       setLoading(false);
@@ -666,8 +668,12 @@ export function Dashboard() {
       };
       if (services.some((s) => (s.price_cents ?? 0) > 0 && !isExamplePaidConsultation(s))) await bump('paid-booking');
       if (services.some((s) => s.meeting_type === 'group')) await bump('group-scheduling');
-      const bookingCount = bookings.filter((b) => b.status === 'confirmed' || b.status === 'completed').length;
-      if (bookingCount >= 10) await bump('analytics');
+      const { count: bookingCount } = await supabase
+        .from('bookings')
+        .select('id', { count: 'exact', head: true })
+        .eq('host_id', profile.id)
+        .in('status', ['confirmed', 'completed']);
+      if ((bookingCount ?? 0) >= 10) await bump('analytics');
       const needQuotes = !have.includes('quotes');
       const needPolls = !have.includes('group-scheduling');
       if (needQuotes || needPolls) {
@@ -692,7 +698,6 @@ export function Dashboard() {
     profile?.id,
     loading,
     services,
-    bookings.length,
     refreshProfile,
   ]);
 

@@ -66,6 +66,7 @@ describe('buildSidebarNav', () => {
     const { primary, moreTools, settings } = buildSidebarNav('simple');
     expect(primary.map((i) => i.label)).toEqual([
       'Dashboard',
+      'Calendar',
       'Booking',
       'Send Docs + Sign-by-Text',
       'NeverMiss Reminders',

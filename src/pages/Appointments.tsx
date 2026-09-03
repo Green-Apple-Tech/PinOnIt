@@ -9,6 +9,7 @@ import { toast } from '../components/Toast';
 import { syncBookingToExternalCalendarsAsHost } from '../lib/writeCalendarEvent';
 import { BookingAlsoRemindPicker } from '../components/BookingAlsoRemindPicker';
 import { parseAlsoRemindIds } from '../lib/reminderAlso';
+import { hostCalendarWindow } from '../lib/queryWindow';
 import { CalendarConnections } from '../components/CalendarConnections';
 import {
   ChevronLeft,
@@ -431,17 +432,22 @@ export function AppointmentsPage() {
 
   const loadData = async () => {
     if (!profile) return;
+    const { from, to } = hostCalendarWindow();
     const [bookRes, svcRes, extEvtRes, personalRes] = await Promise.all([
       supabase
         .from('bookings')
         .select('*, services(name, color, duration_minutes, location_type, location)')
         .eq('host_id', profile.id)
+        .gte('start_time', from)
+        .lte('start_time', to)
         .order('start_time', { ascending: true }),
       supabase.from('services').select('*').eq('host_id', profile.id),
       supabase
         .from('calendar_events')
         .select('id, title, start_at, end_at, all_day, also_remind_ids, connected_calendars(provider)')
         .eq('host_id', profile.id)
+        .gte('start_at', from)
+        .lte('start_at', to)
         .order('start_at', { ascending: true }),
       supabase
         .from('personal_reminders')

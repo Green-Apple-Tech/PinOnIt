@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import type { Service } from '../lib/types';
-import { toast } from '../components/Toast';
 import {
   Copy,
   ExternalLink,

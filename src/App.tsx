@@ -5,20 +5,15 @@ import { ThemeProvider } from './hooks/useTheme';
 import { AuthForm } from './components/Auth';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthCallback } from './components/AuthCallback';
-import { AIChat } from './components/AIChat';
 import { ToastContainer } from './components/Toast';
 import { Landing } from './pages/Landing';
 import { CalendlyAlternative } from './pages/CalendlyAlternative';
 import { WhyPinOnItPage } from './pages/WhyPinOnIt';
-import { BookPage } from './pages/Book';
-import { ReschedulePage } from './pages/Reschedule';
-import { BookingActionPage } from './pages/BookingAction';
 import { TermsPage } from './pages/Terms';
 import { PrivacyPage } from './pages/Privacy';
 import { SmsConsentPage } from './pages/SmsConsent';
 import { AcceptableUsePage } from './pages/AcceptableUse';
 import { LeaderboardPage } from './pages/Leaderboard';
-import { PollVotePage } from './pages/PollVote';
 import { StatusPage } from './pages/Status';
 import { NotFoundPage } from './pages/NotFound';
 import { SessionManager } from './components/SessionManager';
@@ -80,6 +75,21 @@ const CreateDocumentPage = lazy(() =>
 );
 const DocumentConfirmPage = lazy(() =>
   import('./pages/DocumentConfirm').then((m) => ({ default: m.DocumentConfirmPage })),
+);
+const BookPage = lazy(() =>
+  import('./pages/Book').then((m) => ({ default: m.BookPage })),
+);
+const ReschedulePage = lazy(() =>
+  import('./pages/Reschedule').then((m) => ({ default: m.ReschedulePage })),
+);
+const BookingActionPage = lazy(() =>
+  import('./pages/BookingAction').then((m) => ({ default: m.BookingActionPage })),
+);
+const PollVotePage = lazy(() =>
+  import('./pages/PollVote').then((m) => ({ default: m.PollVotePage })),
+);
+const AIChat = lazy(() =>
+  import('./components/AIChat').then((m) => ({ default: m.AIChat })),
 );
 
 function DashboardFallback() {
@@ -162,8 +172,22 @@ function App() {
             <Route path="/ref/:code" element={<RefRedirect />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/onboarding" element={<Navigate to="/dashboard?onboarding=1" replace />} />
-            <Route path="/booking/:bookingId/:action/:actionToken" element={<BookingActionPage />} />
-            <Route path="/r/:token" element={<ReschedulePage />} />
+            <Route
+              path="/booking/:bookingId/:action/:actionToken"
+              element={
+                <Suspense fallback={<DashboardFallback />}>
+                  <BookingActionPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/r/:token"
+              element={
+                <Suspense fallback={<DashboardFallback />}>
+                  <ReschedulePage />
+                </Suspense>
+              }
+            />
             <Route
               path="/d/:token"
               element={
@@ -210,7 +234,14 @@ function App() {
             <Route path="/documents" element={<PreserveSearchRedirect to="/dashboard/documents" />} />
             <Route path="/documents/new" element={<PreserveSearchRedirect to="/dashboard/documents/new" />} />
             {/* Single-use booking links */}
-            <Route path="/s/:token" element={<BookPage />} />
+            <Route
+              path="/s/:token"
+              element={
+                <Suspense fallback={<DashboardFallback />}>
+                  <BookPage />
+                </Suspense>
+              }
+            />
             {/* Public quote / invoice / receipt */}
             <Route
               path="/q/:token"
@@ -221,14 +252,37 @@ function App() {
               }
             />
             {/* Poll voting */}
-            <Route path="/poll/:pollId" element={<PollVotePage />} />
+            <Route
+              path="/poll/:pollId"
+              element={
+                <Suspense fallback={<DashboardFallback />}>
+                  <PollVotePage />
+                </Suspense>
+              }
+            />
             {/* Public booking pages — must be after all fixed routes */}
-            <Route path="/:slug/services" element={<BookPage />} />
-            <Route path="/:slug" element={<BookPage />} />
+            <Route
+              path="/:slug/services"
+              element={
+                <Suspense fallback={<DashboardFallback />}>
+                  <BookPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/:slug"
+              element={
+                <Suspense fallback={<DashboardFallback />}>
+                  <BookPage />
+                </Suspense>
+              }
+            />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
           <QuietErrorBoundary>
-            <AIChat />
+            <Suspense fallback={null}>
+              <AIChat />
+            </Suspense>
           </QuietErrorBoundary>
           <ToastContainer />
         </BrowserRouter>

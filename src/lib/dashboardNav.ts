@@ -56,8 +56,6 @@ export const SIMPLE_PRIMARY_NAV: MoreToolsNavItem[] = [
   { label: 'NeverMiss Reminders', icon: Bell, path: '/dashboard/reminders' },
 ];
 
-export const FEATURED_NAV: MoreToolsNavItem[] = [];
-
 export const SETTINGS_NAV_ITEM: MoreToolsNavItem = {
   label: 'Settings',
   icon: Settings,

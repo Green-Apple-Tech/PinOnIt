@@ -26,6 +26,7 @@ import { isUnusedSingleUseExpired } from '../lib/singleUseLinks';
 import { syncBookingToExternalCalendars } from '../lib/writeCalendarEvent';
 import { stripePromise } from '../lib/stripe';
 import { StripeBookingCheckout } from '../components/StripeBookingCheckout';
+import { publicBusyWindow } from '../lib/queryWindow';
 import type { RescheduleSession } from '../lib/reschedule';
 import { usePageMeta } from '../lib/pageMeta';
 import {
@@ -705,11 +706,12 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
     setStep('datetime');
     setLoading(true);
     (async () => {
+      const { from, to } = publicBusyWindow();
       const [availRes, bookRes, ovRes, calEvtRes] = await Promise.all([
         supabase.from('availability').select('*').eq('host_id', hostId).eq('is_active', true),
-        supabase.from('bookings').select('id,start_time,end_time,status').eq('host_id', hostId).in('status', ['confirmed']),
+        supabase.from('bookings').select('id,start_time,end_time,status').eq('host_id', hostId).in('status', ['confirmed']).gte('start_time', from).lte('start_time', to),
         supabase.from('date_overrides').select('*').eq('host_id', hostId),
-        supabase.from('calendar_events').select('start_at,end_at,all_day,show_status,transparency,attendee_self_status,is_birthday_cal,is_holiday_cal,title').eq('host_id', hostId),
+        supabase.from('calendar_events').select('start_at,end_at,all_day,show_status,transparency,attendee_self_status,is_birthday_cal,is_holiday_cal,title').eq('host_id', hostId).gte('start_at', from).lte('start_at', to),
       ]);
       setAvailability(availRes.data ?? []);
       setBookings(((bookRes.data ?? []) as Booking[]).filter((b) => b.id !== originalId));
@@ -786,14 +788,15 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
         hostId = profile.id;
       }
 
+      const { from, to } = publicBusyWindow();
       const [svcRes, availRes, bookRes, ovRes, calEvtRes] = await Promise.all([
         serviceId
           ? supabase.from('services').select(SERVICE_SELECT).eq('id', serviceId).eq('is_active', true)
           : supabase.from('services').select(SERVICE_SELECT).eq('host_id', hostId).eq('is_active', true),
         supabase.from('availability').select('*').eq('host_id', hostId).eq('is_active', true),
-        supabase.from('bookings').select('id,start_time,end_time,status').eq('host_id', hostId).in('status', ['confirmed']),
+        supabase.from('bookings').select('id,start_time,end_time,status').eq('host_id', hostId).in('status', ['confirmed']).gte('start_time', from).lte('start_time', to),
         supabase.from('date_overrides').select('*').eq('host_id', hostId),
-        supabase.from('calendar_events').select('start_at,end_at,all_day,show_status,transparency,attendee_self_status,is_birthday_cal,is_holiday_cal,title').eq('host_id', hostId),
+        supabase.from('calendar_events').select('start_at,end_at,all_day,show_status,transparency,attendee_self_status,is_birthday_cal,is_holiday_cal,title').eq('host_id', hostId).gte('start_at', from).lte('start_at', to),
       ]);
 
       const allServices = (svcRes.data as Service[]) ?? [];
