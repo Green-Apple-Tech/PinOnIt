@@ -59,7 +59,7 @@ export function usePageMeta(opts: {
     return () => {
       document.title = prev || DEFAULTS.title;
       upsertMeta('meta[name="description"]', { name: 'description', content: DEFAULTS.description });
-      upsertMeta('meta[property="og:title"]', { property: 'og:title', content: 'Your mini office by text' });
+      upsertMeta('meta[property="og:title"]', { property: 'og:title', content: 'Book a Meeting - Click This Link' });
       upsertMeta('meta[property="og:description"]', { property: 'og:description', content: DEFAULTS.description });
       upsertMeta('meta[property="og:url"]', { property: 'og:url', content: DEFAULTS.url });
       upsertMeta('meta[property="og:image"]', { property: 'og:image', content: DEFAULTS.image });
