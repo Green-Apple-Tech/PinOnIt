@@ -82,7 +82,7 @@ This Mutual Non-Disclosure Agreement ("Agreement") is entered into as of the dat
 
 export const CONTRACT_STARTER_TEXT = `SERVICE / BUSINESS AGREEMENT
 
-This Agreement is entered into as of the date of electronic signature below, between the sender of this document ("Provider") and [Recipient Name] ("Client").
+This Agreement is entered into as of the date of electronic signature below, between [Business Name] ("Provider") and [Recipient Name] ("Client").
 
 1. Scope. Provider will perform or supply the following: [Topic]. Details, amounts, and any line items shown with this document are part of the scope.
 
@@ -101,36 +101,39 @@ This Agreement is entered into as of the date of electronic signature below, bet
 export const QUOTE_STARTER_TEXT = `QUOTE
 
 Prepared for: [Recipient Name].
+From: [Business Name].
 
 This quote is an estimate for: [Topic].
 
-The line items, tax, and total on this page are the proposed amounts. This is not an invoice and not a charge. Prices are valid for 30 days unless the sender states otherwise.
+The line items, tax, and total on this page are the proposed amounts. This is not an invoice and not a charge. Prices are valid for 30 days unless [Business Name] states otherwise.
 
-If you want to proceed, reply to the sender or approve this quote as instructed on this page. A separate invoice or contract may follow.
+If you want to proceed, reply to [Business Name] or approve this quote as instructed on this page. A separate invoice or contract may follow.
 
-Amounts and any pay-elsewhere links are between you and the sender.`;
+Amounts and any pay-elsewhere links are between you and [Business Name].`;
 
 export const INVOICE_STARTER_TEXT = `INVOICE
 
 Prepared for: [Recipient Name].
+From: [Business Name].
 
 This invoice is for: [Topic].
 
 The line items, tax, and total on this page are the amounts requested. Approving this invoice confirms you have reviewed those charges.
 
-Pay as the sender instructed (including any pay link on this page). Payment terms, if any, are between you and the sender.
+Pay as [Business Name] instructed (including any pay link on this page). Payment terms, if any, are between you and [Business Name].
 
 An electronic approval through this page is a record that you reviewed this invoice.`;
 
 export const RECEIPT_STARTER_TEXT = `RECEIPT
 
 Prepared for: [Recipient Name].
+From: [Business Name].
 
 This receipt confirms goods or services related to: [Topic].
 
 The line items and total on this page describe what was provided. Confirming this receipt is an acknowledgement that you received those goods or services. It is not a new charge.
 
-Keep a copy for your records. Any refund or dispute is between you and the sender.`;
+Keep a copy for your records. Any refund or dispute is between you and [Business Name].`;
 
 export const QUICK_ADDENDUM_STARTER_TEXT = `QUICK ADDENDUM
 
@@ -142,10 +145,19 @@ By signing, you confirm you have reviewed this addendum and agree to the terms d
 
 This is a general-purpose starting template. It is not legal advice. Consult an attorney for high-risk or regulated transactions.`;
 
+export function injectSenderPlaceholders(text: string) {
+  return text
+    .replace(/the sender of this document/gi, '[Business Name]')
+    .replace(/reply to the sender/gi, 'reply to [Business Name]')
+    .replace(/as the sender instructed/gi, 'as [Business Name] instructed')
+    .replace(/unless the sender states otherwise/gi, 'unless [Business Name] states otherwise')
+    .replace(/between you and the sender/gi, 'between you and [Business Name]');
+}
+
 export function defaultDocumentBody(type: SmbDocumentType, saved?: string | null) {
   const trimmed = saved?.trim();
-  if (type === 'waiver') return injectWaiverRecipientPlaceholder(trimmed || WAIVER_STARTER_TEXT);
-  if (trimmed) return trimmed;
+  if (type === 'waiver') return injectSenderPlaceholders(injectWaiverRecipientPlaceholder(trimmed || WAIVER_STARTER_TEXT));
+  if (trimmed) return injectSenderPlaceholders(trimmed);
   if (type === 'nda') return NDA_STARTER_TEXT;
   if (type === 'contract') return CONTRACT_STARTER_TEXT;
   if (type === 'quote') return QUOTE_STARTER_TEXT;
@@ -168,7 +180,7 @@ export function fillDocumentPlaceholders(
   const recipient = vars.recipientName?.trim() || '[Recipient Name]';
   const business = vars.businessName?.trim() || '[Business Name]';
   const activity = vars.activityDescription?.trim() || vars.topic?.trim() || '[Activity/Service Description]';
-  return text
+  return injectSenderPlaceholders(text)
     .replaceAll('[Topic]', topic)
     .replaceAll('[Recipient Name]', recipient)
     .replaceAll('[Client Name]', recipient)
