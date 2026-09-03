@@ -124,13 +124,54 @@ function ChannelIcon({
   className?: string;
   style?: CSSProperties;
 }) {
-  const Icon: ElementType | undefined =
-    (channel === 'sms' ? Smartphone
-      : channel === 'whatsapp' ? MessageSquare
-      : channel === 'voice' ? PhoneCall
-      : Mail) || Mail;
-  if (!Icon) return <span className={className} style={style} aria-hidden />;
-  return <Icon className={className} style={style} />;
+  // Bolt deployments have been intermittently not rendering Lucide SVGs.
+  // Use lightweight letter badges so the SMS/WhatsApp icons are always visible.
+  const sizeAndLayout = `inline-flex items-center justify-center ${className ?? ''}`.trim();
+  if (channel === 'sms') {
+    return (
+      <span
+        aria-hidden
+        className={`${sizeAndLayout} rounded-md bg-amber-50/90 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 text-[10px] font-black`}
+        style={style}
+      >
+        S
+      </span>
+    );
+  }
+  if (channel === 'whatsapp') {
+    return (
+      <span
+        aria-hidden
+        className={`${sizeAndLayout} rounded-md bg-green-50/90 dark:bg-green-500/10 text-green-700 dark:text-green-400 text-[10px] font-black`}
+        style={style}
+      >
+        WA
+      </span>
+    );
+  }
+  if (channel === 'voice') {
+    return (
+      <span
+        aria-hidden
+        className={`${sizeAndLayout} rounded-md bg-violet-50/90 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 text-[10px] font-black`}
+        style={style}
+      >
+        V
+      </span>
+    );
+  }
+  if (channel === 'email') {
+    return (
+      <span
+        aria-hidden
+        className={`${sizeAndLayout} rounded-md bg-sky-50/90 dark:bg-sky-500/10 text-sky-700 dark:text-sky-300 text-[10px] font-black`}
+        style={style}
+      >
+        E
+      </span>
+    );
+  }
+  return <span className={sizeAndLayout} style={style} aria-hidden />;
 }
 
 /** One grid for label + 4 channel columns (header and rows share tracks). */
