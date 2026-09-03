@@ -65,7 +65,7 @@ export function DocumentsPage() {
       <div className="mb-5 md:mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
-            Send Docs + <span className="font-sign-by-text text-brand-700 dark:text-brand-300">Sign-by-Text</span>
+            Send Docs + <span className="font-sign-by-text text-2xl md:text-3xl text-brand-700 dark:text-brand-300">Sign-by-Text</span>
           </h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-slate-400 max-w-2xl">
             Quotes, invoices, NDAs, waivers — one place. No login for the recipient.

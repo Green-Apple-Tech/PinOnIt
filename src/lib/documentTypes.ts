@@ -36,8 +36,6 @@ export const SMB_DOCUMENT_TYPES: DocumentTypeOption[] = [
   { id: 'damage_condition_report', label: 'Damage / Condition Report', hint: 'Record condition or damage', confirmationType: 'approve' },
   { id: 'rental_agreement', label: 'Rental Agreement', hint: 'Agree to rental terms', confirmationType: 'sign' },
   { id: 'photo_video_release', label: 'Photo / Video Release', hint: 'Allow photo or video use', confirmationType: 'sign' },
-  { id: 'parent_minor_consent', label: 'Parent / Minor Consent', hint: 'Parent or guardian consent', confirmationType: 'sign' },
-  { id: 'emergency_authorization', label: 'Emergency Authorization', hint: 'Authorize emergency action', confirmationType: 'sign' },
   { id: 'walkthrough', label: 'Walkthrough / Final Walkthrough', hint: 'Acknowledge a walkthrough', confirmationType: 'approve' },
   { id: 'showing_acknowledgment', label: 'Showing Acknowledgment', hint: 'Acknowledge a showing', confirmationType: 'approve' },
   { id: 'repair_confirmation', label: 'Repair Confirmation', hint: 'Confirm repair work', confirmationType: 'approve' },

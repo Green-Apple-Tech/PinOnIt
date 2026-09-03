@@ -21,7 +21,6 @@ import {
   defaultWaiverText,
   defaultVerificationRequired,
   documentBodyIsEditable,
-  documentTypeLabel,
   documentUploadMaxLabel,
   documentViewUrl,
   fillDocumentPlaceholders,
@@ -72,7 +71,8 @@ export function CreateDocumentPage() {
   const [libraryFileId, setLibraryFileId] = useState<string | null>(null);
   const [customTypeLabel, setCustomTypeLabel] = useState('');
   const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [recipientName, setRecipientName] = useState('');
+  const [recipientFirstName, setRecipientFirstName] = useState('');
+  const [recipientLastName, setRecipientLastName] = useState('');
   const [recipientEmail, setRecipientEmail] = useState('');
   const [recipientPhone, setRecipientPhone] = useState('');
   const [topic, setTopic] = useState('');
@@ -153,9 +153,8 @@ export function CreateDocumentPage() {
   const isMoney = isMoneyDocumentType(documentType);
   const bodyEditable = documentBodyIsEditable(documentType) && !isLibraryPdf;
   const typeSelectValue = libraryFileId ? `${LIBRARY_FILE_PREFIX}${libraryFileId}` : documentType;
+  const recipientName = `${recipientFirstName.trim()} ${recipientLastName.trim()}`.trim();
   const scopeAlreadyAccepted = Boolean(profile?.sign_by_text_scope_accepted_at);
-  const needsScopeAck =
-    !scopeAlreadyAccepted && (verificationRequired || isUpload || isLibraryPdf || entryMode === 'sign');
   const knownBusinessNames = useMemo(
     () => businessNameOptions([
       profile?.business_name,
@@ -284,14 +283,8 @@ export function CreateDocumentPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!user?.id || !selectedTemplate) return;
-    const typeLabel = documentTypeLabel(documentType, customTypeLabel);
     const libraryName = selectedLibraryFile?.name?.trim();
-    const topicText = topic.trim()
-      || (isMoney ? typeLabel : isLibraryPdf
-        ? (libraryName || selectedLibraryFile?.file_name.replace(/\.pdf$/i, '') || 'Document')
-        : isUpload
-          ? (uploadFile?.name.replace(/\.pdf$/i, '') || 'Document')
-          : '');
+    const topicText = topic.trim();
     const phone = recipientPhone.trim() ? normalizePhoneE164(recipientPhone) : null;
     if (documentType === 'other' && !customTypeLabel.trim()) {
       setError('Enter a custom document type.');
@@ -301,7 +294,11 @@ export function CreateDocumentPage() {
       setError('Choose a PDF to send for signature.');
       return;
     }
-    if (needsScopeAck && !scopeAcked) {
+    if (!recipientFirstName.trim() || !recipientLastName.trim()) {
+      setError('Add the recipient’s first and last name.');
+      return;
+    }
+    if (!scopeAcked) {
       setError('Confirm you understand Sign-by-Text scope before sending.');
       return;
     }
@@ -434,7 +431,7 @@ export function CreateDocumentPage() {
       await refreshProfile();
     }
 
-    if (user.id && needsScopeAck && scopeAcked && !scopeAlreadyAccepted) {
+    if (user.id && scopeAcked && !scopeAlreadyAccepted) {
       await supabase
         .from('profiles')
         .update({ sign_by_text_scope_accepted_at: new Date().toISOString() })
@@ -615,8 +612,7 @@ export function CreateDocumentPage() {
               </p>
             </label>
           )}
-          {needsScopeAck && (
-            <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-3">
+          <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-3">
               <input
                 type="checkbox"
                 checked={scopeAcked}
@@ -628,20 +624,31 @@ export function CreateDocumentPage() {
                 {signByTextAckLabel(uploadMaxLabel)}
               </span>
             </label>
-          )}
         </div>
 
         <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-6 space-y-4">
           <label className="block">
-            <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Recipient name</span>
-            <input
-              value={recipientName}
-              onChange={(e) => setRecipientName(e.target.value)}
-              required
-              className={fieldClass}
-              placeholder="Jane Smith"
-              autoComplete="name"
-            />
+            <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Recipient name <span className="text-red-500">*</span></span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
+              <input
+                value={recipientFirstName}
+                onChange={(e) => setRecipientFirstName(e.target.value)}
+                required
+                className={fieldClass.replace('mt-1 ', '')}
+                placeholder="Jane"
+                autoComplete="given-name"
+                aria-label="Recipient first name"
+              />
+              <input
+                value={recipientLastName}
+                onChange={(e) => setRecipientLastName(e.target.value)}
+                required
+                className={fieldClass.replace('mt-1 ', '')}
+                placeholder="Smith"
+                autoComplete="family-name"
+                aria-label="Recipient last name"
+              />
+            </div>
             <p className="mt-1 text-xs text-gray-400">
               Fills [Recipient Name] in the document below as you type.
             </p>
@@ -681,16 +688,16 @@ export function CreateDocumentPage() {
           </label>
           <label className="block">
             <span className="text-xs font-medium text-gray-600 dark:text-slate-400">
-              {isWaiver ? 'Activity / service description' : isUpload ? 'Topic (optional)' : 'Topic'}
+              {isWaiver ? 'Activity / service description' : 'Topic'} <span className="text-red-500">*</span>
             </span>
             <input
               value={topic}
               onChange={(e) => setTopic(e.target.value.slice(0, 150))}
-              required={!isMoney && !isUpload}
+              required
               maxLength={150}
               list="document-activity-options"
               className={fieldClass}
-              placeholder={isWaiver ? 'e.g. kitchen remodel, zip-line tour' : isMoney ? 'Kitchen remodel' : isUpload ? 'Optional note (defaults to file name)' : 'Kitchen remodel deposit'}
+              placeholder={isWaiver ? 'e.g. kitchen remodel, zip-line tour' : isMoney ? 'Kitchen remodel' : isUpload ? 'e.g. Kitchen remodel PDF' : 'Kitchen remodel deposit'}
             />
             <datalist id="document-activity-options">
               {activityOptions.map((name) => (
@@ -704,12 +711,11 @@ export function CreateDocumentPage() {
                 : isUpload
                 ? ' — shown above the PDF'
                 : ' — shown on the confirmation page'}
-              {isMoney ? '. Defaults to the document type if you leave it blank.' : ''}
+              
             </p>
           </label>
-          {!isUpload && (
-            <label className="block">
-              <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Business name</span>
+          <label className="block">
+              <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Business name <span className="text-red-500">*</span></span>
               <input
                 value={businessName}
                 onChange={(e) => setBusinessName(e.target.value.slice(0, 120))}
@@ -736,7 +742,6 @@ export function CreateDocumentPage() {
                 Shown as “from …” on the document. Save a default in Settings → Profile. Prefer company name over your personal name.
               </p>
             </label>
-          )}
         </div>
 
         {isMoney && (

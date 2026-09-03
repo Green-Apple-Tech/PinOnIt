@@ -188,7 +188,7 @@ export function Landing() {
       <section id="sign-by-text" className="py-16 md:py-20 px-6 bg-violet-50/80 dark:bg-violet-950/20 border-y border-violet-100 dark:border-violet-900/40 scroll-mt-16">
         <div className="max-w-5xl mx-auto grid lg:grid-cols-2 gap-10 items-center">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-violet-600 dark:text-violet-300 mb-2">Exclusive to PinOnIt</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-violet-600 dark:text-violet-300 mb-2">Sign by Text</p>
             <h2 className="font-sign-by-text text-4xl md:text-5xl text-violet-800 dark:text-violet-200 leading-tight mb-3">
               Sign-by-Text
             </h2>
@@ -274,7 +274,6 @@ export function Landing() {
                   {exclusive && (
                     <span className="text-[11px] font-semibold text-violet-700 dark:text-violet-300">
                       <span className="font-sign-by-text text-sm">Sign-by-Text</span>
-                      {' '}— exclusive to PinOnIt
                     </span>
                   )}
                 </div>

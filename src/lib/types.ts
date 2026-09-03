@@ -477,8 +477,6 @@ export type SmbDocumentType =
   | 'damage_condition_report'
   | 'rental_agreement'
   | 'photo_video_release'
-  | 'parent_minor_consent'
-  | 'emergency_authorization'
   | 'walkthrough'
   | 'showing_acknowledgment'
   | 'repair_confirmation'

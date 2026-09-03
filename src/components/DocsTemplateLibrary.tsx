@@ -272,8 +272,7 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
           Upload a PDF once, name it, then pick it from Document Type when you send. PDF only, up to {formatBytes(DOCUMENT_UPLOAD_MAX_BYTES)}.
         </p>
         <p className="text-xs text-slate-500 dark:text-slate-400">{DOCUMENT_UPLOAD_READABILITY_HINT}</p>
-        {!scopeAlreadyAccepted && (
-          <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-3">
+        <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-3">
             <input
               type="checkbox"
               checked={scopeAcked}
@@ -284,7 +283,6 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
               {signByTextAckLabel(uploadMaxLabel)}
             </span>
           </label>
-        )}
         <div className="flex flex-col sm:flex-row gap-2">
           <input
             type="text"
