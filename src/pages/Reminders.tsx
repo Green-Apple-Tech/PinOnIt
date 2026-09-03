@@ -18,6 +18,7 @@ import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } fr
 import { resolveDefaultReminderChannel, getWhatsappNumber } from '../lib/reminderChannels';
 import { VoicePersonalReminder, PersonalReminderDefaultsEditor, type VoicePersonalReminderHandle } from '../components/VoicePersonalReminder';
 import { AlsoRemindPeople } from '../components/AlsoRemindPeople';
+import { SmsIcon as SmsSvg, WhatsappIcon as WhatsappSvg, EmailIcon as EmailSvg, VoiceIcon as VoiceSvg } from '../components/ChannelBadges';
 import { SMS_OPT_OUT_FOOTER } from '../lib/smsOptOut';
 import { SmsBookingConsent } from '../components/SmsConsentText';
 import { ChannelMark } from '../components/ChannelMark';
@@ -115,7 +116,6 @@ const CHANNEL_INFO: { key: Channel; label: string; color: string; bg: string }[]
   { key: 'voice',   label: 'Voice Call', color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800' },
 ];
 
-/** Always returns a real lucide component — avoids React #130 from `<ch.icon />` when icon is undefined. */
 function ChannelIcon({
   channel,
   className,
@@ -125,54 +125,12 @@ function ChannelIcon({
   className?: string;
   style?: CSSProperties;
 }) {
-  // Bolt deployments have been intermittently not rendering Lucide SVGs.
-  // Use lightweight letter badges so the SMS/WhatsApp icons are always visible.
-  const sizeAndLayout = `inline-flex items-center justify-center ${className ?? ''}`.trim();
-  if (channel === 'sms') {
-    return (
-      <span
-        aria-hidden
-        className={`${sizeAndLayout} rounded-md bg-amber-50/90 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 text-[10px] font-black`}
-        style={style}
-      >
-        S
-      </span>
-    );
-  }
-  if (channel === 'whatsapp') {
-    return (
-      <span
-        aria-hidden
-        className={`${sizeAndLayout} rounded-md bg-green-50/90 dark:bg-green-500/10 text-green-700 dark:text-green-400 text-[10px] font-black`}
-        style={style}
-      >
-        WA
-      </span>
-    );
-  }
-  if (channel === 'voice') {
-    return (
-      <span
-        aria-hidden
-        className={`${sizeAndLayout} rounded-md bg-violet-50/90 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 text-[10px] font-black`}
-        style={style}
-      >
-        V
-      </span>
-    );
-  }
-  if (channel === 'email') {
-    return (
-      <span
-        aria-hidden
-        className={`${sizeAndLayout} rounded-md bg-sky-50/90 dark:bg-sky-500/10 text-sky-700 dark:text-sky-300 text-[10px] font-black`}
-        style={style}
-      >
-        E
-      </span>
-    );
-  }
-  return <span className={sizeAndLayout} style={style} aria-hidden />;
+  const cls = className ?? 'h-4 w-4';
+  if (channel === 'sms') return <SmsSvg className={`${cls} text-amber-600 dark:text-amber-400`} />;
+  if (channel === 'whatsapp') return <WhatsappSvg className={`${cls} text-green-600 dark:text-green-400`} />;
+  if (channel === 'voice') return <VoiceSvg className={`${cls} text-violet-600 dark:text-violet-400`} />;
+  if (channel === 'email') return <EmailSvg className={`${cls} text-blue-600 dark:text-blue-400`} />;
+  return <span className={className} style={style} aria-hidden />;
 }
 
 /** One grid for label + 4 channel columns (header and rows share tracks). */
