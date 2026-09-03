@@ -27,6 +27,7 @@ import { syncBookingToExternalCalendars } from '../lib/writeCalendarEvent';
 import { stripePromise } from '../lib/stripe';
 import { StripeBookingCheckout } from '../components/StripeBookingCheckout';
 import { publicBusyWindow } from '../lib/queryWindow';
+import { mapCreateGuestBookingError } from '../lib/createGuestBooking';
 import type { RescheduleSession } from '../lib/reschedule';
 import { usePageMeta } from '../lib/pageMeta';
 import {
@@ -984,32 +985,29 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
       return true;
     });
     const addressVal = guestAddress.trim() || null;
-    const { data, error: insertError } = await supabase.from('bookings').insert({
-      service_id: selectedService.id,
-      host_id: host.id,
-      guest_name: guestName,
-      guest_email: email || null,
-      guest_phone: phoneVal,
-      guest_address: addressVal,
-      notify_via: notifyViaPayload.length > 0 ? notifyViaPayload : null,
-      guest_timezone: guestTimezone,
-      start_time: startTime.toISOString(),
-      end_time: endTime.toISOString(),
-      notes: guestNotes,
-      status: 'confirmed',
-      is_recurring: isRecurring,
-      recurrence_frequency: isRecurring ? selectedService.recurrence_frequency : null,
-      reminder_channels: effectiveReminderChannels.length > 0 ? effectiveReminderChannels : ['email'],
-      reminder_times: selectedTimes,
-      stripe_payment_id: stripePaymentId,
-    }).select().maybeSingle();
+    const { data, error: insertError } = await supabase.rpc('create_guest_booking', {
+      p_payload: {
+        service_id: selectedService.id,
+        host_id: host.id,
+        guest_name: guestName.trim(),
+        guest_email: email || null,
+        guest_phone: phoneVal,
+        guest_address: addressVal,
+        notify_via: notifyViaPayload.length > 0 ? notifyViaPayload : null,
+        guest_timezone: guestTimezone,
+        start_time: startTime.toISOString(),
+        end_time: endTime.toISOString(),
+        notes: guestNotes,
+        is_recurring: isRecurring,
+        recurrence_frequency: isRecurring ? selectedService.recurrence_frequency : null,
+        reminder_channels: effectiveReminderChannels.length > 0 ? effectiveReminderChannels : ['email'],
+        reminder_times: selectedTimes,
+        stripe_payment_id: stripePaymentId,
+      },
+    });
     if (insertError || !data) {
-      const msg = `${insertError?.message ?? ''} ${insertError?.code ?? ''}`;
-      setDetailsError(
-        /guest_blocked/i.test(msg)
-          ? 'This email cannot book with this host.'
-          : 'Could not complete this booking. Please try another time.',
-      );
+      console.error('create_guest_booking failed', insertError);
+      setDetailsError(mapCreateGuestBookingError(insertError?.message, insertError?.code));
       return null;
     }
     if (data) {
@@ -1104,24 +1102,26 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
         const nextStart = addRecurrence(startTime, freq);
         if (!shouldStopRecurrence(nextStart, 2, endType, selectedService.recurrence_end_date, selectedService.recurrence_end_occurrences)) {
           const nextEnd = new Date(nextStart.getTime() + selectedService.duration_minutes * 60000);
-          await supabase.from('bookings').insert({
-            service_id: selectedService.id,
-            host_id: host.id,
-            guest_name: guestName,
-            guest_email: email || null,
-            guest_phone: phoneVal,
-            guest_address: addressVal,
-            notify_via: notifyViaPayload.length > 0 ? notifyViaPayload : null,
-            guest_timezone: guestTimezone,
-            start_time: nextStart.toISOString(),
-            end_time: nextEnd.toISOString(),
-            notes: guestNotes,
-            status: 'confirmed',
-            is_recurring: true,
-            recurrence_frequency: freq,
-            parent_booking_id: data.id,
-            reminder_channels: effectiveReminderChannels.length > 0 ? effectiveReminderChannels : ['email'],
-            reminder_times: selectedTimes,
+          await supabase.rpc('create_guest_booking', {
+            p_payload: {
+              service_id: selectedService.id,
+              host_id: host.id,
+              guest_name: guestName.trim(),
+              guest_email: email || null,
+              guest_phone: phoneVal,
+              guest_address: addressVal,
+              notify_via: notifyViaPayload.length > 0 ? notifyViaPayload : null,
+              guest_timezone: guestTimezone,
+              start_time: nextStart.toISOString(),
+              end_time: nextEnd.toISOString(),
+              notes: guestNotes,
+              is_recurring: true,
+              recurrence_frequency: freq,
+              parent_booking_id: (data as Booking).id,
+              reminder_channels: effectiveReminderChannels.length > 0 ? effectiveReminderChannels : ['email'],
+              reminder_times: selectedTimes,
+              stripe_payment_id: null,
+            },
           });
         }
       }
