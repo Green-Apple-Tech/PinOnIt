@@ -1,9 +1,12 @@
-import { HOLD_UP_COPY, SIGN_BY_TEXT_SCOPE_SUMMARY } from './documentCopy';
-
 export type PageHelpGuide = {
   title: string;
   purpose: string;
   steps: string[];
+  /** Optional page-specific capabilities shown under Can / Cannot. */
+  canDo?: string[];
+  cannotDo?: string[];
+  /** Short prompts shown in Ask. */
+  suggestedQuestions?: string[];
 };
 
 function keyFromLocation(pathname: string, search: string, hash: string): string {
@@ -41,13 +44,20 @@ function keyFromLocation(pathname: string, search: string, hash: string): string
 const GUIDES: Record<string, PageHelpGuide> = {
   home: {
     title: 'Dashboard',
-    purpose: 'This is your home base. On a phone it shows today’s meetings. On a computer you share your booking link and manage meeting types.',
+    purpose:
+      'Your home base — big tiles for Bookings, Send Docs + Sign-by-Text, and NeverMiss, plus smaller shortcuts to the rest. Glance cards show what needs attention.',
     steps: [
       'Set your booking URL in Settings if you have not already (pinonit.com/yourname).',
-      'Tap Share my link (phone) or copy the link on this page and send it to a client.',
-      'When they pick a time, the meeting shows here and on Calendar.',
-      'Turn on Advanced mode in Settings → General if you want every tool in the sidebar.',
+      'Use the three large tiles for everyday work; smaller tiles open extra tools.',
+      'When someone books or signs, it shows in the glance cards below.',
+      'Tap How to anytime — or Ask if you have a specific question.',
     ],
+    canDo: [
+      'Jump into booking, documents, or reminders in one tap.',
+      'See upcoming bookings and docs waiting on signature.',
+    ],
+    cannotDo: ['This page does not send documents or reminders by itself — open those tools to take action.'],
+    suggestedQuestions: ['Where do I start?', 'How do I share my booking link?'],
   },
   share: {
     title: 'Share your link',
@@ -59,13 +69,16 @@ const GUIDES: Record<string, PageHelpGuide> = {
     ],
   },
   calendar: {
-    title: 'Calendar',
+    title: 'Bookings',
     purpose: 'See every PinOnIt booking and busy times from connected calendars. Call, text, or reschedule from here.',
     steps: [
-      'Connect Google, Outlook, or Apple in Availability so you do not double-book.',
+      'Connect Google, Outlook, or Apple in Settings → Availability so you do not double-book.',
       'Tap a meeting to see the client, location, and actions.',
       'If the calendar looks empty, share your booking link from the Dashboard.',
     ],
+    canDo: ['View and manage bookings', 'Open NeverMiss from an event bell'],
+    cannotDo: ['Guests cannot see your private calendar details — only free slots on your booking page.'],
+    suggestedQuestions: ['How do clients book me?', 'Why is my calendar empty?'],
   },
   availability: {
     title: 'Availability',
@@ -79,13 +92,17 @@ const GUIDES: Record<string, PageHelpGuide> = {
   },
   reminders: {
     title: 'NeverMiss Reminders',
-    purpose: 'PinOnIt can text, email, WhatsApp, or call so people actually show up. Nothing sends until a reminder is turned on here.',
+    purpose:
+      'Email, SMS, WhatsApp, or voice so people show up. Nothing sends until a reminder is turned on.',
     steps: [
-      'Add coworkers under Settings → Coworkers (name, email/phone, channels).',
-      'On Calendar, click the bell on an event → Step 1: check who to copy → Save for this event.',
-      'Turn on Booking Confirmation and 24h / 1h guest reminders below.',
-      'Optional: Step 2 in the bell modal adds a one-off custom reminder for that event.',
+      'Turn on Booking Confirmation and 24h / 1h guest reminders on this page.',
+      'Optional: add coworkers under Settings and copy them on events from Calendar.',
+      'Use Advanced for voice defaults and per-contact overrides in Contacts.',
+      'On Calendar, the bell on an event can customize that meeting only.',
     ],
+    canDo: ['Remind guests and coworkers before meetings', 'Use email / SMS / WhatsApp / voice when enabled'],
+    cannotDo: ['Reminders do not send until you enable them', 'PinOnIt cannot force a carrier to deliver every SMS'],
+    suggestedQuestions: ['Why didn’t my reminder send?', 'How do I turn on NeverMiss?'],
   },
   services: {
     title: 'Event types',
@@ -98,13 +115,28 @@ const GUIDES: Record<string, PageHelpGuide> = {
     ],
   },
   documents: {
-    title: 'Doc Center',
-    purpose: `Send quotes, invoices, receipts, NDAs, contracts, and liability waivers from one place. ${HOLD_UP_COPY} ${SIGN_BY_TEXT_SCOPE_SUMMARY}`,
+    title: 'Send Docs + Sign-by-Text',
+    purpose:
+      'One place for quotes, invoices, receipts, NDAs, waivers, addendums, and PDF uploads. Turn on SMS verification & signature when you need it — recipients use a phone link, no app.',
     steps: [
-      'Tap New document and pick a type. Quotes, invoices, and receipts include line items and tax.',
-      'Add the recipient name. Phone is required only when verification is on (default for NDAs, contracts, and waivers).',
-      'Leave verification off for a quote they can just view, or a one-tap invoice/receipt confirm — no text verification code or signature.',
-      'Copy the link from the list if you need to resend it another way.',
+      'Tap New document and pick Document Type (or a Saved PDF from Settings → Docs).',
+      'Add recipient name. Phone is required when verification is on.',
+      'Use “Require signature & 2FA code” for Sign-by-Text; leave it off for simple view/confirm sends.',
+      'Copy the link from the list if you need to resend another way.',
+    ],
+    canDo: [
+      'Send single-signature business docs with optional SMS 2FA + signature',
+      'Send quotes/invoices/receipts with line items',
+      'Upload clear PDFs up to 5MB',
+    ],
+    cannotDo: [
+      'Wills, trusts, powers of attorney, deeds, court papers, notarized or multi-signer docs',
+      'Guarantee legal validity for your situation — this builds an evidentiary record, not a notary service',
+    ],
+    suggestedQuestions: [
+      'What documents can I send?',
+      'How do I get a signature by text?',
+      'Is this legally binding?',
     ],
   },
   'paid-booking': {
@@ -118,7 +150,8 @@ const GUIDES: Record<string, PageHelpGuide> = {
   },
   group: {
     title: 'Group Scheduling',
-    purpose: 'Find a time when several people are free — polls for people with email, or SMS coordinate for people who only have a phone.',
+    purpose:
+      'Find a time when several people are free — polls for people with email, or SMS coordinate for phone-only invitees.',
     steps: [
       'Create a poll if the group can click a link and vote on times.',
       'Use Coordinate if you only have phone numbers.',
@@ -149,7 +182,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
     steps: [
       'Tap Import from Gmail or Outlook, or add someone by hand.',
       'Share your booking link — new bookers appear automatically.',
-      'Open a contact to see their past meetings.',
+      'Optional: set a NeverMiss override on a contact for special reminder rules.',
     ],
   },
   signature: {
@@ -172,7 +205,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
   },
   analytics: {
     title: 'Analytics',
-    purpose: 'A simple picture of how many meetings you are booking. After 10 meetings it also appears in the sidebar.',
+    purpose: 'A simple picture of how many meetings you are booking.',
     steps: [
       'Share your link so bookings start coming in.',
       'Use the 7 / 30 / 90 day buttons to change the range.',
@@ -181,7 +214,8 @@ const GUIDES: Record<string, PageHelpGuide> = {
   },
   billing: {
     title: 'Billing',
-    purpose: 'Manage your Pro subscription. Every account starts with a 14-day trial; subscribe before it ends to keep booking and reminders running.',
+    purpose:
+      'Manage your Pro subscription. Every account starts with a 14-day trial; subscribe before it ends to keep booking and reminders running.',
     steps: [
       'Expired accounts are read-only until you reactivate — your data stays.',
       'Calendly switchers: 60 days with a card on file ($0 today).',
@@ -190,21 +224,20 @@ const GUIDES: Record<string, PageHelpGuide> = {
   },
   settings: {
     title: 'Settings',
-    purpose: 'Your account, booking URL, advanced mode, and other preferences.',
+    purpose: 'Your account, booking URL, docs defaults, branding, and other preferences.',
     steps: [
       'General → set your name and booking username.',
-      'Docs → save waiver language and quote/invoice defaults.',
-      'Branding, Integrations, and Referrals each have their own tab at the top.',
-      'Turn on Advanced mode if you want every tool in the sidebar.',
-      'Settings → General → Advanced to block an email or domain from booking, or mark it as spam.',
+      'Docs → templates and named PDF library.',
+      'Branding, Integrations, and Referrals each have their own tab.',
+      'Turn on Advanced mode if you want every tool listed in the sidebar.',
     ],
   },
   'settings-docs': {
     title: 'Docs defaults',
-    purpose: 'Save the waiver, tax, and line items that new Doc Center sends start from.',
+    purpose: 'Save waiver language, templates, and named PDFs that new sends can reuse.',
     steps: [
-      'Edit the waiver template and keep [Recipient Name], [Business Name], and [Activity/Service Description] so they fill in when you send.',
-      'Set a default tax percent and quote/invoice lines if you send those often.',
+      'Edit host templates and keep placeholders like [Recipient Name] so they fill when you send.',
+      'Upload named PDFs (clear, complete, up to 5MB) for reuse in Document Type.',
       'Save. New documents pick these up; you can still change any one send.',
     ],
   },
@@ -234,25 +267,29 @@ const GUIDES: Record<string, PageHelpGuide> = {
   },
   activity: {
     title: 'Activity',
-    purpose: 'A log of messages PinOnIt sent and every Doc Center send — pending, viewed, or signed.',
+    purpose: 'A log of messages PinOnIt sent and Doc Center activity.',
     steps: [
-      'Use Documents to see NDAs, waivers, contracts, invoices, quotes, and receipts.',
+      'Use Documents for NDAs, waivers, contracts, invoices, quotes, and receipts.',
       'Status updates when the recipient views or signs.',
       'If a message failed, check the phone/email and try again.',
     ],
   },
   'more-tools': {
-    title: 'More Tools',
-    purpose: 'Every extra PinOnIt tool in one place. In simple mode these stay tucked away until you need them.',
+    title: 'All Tools',
+    purpose:
+      'Every PinOnIt tool in one place. The three main ones (Bookings, Send Docs + Sign-by-Text, NeverMiss) are featured; the rest are compact shortcuts.',
     steps: [
-      'Open any card to use that tool.',
-      'Send SMS NDA/Waiver sits in the main sidebar; Event types, Contacts, Docs, Branding, Analytics, and Referrals live under Settings.',
-      'Paid booking, Doc Center, and the rest stay here so the main menu stays simple.',
-      'Turn on Advanced mode in Settings if you want every tool listed in the sidebar.',
+      'Use the three large cards for everyday work.',
+      'Open a smaller card for QR, signature, paid booking, or group scheduling.',
+      'Settings still holds Docs templates, branding, and account options.',
     ],
   },
 };
 
 export function getPageHelp(pathname: string, search = '', hash = ''): PageHelpGuide {
   return GUIDES[keyFromLocation(pathname, search, hash)] ?? GUIDES.home;
+}
+
+export function listPageHelpGuides(): PageHelpGuide[] {
+  return Object.values(GUIDES);
 }
