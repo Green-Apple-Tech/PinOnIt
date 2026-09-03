@@ -90,7 +90,6 @@ export function OnboardingBot() {
   const [animating, setAnimating] = useState(false);
   const [calloutMessage, setCalloutMessage] = useState('');
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const triggered = useRef(false);
 
   const question = QUESTIONS[currentQ];
   const progressIndex = PROGRESS_IDS.indexOf(question?.id ?? '');
@@ -125,36 +124,11 @@ export function OnboardingBot() {
   }, []);
 
   useEffect(() => {
-    if (isDismissed() || isCompleted()) return;
-
-    const onScroll = () => {
-      if (triggered.current) return;
-      const scrollTop = window.scrollY;
-      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-      if (docHeight > 0 && scrollTop / docHeight >= 0.3) {
-        triggered.current = true;
-        openPanel();
-      }
-    };
-
-    const timer = window.setTimeout(() => {
-      if (!triggered.current) {
-        triggered.current = true;
-        openPanel();
-      }
-    }, 8000);
-
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener('scroll', onScroll);
-      if (advanceTimer.current) clearTimeout(advanceTimer.current);
-    };
-  }, [openPanel]);
-
-  useEffect(() => {
     setCompleted(isCompleted());
   }, []);
+
+  // No auto-open on page load — user opens the bubble if they want help.
+  // Calendly import is asked in the booking setup wizard instead.
 
   const goNext = useCallback(() => {
     setAnimating(true);

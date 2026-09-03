@@ -261,7 +261,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep, openCa
   const [saving, setSaving] = useState(false);
 
   // Welcome step
-  const [welcomeIntent, setWelcomeIntent] = useState<'intent' | 'calendly'>(() =>
+  const [welcomeIntent, setWelcomeIntent] = useState<'intent' | 'calendly' | 'booking_ask'>(() =>
     openCalendlyImport ? 'calendly' : 'intent',
   );
   const [fromCalendly, setFromCalendly] = useState<boolean | null>(() =>
@@ -936,7 +936,8 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep, openCa
     setFromCalendly(true);
   };
 
-  const handleIntentBooking = async () => {
+  /** Continue booking setup without Calendly import. */
+  const continueBookingWithoutCalendly = async () => {
     setFromCalendly(false);
     setWelcomeIntent('intent');
     if (isAlreadyPro) {
@@ -945,6 +946,13 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep, openCa
       return;
     }
     setShowTrialOffer(true);
+  };
+
+  /** Booking path: ask about Calendly import first. */
+  const handleIntentBooking = () => {
+    setWelcomeIntent('booking_ask');
+    setFromCalendly(null);
+    setScrapeError('');
   };
 
   const handleIntentDocuments = async (path: string) => {
@@ -1323,6 +1331,56 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep, openCa
           );
         }
 
+        if (welcomeIntent === 'booking_ask' && !showTrialOffer) {
+          return (
+            <div>
+              <div className="mb-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWelcomeIntent('intent');
+                    setFromCalendly(null);
+                  }}
+                  className="text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1"
+                >
+                  <ArrowLeft className="h-4 w-4" /> Back
+                </button>
+              </div>
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-indigo-100 dark:bg-indigo-900/30 mb-4">
+                  <Calendar className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Set up your booking page</h2>
+                <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm max-w-sm mx-auto">
+                  Switching from Calendly? Import event types and availability, or start fresh.
+                </p>
+              </div>
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={openCalendlyImportFlow}
+                  className="w-full p-5 rounded-2xl border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50/50 dark:bg-indigo-950/20 hover:border-indigo-500 text-left transition-all"
+                >
+                  <p className="text-base font-bold text-slate-900 dark:text-white">Yes — import from Calendly</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                    Connect your account or paste your Calendly URL.
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void continueBookingWithoutCalendly()}
+                  className="w-full p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-600 bg-white dark:bg-slate-900 text-left transition-all"
+                >
+                  <p className="text-base font-bold text-slate-900 dark:text-white">No — set up from scratch</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                    Create your event types and availability in PinOnIt.
+                  </p>
+                </button>
+              </div>
+            </div>
+          );
+        }
+
         if (welcomeIntent === 'intent' && !showTrialOffer) {
           return (
             <div>
@@ -1336,7 +1394,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep, openCa
               <div className="space-y-3 mb-6">
                 <button
                   type="button"
-                  onClick={() => void handleIntentBooking()}
+                  onClick={() => handleIntentBooking()}
                   className="w-full p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-600 bg-white dark:bg-slate-900 text-left transition-all group"
                 >
                   <div className="flex items-start gap-4">
@@ -1382,16 +1440,6 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep, openCa
                   </div>
                 </button>
               </div>
-
-              <p className="text-center">
-                <button
-                  type="button"
-                  onClick={openCalendlyImportFlow}
-                  className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
-                >
-                  Switching from Calendly or another tool? Import your setup →
-                </button>
-              </p>
             </div>
           );
         }
@@ -1403,7 +1451,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep, openCa
                 <button
                   type="button"
                   onClick={() => {
-                    setWelcomeIntent('intent');
+                    setWelcomeIntent('booking_ask');
                     setFromCalendly(null);
                     setScrapeError('');
                   }}
