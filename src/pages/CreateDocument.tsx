@@ -627,8 +627,7 @@ export function CreateDocumentPage() {
               />
             </div>
           )}
-          {needsScopeAck && (
-            <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-3">
+          <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-3">
               <input
                 type="checkbox"
                 checked={scopeAcked}
