@@ -14,9 +14,10 @@ import { CalendarDays, LogOut, X, Check, Sun, Moon, Copy, Share2, Mail, Link2, E
 import {
   MORE_TOOLS_HUB_PATH,
   buildSidebarNav,
+  isDashboardNavActive,
   isMoreToolsSectionActive,
-  navPathMatches,
 } from '../lib/dashboardNav';
+import { DashboardHome } from '../components/DashboardHome';
 import { parseRevealedTools, revealTool } from '../lib/progressiveDisclosure';
 import { defaultAvailabilityRows } from '../lib/availabilityGrid';
 import { PageHelpButton } from '../components/PageHelp';
@@ -49,7 +50,14 @@ import {
   withoutPinOnItDemoFeedback,
 } from '../lib/eventTypes';
 
-type NavItem = { to: string; icon: typeof LayoutGrid; label: string; badge?: string; children?: NavItem[] };
+type NavItem = {
+  to: string;
+  icon: typeof LayoutGrid;
+  label: string;
+  badge?: string;
+  children?: NavItem[];
+  signByText?: boolean;
+};
 
 // ── Quick-create booking link modal ──────────────────────────────────────────
 
@@ -1429,6 +1437,7 @@ export function Dashboard() {
       icon: item.icon,
       label: item.label,
       badge: item.badge,
+      signByText: item.signByText,
     })),
     ...(moreToolsNav.length
       ? [{
@@ -1440,28 +1449,38 @@ export function Dashboard() {
             icon: item.icon,
             label: item.label,
             badge: item.badge,
+            signByText: item.signByText,
           })),
         } satisfies NavItem]
       : []),
   ];
 
   const isDashboardHome = location.pathname === '/dashboard';
-  const isActive = (path: string) => {
-    if (path === MORE_TOOLS_HUB_PATH) {
+  const isActive = (item: NavItem | string) => {
+    if (typeof item === 'string') {
+      if (item === MORE_TOOLS_HUB_PATH) {
+        return location.pathname === MORE_TOOLS_HUB_PATH;
+      }
+      return isDashboardNavActive({ to: item, label: '' }, location.pathname, location.search, location.hash);
+    }
+    if (item.to === MORE_TOOLS_HUB_PATH) {
       return location.pathname === MORE_TOOLS_HUB_PATH;
     }
-    return navPathMatches(path, location.pathname, location.search, location.hash);
+    return isDashboardNavActive(item, location.pathname, location.search, location.hash);
   };
   const initials = (displayName?.[0] ?? displayEmail?.[0] ?? '?').toUpperCase();
 
-  const navLinkClass = (path: string) => {
-    const active = isActive(path);
+  const navLinkClass = (item: NavItem) => {
+    const active = isActive(item);
     const padding = active ? 'pl-[calc(0.75rem-3px)] pr-3' : 'px-3';
-    return `flex items-center gap-3 py-2.5 rounded-lg text-sm transition-colors ${padding} ${
-      active
+    const highlight = item.signByText
+      ? active
+        ? 'bg-violet-50 dark:bg-violet-500/10 text-violet-800 dark:text-violet-300 font-semibold border-l-[3px] border-violet-500 rounded-l-none'
+        : 'text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-500/10'
+      : active
         ? 'bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400 font-semibold border-l-[3px] border-brand-600 dark:border-brand-500 rounded-l-none'
-        : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-900'
-    }`;
+        : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-900';
+    return `flex items-center gap-3 py-2.5 rounded-lg text-sm transition-colors ${padding} ${highlight}`;
   };
 
   const renderNavLink = (
@@ -1469,18 +1488,24 @@ export function Dashboard() {
     opts?: { collapsed?: boolean; onNavigate?: () => void; nested?: boolean },
   ) => (
     <Link
-      key={item.to}
+      key={item.to + item.label}
       to={item.to}
       title={opts?.collapsed ? item.label : undefined}
       onClick={opts?.onNavigate}
-      className={`${navLinkClass(item.to)} ${opts?.collapsed ? 'justify-center px-3' : ''} ${
+      className={`${navLinkClass(item)} ${opts?.collapsed ? 'justify-center px-3' : ''} ${
         opts?.nested ? 'text-[13px] py-2' : ''
       }`}
     >
       {item.icon ? <item.icon className="h-[18px] w-[18px] shrink-0" /> : null}
       {!opts?.collapsed && (
         <>
-          <span className={opts?.nested ? 'truncate' : undefined}>{item.label}</span>
+          <span
+            className={`${opts?.nested ? 'truncate' : ''} ${
+              item.signByText ? 'font-sign-by-text text-[1.15rem] leading-none' : ''
+            }`}
+          >
+            {item.label}
+          </span>
           {item.badge ? (
             <span className="ml-auto shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400">
               {item.badge}
@@ -1495,7 +1520,7 @@ export function Dashboard() {
     item: NavItem,
     opts?: { onNavigate?: () => void },
   ) => {
-    const parentActive = isActive(item.to);
+    const parentActive = isActive(item);
     const parentPadding = parentActive ? 'pl-[calc(0.75rem-3px)] pr-1' : 'pl-3 pr-1';
     return (
       <div key={item.to} className="space-y-0.5">
@@ -1681,45 +1706,9 @@ export function Dashboard() {
 
         {/* Dashboard home */}
         {isDashboardHome && (
-          <main className="flex-1 p-4 md:p-8 max-w-4xl w-full">
-
-            <MobileTodayStrip bookings={bookings} />
-
-            {/* Page heading */}
-            <div className="mb-4 md:mb-6 flex items-start justify-between gap-3">
-              <div>
-                <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Send your Availability</h1>
-                <p className="mt-0.5 md:mt-1 text-gray-500 dark:text-slate-400 text-xs md:text-sm">
-                  {upcomingBookings.length > 0
-                    ? `${upcomingBookings.length} upcoming meeting${upcomingBookings.length !== 1 ? 's' : ''}`
-                    : 'Manage your event types and booking link.'}
-                </p>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                {profile?.show_wizard_button !== false && (
-                  <button
-                    onClick={() => {
-                      setWizardUserRequested(true);
-                      setWizardInitialStep(wizardStartIndex({
-                        onboardingCompleted: profile?.onboarding_completed,
-                        hasServices: services.length > 0,
-                        hasSlug: !!(profile?.slug || liveSlug),
-                      }));
-                      setWizardSession((n) => n + 1);
-                      setShowWizard(true);
-                    }}
-                    className="flex items-center gap-1.5 px-2.5 md:px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                    title="Run setup wizard"
-                  >
-                    <Sparkles className="h-4 w-4" />
-                    <span className="hidden sm:inline">Wizard Setup</span>
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Onboarding checklist — hidden automatically when all steps complete */}
-            <div>
+          <>
+            {/* Onboarding checklist — kept above the new ops dashboard */}
+            <div className="px-4 md:px-8 pt-4 md:pt-6 max-w-5xl w-full">
             {!loading && !checklistDismissed && (() => {
               const hasCalendar = calendarCount > 0;
               const hasService = services.length > 0;
@@ -1734,7 +1723,7 @@ export function Dashboard() {
               const allDone = completedCount === steps.length;
               if (allDone) return null;
               return (
-                <div className="mb-4 md:mb-6 bg-white dark:bg-slate-900/50 rounded-2xl overflow-hidden shadow-sm" style={{ border: '1.5px solid #f97316', animation: 'onboarding-pulse 2s ease-in-out infinite' }}>
+                <div className="mb-4 md:mb-2 bg-white dark:bg-slate-900/50 rounded-2xl overflow-hidden shadow-sm" style={{ border: '1.5px solid #f97316', animation: 'onboarding-pulse 2s ease-in-out infinite' }}>
                   <div className="flex items-center justify-between px-4 md:px-5 py-3 md:py-4 border-b border-slate-100 dark:border-slate-800">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="flex gap-1 shrink-0">
@@ -1784,188 +1773,24 @@ export function Dashboard() {
             })()}
             </div>
 
-            {/* Share panel / link created banner */}
-            {createdUrl && <LinkCreatedBanner bookingUrl={createdUrl} onDismiss={() => setCreatedUrl('')} />}
-            {profile && effectiveSlug && !createdUrl && (
-              <div id="share" className="scroll-mt-20">
-              <SharePanel
-                slug={effectiveSlug}
-                userId={profile.id}
-                onSlugChange={(s) => {
-                  setLiveSlug(s);
-                  void refreshProfile();
+            {profile?.id && (
+              <DashboardHome
+                hostId={profile.id}
+                bookings={bookings}
+                showWizardButton={profile?.show_wizard_button !== false}
+                onOpenWizard={() => {
+                  setWizardUserRequested(true);
+                  setWizardInitialStep(wizardStartIndex({
+                    onboardingCompleted: profile?.onboarding_completed,
+                    hasServices: services.length > 0,
+                    hasSlug: !!(profile?.slug || liveSlug),
+                  }));
+                  setWizardSession((n) => n + 1);
+                  setShowWizard(true);
                 }}
-                shareUrl={shareUrl || `https://pinonit.com/${effectiveSlug}`}
-                hostName={profile.full_name?.trim() || undefined}
-              />
-              </div>
-            )}
-
-            <div>
-            <SingleUseLinksRow />
-            </div>
-
-            {/* No slug nudge */}
-            <div>
-            {!effectiveSlug && !createdUrl && (
-              <div className="mb-4 md:mb-6 p-3 md:p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">Set your meeting URL</p>
-                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Add a username so your meeting link is shareable.</p>
-                </div>
-                <Link to="/dashboard/settings" className="shrink-0 flex items-center gap-1 text-xs font-semibold text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 transition-colors">
-                  Go to Settings <ChevronRight className="h-3 w-3" />
-                </Link>
-              </div>
-            )}
-            </div>
-
-            {/* Types of Meetings section */}
-            <div>
-              <div className="flex items-center justify-between mb-3 md:mb-4 gap-2">
-                <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">Meetings</h2>
-                <button
-                  onClick={() => navigate('/dashboard/settings?tab=event-types&new=one_on_one')}
-                  className="flex items-center gap-1.5 md:gap-2 px-3 md:px-5 py-2 md:py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-xs md:text-sm font-semibold rounded-full transition-all shadow-sm"
-                >
-                  <Plus className="h-4 w-4" />
-                  New Meeting Type
-                </button>
-              </div>
-
-              {/* Search */}
-              {meetingServices.length > 3 && (
-                <div className="relative mb-4">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-slate-500 pointer-events-none" />
-                  <input
-                    type="text"
-                    value={serviceSearch}
-                    onChange={(e) => setServiceSearch(e.target.value)}
-                    placeholder="Search event types..."
-                    className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500 transition"
-                  />
-                </div>
-              )}
-
-              {loading ? (
-                <div className="text-center py-12 text-gray-400 dark:text-slate-500">
-                  <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                </div>
-              ) : meetingServices.length === 0 ? (
-                <div className="rounded-2xl border-2 border-dashed border-gray-200 dark:border-slate-700 p-6 md:p-12 text-center">
-                  <div className="h-12 w-12 md:h-14 md:w-14 bg-brand-50 dark:bg-brand-950/40 rounded-2xl flex items-center justify-center mx-auto mb-3 md:mb-4">
-                    <CalendarDays className="h-6 w-6 md:h-7 md:w-7 text-brand-600 dark:text-brand-400" />
-                  </div>
-                  <h3 className="text-base md:text-lg font-bold mb-2 text-gray-900 dark:text-white">No meeting types yet</h3>
-                  <p className="text-sm text-gray-500 dark:text-slate-400 mb-4 md:mb-6 max-w-sm mx-auto">
-                    Create your first meeting type and share the link so people can book time with you.
-                  </p>
-                  <button
-                    onClick={() => navigate('/dashboard/settings?tab=event-types&new=one_on_one')}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-full transition-all"
-                  >
-                    <Plus className="h-4 w-4" />
-                    New Meeting Type
-                  </button>
-                </div>
-              ) : (
-                <>
-                <div className="mb-4">
-                  <p className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-slate-400">
-                    SELECT EVENTS TO INCLUDE IN YOUR LINK
-                  </p>
-                  <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">
-                    Only checked events appear when someone visits your booking link.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  {meetingServices
-                    .filter((s) => !serviceSearch || s.name.toLowerCase().includes(serviceSearch.toLowerCase()))
-                    .map((svc) => {
-                      const isExample = isExamplePaidConsultation(svc);
-                      const label = displayEventTypeName(svc);
-                      const eventTypeUrl = bookingSlug && !isExample
-                        ? buildShareUrl(bookingSlug, bookableServices, new Set([svc.id]))
-                        : null;
-                      const meta = `${svc.duration_minutes} min · ${svc.price_cents ? `$${(svc.price_cents / 100).toFixed(2)}` : 'Free'} · ${(svc.location_type ?? 'video').replace('_', ' ')}`;
-                      const isSelected = !isExample && selectedServiceIds.has(svc.id);
-                      return (
-                        <div
-                          key={svc.id}
-                          className={`flex items-center gap-3 px-4 py-3.5 border rounded-xl transition-colors group ${
-                            isExample
-                              ? 'bg-gray-50 dark:bg-slate-900/30 border-gray-200 dark:border-slate-800 opacity-70'
-                              : 'bg-white dark:bg-slate-900/50 border-gray-200 dark:border-slate-800 hover:border-gray-300 dark:hover:border-slate-700'
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            disabled={isExample}
-                            onChange={() => { if (!isExample) toggleServiceSelection(svc.id); }}
-                            className="h-4 w-4 rounded border-gray-300 dark:border-slate-600 text-brand-600 focus:ring-brand-500 shrink-0 disabled:cursor-not-allowed disabled:opacity-40"
-                            aria-label={isExample ? `${label} example (not in your booking link)` : `Include ${label} in booking link`}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <p className={`text-sm font-semibold truncate ${isExample ? 'text-gray-500 dark:text-slate-400' : 'text-gray-900 dark:text-white'}`}>{label}</p>
-                              {isExample && (
-                                <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-gray-200 dark:bg-slate-800 text-gray-500 dark:text-slate-400">Example</span>
-                              )}
-                            </div>
-                            <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{meta}</p>
-                          </div>
-
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            {eventTypeUrl && (
-                              <button
-                                type="button"
-                                onClick={() => setServiceQrModal({ url: eventTypeUrl, title: label })}
-                                className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 hover:border-brand-300 dark:hover:border-brand-600 hover:bg-brand-50 dark:hover:bg-brand-950/30 transition-colors"
-                                title="QR code for this event type"
-                              >
-                                <QrCode className="h-3.5 w-3.5" />
-                              </button>
-                            )}
-                            {isExample ? (
-                              <button
-                                type="button"
-                                onClick={() => void removeExampleService(svc)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
-                                title="Remove this example"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                                Remove
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => navigate(`/dashboard/settings?tab=event-types&edit=${svc.id}`)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg hover:opacity-80 transition-colors text-white"
-                                style={{ backgroundColor: '#5864C6' }}
-                                title="Edit meeting type"
-                              >
-                                <PenLine className="h-3.5 w-3.5" />
-                                Edit
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-                </>
-              )}
-            </div>
-
-            {serviceQrModal && (
-              <QRModal
-                variant="booking"
-                url={serviceQrModal.url}
-                title={serviceQrModal.title}
-                onClose={() => setServiceQrModal(null)}
               />
             )}
-          </main>
+          </>
         )}
 
         {!isDashboardHome && (

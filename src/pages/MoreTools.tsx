@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { documentsNewPath } from '../lib/documentActions';
 import {
-  QrCode, Mail, ClipboardSignature, ArrowRight,
+  QrCode, Mail, ClipboardSignature, ArrowRight, FileText,
   CalendarDays, Users, ShoppingBag, Bell, Sparkles,
   ChevronDown, type LucideIcon,
 } from 'lucide-react';
@@ -25,7 +26,7 @@ const MAIN_TOOLS: ToolItem[] = [
     badge: 'Tool 1',
     description: 'Your booking page, event types, and calendar sync — Google, Outlook, and Apple. Prevent double-bookings, accept payments, and share one link everywhere.',
     buttonLabel: 'Open Scheduler',
-    to: '/dashboard',
+    to: '/dashboard/appointments',
     accent: 'brand',
   },
   {
@@ -42,11 +43,27 @@ const MAIN_TOOLS: ToolItem[] = [
 
 const INCLUDED_TOOLS: ToolItem[] = [
   {
+    id: 'sign-by-text',
+    icon: ClipboardSignature,
+    title: 'Sign-by-Text',
+    description: 'Send NDAs, waivers, addendums, and simple agreements by text. Recipients verify with an SMS code and sign on their phone — no app required.',
+    buttonLabel: 'Open Sign-by-Text',
+    to: documentsNewPath('sign'),
+  },
+  {
+    id: 'send-docs',
+    icon: FileText,
+    title: 'Send Docs',
+    description: 'Quotes, invoices, receipts, and everyday documents — same Doc Center, send-without-signature flow.',
+    buttonLabel: 'Open Send Docs',
+    to: documentsNewPath('send'),
+  },
+  {
     id: 'documents',
     icon: ClipboardSignature,
-    title: 'Doc Center',
-    description: 'Send quotes, invoices, receipts, NDAs, contracts, and liability waivers. Line items and a pay-elsewhere link when you need money; verified signatures when you need them to hold up.',
-    buttonLabel: 'Open Doc Center',
+    title: 'All documents',
+    description: 'See every send — pending, viewed, and confirmed — in one list.',
+    buttonLabel: 'Open document list',
     to: '/dashboard/documents',
   },
   {

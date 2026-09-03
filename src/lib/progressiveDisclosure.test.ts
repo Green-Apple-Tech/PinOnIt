@@ -62,21 +62,22 @@ describe('profilePatchForBusinessType', () => {
 });
 
 describe('buildSidebarNav', () => {
-  it('keeps simple mode to the four core items plus More Tools leftovers', () => {
+  it('puts Dashboard-first product areas in primary nav', () => {
     const { primary, moreTools } = buildSidebarNav('simple');
     expect(primary.map((i) => i.label)).toEqual([
       'Dashboard',
-      'Calendar',
-      'Smart Reminders',
-      'Send SMS NDA/Waiver',
+      'Booking',
+      'Sign-by-Text',
+      'Send Docs',
+      'Reminders',
+      'QR Codes',
+      'Signature Creator',
+      'Settings',
     ]);
-    expect(primary.map((i) => i.label)).not.toContain('Share');
-    expect(moreTools.some((i) => i.label === 'Settings')).toBe(true);
-    expect(moreTools.some((i) => i.label === 'Doc Center')).toBe(true);
-    expect(moreTools.some((i) => i.label === 'Contacts')).toBe(false);
-    expect(moreTools.some((i) => i.label === 'Referrals')).toBe(false);
-    expect(moreTools.some((i) => i.label === 'Event types')).toBe(false);
-    expect(moreTools.some((i) => i.label === 'Analytics')).toBe(false);
+    expect(primary.some((i) => i.signByText)).toBe(true);
+    expect(moreTools.some((i) => i.label === 'Paid Booking')).toBe(true);
+    expect(moreTools.some((i) => i.label === 'Group Scheduling')).toBe(true);
+    expect(moreTools.some((i) => i.label === 'Doc Center')).toBe(false);
   });
 
   it('keeps paid booking under More Tools in simple mode even after it is used', () => {
@@ -88,11 +89,10 @@ describe('buildSidebarNav', () => {
   it('flattens every tool in advanced mode', () => {
     const { primary, moreTools } = buildSidebarNav('advanced');
     expect(moreTools).toEqual([]);
-    expect(primary.some((i) => i.label === 'Send SMS NDA/Waiver')).toBe(true);
+    expect(primary.some((i) => i.label === 'Sign-by-Text')).toBe(true);
     expect(primary.some((i) => i.label === 'Settings')).toBe(true);
-    expect(primary.some((i) => i.label === 'Doc Center')).toBe(true);
+    expect(primary.some((i) => i.label === 'Send Docs')).toBe(true);
     expect(primary.some((i) => i.label === 'Paid Booking')).toBe(true);
-    expect(primary.map((i) => i.label)).not.toContain('Share');
   });
 });
 

@@ -2,16 +2,17 @@ import {
   Bell,
   CalendarCheck,
   ClipboardSignature,
+  FileText,
   LayoutGrid,
   Mail,
   QrCode,
   Settings,
-  Shield,
   ShoppingBag,
   Users,
   type LucideIcon,
 } from 'lucide-react';
 import type { RevealedToolId, UiMode } from './progressiveDisclosure';
+import { documentsNewPath } from './documentActions';
 
 export type MoreToolsNavItem = {
   label: string;
@@ -23,6 +24,8 @@ export type MoreToolsNavItem = {
   activePaths?: string[];
   /** Path prefixes that count as this item being active (e.g. nested routes). */
   activePathPrefixes?: string[];
+  /** Apply cursive Sign-by-Text treatment to the label. */
+  signByText?: boolean;
 };
 
 export type DashboardNavItem = {
@@ -31,25 +34,39 @@ export type DashboardNavItem = {
   label: string;
   badge?: string;
   children?: DashboardNavItem[];
+  signByText?: boolean;
 };
 
-/** Simple-mode top of sidebar. Everything else stays under More Tools / Settings. */
+/** Primary sidebar — Dashboard-first product areas. */
 export const SIMPLE_PRIMARY_NAV: MoreToolsNavItem[] = [
   { label: 'Dashboard', icon: LayoutGrid, path: '/dashboard' },
-  { label: 'Calendar', icon: CalendarCheck, path: '/dashboard/appointments' },
-  { label: 'Smart Reminders', icon: Bell, path: '/dashboard/reminders' },
-];
-
-/** Always-visible shortcuts, inserted above More Tools. */
-export const FEATURED_NAV: MoreToolsNavItem[] = [
+  { label: 'Booking', icon: CalendarCheck, path: '/dashboard/appointments' },
   {
-    label: 'Send SMS NDA/Waiver',
-    icon: Shield,
-    path: '/dashboard/documents/new',
+    label: 'Sign-by-Text',
+    icon: ClipboardSignature,
+    path: documentsNewPath('sign'),
+    signByText: true,
   },
+  {
+    label: 'Send Docs',
+    icon: FileText,
+    path: documentsNewPath('send'),
+  },
+  { label: 'Reminders', icon: Bell, path: '/dashboard/reminders' },
+  {
+    label: 'QR Codes',
+    icon: QrCode,
+    path: '/dashboard/qr-code',
+    activePaths: ['/dashboard/qr'],
+  },
+  { label: 'Signature Creator', icon: Mail, path: '/dashboard/signature' },
+  { label: 'Settings', icon: Settings, path: '/dashboard/settings' },
 ];
 
-/** Single source of truth for sidebar More Tools — add items here. */
+/** Kept for progressive disclosure / advanced mode extras. */
+export const FEATURED_NAV: MoreToolsNavItem[] = [];
+
+/** Secondary tools — still reachable, not competing with the primary product areas. */
 export const MORE_TOOLS_NAV: MoreToolsNavItem[] = [
   {
     label: 'Group Scheduling',
@@ -59,22 +76,7 @@ export const MORE_TOOLS_NAV: MoreToolsNavItem[] = [
     activePathPrefixes: ['/dashboard/group-scheduling'],
     activePaths: ['/dashboard/coordinate'],
   },
-  {
-    label: 'Doc Center',
-    icon: ClipboardSignature,
-    path: '/dashboard/documents',
-    toolId: 'quotes',
-    activePaths: ['/dashboard/quotes'],
-  },
   { label: 'Paid Booking', icon: ShoppingBag, path: '/dashboard/paid-booking', toolId: 'paid-booking' },
-  {
-    label: 'QR Code Creator',
-    icon: QrCode,
-    path: '/dashboard/qr-code',
-    activePaths: ['/dashboard/qr'],
-  },
-  { label: 'Email Signature', icon: Mail, path: '/dashboard/signature' },
-  { label: 'Settings', icon: Settings, path: '/dashboard/settings' },
 ];
 
 /** Tools that can be permanently surfaced after a trigger — derived from MORE_TOOLS_NAV. */
@@ -89,11 +91,53 @@ export function isMoreToolsNavActive(item: MoreToolsNavItem, pathname: string, s
   return false;
 }
 
+/** Active state for primary + more-tools items (handles Sign-by-Text vs Send Docs query split). */
+export function isDashboardNavActive(
+  item: { to: string; label: string; signByText?: boolean },
+  pathname: string,
+  search = '',
+  hash = '',
+): boolean {
+  if (item.signByText || item.label === 'Sign-by-Text') {
+    if (!pathname.startsWith('/dashboard/documents')) return false;
+    const action = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search).get('action');
+    if (action) {
+      return ['sign', 'nda', 'waiver', 'addendum', 'agreement'].includes(action);
+    }
+    const type = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search).get('type');
+    return Boolean(
+      type &&
+        ['nda', 'contract', 'waiver', 'quick_addendum', 'upload', 'service_agreement', 'consent_form'].includes(type),
+    );
+  }
+  if (item.label === 'Send Docs') {
+    if (!pathname.startsWith('/dashboard/documents')) return false;
+    const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
+    const action = params.get('action');
+    if (action) {
+      return ['send', 'quote', 'invoice', 'receipt'].includes(action);
+    }
+    const type = params.get('type');
+    if (type && ['nda', 'contract', 'waiver', 'quick_addendum', 'upload', 'service_agreement', 'consent_form'].includes(type)) {
+      return false;
+    }
+    // Doc list + send/money create flows
+    return true;
+  }
+  return navPathMatches(item.to, pathname, search, hash);
+}
+
 export function navPathMatches(to: string, pathname: string, search = '', hash = ''): boolean {
   const [withoutHash, itemHash] = to.split('#');
   const [path, query] = withoutHash.split('?');
   if (pathname !== path) return false;
-  if (query && !search.includes(query)) return false;
+  if (query) {
+    const want = new URLSearchParams(query);
+    const have = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
+    for (const [k, v] of want.entries()) {
+      if (have.get(k) !== v) return false;
+    }
+  }
   if (itemHash) return hash === `#${itemHash}`;
   if (path === '/dashboard' && hash === '#share' && !query) return false;
   return true;
@@ -110,18 +154,21 @@ export function isMoreToolsSectionActive(pathname: string, search = '', hash = '
 }
 
 function toDashboardItem(item: MoreToolsNavItem): DashboardNavItem {
-  return { to: item.path, icon: item.icon, label: item.label, badge: item.badge };
+  return {
+    to: item.path,
+    icon: item.icon,
+    label: item.label,
+    badge: item.badge,
+    signByText: item.signByText,
+  };
 }
 
 export function buildSidebarNav(
   uiMode: UiMode,
 ): { primary: DashboardNavItem[]; moreTools: MoreToolsNavItem[] } {
-  const primary = [...SIMPLE_PRIMARY_NAV, ...FEATURED_NAV].map(toDashboardItem);
-  const extras = MORE_TOOLS_NAV.filter(
-    (item) => !SIMPLE_PRIMARY_NAV.some((p) => p.path === item.path) && !FEATURED_NAV.some((p) => p.path === item.path),
-  );
+  const primary = SIMPLE_PRIMARY_NAV.map(toDashboardItem);
   if (uiMode === 'advanced') {
-    return { primary: [...primary, ...extras.map(toDashboardItem)], moreTools: [] };
+    return { primary: [...primary, ...MORE_TOOLS_NAV.map(toDashboardItem)], moreTools: [] };
   }
-  return { primary, moreTools: extras };
+  return { primary, moreTools: MORE_TOOLS_NAV };
 }

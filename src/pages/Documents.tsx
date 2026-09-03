@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { CheckCircle, Clock, Copy, Eye, FileText, Plus } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
+import { documentsNewPath } from '../lib/documentActions';
 import {
   HOLD_UP_COPY,
   documentTypeLabel,
@@ -64,30 +65,39 @@ export function DocumentsPage() {
     <main className="p-4 md:p-8 max-w-5xl pb-28 md:pb-8">
       <div className="mb-5 md:mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Doc Center</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Documents</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-slate-400 max-w-2xl">
-            Invoices, quotes, NDAs, waivers, work orders, and more — one place. No login for the recipient.
+            <span className="font-sign-by-text text-base text-brand-700 dark:text-brand-300">Sign-by-Text</span>
+            {' '}and Send Docs — one place. No login for the recipient.
           </p>
           <p className="mt-2 text-sm text-gray-600 dark:text-slate-300 max-w-2xl">{HOLD_UP_COPY}</p>
         </div>
-        <Link
-          to="/dashboard/documents/new"
-          className="inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold"
-        >
-          <Plus className="h-4 w-4" />
-          New document
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            to={documentsNewPath('sign')}
+            className="inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold"
+          >
+            <Plus className="h-4 w-4" />
+            <span className="font-sign-by-text text-base">Sign-by-Text</span>
+          </Link>
+          <Link
+            to={documentsNewPath('send')}
+            className="inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-semibold text-gray-800 dark:text-slate-100"
+          >
+            Send Docs
+          </Link>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-6">
         {[
-          { to: '/dashboard/documents/new?type=upload', label: 'Upload PDF to sign' },
-          { to: '/dashboard/documents/new?type=quick_addendum', label: 'Quick Addendum' },
-          { to: '/dashboard/documents/new?type=nda', label: 'Send NDA' },
-          { to: '/dashboard/documents/new?type=waiver', label: 'Send Waiver' },
-          { to: '/dashboard/documents/new?type=invoice', label: 'Send Invoice/Quote' },
-          { to: '/dashboard/documents/new?type=contract', label: 'Send Contract' },
-          { to: '/dashboard/documents/new?type=receipt', label: 'Send Receipt' },
+          { to: documentsNewPath('sign', 'upload'), label: 'Upload PDF to sign' },
+          { to: documentsNewPath('addendum'), label: 'Quick Addendum' },
+          { to: documentsNewPath('nda'), label: 'Send NDA' },
+          { to: documentsNewPath('waiver'), label: 'Send Waiver' },
+          { to: documentsNewPath('invoice'), label: 'Send Invoice' },
+          { to: documentsNewPath('quote'), label: 'Send Quote' },
+          { to: documentsNewPath('receipt'), label: 'Send Receipt' },
         ].map((btn) => (
           <Link
             key={btn.to}
@@ -122,8 +132,8 @@ export function DocumentsPage() {
           <div className="p-10 text-center">
             <FileText className="h-8 w-8 mx-auto text-gray-300 dark:text-slate-600" />
             <p className="mt-3 text-sm text-gray-500 dark:text-slate-400">No documents yet. Send your first one.</p>
-            <Link to="/dashboard/documents/new" className="mt-4 inline-block text-sm font-semibold text-brand-600">
-              Create a document
+            <Link to={documentsNewPath('sign')} className="mt-4 inline-block text-sm font-semibold text-brand-600">
+              Start with Sign-by-Text
             </Link>
           </div>
         ) : (

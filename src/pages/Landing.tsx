@@ -41,9 +41,10 @@ const TEXT_ACTION_CARDS = [
   },
   {
     icon: ClipboardSignature,
-    title: 'Sign by Text',
+    title: 'Sign-by-Text',
     you: 'Waivers, NDAs, addendums, or simple contracts — signed with a finger after an SMS code.',
     theySee: 'Please sign before Saturday: pinonit.com/d/…',
+    exclusive: true,
   },
   {
     icon: Bell,
@@ -88,7 +89,7 @@ const TRADE_CHIPS = [
 
 const SIX_TOOLS = [
   { icon: Calendar, title: 'Easy Booking', desc: 'Your booking page and links, synced to your calendar.' },
-  { icon: ClipboardSignature, title: 'Sign by Text', desc: 'Waivers, NDAs, addendums, simple contracts.' },
+  { icon: ClipboardSignature, title: 'Sign-by-Text', desc: 'Waivers, NDAs, addendums, simple contracts.' },
   { icon: Bell, title: 'Super Reminders', desc: 'You, your customers, or anyone else — by SMS.' },
   { icon: Receipt, title: 'Business Documents', desc: 'Quotes, invoices, receipts — send in seconds.' },
   { icon: QrCode, title: 'QR Codes', desc: 'Booking page, link, or business — instant.' },
@@ -183,6 +184,51 @@ export function Landing() {
         </div>
       </section>
 
+      {/* Sign-by-Text featured */}
+      <section id="sign-by-text" className="py-16 md:py-20 px-6 bg-violet-50/80 dark:bg-violet-950/20 border-y border-violet-100 dark:border-violet-900/40 scroll-mt-16">
+        <div className="max-w-5xl mx-auto grid lg:grid-cols-2 gap-10 items-center">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-violet-600 dark:text-violet-300 mb-2">Exclusive to PinOnIt</p>
+            <h2 className="font-sign-by-text text-4xl md:text-5xl text-violet-800 dark:text-violet-200 leading-tight mb-3">
+              Sign-by-Text
+            </h2>
+            <p className="text-lg text-slate-700 dark:text-slate-200 font-medium mb-3">
+              Need someone to sign a waiver, NDA, quote, addendum or simple contract?
+            </p>
+            <p className="text-slate-600 dark:text-slate-300 mb-6">
+              Text it. Verify it. Sign it. Done. No app required for the recipient.
+            </p>
+            <div className="flex flex-wrap gap-2 mb-6">
+              {['TEXT', 'OPEN', 'VERIFY', 'SIGN', 'DONE'].map((step, i) => (
+                <span key={step} className="inline-flex items-center gap-2">
+                  <span className="px-3 py-1.5 rounded-full bg-white dark:bg-slate-900 border border-violet-200 dark:border-violet-800 text-xs font-bold text-violet-700 dark:text-violet-300 tracking-wide">
+                    {step}
+                  </span>
+                  {i < 4 && <span className="text-violet-300 dark:text-violet-700 text-sm">→</span>}
+                </span>
+              ))}
+            </div>
+            <Link
+              to="/signup"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-brand-500 hover:bg-brand-600 text-white font-bold text-sm shadow-md"
+            >
+              Try Sign-by-Text <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+          <div className="rounded-3xl border border-violet-200 dark:border-violet-800 bg-white dark:bg-slate-900 p-5 shadow-lg shadow-violet-100/60 dark:shadow-none">
+            <SmsPhoneMockup
+              messages={[
+                { role: 'business' as const, text: "Hi Maria — please review & sign the waiver: pinonit.com/d/k8x2" },
+                { role: 'system' as const, text: 'Code sent · enter to verify' },
+                { role: 'customer' as const, text: 'Signed with my finger ✅' },
+                { role: 'system' as const, text: 'Verified · timestamped · done' },
+              ]}
+              caption="Sign-by-Text on their phone — nothing to install."
+            />
+          </div>
+        </div>
+      </section>
+
       {/* How it works */}
       <section id="demo" className="py-20 px-6 bg-slate-50 dark:bg-slate-900/40 scroll-mt-16">
         <div className="max-w-5xl mx-auto">
@@ -213,12 +259,28 @@ export function Landing() {
             Booking. Reminders. Documents. Signatures. QR codes.
           </h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {TEXT_ACTION_CARDS.map(({ icon: Icon, title, you, theySee }) => (
-              <div key={title} className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6">
-                <div className="h-10 w-10 rounded-xl bg-brand-50 dark:bg-brand-500/10 flex items-center justify-center mb-4">
-                  <Icon className="h-5 w-5 text-brand-600 dark:text-brand-400" />
+            {TEXT_ACTION_CARDS.map(({ icon: Icon, title, you, theySee, exclusive }) => (
+              <div key={title} className={`rounded-2xl border bg-white dark:bg-slate-900 p-6 ${
+                exclusive
+                  ? 'border-violet-300 dark:border-violet-700 ring-1 ring-violet-200/80 dark:ring-violet-800/60'
+                  : 'border-slate-200 dark:border-slate-800'
+              }`}>
+                <div className="flex items-start justify-between gap-2 mb-4">
+                  <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${
+                    exclusive ? 'bg-violet-50 dark:bg-violet-500/10' : 'bg-brand-50 dark:bg-brand-500/10'
+                  }`}>
+                    <Icon className={`h-5 w-5 ${exclusive ? 'text-violet-600 dark:text-violet-300' : 'text-brand-600 dark:text-brand-400'}`} />
+                  </div>
+                  {exclusive && (
+                    <span className="text-[11px] font-semibold text-violet-700 dark:text-violet-300">
+                      <span className="font-sign-by-text text-sm">Sign-by-Text</span>
+                      {' '}— exclusive to PinOnIt
+                    </span>
+                  )}
                 </div>
-                <h3 className="font-bold text-slate-900 dark:text-white mb-2">{title}</h3>
+                <h3 className={`font-bold text-slate-900 dark:text-white mb-2 ${exclusive ? 'font-sign-by-text text-2xl text-violet-800 dark:text-violet-200' : ''}`}>
+                  {title}
+                </h3>
                 <p className="text-sm text-slate-600 dark:text-slate-300 mb-3">{you}</p>
                 <div className="rounded-xl bg-slate-100 dark:bg-slate-800 px-3 py-2 text-xs text-slate-600 dark:text-slate-300 font-mono leading-snug">
                   {theySee}

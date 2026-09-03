@@ -1,11 +1,17 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, Copy, Loader2, MessageSquare, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { PHONE_HINT, PHONE_PLACEHOLDER, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import { revealTool } from '../lib/progressiveDisclosure';
 import { quoteTotals } from '../lib/quoteMath';
+import {
+  DOCUMENT_ACTIONS,
+  documentsNewPath,
+  resolveDocumentAction,
+  type DocumentActionId,
+} from '../lib/documentActions';
 import {
   HOLD_UP_COPY,
   CONTRACT_HOST_HINT,
@@ -46,12 +52,16 @@ function formatBytes(n: number) {
 
 export function CreateDocumentPage() {
   const { user, profile, refreshProfile } = useAuth();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const typeParam = searchParams.get('type');
+  const actionParam = searchParams.get('action');
+  const resolvedAction = resolveDocumentAction(actionParam, typeParam);
   const initialType: SmbDocumentType =
-    typeParam && isSmbDocumentType(typeParam) ? typeParam : 'nda';
+    typeParam && isSmbDocumentType(typeParam) ? typeParam : resolvedAction.defaultType;
 
   const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
+  const [actionId, setActionId] = useState<DocumentActionId>(resolvedAction.id);
   const [documentType, setDocumentType] = useState<SmbDocumentType>(initialType);
   const [customTypeLabel, setCustomTypeLabel] = useState('');
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -83,11 +93,29 @@ export function CreateDocumentPage() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    const nextAction = resolveDocumentAction(actionParam, typeParam);
+    setActionId(nextAction.id);
     if (typeParam && isSmbDocumentType(typeParam)) {
       setDocumentType(typeParam);
       setVerificationRequired(defaultVerificationRequired(typeParam));
+    } else {
+      setDocumentType(nextAction.defaultType);
+      setVerificationRequired(defaultVerificationRequired(nextAction.defaultType));
     }
-  }, [typeParam]);
+  }, [typeParam, actionParam]);
+
+  const activeAction = DOCUMENT_ACTIONS.find((a) => a.id === actionId) ?? DOCUMENT_ACTIONS[0];
+  const typeOptions = activeAction.typeFilter
+    ? SMB_DOCUMENT_TYPES.filter((t) => activeAction.typeFilter!.includes(t.id))
+    : SMB_DOCUMENT_TYPES;
+
+  const applyAction = (next: DocumentActionId) => {
+    const a = DOCUMENT_ACTIONS.find((x) => x.id === next) ?? DOCUMENT_ACTIONS[0];
+    setActionId(a.id);
+    setDocumentType(a.defaultType);
+    setVerificationRequired(defaultVerificationRequired(a.defaultType));
+    navigate(documentsNewPath(a.id, a.defaultType), { replace: true });
+  };
 
   useEffect(() => {
     void supabase
@@ -173,6 +201,7 @@ export function CreateDocumentPage() {
     setVerificationRequired(defaultVerificationRequired(next));
     if (next !== 'upload') setUploadFile(null);
     if (next !== 'other') setCustomTypeLabel('');
+    navigate(documentsNewPath(actionId, next), { replace: true });
   };
 
   const handleUploadPick = (file: File | null) => {
@@ -380,13 +409,35 @@ export function CreateDocumentPage() {
     <main className="p-4 md:p-8 max-w-2xl pb-28 md:pb-8">
       <Link to="/dashboard/documents" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 dark:text-slate-400 dark:hover:text-white">
         <ArrowLeft className="h-4 w-4" />
-        Doc Center
+        All documents
       </Link>
-      <h1 className="mt-3 text-xl md:text-2xl font-bold text-gray-900 dark:text-white">New document</h1>
+      <h1 className="mt-3 text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
+        {actionId === 'sign' ? (
+          <>
+            <span className="font-sign-by-text text-brand-700 dark:text-brand-300">Sign-by-Text</span>
+          </>
+        ) : (
+          'Send a document'
+        )}
+      </h1>
       <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">{HOLD_UP_COPY}</p>
 
       <form onSubmit={(e) => void handleSubmit(e)} className="mt-6 space-y-5">
         <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-6 space-y-4">
+          <label className="block">
+            <span className="text-xs font-medium text-gray-600 dark:text-slate-400">What do you want to do?</span>
+            <select
+              value={actionId}
+              onChange={(e) => applyAction(e.target.value as DocumentActionId)}
+              className={fieldClass}
+            >
+              {DOCUMENT_ACTIONS.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="block">
             <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Document Type</span>
             <select
@@ -394,7 +445,7 @@ export function CreateDocumentPage() {
               onChange={(e) => handleTypeChange(e.target.value as SmbDocumentType)}
               className={fieldClass}
             >
-              {SMB_DOCUMENT_TYPES.map((t) => (
+              {typeOptions.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.label}
                 </option>
