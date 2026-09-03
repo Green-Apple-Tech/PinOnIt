@@ -1430,7 +1430,7 @@ export function Dashboard() {
   };
 
   const uiMode = profile?.ui_mode === 'advanced' ? 'advanced' : 'simple';
-  const { primary: primaryNav, moreTools: moreToolsNav } = buildSidebarNav(uiMode);
+  const { primary: primaryNav, moreTools: moreToolsNav, settings: settingsNav } = buildSidebarNav(uiMode);
   const mainNavItems: NavItem[] = [
     ...primaryNav.map((item) => ({
       to: item.to,
@@ -1453,6 +1453,12 @@ export function Dashboard() {
           })),
         } satisfies NavItem]
       : []),
+    {
+      to: settingsNav.to,
+      icon: settingsNav.icon,
+      label: settingsNav.label,
+      badge: settingsNav.badge,
+    },
   ];
 
   const isDashboardHome = location.pathname === '/dashboard';

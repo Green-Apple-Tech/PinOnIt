@@ -27,8 +27,8 @@ import { NotificationTestPanel } from '../components/NotificationTestPanel';
 import { AlsoRemindPeople } from '../components/AlsoRemindPeople';
 import { BookingBlocksSettings } from '../components/BookingBlocksSettings';
 import { readProfileCache, writeProfileCache } from '../lib/profileCache';
-import { WAIVER_HOST_HINT } from '../lib/documentCopy';
 import { injectWaiverRecipientPlaceholder } from '../lib/documents';
+import { DocsTemplateLibrary } from '../components/DocsTemplateLibrary';
 import { SmsBookingConsent } from '../components/SmsConsentText';
 import { SESSION_TIMEOUT_OPTIONS, sessionTimeoutOptionValue } from '../lib/sessionTimeout';
 
@@ -940,8 +940,8 @@ export function SettingsPage() {
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Profile, booking page, docs, branding, event types, contacts, availability, and billing.</p>
       </div>
 
-      {/* Top-level section tabs */}
-      <div className="flex gap-0.5 mb-6 border-b border-slate-200 dark:border-slate-800 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+      {/* Top-level section tabs — wrap on narrow screens (no horizontal scroll) */}
+      <div className="flex flex-wrap gap-x-0.5 gap-y-0 mb-6 border-b border-slate-200 dark:border-slate-800 -mx-4 px-4 sm:mx-0 sm:px-0">
         {TOP_LEVEL_SECTIONS.map((s) => (
           <button
             key={s.key}
@@ -978,7 +978,7 @@ export function SettingsPage() {
         <>
 
       {section === 'general' && (
-      <div className="flex gap-0.5 mb-6 border-b border-slate-200 dark:border-slate-800 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+      <div className="flex flex-wrap gap-x-0.5 gap-y-0 mb-6 border-b border-slate-200 dark:border-slate-800 -mx-4 px-4 sm:mx-0 sm:px-0">
         {tabs.map((t) => (
           <button
             key={t.key}
@@ -1529,7 +1529,7 @@ export function SettingsPage() {
           <div>
             <h2 className="text-lg font-semibold">Docs</h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Defaults for Doc Center. New waivers, quotes, invoices, and receipts start from these. You can still edit each send.
+              Defaults for Doc Center — editable templates, named PDFs, tax, and quote lines. You can still edit each send.
             </p>
           </div>
 
@@ -1586,22 +1586,15 @@ export function SettingsPage() {
             </button>
           </div>
 
-          <div className="border-t border-slate-200 dark:border-slate-800 pt-4 space-y-2">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Waiver template</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-              {WAIVER_HOST_HINT} Save this page to use it as your default when you send a waiver. You can still edit it per document.
-            </p>
-            <textarea
-              value={waiverTemplate}
-              onChange={(e) => setWaiverTemplate(e.target.value)}
-              rows={8}
-              placeholder="Starts from the PinOnIt waiver template. Keep [Recipient Name], [Business Name], and [Activity/Service Description] so they fill in when you send, then have an attorney review it."
-              className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition text-sm leading-relaxed"
-            />
-            <p className="text-xs text-slate-400 dark:text-slate-500">
-              This is used as your starting point each time you send a waiver — you can still edit it per document.
-            </p>
-          </div>
+          {profile?.id && (
+            <div className="border-t border-slate-200 dark:border-slate-800 pt-4">
+              <DocsTemplateLibrary
+                hostId={profile.id}
+                waiverTemplate={waiverTemplate}
+                onWaiverTemplateChange={setWaiverTemplate}
+              />
+            </div>
+          )}
 
           <SaveBtn saving={saving} saved={saved} onClick={handleSaveDocs} />
         </div>

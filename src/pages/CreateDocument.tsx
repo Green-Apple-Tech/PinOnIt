@@ -34,7 +34,10 @@ import {
   newDocumentToken,
   sendDocumentLink,
 } from '../lib/documents';
+import type { HostDocumentFile, HostDocumentTemplate } from '../lib/hostDocuments';
 import type { DocumentTemplate, HostQuoteLineItem, SmbDocumentType } from '../lib/types';
+
+const LIBRARY_FILE_PREFIX = 'file:';
 
 const fieldClass =
   'mt-1 w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-3 text-base';
@@ -64,8 +67,11 @@ export function CreateDocumentPage() {
     typeParam && isSmbDocumentType(typeParam) ? typeParam : resolvedAction.defaultType;
 
   const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
+  const [hostOverrides, setHostOverrides] = useState<HostDocumentTemplate[]>([]);
+  const [libraryFiles, setLibraryFiles] = useState<HostDocumentFile[]>([]);
   const [actionId, setActionId] = useState<DocumentActionId>(resolvedAction.id);
   const [documentType, setDocumentType] = useState<SmbDocumentType>(initialType);
+  const [libraryFileId, setLibraryFileId] = useState<string | null>(null);
   const [customTypeLabel, setCustomTypeLabel] = useState('');
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [recipientName, setRecipientName] = useState('');
@@ -112,6 +118,7 @@ export function CreateDocumentPage() {
   const applyAction = (next: DocumentActionId) => {
     const a = DOCUMENT_ACTIONS.find((x) => x.id === next) ?? DOCUMENT_ACTIONS[0];
     setActionId(a.id);
+    setLibraryFileId(null);
     setDocumentType(a.defaultType);
     // Keep entry mode; do not change verification — user (or nav default) owns that checkbox.
     const q = new URLSearchParams({ mode: entryMode, type: a.defaultType });
@@ -125,11 +132,28 @@ export function CreateDocumentPage() {
       .then(({ data }) => setTemplates((data as DocumentTemplate[]) ?? []));
   }, []);
 
+  useEffect(() => {
+    if (!user?.id) return;
+    void Promise.all([
+      supabase.from('host_document_templates').select('*').eq('host_id', user.id),
+      supabase.from('host_document_files').select('*').eq('host_id', user.id).order('created_at', { ascending: false }),
+    ]).then(([overridesRes, filesRes]) => {
+      setHostOverrides((overridesRes.data as HostDocumentTemplate[]) ?? []);
+      setLibraryFiles((filesRes.data as HostDocumentFile[]) ?? []);
+    });
+  }, [user?.id]);
+
+  const selectedLibraryFile = libraryFileId
+    ? libraryFiles.find((f) => f.id === libraryFileId) ?? null
+    : null;
   const selectedTemplate = templates.find((t) => t.document_type === documentType) ?? null;
+  const hostOverrideText = hostOverrides.find((o) => o.document_type === documentType)?.full_text?.trim() || null;
   const isWaiver = documentType === 'waiver';
   const isUpload = isUploadDocumentType(documentType);
+  const isLibraryPdf = Boolean(selectedLibraryFile);
   const isMoney = isMoneyDocumentType(documentType);
-  const bodyEditable = documentBodyIsEditable(documentType);
+  const bodyEditable = documentBodyIsEditable(documentType) && !isLibraryPdf;
+  const typeSelectValue = libraryFileId ? `${LIBRARY_FILE_PREFIX}${libraryFileId}` : documentType;
   const knownBusinessNames = useMemo(
     () => businessNameOptions([
       profile?.business_name,
@@ -163,14 +187,23 @@ export function CreateDocumentPage() {
   }, [user?.id]);
 
   useEffect(() => {
+    if (isLibraryPdf) return;
     if (isWaiver) {
-      setCustomText(defaultWaiverText(profile?.waiver_template));
+      setCustomText(defaultWaiverText(hostOverrideText || profile?.waiver_template));
       return;
     }
     if (bodyEditable) {
-      setCustomText(selectedTemplate?.full_text?.trim() || defaultDocumentBody(documentType));
+      setCustomText(hostOverrideText || selectedTemplate?.full_text?.trim() || defaultDocumentBody(documentType));
     }
-  }, [documentType, isWaiver, bodyEditable, profile?.waiver_template, selectedTemplate?.full_text]);
+  }, [
+    documentType,
+    isWaiver,
+    isLibraryPdf,
+    bodyEditable,
+    hostOverrideText,
+    profile?.waiver_template,
+    selectedTemplate?.full_text,
+  ]);
 
   useEffect(() => {
     if (defaultsApplied || !profile || !isMoney) return;
@@ -190,22 +223,40 @@ export function CreateDocumentPage() {
   );
 
   const filledBody = useMemo(
-    () => fillDocumentPlaceholders(customText || selectedTemplate?.full_text || defaultDocumentBody(documentType), {
-      topic,
-      recipientName,
-      businessName,
-      activityDescription: topic,
-    }),
-    [customText, selectedTemplate?.full_text, documentType, topic, recipientName, businessName],
+    () => fillDocumentPlaceholders(
+      customText || hostOverrideText || selectedTemplate?.full_text || defaultDocumentBody(documentType),
+      {
+        topic,
+        recipientName,
+        businessName,
+        activityDescription: topic,
+      },
+    ),
+    [customText, hostOverrideText, selectedTemplate?.full_text, documentType, topic, recipientName, businessName],
   );
 
   const handleTypeChange = (next: SmbDocumentType) => {
+    setLibraryFileId(null);
     setDocumentType(next);
     if (next !== 'upload') setUploadFile(null);
     if (next !== 'other') setCustomTypeLabel('');
     // Preserve verification + entry mode; type change must not flip the checkbox.
     const q = new URLSearchParams({ mode: entryMode, type: next });
     navigate(`/dashboard/documents/new?${q.toString()}`, { replace: true });
+  };
+
+  const handleTypeSelect = (value: string) => {
+    if (value.startsWith(LIBRARY_FILE_PREFIX)) {
+      const id = value.slice(LIBRARY_FILE_PREFIX.length);
+      setLibraryFileId(id);
+      setDocumentType('upload');
+      setUploadFile(null);
+      setCustomTypeLabel('');
+      const q = new URLSearchParams({ mode: entryMode, type: 'upload' });
+      navigate(`/dashboard/documents/new?${q.toString()}`, { replace: true });
+      return;
+    }
+    handleTypeChange(value as SmbDocumentType);
   };
 
   const handleUploadPick = (file: File | null) => {
@@ -231,13 +282,19 @@ export function CreateDocumentPage() {
     e.preventDefault();
     if (!user?.id || !selectedTemplate) return;
     const typeLabel = documentTypeLabel(documentType, customTypeLabel);
-    const topicText = topic.trim() || (isMoney ? typeLabel : isUpload ? (uploadFile?.name.replace(/\.pdf$/i, '') || 'Document') : '');
+    const libraryName = selectedLibraryFile?.name?.trim();
+    const topicText = topic.trim()
+      || (isMoney ? typeLabel : isLibraryPdf
+        ? (libraryName || selectedLibraryFile?.file_name.replace(/\.pdf$/i, '') || 'Document')
+        : isUpload
+          ? (uploadFile?.name.replace(/\.pdf$/i, '') || 'Document')
+          : '');
     const phone = recipientPhone.trim() ? normalizePhoneE164(recipientPhone) : null;
     if (documentType === 'other' && !customTypeLabel.trim()) {
       setError('Enter a custom document type.');
       return;
     }
-    if (isUpload && !uploadFile) {
+    if (isUpload && !isLibraryPdf && !uploadFile) {
       setError('Choose a PDF to send for signature.');
       return;
     }
@@ -276,7 +333,30 @@ export function CreateDocumentPage() {
     let fileName: string | null = null;
     let fileSize: number | null = null;
 
-    if (isUpload && uploadFile) {
+    if (isLibraryPdf && selectedLibraryFile) {
+      filePath = `${user.id}/${token}.pdf`;
+      fileName = selectedLibraryFile.file_name.slice(0, 200);
+      fileSize = selectedLibraryFile.file_size_bytes;
+      const { data: blob, error: dlErr } = await supabase.storage
+        .from(DOCUMENT_UPLOAD_BUCKET)
+        .download(selectedLibraryFile.file_path);
+      if (dlErr || !blob) {
+        setError(dlErr?.message || 'Could not load your saved PDF. Try again or re-upload it in Settings → Docs.');
+        setSubmitting(false);
+        return;
+      }
+      const { error: upErr } = await supabase.storage
+        .from(DOCUMENT_UPLOAD_BUCKET)
+        .upload(filePath, blob, {
+          contentType: 'application/pdf',
+          upsert: false,
+        });
+      if (upErr) {
+        setError(upErr.message || 'Could not prepare the PDF for this send. Try again.');
+        setSubmitting(false);
+        return;
+      }
+    } else if (isUpload && uploadFile) {
       filePath = `${user.id}/${token}.pdf`;
       fileName = uploadFile.name.slice(0, 200);
       fileSize = uploadFile.size;
@@ -296,15 +376,15 @@ export function CreateDocumentPage() {
     const lineItems = isMoney
       ? items.filter((i) => i.description.trim() || i.amount)
       : [];
-    const bodyForSave = fillDocumentPlaceholders(
-      (bodyEditable ? customText.trim() : selectedTemplate.full_text?.trim() || defaultDocumentBody(documentType)) || '',
-      {
-        topic: topicText,
-        recipientName: recipientName.trim(),
-        businessName: businessName.trim(),
-        activityDescription: topicText,
-      },
-    );
+    const bodySource = bodyEditable
+      ? customText.trim()
+      : (hostOverrideText || selectedTemplate.full_text?.trim() || defaultDocumentBody(documentType));
+    const bodyForSave = fillDocumentPlaceholders(bodySource || '', {
+      topic: topicText,
+      recipientName: recipientName.trim(),
+      businessName: businessName.trim(),
+      activityDescription: topicText,
+    });
 
     const { error: err } = await supabase.from('documents').insert({
       token,
@@ -313,7 +393,9 @@ export function CreateDocumentPage() {
       recipient_phone: phone,
       recipient_email: recipientEmail.trim() || null,
       document_type: selectedTemplate.document_type,
-      document_type_custom: documentType === 'other' ? customTypeLabel.trim() : null,
+      document_type_custom: documentType === 'other'
+        ? customTypeLabel.trim()
+        : (isLibraryPdf ? (libraryName || null) : null),
       template_id: selectedTemplate.id,
       topic: topicText,
       custom_text: isUpload ? null : (bodyForSave || null),
@@ -448,8 +530,8 @@ export function CreateDocumentPage() {
           <label className="block">
             <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Document Type</span>
             <select
-              value={documentType}
-              onChange={(e) => handleTypeChange(e.target.value as SmbDocumentType)}
+              value={typeSelectValue}
+              onChange={(e) => handleTypeSelect(e.target.value)}
               className={fieldClass}
             >
               {SMB_DOCUMENT_TYPES.map((t) => (
@@ -457,9 +539,18 @@ export function CreateDocumentPage() {
                   {t.label}
                 </option>
               ))}
+              {libraryFiles.length > 0 && (
+                <optgroup label="Saved PDFs">
+                  {libraryFiles.map((f) => (
+                    <option key={f.id} value={`${LIBRARY_FILE_PREFIX}${f.id}`}>
+                      {f.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
             </select>
             <p className="mt-1 text-xs text-gray-400">
-              Identifies what you are sending. Templates for each type can be refined later.
+              Built-in types use your Settings → Docs defaults when saved. Named PDFs come from your library there.
             </p>
           </label>
           <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-violet-200 dark:border-violet-800/60 bg-violet-50/50 dark:bg-violet-950/20 px-3 py-3">
@@ -494,7 +585,15 @@ export function CreateDocumentPage() {
               />
             </label>
           )}
-          {isUpload && (
+          {isUpload && isLibraryPdf && selectedLibraryFile && (
+            <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/50 px-3 py-3">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">{selectedLibraryFile.name}</p>
+              <p className="mt-0.5 text-xs text-gray-500 dark:text-slate-400">
+                Saved PDF · {selectedLibraryFile.file_name} · {formatBytes(selectedLibraryFile.file_size_bytes)}
+              </p>
+            </div>
+          )}
+          {isUpload && !isLibraryPdf && (
             <label className="block">
               <span className="text-xs font-medium text-gray-600 dark:text-slate-400">PDF to sign</span>
               <input
@@ -509,6 +608,7 @@ export function CreateDocumentPage() {
               </p>
               <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
                 They get a text, enter a 2FA code, then sign with their finger — same simple flow as NDA/waiver.
+                Save reusable PDFs under Settings → Docs.
               </p>
             </label>
           )}
@@ -781,18 +881,21 @@ export function CreateDocumentPage() {
               />
             </label>
           </div>
-        ) : selectedTemplate ? (
+        ) : !isUpload && selectedTemplate ? (
           <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-6">
             <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-slate-400 mb-2">
               Full text they will see
             </p>
             <p className="text-sm text-gray-700 dark:text-slate-200 whitespace-pre-line leading-relaxed">
-              {fillDocumentPlaceholders(selectedTemplate.full_text || defaultDocumentBody(documentType), {
-                topic,
-                recipientName,
-                businessName,
-                activityDescription: topic,
-              })}
+              {fillDocumentPlaceholders(
+                hostOverrideText || selectedTemplate.full_text || defaultDocumentBody(documentType),
+                {
+                  topic,
+                  recipientName,
+                  businessName,
+                  activityDescription: topic,
+                },
+              )}
             </p>
           </div>
         ) : null}

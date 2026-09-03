@@ -50,7 +50,7 @@ export const SMB_DOCUMENT_TYPES: DocumentTypeOption[] = [
 
 export const MONEY_DOCUMENT_TYPES: SmbDocumentType[] = ['quote', 'invoice', 'receipt'];
 
-export const DOCUMENT_UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
+export const DOCUMENT_UPLOAD_MAX_BYTES = 5 * 1024 * 1024;
 export const DOCUMENT_UPLOAD_BUCKET = 'document-files';
 
 export function isUploadDocumentType(type: SmbDocumentType) {
