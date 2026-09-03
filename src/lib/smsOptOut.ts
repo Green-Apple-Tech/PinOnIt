@@ -9,3 +9,15 @@ export function appendSmsOptOut(body: string): string {
   const sep = /[.!?]$/.test(trimmed) ? ' ' : '. ';
   return `${trimmed}${sep}${SMS_OPT_OUT_FOOTER}`;
 }
+
+export function appendSmsReplyFooter(body: string): string {
+  const trimmed = body.trim();
+  if (!trimmed) return SMS_REPLY_FOOTER;
+  if (/\breply\s+1\s+to\s+cancel\b/i.test(trimmed)) return trimmed;
+  const sep = /[.!?]$/.test(trimmed) ? ' ' : '. ';
+  return `${trimmed}${sep}${SMS_REPLY_FOOTER}`;
+}
+
+export function appendSmsGuestFooters(body: string): string {
+  return appendSmsOptOut(appendSmsReplyFooter(body));
+}
