@@ -1,7 +1,9 @@
 import type { SmbDocumentType } from './types';
-import { defaultVerificationRequired } from './documentTypes';
 
-/** Shared Doc Center “what do you want to do?” actions — one create page, different entry points. */
+/** How the user opened the shared create page — only affects the verification checkbox default. */
+export type DocsEntryMode = 'sign' | 'send';
+
+/** Convenience “What do you want to do?” choices — same page, full type list always. */
 export type DocumentActionId =
   | 'sign'
   | 'send'
@@ -16,37 +18,19 @@ export type DocumentActionId =
 export type DocumentAction = {
   id: DocumentActionId;
   label: string;
-  /** Default document_type when this action is chosen. */
   defaultType: SmbDocumentType;
-  /** Optional: limit the type dropdown to these ids (undefined = full catalog). */
-  typeFilter?: SmbDocumentType[];
 };
 
 export const DOCUMENT_ACTIONS: DocumentAction[] = [
-  {
-    id: 'sign',
-    label: 'Send for Signature',
-    defaultType: 'nda',
-    typeFilter: ['nda', 'contract', 'waiver', 'quick_addendum', 'upload', 'service_agreement', 'consent_form'],
-  },
-  {
-    id: 'send',
-    label: 'Send Document',
-    defaultType: 'other',
-    typeFilter: undefined,
-  },
-  { id: 'quote', label: 'Send Quote', defaultType: 'quote', typeFilter: ['quote'] },
-  { id: 'invoice', label: 'Send Invoice', defaultType: 'invoice', typeFilter: ['invoice'] },
-  { id: 'receipt', label: 'Send Receipt', defaultType: 'receipt', typeFilter: ['receipt'] },
-  { id: 'waiver', label: 'Send Waiver', defaultType: 'waiver', typeFilter: ['waiver'] },
-  { id: 'nda', label: 'Send NDA', defaultType: 'nda', typeFilter: ['nda'] },
-  { id: 'addendum', label: 'Send Addendum', defaultType: 'quick_addendum', typeFilter: ['quick_addendum'] },
-  {
-    id: 'agreement',
-    label: 'Send Simple Agreement',
-    defaultType: 'contract',
-    typeFilter: ['contract', 'service_agreement'],
-  },
+  { id: 'sign', label: 'Send for Signature', defaultType: 'nda' },
+  { id: 'send', label: 'Send Document', defaultType: 'other' },
+  { id: 'quote', label: 'Send Quote', defaultType: 'quote' },
+  { id: 'invoice', label: 'Send Invoice', defaultType: 'invoice' },
+  { id: 'receipt', label: 'Send Receipt', defaultType: 'receipt' },
+  { id: 'waiver', label: 'Send Waiver', defaultType: 'waiver' },
+  { id: 'nda', label: 'Send NDA', defaultType: 'nda' },
+  { id: 'addendum', label: 'Send Addendum', defaultType: 'quick_addendum' },
+  { id: 'agreement', label: 'Send Simple Agreement', defaultType: 'contract' },
 ];
 
 export function isDocumentActionId(value: string | null | undefined): value is DocumentActionId {
@@ -57,7 +41,18 @@ export function documentActionById(id: DocumentActionId): DocumentAction {
   return DOCUMENT_ACTIONS.find((a) => a.id === id) ?? DOCUMENT_ACTIONS[0];
 }
 
-/** Resolve action from URL: prefer ?action=, else infer from ?type=. */
+/** Prefer ?mode= from Sign-by-Text / Send Docs nav. Legacy ?action=sign|send still works. */
+export function resolveDocsEntryMode(
+  modeParam: string | null,
+  actionParam: string | null,
+): DocsEntryMode {
+  if (modeParam === 'sign' || modeParam === 'send') return modeParam;
+  if (actionParam === 'sign') return 'sign';
+  if (actionParam === 'send') return 'send';
+  return 'send';
+}
+
+/** Map dropdown / ?type= to a convenience action id (does not control verification). */
 export function resolveDocumentAction(
   actionParam: string | null,
   typeParam: string | null,
@@ -73,14 +68,11 @@ export function resolveDocumentAction(
   if (typeParam === 'quick_addendum') return documentActionById('addendum');
   if (typeParam === 'contract' || typeParam === 'service_agreement') return documentActionById('agreement');
   if (typeParam === 'upload') return documentActionById('sign');
-  if (typeParam && defaultVerificationRequired(typeParam as SmbDocumentType)) {
-    return documentActionById('sign');
-  }
   return documentActionById('send');
 }
 
-export function documentsNewPath(action: DocumentActionId, type?: SmbDocumentType) {
-  const a = documentActionById(action);
-  const t = type ?? a.defaultType;
-  return `/dashboard/documents/new?action=${a.id}&type=${t}`;
+export function documentsNewPath(mode: DocsEntryMode, type?: SmbDocumentType) {
+  const q = new URLSearchParams({ mode });
+  if (type) q.set('type', type);
+  return `/dashboard/documents/new?${q.toString()}`;
 }

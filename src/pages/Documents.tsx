@@ -92,12 +92,12 @@ export function DocumentsPage() {
       <div className="flex flex-wrap gap-2 mb-6">
         {[
           { to: documentsNewPath('sign', 'upload'), label: 'Upload PDF to sign' },
-          { to: documentsNewPath('addendum'), label: 'Quick Addendum' },
-          { to: documentsNewPath('nda'), label: 'Send NDA' },
-          { to: documentsNewPath('waiver'), label: 'Send Waiver' },
-          { to: documentsNewPath('invoice'), label: 'Send Invoice' },
-          { to: documentsNewPath('quote'), label: 'Send Quote' },
-          { to: documentsNewPath('receipt'), label: 'Send Receipt' },
+          { to: documentsNewPath('sign', 'quick_addendum'), label: 'Quick Addendum' },
+          { to: documentsNewPath('sign', 'nda'), label: 'Send NDA' },
+          { to: documentsNewPath('sign', 'waiver'), label: 'Send Waiver' },
+          { to: documentsNewPath('send', 'invoice'), label: 'Send Invoice' },
+          { to: documentsNewPath('send', 'quote'), label: 'Send Quote' },
+          { to: documentsNewPath('send', 'receipt'), label: 'Send Receipt' },
         ].map((btn) => (
           <Link
             key={btn.to}

@@ -98,31 +98,18 @@ export function isDashboardNavActive(
   search = '',
   hash = '',
 ): boolean {
+  const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
+  const mode = params.get('mode') ?? (params.get('action') === 'sign' || params.get('action') === 'send' ? params.get('action') : null);
+
   if (item.signByText || item.label === 'Sign-by-Text') {
-    if (!pathname.startsWith('/dashboard/documents')) return false;
-    const action = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search).get('action');
-    if (action) {
-      return ['sign', 'nda', 'waiver', 'addendum', 'agreement'].includes(action);
-    }
-    const type = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search).get('type');
-    return Boolean(
-      type &&
-        ['nda', 'contract', 'waiver', 'quick_addendum', 'upload', 'service_agreement', 'consent_form'].includes(type),
-    );
+    if (!pathname.startsWith('/dashboard/documents/new')) return false;
+    return mode === 'sign';
   }
   if (item.label === 'Send Docs') {
+    if (pathname === '/dashboard/documents') return true;
     if (!pathname.startsWith('/dashboard/documents')) return false;
-    const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
-    const action = params.get('action');
-    if (action) {
-      return ['send', 'quote', 'invoice', 'receipt'].includes(action);
-    }
-    const type = params.get('type');
-    if (type && ['nda', 'contract', 'waiver', 'quick_addendum', 'upload', 'service_agreement', 'consent_form'].includes(type)) {
-      return false;
-    }
-    // Doc list + send/money create flows
-    return true;
+    // Create page without mode=sign (including mode=send or missing) counts as Send Docs.
+    return mode !== 'sign';
   }
   return navPathMatches(item.to, pathname, search, hash);
 }

@@ -8,9 +8,10 @@ import { revealTool } from '../lib/progressiveDisclosure';
 import { quoteTotals } from '../lib/quoteMath';
 import {
   DOCUMENT_ACTIONS,
-  documentsNewPath,
+  resolveDocsEntryMode,
   resolveDocumentAction,
   type DocumentActionId,
+  type DocsEntryMode,
 } from '../lib/documentActions';
 import {
   HOLD_UP_COPY,
@@ -20,7 +21,6 @@ import {
   DOCUMENT_UPLOAD_BUCKET,
   DOCUMENT_UPLOAD_MAX_BYTES,
   defaultDocumentBody,
-  defaultVerificationRequired,
   defaultWaiverText,
   documentBodyIsEditable,
   documentTypeLabel,
@@ -56,6 +56,8 @@ export function CreateDocumentPage() {
   const [searchParams] = useSearchParams();
   const typeParam = searchParams.get('type');
   const actionParam = searchParams.get('action');
+  const modeParam = searchParams.get('mode');
+  const entryMode: DocsEntryMode = resolveDocsEntryMode(modeParam, actionParam);
   const resolvedAction = resolveDocumentAction(actionParam, typeParam);
   const initialType: SmbDocumentType =
     typeParam && isSmbDocumentType(typeParam) ? typeParam : resolvedAction.defaultType;
@@ -73,9 +75,8 @@ export function CreateDocumentPage() {
   const [activityOptions, setActivityOptions] = useState<string[]>([]);
   const businessNameHydrated = useRef(false);
   const [customText, setCustomText] = useState(() => defaultWaiverText());
-  const [verificationRequired, setVerificationRequired] = useState(() =>
-    defaultVerificationRequired(initialType),
-  );
+  /** Default only from nav entry (Sign-by-Text → on, Send Docs → off). Never locked by document type. */
+  const [verificationRequired, setVerificationRequired] = useState(() => entryMode === 'sign');
   const [items, setItems] = useState<HostQuoteLineItem[]>([{ description: '', amount: 0 }]);
   const [taxPercent, setTaxPercent] = useState(0);
   const [notes, setNotes] = useState('');
@@ -92,29 +93,28 @@ export function CreateDocumentPage() {
   } | null>(null);
   const [copied, setCopied] = useState(false);
 
+  // Sync type/action from URL; verification default only when entry mode changes (nav).
   useEffect(() => {
     const nextAction = resolveDocumentAction(actionParam, typeParam);
     setActionId(nextAction.id);
     if (typeParam && isSmbDocumentType(typeParam)) {
       setDocumentType(typeParam);
-      setVerificationRequired(defaultVerificationRequired(typeParam));
-    } else {
+    } else if (!typeParam) {
       setDocumentType(nextAction.defaultType);
-      setVerificationRequired(defaultVerificationRequired(nextAction.defaultType));
     }
   }, [typeParam, actionParam]);
 
-  const activeAction = DOCUMENT_ACTIONS.find((a) => a.id === actionId) ?? DOCUMENT_ACTIONS[0];
-  const typeOptions = activeAction.typeFilter
-    ? SMB_DOCUMENT_TYPES.filter((t) => activeAction.typeFilter!.includes(t.id))
-    : SMB_DOCUMENT_TYPES;
+  useEffect(() => {
+    setVerificationRequired(entryMode === 'sign');
+  }, [entryMode]);
 
   const applyAction = (next: DocumentActionId) => {
     const a = DOCUMENT_ACTIONS.find((x) => x.id === next) ?? DOCUMENT_ACTIONS[0];
     setActionId(a.id);
     setDocumentType(a.defaultType);
-    setVerificationRequired(defaultVerificationRequired(a.defaultType));
-    navigate(documentsNewPath(a.id, a.defaultType), { replace: true });
+    // Keep entry mode; do not change verification — user (or nav default) owns that checkbox.
+    const q = new URLSearchParams({ mode: entryMode, type: a.defaultType });
+    navigate(`/dashboard/documents/new?${q.toString()}`, { replace: true });
   };
 
   useEffect(() => {
@@ -198,10 +198,11 @@ export function CreateDocumentPage() {
 
   const handleTypeChange = (next: SmbDocumentType) => {
     setDocumentType(next);
-    setVerificationRequired(defaultVerificationRequired(next));
     if (next !== 'upload') setUploadFile(null);
     if (next !== 'other') setCustomTypeLabel('');
-    navigate(documentsNewPath(actionId, next), { replace: true });
+    // Preserve verification + entry mode; type change must not flip the checkbox.
+    const q = new URLSearchParams({ mode: entryMode, type: next });
+    navigate(`/dashboard/documents/new?${q.toString()}`, { replace: true });
   };
 
   const handleUploadPick = (file: File | null) => {
@@ -247,7 +248,7 @@ export function CreateDocumentPage() {
       setError('Add the business name that appears on this waiver.');
       return;
     }
-    if ((verificationRequired || isUpload) && !phone) {
+    if (verificationRequired && !phone) {
       setError('Add a valid phone number so the recipient can verify.');
       return;
     }
@@ -311,7 +312,7 @@ export function CreateDocumentPage() {
           })
         : null,
       status: 'pending',
-      verification_required: isUpload ? true : verificationRequired,
+      verification_required: verificationRequired,
       line_items: lineItems,
       tax_percent: isMoney ? Number(taxPercent) || 0 : 0,
       notes: isMoney ? notes.trim() || null : null,
@@ -412,13 +413,7 @@ export function CreateDocumentPage() {
         All documents
       </Link>
       <h1 className="mt-3 text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
-        {actionId === 'sign' ? (
-          <>
-            <span className="font-sign-by-text text-brand-700 dark:text-brand-300">Sign-by-Text</span>
-          </>
-        ) : (
-          'Send a document'
-        )}
+        New document
       </h1>
       <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">{HOLD_UP_COPY}</p>
 
@@ -445,7 +440,7 @@ export function CreateDocumentPage() {
               onChange={(e) => handleTypeChange(e.target.value as SmbDocumentType)}
               className={fieldClass}
             >
-              {typeOptions.map((t) => (
+              {SMB_DOCUMENT_TYPES.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.label}
                 </option>
@@ -454,6 +449,24 @@ export function CreateDocumentPage() {
             <p className="mt-1 text-xs text-gray-400">
               Identifies what you are sending. Templates for each type can be refined later.
             </p>
+          </label>
+          <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-violet-200 dark:border-violet-800/60 bg-violet-50/50 dark:bg-violet-950/20 px-3 py-3">
+            <input
+              type="checkbox"
+              checked={verificationRequired}
+              onChange={(e) => setVerificationRequired(e.target.checked)}
+              className="mt-1"
+            />
+            <span>
+              <span className="block text-sm font-semibold text-gray-900 dark:text-white">
+                Require signature &amp; 2FA code
+              </span>
+              <span className="block mt-1 text-xs text-gray-500 dark:text-slate-400">
+                {verificationRequired
+                  ? 'They enter an SMS code, then sign or confirm on their phone. Works with any document type.'
+                  : 'They view and confirm with one tap — no OTP, no signature canvas. Turn on anytime before sending.'}
+              </span>
+            </span>
           </label>
           {documentType === 'other' && (
             <label className="block">
@@ -518,7 +531,7 @@ export function CreateDocumentPage() {
           </label>
           <label className="block">
             <span className="text-xs font-medium text-gray-600 dark:text-slate-400">
-              Phone {(verificationRequired || isUpload) ? '' : '(optional)'}
+              Phone {verificationRequired ? '' : '(optional)'}
             </span>
             <input
               type="tel"
@@ -526,13 +539,15 @@ export function CreateDocumentPage() {
               value={recipientPhone}
               onChange={(e) => setRecipientPhone(e.target.value)}
               onBlur={() => setRecipientPhone(blurFormatPhone(recipientPhone))}
-              required={verificationRequired || isUpload}
+              required={verificationRequired}
               className={fieldClass}
               placeholder={PHONE_PLACEHOLDER}
               autoComplete="tel"
             />
             <p className="mt-1 text-xs text-gray-400">
-              {(verificationRequired || isUpload) ? PHONE_HINT : 'Needed only if you want us to text the link, or if verification is on.'}
+              {verificationRequired
+                ? PHONE_HINT
+                : 'Needed only if you want us to text the link, or if signature & 2FA is on.'}
             </p>
           </label>
           <label className="block">
@@ -593,32 +608,6 @@ export function CreateDocumentPage() {
               </p>
             </label>
           )}
-        </div>
-
-        <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-6">
-          <label className={`flex items-start gap-3 ${isUpload ? 'cursor-default' : 'cursor-pointer'}`}>
-            <input
-              type="checkbox"
-              checked={isUpload ? true : verificationRequired}
-              disabled={isUpload}
-              onChange={(e) => setVerificationRequired(e.target.checked)}
-              className="mt-1"
-            />
-            <span>
-              <span className="block text-sm font-semibold text-gray-900 dark:text-white">
-                Require phone verification
-              </span>
-              <span className="block mt-1 text-xs text-gray-500 dark:text-slate-400">
-                {isUpload
-                  ? 'Always on for uploaded PDFs — SMS code, then finger signature.'
-                  : verificationRequired
-                  ? 'They enter an SMS code, then sign or confirm. Default on for NDAs, contracts, and waivers.'
-                  : documentType === 'quote'
-                    ? 'They can view this quote with no OTP and no signature.'
-                    : 'They confirm with one tap — no OTP, no signature canvas.'}
-              </span>
-            </span>
-          </label>
         </div>
 
         {isMoney && (
