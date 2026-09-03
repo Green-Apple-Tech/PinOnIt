@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { normalizeAlsoPeople } from '../lib/reminderAlso';
 
-/** Compact guide on Smart Reminders — roster editing lives in Settings → Coworkers. */
+/** Compact guide on NeverMiss Reminders — roster editing lives in Settings → Coworkers. */
 export function CoworkerReminderGuide() {
   const { profile } = useAuth();
   const roster = normalizeAlsoPeople(profile?.reminder_also);

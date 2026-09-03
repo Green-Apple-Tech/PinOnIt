@@ -683,8 +683,21 @@ export function RemindersPage({
       )}
 
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Smart Reminders</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        <div className="flex items-start gap-3 md:gap-4">
+          <div className="h-12 w-12 md:h-14 md:w-14 rounded-2xl bg-brand-50 dark:bg-brand-500/15 flex items-center justify-center shrink-0">
+            <BellRing className="h-6 w-6 md:h-7 md:w-7 text-brand-600 dark:text-brand-400" />
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">NeverMiss Reminders</h1>
+            <p className="mt-1 text-base font-medium text-slate-700 dark:text-slate-200">
+              Never miss a reminder.
+            </p>
+            <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
+              Your team gets notified too, so nobody drops the ball — add coworkers in Settings and copy them on any event from Calendar.
+            </p>
+          </div>
+        </div>
+        <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
           Remind yourself, your guests, and coworkers. Manage the roster in{' '}
           <Link to="/dashboard/settings?tab=coworkers" className="font-semibold text-[#5864C6] hover:underline">
             Settings → Coworkers

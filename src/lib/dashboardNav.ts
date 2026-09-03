@@ -52,7 +52,7 @@ export const SIMPLE_PRIMARY_NAV: MoreToolsNavItem[] = [
     icon: FileText,
     path: documentsNewPath('send'),
   },
-  { label: 'Reminders', icon: Bell, path: '/dashboard/reminders' },
+  { label: 'NeverMiss Reminders', icon: Bell, path: '/dashboard/reminders' },
   {
     label: 'QR Codes',
     icon: QrCode,

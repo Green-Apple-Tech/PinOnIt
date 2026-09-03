@@ -141,7 +141,7 @@ export function AddToHomeScreenPrompt() {
         ) : (
           <div className="px-5 pb-2">
             <p className="text-sm text-slate-600 dark:text-slate-300">
-              Install PinOnIt for faster access to Calendar, Smart Reminders, and your booking link.
+              Install PinOnIt for faster access to Calendar, NeverMiss Reminders, and your booking link.
             </p>
           </div>
         )}

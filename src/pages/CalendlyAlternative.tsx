@@ -94,10 +94,10 @@ const SCREENSHOT_V = '20260901';
 
 const SCREENSHOTS = [
   {
-    title: 'Super Reminders & Critical Alerts',
+    title: 'NeverMiss Reminders & Critical Alerts',
     emoji: '🔔',
     desc: 'Email, SMS, WhatsApp, and voice for every booking — plus extra pings for critical meetings (1h + 15m text, 1d + 4h email).',
-    tag: 'Smart Reminders',
+    tag: 'NeverMiss Reminders',
     color: 'from-violet-500 to-violet-700',
     image: `/screenshots/reminders.png?v=${SCREENSHOT_V}`,
   },
@@ -411,7 +411,7 @@ export function CalendlyAlternative() {
         <div className="mt-1.5 flex flex-wrap items-center justify-center gap-2 px-4">
           {[
             { num: '1', label: 'Scheduling' },
-            { num: '2', label: 'Smart Reminders' },
+            { num: '2', label: 'NeverMiss Reminders' },
             { num: '3', label: 'Doc Center' },
             { num: '4', label: 'Paid Booking' },
             { num: '5', label: 'QR Code Creator' },
@@ -579,7 +579,7 @@ export function CalendlyAlternative() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {[
               { icon: Calendar, title: 'Scheduling', desc: 'Booking page, event types, and Google / Outlook / Apple sync so you do not double-book.' },
-              { icon: Bell, title: 'Smart Reminders', desc: 'Email, SMS, WhatsApp, and voice — plus two-way text to cancel or reschedule.' },
+              { icon: Bell, title: 'NeverMiss Reminders', desc: 'Email, SMS, WhatsApp, and voice — plus two-way text to cancel or reschedule.' },
               { icon: ShoppingBag, title: 'Paid Booking', desc: 'A price-list storefront. Stripe, PayPal, Venmo, Cash App, or Zelle at booking time.' },
               { icon: QrCode, title: 'QR Code Creator', desc: 'Print a code for cards, trucks, and shop windows that opens your booking page.' },
               { icon: Mail, title: 'Email Signature', desc: 'A signature with your booking link so every email can get you a meeting.' },

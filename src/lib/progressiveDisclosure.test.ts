@@ -69,7 +69,7 @@ describe('buildSidebarNav', () => {
       'Booking',
       'Sign-by-Text',
       'Send Docs',
-      'Reminders',
+      'NeverMiss Reminders',
       'QR Codes',
       'Signature Creator',
       'Settings',

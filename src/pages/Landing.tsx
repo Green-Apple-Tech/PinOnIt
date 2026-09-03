@@ -48,8 +48,8 @@ const TEXT_ACTION_CARDS = [
   },
   {
     icon: Bell,
-    title: 'Super Reminders',
-    you: 'Remind yourself — or have PinOnIt remind your customer, co-worker, spouse, or anyone else.',
+    title: 'NeverMiss Reminders',
+    you: 'Never miss a reminder. Ping customers — and optionally copy your team — by SMS, WhatsApp, email, or voice.',
     theySee: 'Reminder: 10am tomorrow. Reply C to cancel or R to reschedule.',
   },
   {
@@ -77,7 +77,7 @@ const OLD_VS_TEXT = [
   { old: 'Print, sign, scan, send back', new: 'Finger sign on their phone' },
   { old: 'Text-tag to schedule', new: 'Send your booking link once' },
   { old: 'Five tools, five logins', new: 'One app — $8.99/mo' },
-  { old: 'Chasing no-shows by phone', new: 'Super Reminders that reply back' },
+  { old: 'Chasing no-shows by phone', new: 'NeverMiss Reminders that reply back' },
 ];
 
 const TRADE_CHIPS = [
@@ -90,7 +90,7 @@ const TRADE_CHIPS = [
 const SIX_TOOLS = [
   { icon: Calendar, title: 'Easy Booking', desc: 'Your booking page and links, synced to your calendar.' },
   { icon: ClipboardSignature, title: 'Sign-by-Text', desc: 'Waivers, NDAs, addendums, simple contracts.' },
-  { icon: Bell, title: 'Super Reminders', desc: 'You, your customers, or anyone else — by SMS.' },
+  { icon: Bell, title: 'NeverMiss Reminders', desc: 'Never miss a reminder — you, customers, or your team.' },
   { icon: Receipt, title: 'Business Documents', desc: 'Quotes, invoices, receipts — send in seconds.' },
   { icon: QrCode, title: 'QR Codes', desc: 'Booking page, link, or business — instant.' },
   { icon: Mail, title: 'Signature Creator', desc: 'Save a signature for docs and email.' },

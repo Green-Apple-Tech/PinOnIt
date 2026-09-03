@@ -189,7 +189,7 @@ export function ActivityPage() {
         Open a document on{' '}
         <Link to="/dashboard/documents" className="font-semibold underline text-slate-600 dark:text-slate-300">Doc Center</Link>
         . Reminder templates stay under{' '}
-        <Link to="/dashboard/reminders" className="font-semibold underline text-slate-600 dark:text-slate-300">Smart Reminders</Link>.
+        <Link to="/dashboard/reminders" className="font-semibold underline text-slate-600 dark:text-slate-300">NeverMiss Reminders</Link>.
       </p>
     </div>
   );

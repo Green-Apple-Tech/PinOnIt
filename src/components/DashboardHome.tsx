@@ -269,7 +269,7 @@ export function DashboardHome({ hostId, bookings, onOpenWizard, showWizardButton
           icon={Bell}
           empty="No upcoming personal reminders."
           linkTo="/dashboard/reminders"
-          linkLabel="Reminders"
+          linkLabel="NeverMiss Reminders"
           rows={reminders.map((r) => ({
             id: r.id,
             primary: r.title?.trim() || 'Reminder',
@@ -291,7 +291,7 @@ export function DashboardHome({ hostId, bookings, onOpenWizard, showWizardButton
               <span className="font-semibold text-gray-800 dark:text-slate-100">SEND IT</span> — quotes, invoices, docs
             </li>
             <li>
-              <span className="font-semibold text-gray-800 dark:text-slate-100">REMIND IT</span> — smart reminders
+              <span className="font-semibold text-gray-800 dark:text-slate-100">REMIND IT</span> — NeverMiss reminders
             </li>
           </ul>
           <p className="mt-3 text-xs text-gray-400 dark:text-slate-500">

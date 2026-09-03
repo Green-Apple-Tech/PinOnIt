@@ -78,7 +78,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
     ],
   },
   reminders: {
-    title: 'Smart Reminders',
+    title: 'NeverMiss Reminders',
     purpose: 'PinOnIt can text, email, WhatsApp, or call so people actually show up. Nothing sends until a reminder is turned on here.',
     steps: [
       'Add coworkers under Settings → Coworkers (name, email/phone, channels).',
@@ -103,7 +103,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
     steps: [
       'Tap New document and pick a type. Quotes, invoices, and receipts include line items and tax.',
       'Add the recipient name. Phone is required only when verification is on (default for NDAs, contracts, and waivers).',
-      'Leave verification off for a quote they can just view, or a one-tap invoice/receipt confirm — no OTP or signature.',
+      'Leave verification off for a quote they can just view, or a one-tap invoice/receipt confirm — no text verification code or signature.',
       'Copy the link from the list if you need to resend it another way.',
     ],
   },

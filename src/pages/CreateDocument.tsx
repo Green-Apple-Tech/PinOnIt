@@ -464,7 +464,7 @@ export function CreateDocumentPage() {
               <span className="block mt-1 text-xs text-gray-500 dark:text-slate-400">
                 {verificationRequired
                   ? 'They enter an SMS code, then sign or confirm on their phone. Works with any document type.'
-                  : 'They view and confirm with one tap — no OTP, no signature canvas. Turn on anytime before sending.'}
+                  : 'They view and confirm with one tap — no text verification code, no signature canvas. Turn on anytime before sending.'}
               </span>
             </span>
           </label>

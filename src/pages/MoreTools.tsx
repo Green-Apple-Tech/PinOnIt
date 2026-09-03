@@ -32,10 +32,10 @@ const MAIN_TOOLS: ToolItem[] = [
   {
     id: 'reminders',
     icon: Bell,
-    title: 'Smart Reminders',
+    title: 'NeverMiss Reminders',
     badge: 'Tool 2',
     description: 'Email, SMS, WhatsApp, and Voice reminders for every booking and any calendar event. Make sure nobody misses a meeting.',
-    buttonLabel: 'Open Smart Reminders',
+    buttonLabel: 'Open NeverMiss Reminders',
     to: '/dashboard/reminders',
     accent: 'teal',
   },

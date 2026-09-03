@@ -41,7 +41,7 @@ export const LANDING_COMP_ROWS: LandingCompRow[] = [
 export const LANDING_PRICING_BULLETS_TEXT_FIRST = [
   'Easy Booking (your page + links, synced to your calendar)',
   'Sign by Text (waivers, NDAs, addendums, simple contracts)',
-  'Super Reminders (you, customers, or anyone — by SMS)',
+  'NeverMiss Reminders (you, customers, or anyone — by SMS)',
   'Business Documents (quotes, invoices, receipts)',
   'QR Codes + Signature Creator',
   'Paid booking when you want a deposit',

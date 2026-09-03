@@ -32,7 +32,7 @@ export const REMINDERS_HEADLINE =
   'Reminders they actually get — text, WhatsApp, email, and a call';
 
 export const REMINDERS_SUBHEAD =
-  'A booking is worthless if nobody shows. PinOnIt sends Smart Reminders on the channel people answer: SMS, WhatsApp, email, and voice. Every appointment gets a ping. Critical ones get extras. You can remind yourself about a call or an errand the same way — type it or say it.';
+  'A booking is worthless if nobody shows. PinOnIt sends NeverMiss Reminders on the channel people answer: SMS, WhatsApp, email, and voice. Every appointment gets a ping. Critical ones get extras. You can remind yourself about a call or an errand the same way — type it or say it.';
 
 export type CampaignStep = {
   title: string;
@@ -85,7 +85,7 @@ export const CAMPAIGN_PAGES: Record<string, CampaignCopy> = {
   },
   reminders: {
     slug: 'reminders',
-    eyebrow: 'Smart Reminders',
+    eyebrow: 'NeverMiss Reminders',
     headline: REMINDERS_HEADLINE,
     subhead: REMINDERS_SUBHEAD,
     steps: [
@@ -98,11 +98,11 @@ export const CAMPAIGN_PAGES: Record<string, CampaignCopy> = {
       'Same reminders for PinOnIt bookings and for anything you add yourself. Coworkers and assistants can get copied in when you need a backup.',
     holdUp:
       'Four channels, timed automatically, with extra alerts when missing it would cost you the hour.',
-    metaTitle: 'Smart Reminders | PinOnIt',
+    metaTitle: 'NeverMiss Reminders | PinOnIt',
     metaDescription:
       'SMS, WhatsApp, email, and voice reminders so bookings and appointments actually get shown up to. No extra apps for your clients.',
     loggedInCtaTo: '/dashboard/reminders',
-    loggedInCtaLabel: 'Open Smart Reminders',
+    loggedInCtaLabel: 'Open NeverMiss Reminders',
   },
 };
 
