@@ -6,6 +6,7 @@ import {
   CheckCircle,
   ClipboardSignature,
   Clock,
+  ExternalLink,
   FileText,
   Mail,
   QrCode,
@@ -64,10 +65,17 @@ type DashTool = {
 const PRIMARY_TOOLS: DashTool[] = [
   {
     to: '/dashboard/appointments',
-    title: 'Bookings',
-    blurb: 'Calendar, availability, and new meetings.',
+    title: 'Calendar',
+    blurb: 'Your schedule, upcoming meetings, and availability.',
     icon: CalendarDays,
     accent: 'bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300',
+  },
+  {
+    to: '/dashboard/booking',
+    title: 'Booking',
+    blurb: 'Your booking page, services, and sharing tools.',
+    icon: ExternalLink,
+    accent: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300',
   },
   {
     to: '/dashboard/documents',
@@ -208,7 +216,7 @@ export function DashboardHome({ hostId, bookings, onOpenWizard, showWizardButton
 
       {/* All tools: 3 primary large, others compact */}
       <div className="mb-6 md:mb-8 space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           {PRIMARY_TOOLS.map((tile) => {
             const Icon = tile.icon;
             return (
@@ -292,7 +300,7 @@ export function DashboardHome({ hostId, bookings, onOpenWizard, showWizardButton
           icon={CalendarDays}
           empty="No upcoming bookings."
           linkTo="/dashboard/appointments"
-          linkLabel="Open Booking"
+          linkLabel="Open Calendar"
           rows={upcomingBookings.map((b) => ({
             id: b.id,
             primary: b.guest_name || b.guest_email || 'Guest',

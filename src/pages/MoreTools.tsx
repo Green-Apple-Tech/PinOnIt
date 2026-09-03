@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   QrCode, Mail, ClipboardSignature, ArrowRight,
-  CalendarDays, Users, ShoppingBag, Bell, Sparkles,
+  CalendarDays, ExternalLink, Users, ShoppingBag, Bell, Sparkles,
   ChevronDown, type LucideIcon,
 } from 'lucide-react';
 
@@ -20,12 +20,21 @@ type ToolItem = {
 
 const MAIN_TOOLS: ToolItem[] = [
   {
-    id: 'booking',
+    id: 'calendar',
     icon: CalendarDays,
-    title: 'Bookings',
-    description: 'Your booking page, event types, and calendar sync — Google, Outlook, and Apple. Prevent double-bookings and share one link everywhere.',
-    buttonLabel: 'Open Bookings',
+    title: 'Calendar',
+    description: 'Your schedule, upcoming appointments, and meeting management. Synced with Google, Outlook, and Apple.',
+    buttonLabel: 'Open Calendar',
     to: '/dashboard/appointments',
+    accent: 'brand',
+  },
+  {
+    id: 'booking',
+    icon: ExternalLink,
+    title: 'Booking',
+    description: 'Your booking page, services, and sharing tools. Share one link everywhere and prevent double-bookings.',
+    buttonLabel: 'Open Booking',
+    to: '/dashboard/booking',
     accent: 'brand',
   },
   {
@@ -252,7 +261,7 @@ export function MoreToolsPage() {
           Main Tools
         </h2>
         <MobileToolAccordion tools={MAIN_TOOLS} defaultOpen="booking" />
-        <div className="hidden md:grid gap-5 md:grid-cols-3">
+        <div className="hidden md:grid gap-5 md:grid-cols-4">
           {MAIN_TOOLS.map((tool) => (
             <FeaturedToolCard key={tool.id} tool={tool} />
           ))}

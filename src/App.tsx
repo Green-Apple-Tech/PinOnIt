@@ -60,6 +60,9 @@ const QuoteViewPage = lazy(() =>
 const MoreToolsPage = lazy(() =>
   import('./pages/MoreTools').then((m) => ({ default: m.MoreToolsPage })),
 );
+const BookingPage = lazy(() =>
+  import('./pages/BookingPage').then((m) => ({ default: m.BookingPage })),
+);
 const PaidBookingPage = lazy(() =>
   import('./pages/PaidBooking').then((m) => ({ default: m.PaidBookingPage })),
 );
@@ -184,6 +187,7 @@ function App() {
               <Route path="reminders" element={<RemindersPage />} />
               <Route path="activity" element={<Navigate to="/dashboard/settings?tab=activity" replace />} />
               <Route path="appointments" element={<AppointmentsPage />} />
+              <Route path="booking" element={<BookingPage />} />
               <Route path="contacts" element={<SettingsTabRedirect tab="contacts" />} />
               <Route path="messaging" element={<Navigate to="/dashboard/reminders" replace />} />
               <Route path="settings" element={<SettingsPage />} />

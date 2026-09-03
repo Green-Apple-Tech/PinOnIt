@@ -2,6 +2,7 @@ import {
   Bell,
   CalendarCheck,
   ClipboardSignature,
+  ExternalLink,
   LayoutGrid,
   Mail,
   QrCode,
@@ -38,7 +39,13 @@ export type DashboardNavItem = {
 /** Primary sidebar — product areas only (Settings is appended after More Tools). */
 export const SIMPLE_PRIMARY_NAV: MoreToolsNavItem[] = [
   { label: 'Dashboard', icon: LayoutGrid, path: '/dashboard' },
-  { label: 'Booking', icon: CalendarCheck, path: '/dashboard/appointments' },
+  { label: 'Calendar', icon: CalendarCheck, path: '/dashboard/appointments' },
+  {
+    label: 'Booking',
+    icon: ExternalLink,
+    path: '/dashboard/booking',
+    activePaths: ['/dashboard/booking'],
+  },
   {
     label: DOCS_COMBINED_NAV_LABEL,
     icon: ClipboardSignature,
