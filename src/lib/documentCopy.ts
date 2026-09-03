@@ -12,7 +12,7 @@ export const CONTRACT_HOST_HINT =
 
 /** Short always-on scope line for Sign-by-Text / Doc Center. */
 export const SIGN_BY_TEXT_SCOPE_SUMMARY =
-  'Sign-by-Text is for single-signature business documents (waivers, NDAs, addendums, estimates, job sign-offs). Not for wills, trusts, powers of attorney, deeds, court papers, judge or court orders, notarized documents, anything illegal, or anything that needs multiple signers.';
+  'Sign-by-Text is for single-signature business documents (waivers, NDAs, addendums, estimates, job sign-offs). Not for wills, trusts, powers of attorney (POA), deeds, court or judge filings/orders, notarized instruments, multi-signer closings, or anything illegal/fraudulent.';
 
 export const DOCUMENT_UPLOAD_READABILITY_HINT =
   'Use a clear, complete PDF — blurry scans, missing pages, or cut-off text may not help if there is a dispute.';
@@ -24,5 +24,5 @@ export function signByTextScopeDetail(maxLabel = '5MB') {
 
 /** Always-required checkbox label. */
 export function signByTextAckLabel(maxLabel = '5MB') {
-  return `I understand Sign-by-Text is for single-signature business documents only — not wills, trusts, powers of attorney, deeds, court papers, judge or court orders, notarized documents, anything illegal, or multi-signer docs. Uploaded PDFs must be clear and complete (PDF, up to ${maxLabel}).`;
+  return `I understand Sign-by-Text / Send Docs is only for lawful single-signature business documents. I will not use it for wills, trusts, powers of attorney (POA), deeds, court or judge filings/orders, notarized instruments, multi-signer closings, or illegal/fraudulent content. Uploaded PDFs must be clear and complete (PDF, up to ${maxLabel}).`;
 }

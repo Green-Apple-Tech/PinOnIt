@@ -57,7 +57,7 @@ export function defaultWaiverText(saved?: string | null) {
 
 export const NDA_STARTER_TEXT = `MUTUAL NON-DISCLOSURE AGREEMENT
 
-This Mutual Non-Disclosure Agreement ("Agreement") is entered into as of the date and timestamp of electronic approval below — delivered by SMS or email, verified by two-factor authentication (2FA) to the Receiving Party's phone number, and executed by electronic signature — between the sender of this document ("Disclosing Party") and [Recipient Name] ("Receiving Party"). Each may also be a "Party" and together the "Parties."
+This Mutual Non-Disclosure Agreement ("Agreement") is entered into as of the date and timestamp of electronic approval below — delivered by SMS or email, verified by two-factor authentication (2FA) to the Receiving Party's phone number, and executed by electronic signature — between [Disclosing Party] ("Disclosing Party") and [Recipient Name] ("Receiving Party"). Each may also be a "Party" and together the "Parties."
 
 1. Purpose. The Parties wish to share confidential information to evaluate or pursue: [Topic]. This Agreement protects that information.
 
@@ -175,6 +175,9 @@ export function fillDocumentPlaceholders(
     .replaceAll('[Customer Name]', recipient)
     .replaceAll('[Customer]', recipient)
     .replaceAll('[Business Name]', business)
+    .replaceAll('[Disclosing Party]', business)
+    .replaceAll('[Provider Name]', business)
+    .replaceAll('[Sender Name]', business)
     .replaceAll('[Activity/Service Description]', activity);
 }
 

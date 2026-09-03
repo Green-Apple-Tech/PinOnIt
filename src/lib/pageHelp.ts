@@ -130,7 +130,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
       'Upload clear PDFs up to 5MB',
     ],
     cannotDo: [
-      'Wills, trusts, powers of attorney, deeds, court papers, notarized or multi-signer docs',
+      'Wills, trusts, powers of attorney (POA), deeds, court or judge papers/orders, notarized or multi-signer docs, or illegal/fraudulent content',
       'Guarantee legal validity for your situation — this builds an evidentiary record, not a notary service',
     ],
     suggestedQuestions: [

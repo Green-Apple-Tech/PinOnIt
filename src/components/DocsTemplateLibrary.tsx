@@ -10,6 +10,7 @@ import {
   defaultDocumentBody,
   documentTypeLabel,
   documentUploadMaxLabel,
+  signByTextScopeDetail,
   signByTextAckLabel,
 } from '../lib/documents';
 import {
@@ -272,7 +273,19 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
           Upload a PDF once, name it, then pick it from Document Type when you send. PDF only, up to {formatBytes(DOCUMENT_UPLOAD_MAX_BYTES)}.
         </p>
         <p className="text-xs text-slate-500 dark:text-slate-400">{DOCUMENT_UPLOAD_READABILITY_HINT}</p>
-        <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-3">
+        <div className="rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/60 dark:bg-amber-950/20 p-2.5">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300 mb-1.5">
+            Sign-by-Text scope
+          </p>
+          <textarea
+            readOnly
+            value={signByTextScopeDetail(uploadMaxLabel)}
+            rows={4}
+            className="w-full resize-none rounded-lg border border-amber-200/70 dark:border-amber-700/60 bg-white/80 dark:bg-slate-900 px-2.5 py-2 text-xs text-slate-700 dark:text-slate-200 leading-relaxed"
+          />
+        </div>
+        {!scopeAlreadyAccepted && (
+          <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-3">
             <input
               type="checkbox"
               checked={scopeAcked}
@@ -283,6 +296,7 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
               {signByTextAckLabel(uploadMaxLabel)}
             </span>
           </label>
+        )}
         <div className="flex flex-col sm:flex-row gap-2">
           <input
             type="text"

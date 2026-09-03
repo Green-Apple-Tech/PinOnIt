@@ -45,7 +45,7 @@ const TEXT_ACTION_CARDS = [
     title: 'Sign-by-Text',
     you: 'Waivers, NDAs, addendums, or simple contracts — signed with a finger after an SMS code.',
     theySee: 'Please sign before Saturday: pinonit.com/d/…',
-    exclusive: true,
+    featured: true,
   },
   {
     icon: Bell,
@@ -190,7 +190,7 @@ export function Landing() {
       <section id="sign-by-text" className="py-16 md:py-20 px-6 bg-violet-50/80 dark:bg-violet-950/20 border-y border-violet-100 dark:border-violet-900/40 scroll-mt-16">
         <div className="max-w-5xl mx-auto grid lg:grid-cols-2 gap-10 items-center">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-violet-600 dark:text-violet-300 mb-2">Sign by Text</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-violet-600 dark:text-violet-300 mb-2">Featured workflow</p>
             <h2 className="font-sign-by-text text-4xl md:text-5xl text-violet-800 dark:text-violet-200 leading-tight mb-3">
               Sign-by-Text
             </h2>
@@ -261,25 +261,25 @@ export function Landing() {
             Booking. Reminders. Documents. Signatures. QR codes.
           </h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {TEXT_ACTION_CARDS.map(({ icon: Icon, title, you, theySee, exclusive, channels }) => (
+            {TEXT_ACTION_CARDS.map(({ icon: Icon, title, you, theySee, featured, channels }) => (
               <div key={title} className={`rounded-2xl border bg-white dark:bg-slate-900 p-6 ${
-                exclusive
+                featured
                   ? 'border-violet-300 dark:border-violet-700 ring-1 ring-violet-200/80 dark:ring-violet-800/60'
                   : 'border-slate-200 dark:border-slate-800'
               }`}>
                 <div className="flex items-start justify-between gap-2 mb-4">
                   <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${
-                    exclusive ? 'bg-violet-50 dark:bg-violet-500/10' : 'bg-brand-50 dark:bg-brand-500/10'
+                    featured ? 'bg-violet-50 dark:bg-violet-500/10' : 'bg-brand-50 dark:bg-brand-500/10'
                   }`}>
-                    <Icon className={`h-5 w-5 ${exclusive ? 'text-violet-600 dark:text-violet-300' : 'text-brand-600 dark:text-brand-400'}`} />
+                    <Icon className={`h-5 w-5 ${featured ? 'text-violet-600 dark:text-violet-300' : 'text-brand-600 dark:text-brand-400'}`} />
                   </div>
-                  {exclusive && (
+                  {featured && (
                     <span className="text-[11px] font-semibold text-violet-700 dark:text-violet-300">
                       <span className="font-sign-by-text text-sm">Sign-by-Text</span>
                     </span>
                   )}
                 </div>
-                <h3 className={`font-bold text-slate-900 dark:text-white mb-2 ${exclusive ? 'font-sign-by-text text-2xl text-violet-800 dark:text-violet-200' : ''}`}>
+                <h3 className={`font-bold text-slate-900 dark:text-white mb-2 ${featured ? 'font-sign-by-text text-2xl text-violet-800 dark:text-violet-200' : ''}`}>
                   {title}
                 </h3>
                 <p className="text-sm text-slate-600 dark:text-slate-300 mb-3">{you}</p>

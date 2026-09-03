@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Share, PlusSquare, MoreVertical, X, Download, Smartphone } from 'lucide-react';
 
-const STORAGE_KEY = 'pinonit_a2hs_prompt_v1';
+const LOGIN_COUNT_KEY = 'pinonit_a2hs_mobile_login_count_v1';
+const LAST_PROMPTED_LOGIN_KEY = 'pinonit_a2hs_last_prompted_login_v1';
 
 type DeferredPrompt = Event & {
   prompt: () => Promise<void>;
@@ -38,11 +39,20 @@ export function AddToHomeScreenPrompt() {
   const [open, setOpen] = useState(false);
   const [deferred, setDeferred] = useState<DeferredPrompt | null>(null);
   const [iosHelp, setIosHelp] = useState(false);
+  const [loginCount, setLoginCount] = useState(0);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (isStandaloneDisplay() || !isPhoneLike()) return;
-    if (localStorage.getItem(STORAGE_KEY)) return;
+
+    const prevCount = Number(localStorage.getItem(LOGIN_COUNT_KEY) || '0') || 0;
+    const nextCount = prevCount + 1;
+    localStorage.setItem(LOGIN_COUNT_KEY, String(nextCount));
+    setLoginCount(nextCount);
+
+    const shouldPromptThisLogin = nextCount === 1 || nextCount % 5 === 0;
+    const lastPromptedAt = Number(localStorage.getItem(LAST_PROMPTED_LOGIN_KEY) || '0') || 0;
+    if (!shouldPromptThisLogin || lastPromptedAt === nextCount) return;
 
     const onBip = (e: Event) => {
       e.preventDefault();
@@ -58,7 +68,9 @@ export function AddToHomeScreenPrompt() {
   }, []);
 
   const dismiss = () => {
-    localStorage.setItem(STORAGE_KEY, '1');
+    if (loginCount > 0) {
+      localStorage.setItem(LAST_PROMPTED_LOGIN_KEY, String(loginCount));
+    }
     setOpen(false);
     setIosHelp(false);
   };

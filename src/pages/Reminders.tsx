@@ -669,6 +669,10 @@ export function RemindersPage({
       </div>
 
       <p className="text-sm text-slate-500 dark:text-slate-400">
+        <span className="inline-flex items-center gap-1 mr-1.5 align-middle">
+          <ChannelIcon channel="sms" className="h-3.5 w-3.5 text-amber-500" />
+          <ChannelIcon channel="whatsapp" className="h-3.5 w-3.5" style={{ color: '#25D366' }} />
+        </span>
         Test SMS, WhatsApp, email, or Slack in{' '}
         <Link to="/dashboard/settings?tab=integrations" className="font-semibold text-[#5864C6] hover:underline">
           Settings → Integrations
@@ -791,7 +795,11 @@ export function RemindersPage({
             {wizardStep === 2 && (
               <div>
                 <p className="text-base font-bold text-slate-900 dark:text-white mb-1">How should we send the reminder?</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Select all channels you want — any combination is allowed.</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-5 inline-flex items-center gap-1.5">
+                  <ChannelIcon channel="sms" className="h-3.5 w-3.5 text-amber-500" />
+                  <ChannelIcon channel="whatsapp" className="h-3.5 w-3.5" style={{ color: '#25D366' }} />
+                  Select all channels you want — any combination is allowed.
+                </p>
                 <div className="mb-6">
                   <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-3 block">Channel</span>
                   <div className="flex gap-5">
@@ -1137,7 +1145,11 @@ export function RemindersPage({
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-slate-800">
           <div>
             <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Your contact channels</p>
-            <p className="text-xs text-slate-400 mt-0.5">Needed for SMS and WhatsApp reminders</p>
+            <p className="text-xs text-slate-400 mt-0.5 inline-flex items-center gap-1.5">
+              <ChannelIcon channel="sms" className="h-3.5 w-3.5 text-amber-500" />
+              <ChannelIcon channel="whatsapp" className="h-3.5 w-3.5" style={{ color: '#25D366' }} />
+              Needed for SMS and WhatsApp reminders
+            </p>
           </div>
           {!editingContact && (
             <button

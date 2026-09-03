@@ -32,6 +32,7 @@ import {
   newDocumentToken,
   sendDocumentLink,
   signByTextAckLabel,
+  signByTextScopeDetail,
 } from '../lib/documents';
 import type { HostDocumentFile, HostDocumentTemplate } from '../lib/hostDocuments';
 import type { DocumentTemplate, HostQuoteLineItem, SmbDocumentType } from '../lib/types';
@@ -155,6 +156,7 @@ export function CreateDocumentPage() {
   const typeSelectValue = libraryFileId ? `${LIBRARY_FILE_PREFIX}${libraryFileId}` : documentType;
   const recipientName = `${recipientFirstName.trim()} ${recipientLastName.trim()}`.trim();
   const scopeAlreadyAccepted = Boolean(profile?.sign_by_text_scope_accepted_at);
+  const needsScopeAck = !scopeAlreadyAccepted;
   const knownBusinessNames = useMemo(
     () => businessNameOptions([
       profile?.business_name,
@@ -612,7 +614,21 @@ export function CreateDocumentPage() {
               </p>
             </label>
           )}
-          <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-3">
+          {isUpload && (
+            <div className="rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/60 dark:bg-amber-950/20 p-2.5">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300 mb-1.5">
+                Sign-by-Text scope
+              </p>
+              <textarea
+                readOnly
+                value={signByTextScopeDetail(uploadMaxLabel)}
+                rows={4}
+                className="w-full resize-none rounded-lg border border-amber-200/70 dark:border-amber-700/60 bg-white/80 dark:bg-slate-900 px-2.5 py-2 text-xs text-slate-700 dark:text-slate-200 leading-relaxed"
+              />
+            </div>
+          )}
+          {needsScopeAck && (
+            <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-3">
               <input
                 type="checkbox"
                 checked={scopeAcked}
@@ -715,33 +731,39 @@ export function CreateDocumentPage() {
             </p>
           </label>
           <label className="block">
-              <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Business name <span className="text-red-500">*</span></span>
-              <input
-                value={businessName}
-                onChange={(e) => setBusinessName(e.target.value.slice(0, 120))}
-                required
-                maxLength={120}
-                className={fieldClass}
-                placeholder="Your company or DBA"
-              />
-              {knownBusinessNames.filter((name) => name !== businessName).length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {knownBusinessNames.filter((name) => name !== businessName).map((name) => (
-                    <button
-                      key={name}
-                      type="button"
-                      onClick={() => setBusinessName(name)}
-                      className="px-3 py-1.5 rounded-full border border-gray-200 dark:border-slate-700 text-xs font-semibold text-gray-600 dark:text-slate-300"
-                    >
-                      Use {name}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <p className="mt-1 text-xs text-gray-400">
-                Shown as “from …” on the document. Save a default in Settings → Profile. Prefer company name over your personal name.
-              </p>
-            </label>
+            <span className="text-xs font-medium text-gray-600 dark:text-slate-400">
+              {documentType === 'nda'
+                ? 'Disclosing Party (sender name or company)'
+                : documentType === 'contract'
+                  ? 'Provider name (sender or company)'
+                  : 'Business / sender name'}
+            </span>
+            <input
+              value={businessName}
+              onChange={(e) => setBusinessName(e.target.value.slice(0, 120))}
+              required
+              maxLength={120}
+              className={fieldClass}
+              placeholder="Your company, DBA, or sender name"
+            />
+            {knownBusinessNames.filter((name) => name !== businessName).length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {knownBusinessNames.filter((name) => name !== businessName).map((name) => (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => setBusinessName(name)}
+                    className="px-3 py-1.5 rounded-full border border-gray-200 dark:border-slate-700 text-xs font-semibold text-gray-600 dark:text-slate-300"
+                  >
+                    Use {name}
+                  </button>
+                ))}
+              </div>
+            )}
+            <p className="mt-1 text-xs text-gray-400">
+              Required. This fills sender/disclosing-party fields (like NDA) and shows as “from …” on the document.
+            </p>
+          </label>
         </div>
 
         {isMoney && (

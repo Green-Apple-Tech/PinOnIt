@@ -10,7 +10,7 @@ export const PRODUCT_CAN = [
 ];
 
 export const PRODUCT_CANNOT = [
-  'Wills, trusts, powers of attorney, deeds, court filings, notarized instruments, or multi-signer closings.',
+  'Wills, trusts, powers of attorney (POA), deeds, court or judge filings/orders, notarized instruments, multi-signer closings, or illegal/fraudulent content.',
   'Guarantee a document is legally valid for your situation — PinOnIt builds an evidentiary record (SMS, timestamps, confirmation); it is not a law firm or notary.',
   'Replace attorney review when your document needs specialized legal language.',
   'Act as DocuSign for complex enterprise multi-party workflows.',
@@ -36,7 +36,7 @@ export const HELP_FAQS: HelpFaq[] = [
       'can it notarize',
     ],
     answer:
-      'Sign-by-Text is for single-signature business documents (waivers, NDAs, addendums, estimates, job sign-offs). It is not for wills, trusts, powers of attorney, deeds, court papers, notarized docs, or multi-signer closings. It builds an evidentiary record (SMS code, timestamps, signature) — it does not guarantee validity for every situation. When in doubt, ask your attorney.',
+      'Sign-by-Text is for lawful single-signature business documents (waivers, NDAs, addendums, estimates, job sign-offs). It is not for wills, trusts, powers of attorney (POA), deeds, court/judge papers, notarized docs, multi-signer closings, or illegal content. It builds an evidentiary record (SMS code, timestamps, signature) — it does not guarantee validity for every situation. When in doubt, ask your attorney.',
   },
   {
     id: 'how-send-doc',
