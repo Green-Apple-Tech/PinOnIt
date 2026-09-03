@@ -2,7 +2,6 @@ import {
   Bell,
   CalendarCheck,
   ClipboardSignature,
-  FileText,
   LayoutGrid,
   Mail,
   QrCode,
@@ -12,7 +11,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { RevealedToolId, UiMode } from './progressiveDisclosure';
-import { documentsNewPath } from './documentActions';
+
+export const DOCS_COMBINED_NAV_LABEL = 'Send Docs + Sign-by-Text';
 
 export type MoreToolsNavItem = {
   label: string;
@@ -22,7 +22,8 @@ export type MoreToolsNavItem = {
   toolId?: RevealedToolId;
   activePaths?: string[];
   activePathPrefixes?: string[];
-  signByText?: boolean;
+  /** Mixed-label docs hub (Send Docs + Sign-by-Text). */
+  docsCombined?: boolean;
 };
 
 export type DashboardNavItem = {
@@ -31,7 +32,7 @@ export type DashboardNavItem = {
   label: string;
   badge?: string;
   children?: DashboardNavItem[];
-  signByText?: boolean;
+  docsCombined?: boolean;
 };
 
 /** Primary sidebar — product areas only (Settings is appended after More Tools). */
@@ -39,15 +40,11 @@ export const SIMPLE_PRIMARY_NAV: MoreToolsNavItem[] = [
   { label: 'Dashboard', icon: LayoutGrid, path: '/dashboard' },
   { label: 'Booking', icon: CalendarCheck, path: '/dashboard/appointments' },
   {
-    label: 'Sign-by-Text',
+    label: DOCS_COMBINED_NAV_LABEL,
     icon: ClipboardSignature,
-    path: documentsNewPath('sign'),
-    signByText: true,
-  },
-  {
-    label: 'Send Docs',
-    icon: FileText,
-    path: documentsNewPath('send'),
+    path: '/dashboard/documents',
+    docsCombined: true,
+    activePathPrefixes: ['/dashboard/documents'],
   },
   { label: 'NeverMiss Reminders', icon: Bell, path: '/dashboard/reminders' },
 ];
@@ -92,22 +89,13 @@ export function isMoreToolsNavActive(item: MoreToolsNavItem, pathname: string, s
 }
 
 export function isDashboardNavActive(
-  item: { to: string; label: string; signByText?: boolean },
+  item: { to: string; label: string; docsCombined?: boolean },
   pathname: string,
   search = '',
   hash = '',
 ): boolean {
-  const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
-  const mode = params.get('mode') ?? (params.get('action') === 'sign' || params.get('action') === 'send' ? params.get('action') : null);
-
-  if (item.signByText || item.label === 'Sign-by-Text') {
-    if (!pathname.startsWith('/dashboard/documents/new')) return false;
-    return mode === 'sign';
-  }
-  if (item.label === 'Send Docs') {
-    if (pathname === '/dashboard/documents') return true;
-    if (!pathname.startsWith('/dashboard/documents')) return false;
-    return mode !== 'sign';
+  if (item.docsCombined || item.label === DOCS_COMBINED_NAV_LABEL) {
+    return pathname === '/dashboard/documents' || pathname.startsWith('/dashboard/documents/');
   }
   return navPathMatches(item.to, pathname, search, hash);
 }
@@ -143,7 +131,7 @@ function toDashboardItem(item: MoreToolsNavItem): DashboardNavItem {
     icon: item.icon,
     label: item.label,
     badge: item.badge,
-    signByText: item.signByText,
+    docsCombined: item.docsCombined,
   };
 }
 

@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef, type CSSProperties, type Elem
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
-import { effectivePlan, isActivePlan } from '../lib/plan';
 import { PageChecklist } from '../components/PageChecklist';
 import type { MessageTemplate, ReminderRule, Service } from '../lib/types';
 import { SUPPORTED_LANGUAGES, TEMPLATE_VARIABLES } from '../lib/types';
@@ -162,9 +161,7 @@ export function RemindersPage({
   onOpenProfileTab?: () => void;
 } = {}) {
   const navigate = useNavigate();
-  const { user, profile, subscription, refreshProfile } = useAuth();
-  const plan = effectivePlan(subscription, profile);
-  const hasFullAccess = isActivePlan(plan);
+  const { user, profile, refreshProfile } = useAuth();
   const personalReminderRef = useRef<VoicePersonalReminderHandle>(null);
 
   const openPersonalReminder = useCallback(() => {
@@ -606,8 +603,8 @@ export function RemindersPage({
   return (
     <Wrapper className={embedded ? 'w-full' : 'p-6 md:p-8 max-w-3xl space-y-6'}>
 
-      {/* Contextual checklist — hidden for Pro users */}
-      {!hasFullAccess && (
+      {/* Setup checklist for hosts still getting started */}
+      {!hasAnyReminders && (
         <PageChecklist
           storageKey="reminders_checklist"
           items={[
@@ -687,8 +684,8 @@ export function RemindersPage({
         <ArrowRight className="h-4 w-4 text-slate-400 shrink-0" />
       </Link>
 
-      {/* ── FIRST-TIME SETUP GUIDE (shown when no reminders exist, not for Pro) ── */}
-      {!hasAnyReminders && !showAddForm && !hasFullAccess && (
+      {/* First-time setup when no reminders exist yet */}
+      {!hasAnyReminders && !showAddForm && (
         <div className="rounded-2xl border-2 border-dashed border-[#5864C6]/30 dark:border-[#5864C6]/20 bg-[#5864C6]/5 dark:bg-[#5864C6]/5 p-8 text-center">
           <div className="h-16 w-16 rounded-2xl bg-[#5864C6]/10 dark:bg-[#5864C6]/20 flex items-center justify-center mx-auto mb-5">
             <Bell className="h-8 w-8" style={{ color: '#5864C6' }} />

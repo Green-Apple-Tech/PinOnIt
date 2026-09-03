@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS public.host_document_templates (
   full_text text NOT NULL,
   updated_at timestamptz NOT NULL DEFAULT now(),
   created_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT host_document_templates_type_check CHECK (document_type IN (
+      CONSTRAINT host_document_templates_type_check CHECK (document_type IN (
     'nda', 'contract', 'waiver', 'quote', 'invoice', 'receipt'
   )),
   CONSTRAINT host_document_templates_host_type_unique UNIQUE (host_id, document_type)

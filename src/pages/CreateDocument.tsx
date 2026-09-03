@@ -7,14 +7,10 @@ import { PHONE_HINT, PHONE_PLACEHOLDER, blurFormatPhone, normalizePhoneE164 } fr
 import { revealTool } from '../lib/progressiveDisclosure';
 import { quoteTotals } from '../lib/quoteMath';
 import {
-  DOCUMENT_ACTIONS,
   resolveDocsEntryMode,
-  resolveDocumentAction,
-  type DocumentActionId,
   type DocsEntryMode,
 } from '../lib/documentActions';
 import {
-  HOLD_UP_COPY,
   CONTRACT_HOST_HINT,
   WAIVER_HOST_HINT,
   SMB_DOCUMENT_TYPES,
@@ -23,6 +19,7 @@ import {
   DOCUMENT_UPLOAD_READABILITY_HINT,
   defaultDocumentBody,
   defaultWaiverText,
+  defaultVerificationRequired,
   documentBodyIsEditable,
   documentTypeLabel,
   documentUploadMaxLabel,
@@ -36,7 +33,6 @@ import {
   newDocumentToken,
   sendDocumentLink,
   signByTextAckLabel,
-  signByTextScopeDetail,
 } from '../lib/documents';
 import type { HostDocumentFile, HostDocumentTemplate } from '../lib/hostDocuments';
 import type { DocumentTemplate, HostQuoteLineItem, SmbDocumentType } from '../lib/types';
@@ -66,14 +62,12 @@ export function CreateDocumentPage() {
   const actionParam = searchParams.get('action');
   const modeParam = searchParams.get('mode');
   const entryMode: DocsEntryMode = resolveDocsEntryMode(modeParam, actionParam);
-  const resolvedAction = resolveDocumentAction(actionParam, typeParam);
   const initialType: SmbDocumentType =
-    typeParam && isSmbDocumentType(typeParam) ? typeParam : resolvedAction.defaultType;
+    typeParam && isSmbDocumentType(typeParam) ? typeParam : 'nda';
 
   const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
   const [hostOverrides, setHostOverrides] = useState<HostDocumentTemplate[]>([]);
   const [libraryFiles, setLibraryFiles] = useState<HostDocumentFile[]>([]);
-  const [actionId, setActionId] = useState<DocumentActionId>(resolvedAction.id);
   const [documentType, setDocumentType] = useState<SmbDocumentType>(initialType);
   const [libraryFileId, setLibraryFileId] = useState<string | null>(null);
   const [customTypeLabel, setCustomTypeLabel] = useState('');
@@ -86,8 +80,12 @@ export function CreateDocumentPage() {
   const [activityOptions, setActivityOptions] = useState<string[]>([]);
   const businessNameHydrated = useRef(false);
   const [customText, setCustomText] = useState(() => defaultWaiverText());
-  /** Default only from nav entry (Sign-by-Text → on, Send Docs → off). Never locked by document type. */
-  const [verificationRequired, setVerificationRequired] = useState(() => entryMode === 'sign');
+  /** Default from ?mode= when present; otherwise from document type. */
+  const [verificationRequired, setVerificationRequired] = useState(() =>
+    modeParam === 'sign' || modeParam === 'send' || actionParam === 'sign' || actionParam === 'send'
+      ? entryMode === 'sign'
+      : defaultVerificationRequired(initialType),
+  );
   const [items, setItems] = useState<HostQuoteLineItem[]>([{ description: '', amount: 0 }]);
   const [taxPercent, setTaxPercent] = useState(0);
   const [notes, setNotes] = useState('');
@@ -106,30 +104,25 @@ export function CreateDocumentPage() {
   const [scopeAcked, setScopeAcked] = useState(false);
   const uploadMaxLabel = documentUploadMaxLabel();
 
-  // Sync type/action from URL; verification default only when entry mode changes (nav).
+  // Sync type from URL; verification follows type unless ?mode= forces sign/send.
   useEffect(() => {
-    const nextAction = resolveDocumentAction(actionParam, typeParam);
-    setActionId(nextAction.id);
     if (typeParam && isSmbDocumentType(typeParam)) {
       setDocumentType(typeParam);
+      if (modeParam !== 'sign' && modeParam !== 'send' && actionParam !== 'sign' && actionParam !== 'send') {
+        setVerificationRequired(defaultVerificationRequired(typeParam));
+      }
     } else if (!typeParam) {
-      setDocumentType(nextAction.defaultType);
+      setDocumentType('nda');
     }
-  }, [typeParam, actionParam]);
+  }, [typeParam, actionParam, modeParam]);
 
   useEffect(() => {
-    setVerificationRequired(entryMode === 'sign');
-  }, [entryMode]);
-
-  const applyAction = (next: DocumentActionId) => {
-    const a = DOCUMENT_ACTIONS.find((x) => x.id === next) ?? DOCUMENT_ACTIONS[0];
-    setActionId(a.id);
-    setLibraryFileId(null);
-    setDocumentType(a.defaultType);
-    // Keep entry mode; do not change verification — user (or nav default) owns that checkbox.
-    const q = new URLSearchParams({ mode: entryMode, type: a.defaultType });
-    navigate(`/dashboard/documents/new?${q.toString()}`, { replace: true });
-  };
+    if (modeParam === 'sign' || modeParam === 'send') {
+      setVerificationRequired(modeParam === 'sign');
+    } else if (actionParam === 'sign' || actionParam === 'send') {
+      setVerificationRequired(actionParam === 'sign');
+    }
+  }, [modeParam, actionParam]);
 
   useEffect(() => {
     void supabase
@@ -247,10 +240,10 @@ export function CreateDocumentPage() {
   const handleTypeChange = (next: SmbDocumentType) => {
     setLibraryFileId(null);
     setDocumentType(next);
+    setVerificationRequired(defaultVerificationRequired(next));
     if (next !== 'upload') setUploadFile(null);
     if (next !== 'other') setCustomTypeLabel('');
-    // Preserve verification + entry mode; type change must not flip the checkbox.
-    const q = new URLSearchParams({ mode: entryMode, type: next });
+    const q = new URLSearchParams({ type: next });
     navigate(`/dashboard/documents/new?${q.toString()}`, { replace: true });
   };
 
@@ -259,9 +252,10 @@ export function CreateDocumentPage() {
       const id = value.slice(LIBRARY_FILE_PREFIX.length);
       setLibraryFileId(id);
       setDocumentType('upload');
+      setVerificationRequired(defaultVerificationRequired('upload'));
       setUploadFile(null);
       setCustomTypeLabel('');
-      const q = new URLSearchParams({ mode: entryMode, type: 'upload' });
+      const q = new URLSearchParams({ type: 'upload' });
       navigate(`/dashboard/documents/new?${q.toString()}`, { replace: true });
       return;
     }
@@ -530,27 +524,9 @@ export function CreateDocumentPage() {
       <h1 className="mt-3 text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
         New document
       </h1>
-      <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">{HOLD_UP_COPY}</p>
-      <p className="mt-2 text-sm text-gray-600 dark:text-slate-300 leading-relaxed">
-        {signByTextScopeDetail(uploadMaxLabel)}
-      </p>
 
       <form onSubmit={(e) => void handleSubmit(e)} className="mt-6 space-y-5">
         <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-6 space-y-4">
-          <label className="block">
-            <span className="text-xs font-medium text-gray-600 dark:text-slate-400">What do you want to do?</span>
-            <select
-              value={actionId}
-              onChange={(e) => applyAction(e.target.value as DocumentActionId)}
-              className={fieldClass}
-            >
-              {DOCUMENT_ACTIONS.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.label}
-                </option>
-              ))}
-            </select>
-          </label>
           <label className="block">
             <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Document Type</span>
             <select

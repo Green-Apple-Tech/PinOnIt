@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { documentsNewPath } from '../lib/documentActions';
 import {
-  QrCode, Mail, ClipboardSignature, ArrowRight, FileText,
+  QrCode, Mail, ClipboardSignature, ArrowRight,
   CalendarDays, Users, ShoppingBag, Bell, Sparkles,
   ChevronDown, type LucideIcon,
 } from 'lucide-react';
@@ -14,97 +13,75 @@ type ToolItem = {
   description: string;
   buttonLabel: string;
   to: string;
-  accent?: 'brand' | 'teal' | 'default';
+  accent?: 'brand' | 'teal' | 'violet' | 'default';
   badge?: string;
+  docsCombined?: boolean;
 };
 
 const MAIN_TOOLS: ToolItem[] = [
   {
-    id: 'scheduler',
+    id: 'booking',
     icon: CalendarDays,
-    title: 'Calendar Scheduler',
-    badge: 'Tool 1',
-    description: 'Your booking page, event types, and calendar sync — Google, Outlook, and Apple. Prevent double-bookings, accept payments, and share one link everywhere.',
-    buttonLabel: 'Open Scheduler',
+    title: 'Bookings',
+    description: 'Your booking page, event types, and calendar sync — Google, Outlook, and Apple. Prevent double-bookings and share one link everywhere.',
+    buttonLabel: 'Open Bookings',
     to: '/dashboard/appointments',
     accent: 'brand',
+  },
+  {
+    id: 'docs-hub',
+    icon: ClipboardSignature,
+    title: 'Send Docs + Sign-by-Text',
+    description:
+      'Quotes, invoices, NDAs, waivers, and PDF uploads. Turn on SMS verification & signature when you need it — no app for the recipient.',
+    buttonLabel: 'Open Docs',
+    to: '/dashboard/documents',
+    accent: 'violet',
+    docsCombined: true,
   },
   {
     id: 'reminders',
     icon: Bell,
     title: 'NeverMiss Reminders',
-    badge: 'Tool 2',
-    description: 'Email, SMS, WhatsApp, and Voice reminders for every booking and any calendar event. Make sure nobody misses a meeting.',
-    buttonLabel: 'Open NeverMiss Reminders',
+    description: 'Email, SMS, WhatsApp, and Voice reminders for every booking and calendar event so nobody misses a meeting.',
+    buttonLabel: 'Open NeverMiss',
     to: '/dashboard/reminders',
     accent: 'teal',
   },
 ];
 
-const INCLUDED_TOOLS: ToolItem[] = [
-  {
-    id: 'sign-by-text',
-    icon: ClipboardSignature,
-    title: 'Sign-by-Text',
-    description: 'Send NDAs, waivers, addendums, and simple agreements by text. Recipients verify with an SMS code and sign on their phone — no app required.',
-    buttonLabel: 'Open Sign-by-Text',
-    to: documentsNewPath('sign'),
-  },
-  {
-    id: 'send-docs',
-    icon: FileText,
-    title: 'Send Docs',
-    description: 'Quotes, invoices, receipts, and everyday documents — same Doc Center, send-without-signature flow.',
-    buttonLabel: 'Open Send Docs',
-    to: documentsNewPath('send'),
-  },
-  {
-    id: 'documents',
-    icon: ClipboardSignature,
-    title: 'All documents',
-    description: 'See every send — pending, viewed, and confirmed — in one list.',
-    buttonLabel: 'Open document list',
-    to: '/dashboard/documents',
-  },
+const OTHER_TOOLS: ToolItem[] = [
   {
     id: 'qr',
     icon: QrCode,
-    title: 'QR Code Creator',
-    description: 'Generate QR codes for your booking links to share anywhere — business cards, flyers, signs, or storefronts.',
-    buttonLabel: 'Open QR Creator',
+    title: 'QR Codes',
+    description: 'QR codes for booking links — cards, flyers, signs.',
+    buttonLabel: 'Open',
     to: '/dashboard/qr-code',
   },
   {
     id: 'signature',
     icon: Mail,
-    title: 'Email Signature',
-    description: 'Create a professional email signature with your booking link built in. Every email you send becomes a booking opportunity.',
-    buttonLabel: 'Open Signature Builder',
+    title: 'Signature Creator',
+    description: 'Email signature with your booking link built in.',
+    buttonLabel: 'Open',
     to: '/dashboard/signature',
   },
   {
     id: 'paid',
     icon: ShoppingBag,
-    title: 'Paid Bookings',
-    description: 'Accept payments at booking time — Stripe, PayPal, Venmo, Cash App, or Zelle.',
-    buttonLabel: 'Open Paid Bookings',
+    title: 'Paid Booking',
+    description: 'Collect payment at booking — Stripe, PayPal, Venmo, and more.',
+    buttonLabel: 'Open',
     to: '/dashboard/paid-booking',
   },
   {
     id: 'group',
     icon: Users,
     title: 'Group Scheduling',
-    description: 'Run meeting polls, coordinate via SMS with phone-only invitees, and find a time that works for everyone.',
-    buttonLabel: 'Open Group Scheduling',
+    description: 'Meeting polls and SMS coordination for groups.',
+    buttonLabel: 'Open',
     to: '/dashboard/group-scheduling',
-  },
-  {
-    id: 'appointments',
-    icon: CalendarDays,
-    title: 'Appointments',
-    description: 'See your full calendar of upcoming, past, and pending bookings. Cancel or reschedule with one tap.',
-    buttonLabel: 'Open Calendar',
-    to: '/dashboard/appointments',
   },
 ];
 
@@ -127,6 +104,15 @@ function accentStyles(accent: ToolItem['accent']) {
       btn: 'bg-teal-600 hover:bg-teal-700',
     };
   }
+  if (accent === 'violet') {
+    return {
+      border: 'border-violet-200 dark:border-violet-500/30',
+      bg: 'bg-gradient-to-br from-violet-50 to-white dark:from-violet-900/20 dark:to-slate-900',
+      icon: 'bg-violet-600 text-white',
+      badge: 'text-violet-500',
+      btn: 'bg-violet-600 hover:bg-violet-700',
+    };
+  }
   return {
     border: 'border-gray-200 dark:border-slate-800',
     bg: 'bg-white dark:bg-slate-900',
@@ -134,6 +120,17 @@ function accentStyles(accent: ToolItem['accent']) {
     badge: 'text-gray-400',
     btn: 'bg-brand-600 hover:bg-brand-700',
   };
+}
+
+function ToolTitle({ tool, className = '' }: { tool: ToolItem; className?: string }) {
+  if (tool.docsCombined) {
+    return (
+      <span className={className}>
+        Send Docs + <span className="font-sign-by-text text-[1.15em] leading-none">Sign-by-Text</span>
+      </span>
+    );
+  }
+  return <span className={className}>{tool.title}</span>;
 }
 
 function MobileToolAccordion({ tools, defaultOpen }: { tools: ToolItem[]; defaultOpen?: string }) {
@@ -160,7 +157,9 @@ function MobileToolAccordion({ tools, defaultOpen }: { tools: ToolItem[]; defaul
                 {tool.badge ? (
                   <p className={`text-[10px] font-bold uppercase tracking-widest ${styles.badge}`}>{tool.badge}</p>
                 ) : null}
-                <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{tool.title}</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                  <ToolTitle tool={tool} />
+                </p>
               </div>
               <ChevronDown className={`h-5 w-5 text-slate-400 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
             </button>
@@ -187,22 +186,24 @@ function FeaturedToolCard({ tool }: { tool: ToolItem }) {
   const styles = accentStyles(tool.accent);
   const Icon = tool.icon;
   return (
-    <div className={`group flex flex-col rounded-3xl border-2 ${styles.border} ${styles.bg} p-8 shadow-sm hover:shadow-lg transition-all`}>
-      <div className="flex items-center gap-4 mb-5">
-        <div className={`h-16 w-16 rounded-2xl flex items-center justify-center ${styles.icon}`}>
-          <Icon className="h-8 w-8" />
+    <div className={`group flex flex-col rounded-3xl border-2 ${styles.border} ${styles.bg} p-6 md:p-8 shadow-sm hover:shadow-lg transition-all`}>
+      <div className="flex items-center gap-4 mb-4">
+        <div className={`h-14 w-14 md:h-16 md:w-16 rounded-2xl flex items-center justify-center ${styles.icon}`}>
+          <Icon className="h-7 w-7 md:h-8 md:w-8" />
         </div>
-        <div>
+        <div className="min-w-0">
           {tool.badge ? (
             <span className={`text-[11px] font-bold uppercase tracking-widest ${styles.badge}`}>{tool.badge}</span>
           ) : null}
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white">{tool.title}</h3>
+          <h3 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">
+            <ToolTitle tool={tool} />
+          </h3>
         </div>
       </div>
       <p className="text-sm text-gray-600 dark:text-slate-400 leading-relaxed flex-1">{tool.description}</p>
       <Link
         to={tool.to}
-        className={`mt-6 inline-flex items-center justify-center gap-2 px-5 py-3 text-white text-sm font-semibold rounded-xl transition-colors ${styles.btn}`}
+        className={`mt-5 inline-flex items-center justify-center gap-2 px-5 py-3 text-white text-sm font-semibold rounded-xl transition-colors ${styles.btn}`}
       >
         {tool.buttonLabel} <ArrowRight className="h-4 w-4" />
       </Link>
@@ -210,26 +211,22 @@ function FeaturedToolCard({ tool }: { tool: ToolItem }) {
   );
 }
 
-function ComingSoonCard({
-  icon: Icon,
-  title,
-  description,
-}: {
-  icon: typeof QrCode;
-  title: string;
-  description: string;
-}) {
+function CompactToolCard({ tool }: { tool: ToolItem }) {
+  const Icon = tool.icon;
   return (
-    <div className="group flex flex-col rounded-3xl border border-dashed border-gray-300 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-900/40 p-8">
-      <div className="h-16 w-16 rounded-2xl bg-gray-100 dark:bg-slate-800 flex items-center justify-center mb-6">
-        <Icon className="h-8 w-8 text-gray-400 dark:text-slate-500" />
+    <Link
+      to={tool.to}
+      className="group flex items-start gap-3 rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 hover:border-brand-300 dark:hover:border-brand-500/40 hover:shadow-sm transition-all"
+    >
+      <div className="h-9 w-9 rounded-lg bg-gray-100 dark:bg-slate-800 flex items-center justify-center shrink-0 group-hover:bg-brand-50 dark:group-hover:bg-brand-500/10 transition-colors">
+        <Icon className="h-4 w-4 text-gray-600 dark:text-slate-300 group-hover:text-brand-600 dark:group-hover:text-brand-400" />
       </div>
-      <h2 className="text-xl font-bold text-gray-500 dark:text-slate-400">{title}</h2>
-      <p className="mt-2.5 text-sm text-gray-400 dark:text-slate-500 leading-relaxed flex-1">{description}</p>
-      <span className="mt-6 inline-flex items-center justify-center gap-2 px-5 py-3 border border-gray-200 dark:border-slate-700 text-gray-400 dark:text-slate-500 text-sm font-semibold rounded-xl cursor-not-allowed">
-        Coming Soon
-      </span>
-    </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-gray-900 dark:text-white leading-snug">{tool.title}</p>
+        <p className="mt-0.5 text-xs text-gray-500 dark:text-slate-400 leading-snug line-clamp-2">{tool.description}</p>
+      </div>
+      <ArrowRight className="h-3.5 w-3.5 text-gray-300 dark:text-slate-600 shrink-0 mt-1 group-hover:text-brand-500 transition-colors" />
+    </Link>
   );
 }
 
@@ -250,12 +247,12 @@ export function MoreToolsPage() {
         </div>
       </div>
 
-      <div className="mb-6 md:mb-8">
+      <div className="mb-8 md:mb-10">
         <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400 dark:text-slate-500 mb-3 md:mb-4">
           Main Tools
         </h2>
-        <MobileToolAccordion tools={MAIN_TOOLS} defaultOpen="scheduler" />
-        <div className="hidden md:grid gap-6 md:grid-cols-2">
+        <MobileToolAccordion tools={MAIN_TOOLS} defaultOpen="booking" />
+        <div className="hidden md:grid gap-5 md:grid-cols-3">
           {MAIN_TOOLS.map((tool) => (
             <FeaturedToolCard key={tool.id} tool={tool} />
           ))}
@@ -264,12 +261,11 @@ export function MoreToolsPage() {
 
       <div className="mb-4">
         <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400 dark:text-slate-500 mb-3 md:mb-4">
-          Included Tools
+          More Tools
         </h2>
-        <MobileToolAccordion tools={INCLUDED_TOOLS} />
-        <div className="hidden md:grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {INCLUDED_TOOLS.map((tool) => (
-            <ToolCard key={tool.id} tool={tool} />
+        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+          {OTHER_TOOLS.map((tool) => (
+            <CompactToolCard key={tool.id} tool={tool} />
           ))}
         </div>
       </div>
@@ -278,14 +274,7 @@ export function MoreToolsPage() {
         <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400 dark:text-slate-500 mb-3 md:mb-4">
           Coming Soon
         </h2>
-        <div className="hidden md:grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <ComingSoonCard
-            icon={Sparkles}
-            title="AI Booking Assistant"
-            description="Let AI draft your event descriptions, reminder messages, and follow-up notes in seconds."
-          />
-        </div>
-        <div className="md:hidden rounded-2xl border border-dashed border-gray-300 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-900/40 px-4 py-3.5 flex items-center gap-3">
+        <div className="rounded-xl border border-dashed border-gray-300 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-900/40 px-4 py-3.5 flex items-center gap-3 max-w-md">
           <Sparkles className="h-5 w-5 text-gray-400 shrink-0" />
           <div className="min-w-0">
             <p className="text-sm font-semibold text-gray-500 dark:text-slate-400">AI Booking Assistant</p>
@@ -294,25 +283,5 @@ export function MoreToolsPage() {
         </div>
       </div>
     </main>
-  );
-}
-
-function ToolCard({ tool }: { tool: ToolItem }) {
-  const Icon = tool.icon;
-  return (
-    <div className="group flex flex-col rounded-3xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-8 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-      <div className="h-16 w-16 rounded-2xl bg-brand-50 dark:bg-brand-500/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-        <Icon className="h-8 w-8 text-brand-600 dark:text-brand-400" />
-      </div>
-      <h2 className="text-xl font-bold text-gray-900 dark:text-white">{tool.title}</h2>
-      <p className="mt-2.5 text-sm text-gray-600 dark:text-slate-400 leading-relaxed flex-1">{tool.description}</p>
-      <Link
-        to={tool.to}
-        className="mt-6 inline-flex items-center justify-center gap-2 px-5 py-3 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl transition-colors"
-      >
-        {tool.buttonLabel}
-        <ArrowRight className="h-4 w-4" />
-      </Link>
-    </div>
   );
 }

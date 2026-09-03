@@ -648,6 +648,8 @@ export function ContactsPage({ embedded = false }: { embedded?: boolean }) {
                 : c,
             ),
           );
+        } else {
+          showToast(companyErr.message || 'Saved for this contact, but not for others at the company.', 'error');
         }
       }
     } else {

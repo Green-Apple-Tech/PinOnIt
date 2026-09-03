@@ -11,7 +11,6 @@ import {
   documentTypeLabel,
   documentUploadMaxLabel,
   signByTextAckLabel,
-  signByTextScopeDetail,
 } from '../lib/documents';
 import {
   HOST_EDITABLE_TEMPLATE_TYPES,
@@ -55,6 +54,9 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
       supabase.from('host_document_templates').select('*').eq('host_id', hostId),
       supabase.from('host_document_files').select('*').eq('host_id', hostId).order('created_at', { ascending: false }),
     ]);
+    if (g.error || o.error || f.error) {
+      toast.error(g.error?.message || o.error?.message || f.error?.message || 'Could not load Doc templates.');
+    }
     setGlobalTemplates((g.data as DocumentTemplate[]) ?? []);
     setOverrides((o.data as HostDocumentTemplate[]) ?? []);
     setFiles((f.data as HostDocumentFile[]) ?? []);
@@ -203,12 +205,6 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 px-3 py-3">
-        <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
-          {signByTextScopeDetail(uploadMaxLabel)}
-        </p>
-      </div>
-
       <div className="space-y-2">
         <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Default document templates</h3>
         <p className="text-xs text-slate-500 dark:text-slate-400">

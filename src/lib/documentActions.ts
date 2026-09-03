@@ -41,7 +41,7 @@ export function documentActionById(id: DocumentActionId): DocumentAction {
   return DOCUMENT_ACTIONS.find((a) => a.id === id) ?? DOCUMENT_ACTIONS[0];
 }
 
-/** Prefer ?mode= from Sign-by-Text / Send Docs nav. Legacy ?action=sign|send still works. */
+/** Prefer ?mode= deep links. Legacy ?action=sign|send still works. */
 export function resolveDocsEntryMode(
   modeParam: string | null,
   actionParam: string | null,
@@ -71,8 +71,11 @@ export function resolveDocumentAction(
   return documentActionById('send');
 }
 
-export function documentsNewPath(mode: DocsEntryMode, type?: SmbDocumentType) {
-  const q = new URLSearchParams({ mode });
+/** Build create-doc URL. Mode is optional (legacy deep links); type alone is enough for defaults. */
+export function documentsNewPath(mode?: DocsEntryMode | null, type?: SmbDocumentType) {
+  const q = new URLSearchParams();
+  if (mode === 'sign' || mode === 'send') q.set('mode', mode);
   if (type) q.set('type', type);
-  return `/dashboard/documents/new?${q.toString()}`;
+  const qs = q.toString();
+  return qs ? `/dashboard/documents/new?${qs}` : '/dashboard/documents/new';
 }

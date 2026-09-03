@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { ExpiredBanner } from '../components/ExpiredBanner';
 import { useAuth } from '../hooks/useAuth';
@@ -10,7 +10,7 @@ import { supabase } from '../lib/supabase';
 import { syncStripeSubscription } from '../lib/stripe';
 import { effectivePlan, isActivePlan } from '../lib/plan';
 import type { Booking, Service } from '../lib/types';
-import { CalendarDays, LogOut, X, Check, Sun, Moon, Copy, Share2, Mail, Link2, ExternalLink, PenLine, Video, Phone, MapPin, ChevronRight, Loader2, Plus, ChevronLeft, LayoutGrid, Menu, AlertCircle, Sparkles, Search, Wrench as Tool, QrCode, MessageSquare, ChevronDown, Trash2 } from 'lucide-react';
+import { LogOut, X, Check, Sun, Moon, Link2, Video, Phone, MapPin, ChevronRight, Loader2, Plus, ChevronLeft, LayoutGrid, Menu, Sparkles, Wrench as Tool, ChevronDown } from 'lucide-react';
 import {
   MORE_TOOLS_HUB_PATH,
   buildSidebarNav,
@@ -22,32 +22,9 @@ import { parseRevealedTools, revealTool } from '../lib/progressiveDisclosure';
 import { defaultAvailabilityRows } from '../lib/availabilityGrid';
 import { PageHelpButton } from '../components/PageHelp';
 import { AddToHomeScreenPrompt } from '../components/AddToHomeScreenPrompt';
-import { QRModal } from '../components/QRModal';
-import {
-  buildAvailabilityEmailInvite,
-  buildAvailabilitySmsInvite,
-  canUseSystemShare,
-  isMobileShareClient,
-  openEmailComposer,
-  openSmsComposer,
-  openWhatsAppComposer,
-  shareViaSystemSheet,
-} from '../lib/bookingShare';
-import {
-  LINK_EXPIRY_OPTIONS,
-  isSingleUseLinksEnabled,
-  linkExpiryToDays,
-  resolveLinkExpiry,
-  type LinkExpiryValue,
-} from '../lib/singleUseLinks';
 import {
   EXAMPLE_PAID_CONSULTATION_NAME,
-  bookableEventTypes,
-  defaultSelectedServiceIds,
-  displayEventTypeName,
-  eventTypeSlug,
   isExamplePaidConsultation,
-  withoutPinOnItDemoFeedback,
 } from '../lib/eventTypes';
 
 type NavItem = {
@@ -56,7 +33,7 @@ type NavItem = {
   label: string;
   badge?: string;
   children?: NavItem[];
-  signByText?: boolean;
+  docsCombined?: boolean;
 };
 
 // ── Quick-create booking link modal ──────────────────────────────────────────
@@ -356,641 +333,6 @@ function CreateLinkModal({ profile, onClose, onCreated }: CreateLinkModalProps) 
   );
 }
 
-// ── Success banner ────────────────────────────────────────────────────────────
-
-function LinkCreatedBanner({ bookingUrl, onDismiss }: { bookingUrl: string; onDismiss: () => void }) {
-  const [copied, setCopied] = useState(false);
-
-  const copy = useCallback(() => {
-    navigator.clipboard.writeText(bookingUrl).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }, [bookingUrl]);
-
-  if (!bookingUrl) return null;
-
-  return (
-    <div className="mb-6 bg-brand-50 border border-brand-200 rounded-2xl p-5">
-      <div className="flex items-center gap-2 mb-1">
-        <div className="h-5 w-5 bg-brand-600 rounded-full flex items-center justify-center">
-          <Check className="h-3 w-3 text-white" />
-        </div>
-        <h2 className="font-semibold text-brand-900 text-sm">Your meeting link is live!</h2>
-        <button onClick={onDismiss} className="ml-auto p-1 text-brand-400 hover:text-brand-700 transition-colors">
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-      <p className="text-xs text-brand-700 mb-3">Share this link so people can schedule directly on your calendar.</p>
-      <div className="flex items-center gap-2">
-        <div className="flex-1 flex items-center gap-2 bg-white border border-brand-200 rounded-xl px-3 py-2.5 min-w-0">
-          <Link2 className="h-3.5 w-3.5 text-brand-500 shrink-0" />
-          <span className="text-sm text-gray-700 truncate font-mono">{bookingUrl}</span>
-        </div>
-        <button
-          onClick={copy}
-          className={`shrink-0 flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-            copied ? 'bg-brand-600 text-white' : 'bg-white border border-brand-200 text-brand-700 hover:bg-brand-50'
-          }`}
-        >
-          {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-          {copied ? 'Copied!' : 'Copy'}
-        </button>
-        <a
-          href={bookingUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="shrink-0 p-2.5 rounded-xl bg-white border border-brand-200 text-brand-700 hover:bg-brand-50 transition-colors"
-        >
-          <ExternalLink className="h-3.5 w-3.5" />
-        </a>
-      </div>
-    </div>
-  );
-}
-
-// ── Inline slug editor ────────────────────────────────────────────────────────
-
-type SlugStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid';
-
-function SlugEditor({ currentSlug, userId, onSaved }: { currentSlug: string; userId: string; onSaved: (newSlug: string) => void }) {
-  const [draft, setDraft] = useState(currentSlug);
-  const [status, setStatus] = useState<SlugStatus>('idle');
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState('');
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    inputRef.current?.focus();
-    inputRef.current?.select();
-  }, []);
-
-  const sanitize = (val: string) =>
-    val.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/--+/g, '-').replace(/^-|-$/g, '');
-
-  const buildSuggestions = (slug: string): string[] => {
-    const results: string[] = [];
-    for (let i = 1; i <= 3; i++) results.push(`${slug}${i}`);
-    return results.filter((s) => s !== currentSlug);
-  };
-
-  const checkSlug = useCallback(async (slug: string) => {
-    if (!slug || slug === currentSlug) { setStatus('idle'); setSuggestions([]); return; }
-    if (slug.length < 2) { setStatus('invalid'); setSuggestions([]); return; }
-    if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(slug) && slug.length > 1) { setStatus('invalid'); setSuggestions([]); return; }
-
-    setStatus('checking');
-    const { data } = await supabase
-      .from('public_host_profiles')
-      .select('id')
-      .eq('slug', slug)
-      .neq('id', userId)
-      .maybeSingle();
-
-    if (data) {
-      setStatus('taken');
-      setSuggestions(buildSuggestions(slug));
-    } else {
-      setStatus('available');
-      setSuggestions([]);
-    }
-  }, [currentSlug, userId]);
-
-  const handleChange = (val: string) => {
-    const clean = sanitize(val);
-    setDraft(clean);
-    setSaveError('');
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => checkSlug(clean), 400);
-  };
-
-  const handleSave = async () => {
-    if (status !== 'available' || !draft || draft === currentSlug) return;
-    setSaving(true);
-    setSaveError('');
-    const { error } = await supabase.from('profiles').update({ slug: draft }).eq('id', userId);
-    if (error) {
-      setSaveError(error.message || 'Failed to save. Please try again.');
-      setSaving(false);
-      return;
-    }
-    onSaved(draft);
-  };
-
-  const statusIcon = () => {
-    if (status === 'checking') return <Loader2 className="h-4 w-4 animate-spin text-slate-400" />;
-    if (status === 'available') return <Check className="h-4 w-4 text-emerald-500" />;
-    if (status === 'taken' || status === 'invalid') return <AlertCircle className="h-4 w-4 text-red-500" />;
-    return null;
-  };
-
-  const statusText = () => {
-    if (draft === currentSlug || status === 'idle') return null;
-    if (status === 'checking') return <span className="text-xs text-slate-400">Checking…</span>;
-    if (status === 'available') return <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Available!</span>;
-    if (status === 'taken') return <span className="text-xs text-red-600 dark:text-red-400 font-medium">Already taken</span>;
-    if (status === 'invalid') return <span className="text-xs text-red-600 dark:text-red-400 font-medium">Use only letters, numbers, and hyphens (min 2 chars)</span>;
-    return null;
-  };
-
-  const origin = window.location.origin;
-
-  return (
-    <div className="mt-3 p-4 bg-white dark:bg-slate-900 border border-brand-200 dark:border-slate-700 rounded-xl space-y-3">
-      <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Customize your URL</p>
-      <div className="flex items-center gap-2">
-        <div className="flex-1 flex items-center bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-brand-500 transition">
-          <span className="pl-3 pr-1 text-sm text-slate-400 dark:text-slate-500 whitespace-nowrap shrink-0">
-            {origin.replace(/^https?:\/\//, '')}/
-          </span>
-          <input
-            ref={inputRef}
-            type="text"
-            value={draft}
-            onChange={(e) => handleChange(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && status === 'available') handleSave(); }}
-            className="flex-1 min-w-0 py-2.5 pr-3 bg-transparent text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none"
-            placeholder="your-name"
-            spellCheck={false}
-            autoComplete="off"
-          />
-          <div className="pr-3 shrink-0">{statusIcon()}</div>
-        </div>
-        <button
-          onClick={handleSave}
-          disabled={saving || status !== 'available' || draft === currentSlug}
-          className="shrink-0 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-white text-sm font-semibold rounded-lg transition-all flex items-center gap-1.5"
-        >
-          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-          Save
-        </button>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <div>{statusText()}</div>
-      </div>
-
-      {status === 'taken' && suggestions.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-xs text-slate-400 dark:text-slate-500">Try:</span>
-          {suggestions.map((s) => (
-            <button
-              key={s}
-              onClick={() => { setDraft(s); if (debounceRef.current) clearTimeout(debounceRef.current); checkSlug(s); }}
-              className="text-xs px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-brand-50 dark:hover:bg-brand-950/40 text-slate-600 dark:text-slate-300 hover:text-brand-700 dark:hover:text-brand-400 border border-slate-200 dark:border-slate-700 rounded-full transition-colors font-medium"
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {saveError && (
-        <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
-          <AlertCircle className="h-3.5 w-3.5 shrink-0" /> {saveError}
-        </p>
-      )}
-    </div>
-  );
-}
-
-// ── Single-use links (scheduling page) ────────────────────────────────────────
-
-function SingleUseLinksRow() {
-  const { profile, refreshProfile } = useAuth();
-  const [enabled, setEnabled] = useState(false);
-  const [linkExpiry, setLinkExpiry] = useState<LinkExpiryValue>('1_booking');
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (!profile?.id) return;
-    setEnabled(isSingleUseLinksEnabled(profile));
-    setLinkExpiry(resolveLinkExpiry(profile));
-  }, [profile?.id]);
-
-  const persist = useCallback(async (nextEnabled: boolean, nextExpiry: LinkExpiryValue) => {
-    if (!profile?.id) return;
-    setSaving(true);
-    await supabase
-      .from('profiles')
-      .update({
-        single_use_links: nextEnabled,
-        link_expiry: nextEnabled ? nextExpiry : '1_booking',
-        single_use_links_enabled: nextEnabled,
-        default_link_expiry_days: nextEnabled ? linkExpiryToDays(nextExpiry) : null,
-      })
-      .eq('id', profile.id);
-    await refreshProfile();
-    setSaving(false);
-  }, [profile?.id, refreshProfile]);
-
-  const handleToggle = () => {
-    const next = !enabled;
-    setEnabled(next);
-    void persist(next, linkExpiry);
-  };
-
-  const handleExpiryChange = (expiry: LinkExpiryValue) => {
-    setLinkExpiry(expiry);
-    if (enabled) void persist(true, expiry);
-  };
-
-  if (!profile) return null;
-
-  return (
-    <div className="mb-6 bg-white dark:bg-slate-900/50 border border-gray-200 dark:border-slate-800 rounded-2xl px-5 py-4">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <Link2 className="h-4 w-4 text-brand-600 shrink-0" />
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-gray-900 dark:text-white">Single use links</p>
-            <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
-              Hand out a booking link that stops working once it&apos;s been used. Pick how long it stays valid: until <span className="font-medium text-gray-600 dark:text-slate-300">1 booking</span> is made, or for <span className="font-medium text-gray-600 dark:text-slate-300">7</span> or <span className="font-medium text-gray-600 dark:text-slate-300">30 days</span> — whichever comes first.
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={enabled}
-          disabled={saving}
-          onClick={handleToggle}
-          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none disabled:opacity-60 ${enabled ? 'bg-[#5864C6]' : 'bg-gray-300 dark:bg-slate-600'}`}
-        >
-          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${enabled ? 'translate-x-6' : 'translate-x-1'}`} />
-        </button>
-        {enabled && (
-          <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto sm:ml-auto">
-            {LINK_EXPIRY_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                disabled={saving}
-                onClick={() => handleExpiryChange(opt.value)}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all disabled:opacity-60 ${
-                  linkExpiry === opt.value
-                    ? 'bg-[#5864C6] border-[#5864C6] text-white'
-                    : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:border-gray-300'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ── Share panel ───────────────────────────────────────────────────────────────
-
-function buildShareUrl(
-  slug: string,
-  services: Service[],
-  selectedIds: Set<string>,
-  origin = (import.meta.env.VITE_APP_URL ?? 'https://pinonit.com').replace(/\/$/, ''),
-): string {
-  const base = `${origin}/${slug}`;
-  if (services.length === 0 || selectedIds.size === 0 || selectedIds.size >= services.length) {
-    return base;
-  }
-  const tokens = Array.from(selectedIds).map((id) => {
-    const svc = services.find((s) => s.id === id);
-    return svc ? eventTypeSlug(svc) : id;
-  });
-  return `${base}?types=${tokens.join(',')}`;
-}
-
-function SharePanel({
-  slug,
-  userId,
-  onSlugChange,
-  shareUrl,
-  hostName,
-}: {
-  slug: string;
-  userId: string;
-  onSlugChange: (newSlug: string) => void;
-  shareUrl: string;
-  hostName?: string;
-}) {
-  const [currentSlug, setCurrentSlug] = useState(slug);
-  const [showEditor, setShowEditor] = useState(false);
-  const [showQR, setShowQR] = useState(false);
-  const [linkCopiedToast, setLinkCopiedToast] = useState(false);
-  const [shareMenuOpen, setShareMenuOpen] = useState(false);
-  const [shareToast, setShareToast] = useState<string | null>(null);
-  const shareMenuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setCurrentSlug(slug);
-  }, [slug]);
-
-  useEffect(() => {
-    if (!shareMenuOpen) return;
-    const onPointerDown = (e: MouseEvent) => {
-      if (shareMenuRef.current && !shareMenuRef.current.contains(e.target as Node)) {
-        setShareMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', onPointerDown);
-    return () => document.removeEventListener('mousedown', onPointerDown);
-  }, [shareMenuOpen]);
-
-  const showShareToast = useCallback((msg: string) => {
-    setShareToast(msg);
-    setTimeout(() => setShareToast(null), 2500);
-  }, []);
-
-  const copyLink = useCallback(() => {
-    navigator.clipboard.writeText(shareUrl).then(() => {
-      setLinkCopiedToast(true);
-      setTimeout(() => setLinkCopiedToast(false), 2000);
-    });
-  }, [shareUrl]);
-
-  const emailInvite = buildAvailabilityEmailInvite(shareUrl, hostName);
-  const smsInvite = buildAvailabilitySmsInvite(shareUrl, hostName);
-  const onPhone = isMobileShareClient();
-  const hasSystemShare = canUseSystemShare();
-
-  const handleSystemShare = async () => {
-    const result = await shareViaSystemSheet({
-      title: emailInvite.subject,
-      text: smsInvite,
-      url: shareUrl,
-    });
-    setShareMenuOpen(false);
-    if (result === 'shared') showShareToast('Opened share sheet');
-    else if (result === 'unavailable') showShareToast('Share not available — try Email or WhatsApp below');
-  };
-
-  const handleEmail = (provider: 'gmail' | 'outlook' | 'default') => {
-    openEmailComposer(provider, emailInvite.subject, emailInvite.body);
-    setShareMenuOpen(false);
-    if (onPhone || provider === 'default') {
-      showShareToast('Opened email app');
-    } else if (provider === 'outlook') {
-      showShareToast('Opening Outlook…');
-    } else {
-      showShareToast('Opened Gmail compose');
-    }
-  };
-
-  const handleSms = () => {
-    openSmsComposer(smsInvite);
-    setShareMenuOpen(false);
-    showShareToast('Opened Messages');
-  };
-
-  const handleWhatsApp = () => {
-    openWhatsAppComposer(smsInvite);
-    setShareMenuOpen(false);
-    showShareToast('Opened WhatsApp');
-  };
-
-  const copyEmailInvite = async () => {
-    await navigator.clipboard.writeText(`Subject: ${emailInvite.subject}\n\n${emailInvite.body}`);
-    setShareMenuOpen(false);
-    showShareToast('Email message copied');
-  };
-
-  const copySmsInvite = async () => {
-    await navigator.clipboard.writeText(smsInvite);
-    setShareMenuOpen(false);
-    showShareToast('Text message copied');
-  };
-
-  const handleSaved = (newSlug: string) => {
-    setCurrentSlug(newSlug);
-    setShowEditor(false);
-    onSlugChange(newSlug);
-  };
-
-  const menuItemCls =
-    'w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors';
-
-  return (
-    <div className="mb-6 bg-brand-50 border border-brand-200 rounded-2xl p-5">
-      <div className="flex items-center gap-2 mb-1">
-        <Share2 className="h-4 w-4 text-brand-600" />
-        <h2 className="font-semibold text-brand-900 text-sm">Your meeting link</h2>
-      </div>
-      <p className="text-xs text-brand-700 mb-3">Share this link anywhere so people can schedule a meeting with you. This page stays live — it does not expire.</p>
-
-      {/* URL display row */}
-      <div className="flex items-center gap-2 mb-2">
-        <div className="flex-1 flex items-center gap-2 bg-white border border-brand-200 rounded-xl px-3 py-2.5 min-w-0">
-          <Link2 className="h-3.5 w-3.5 text-brand-500 shrink-0" />
-          <span className="text-sm text-gray-700 truncate font-mono">{shareUrl}</span>
-        </div>
-      </div>
-
-      {/* Quick actions — copy link & compact QR */}
-      <div className="flex items-center gap-2 mb-2">
-        <button
-          type="button"
-          onClick={copyLink}
-          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-white border border-brand-200 text-brand-700 hover:bg-brand-50 transition-colors"
-        >
-          <Copy className="h-4 w-4" />
-          Copy Link
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowQR(true)}
-          title="QR code"
-          className="shrink-0 inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold bg-white border border-brand-200 text-brand-600 hover:bg-brand-50 transition-colors"
-        >
-          <QrCode className="h-3.5 w-3.5" />
-          QR
-        </button>
-      </div>
-
-      {linkCopiedToast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 bg-slate-900 text-white text-sm font-medium rounded-full shadow-lg">
-          Link copied!
-        </div>
-      )}
-
-      {shareToast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 bg-slate-900 text-white text-sm font-medium rounded-full shadow-lg">
-          {shareToast}
-        </div>
-      )}
-
-      {/* Primary share actions */}
-      <div className="flex flex-col gap-2 mb-3">
-        <div className="relative" ref={shareMenuRef}>
-          <button
-            type="button"
-            onClick={() => setShareMenuOpen((v) => !v)}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-white border border-brand-200 text-brand-700 hover:bg-brand-50 transition-colors"
-            aria-expanded={shareMenuOpen}
-            aria-haspopup="menu"
-          >
-            <Mail className="h-4 w-4" />
-            Send Availability (Email/SMS/WhatsApp)
-            <ChevronDown className={`h-4 w-4 transition-transform ${shareMenuOpen ? 'rotate-180' : ''}`} />
-          </button>
-          {shareMenuOpen && (
-            <div
-              className="absolute left-0 right-0 top-full mt-2 z-50 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl shadow-lg p-1.5"
-              role="menu"
-            >
-              {hasSystemShare && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => void handleSystemShare()}
-                    className={`${menuItemCls} flex items-center gap-1.5 font-semibold`}
-                  >
-                    <Share2 className="h-3.5 w-3.5" />
-                    {onPhone ? 'Share via phone…' : 'Share via device…'}
-                  </button>
-                  <div className="my-1 border-t border-gray-100 dark:border-slate-800" />
-                </>
-              )}
-              <p className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-slate-500">
-                Send email with
-              </p>
-              {onPhone ? (
-                <button type="button" onClick={() => handleEmail('default')} className={menuItemCls}>
-                  Email app (Mail / Gmail / Outlook)
-                </button>
-              ) : (
-                <>
-                  <button type="button" onClick={() => handleEmail('gmail')} className={menuItemCls}>Gmail</button>
-                  <button type="button" onClick={() => handleEmail('outlook')} className={menuItemCls}>Outlook (app or web)</button>
-                  <button type="button" onClick={() => handleEmail('default')} className={menuItemCls}>Default email app</button>
-                </>
-              )}
-              <button type="button" onClick={copyEmailInvite} className={`${menuItemCls} flex items-center gap-1.5`}>
-                <Copy className="h-3.5 w-3.5" /> Copy email message
-              </button>
-              <div className="my-1 border-t border-gray-100 dark:border-slate-800" />
-              <p className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-slate-500">
-                Send text with
-              </p>
-              <button type="button" onClick={handleSms} className={`${menuItemCls} flex items-center gap-1.5`}>
-                <MessageSquare className="h-3.5 w-3.5" /> SMS
-              </button>
-              <button type="button" onClick={handleWhatsApp} className={`${menuItemCls} flex items-center gap-1.5`}>
-                <MessageSquare className="h-3.5 w-3.5" style={{ color: '#25D366' }} /> WhatsApp
-              </button>
-              <button type="button" onClick={copySmsInvite} className={`${menuItemCls} flex items-center gap-1.5`}>
-                <Copy className="h-3.5 w-3.5" /> Copy text message
-              </button>
-            </div>
-          )}
-        </div>
-        <a
-          href={shareUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-white border border-brand-200 text-brand-700 hover:bg-brand-50 transition-colors"
-        >
-          <ExternalLink className="h-4 w-4" />
-          View as End User
-        </a>
-      </div>
-
-      {showQR && (
-        <QRModal
-          variant="booking"
-          url={shareUrl}
-          title={currentSlug}
-          onClose={() => setShowQR(false)}
-        />
-      )}
-
-      {showEditor && (
-        <SlugEditor
-          currentSlug={currentSlug}
-          userId={userId}
-          onSaved={handleSaved}
-        />
-      )}
-
-    </div>
-  );
-}
-
-function isTodayBooking(iso: string): boolean {
-  const d = new Date(iso);
-  const now = new Date();
-  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
-}
-
-/** Compact “today” strip for phones — desktop home content shows below. */
-function MobileTodayStrip({ bookings }: { bookings: Booking[] }) {
-  const todays = bookings
-    .filter((b) => b.status === 'confirmed' && isTodayBooking(b.start_time))
-    .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
-
-  if (todays.length === 0) {
-    return (
-      <div className="md:hidden mb-4 rounded-xl border border-dashed border-gray-200 dark:border-slate-700 px-3 py-2.5">
-        <p className="text-sm font-semibold text-gray-900 dark:text-white">Today</p>
-        <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">No meetings yet — share your link below.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="md:hidden mb-4 space-y-2">
-      <div className="flex items-baseline justify-between gap-2">
-        <h2 className="text-sm font-bold text-gray-900 dark:text-white">Today</h2>
-        <span className="text-xs text-gray-500 dark:text-slate-400">
-          {todays.length} meeting{todays.length !== 1 ? 's' : ''}
-        </span>
-      </div>
-      <div className="space-y-2">
-        {todays.slice(0, 4).map((b) => {
-          const time = new Date(b.start_time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-          const phone = (b.guest_phone || '').trim();
-          return (
-            <div
-              key={b.id}
-              className="flex items-center gap-2 rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2"
-            >
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{b.guest_name}</p>
-                <p className="text-[11px] text-gray-500 dark:text-slate-400 truncate">
-                  {time}
-                  {b.services?.name ? ` · ${b.services.name}` : ''}
-                </p>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                {phone ? (
-                  <>
-                    <a href={`tel:${phone}`} className="h-9 w-9 inline-flex items-center justify-center rounded-lg bg-brand-50 text-brand-700" aria-label="Call">
-                      <Phone className="h-3.5 w-3.5" />
-                    </a>
-                    <a href={`sms:${phone}`} className="h-9 w-9 inline-flex items-center justify-center rounded-lg bg-brand-50 text-brand-700" aria-label="Text">
-                      <MessageSquare className="h-3.5 w-3.5" />
-                    </a>
-                  </>
-                ) : null}
-                {b.meet_link ? (
-                  <a href={b.meet_link} target="_blank" rel="noreferrer" className="h-9 w-9 inline-flex items-center justify-center rounded-lg bg-brand-50 text-brand-700" aria-label="Join">
-                    <Video className="h-3.5 w-3.5" />
-                  </a>
-                ) : null}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-
 export function Dashboard() {
   const { user, profile, subscription, subscriptionLoaded, signOut, refreshProfile } = useAuth();
   const displayName = profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || '';
@@ -1003,7 +345,6 @@ export function Dashboard() {
   const [calendarCount, setCalendarCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createdUrl, setCreatedUrl] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [moreToolsOpen, setMoreToolsOpen] = useState(() =>
     isMoreToolsSectionActive(location.pathname, location.search, location.hash),
@@ -1051,10 +392,6 @@ export function Dashboard() {
   });
   const [wizardSession, setWizardSession] = useState(0);
   const [trialToast, setTrialToast] = useState<{ message: string } | null>(null);
-  const [serviceSearch, setServiceSearch] = useState('');
-  const [serviceQrModal, setServiceQrModal] = useState<{ url: string; title: string } | null>(null);
-  const [selectedServiceIds, setSelectedServiceIds] = useState<Set<string>>(new Set());
-  const serviceSelectionInitialized = useRef(false);
   const examplePaidNormalized = useRef(false);
 
   // Re-fetch profile on mount and when returning to dashboard (e.g. after saving slug in Settings)
@@ -1287,13 +624,6 @@ export function Dashboard() {
   }, [profile]);
 
   useEffect(() => {
-    if (serviceSelectionInitialized.current) return;
-    if (services.length === 0) return;
-    serviceSelectionInitialized.current = true;
-    setSelectedServiceIds(defaultSelectedServiceIds(services));
-  }, [services]);
-
-  useEffect(() => {
     if (!profile || loading || examplePaidNormalized.current) return;
     const toFix = services.filter(
       (s) => isExamplePaidConsultation(s) && (s.is_active || s.name !== EXAMPLE_PAID_CONSULTATION_NAME),
@@ -1319,11 +649,6 @@ export function Dashboard() {
         }
       }
       setServices(next);
-      setSelectedServiceIds((prev) => {
-        const n = new Set(prev);
-        for (const svc of toFix) n.delete(svc.id);
-        return n;
-      });
     })();
   }, [profile, loading, services]);
 
@@ -1371,38 +696,6 @@ export function Dashboard() {
     refreshProfile,
   ]);
 
-  const meetingServices = withoutPinOnItDemoFeedback(services);
-  const bookableServices = bookableEventTypes(meetingServices);
-  const effectiveSlug = (liveSlug || profile?.slug || '').trim();
-  const bookingSlug = effectiveSlug;
-  const shareUrl = bookingSlug ? buildShareUrl(bookingSlug, bookableServices, selectedServiceIds) : '';
-
-  const toggleServiceSelection = (serviceId: string) => {
-    serviceSelectionInitialized.current = true;
-    setSelectedServiceIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(serviceId)) {
-        if (next.size <= 1) return prev;
-        next.delete(serviceId);
-      } else {
-        next.add(serviceId);
-      }
-      return next;
-    });
-  };
-
-  const removeExampleService = async (svc: Service) => {
-    if (!profile) return;
-    const { error } = await supabase.from('services').delete().eq('id', svc.id).eq('host_id', profile.id);
-    if (error) return;
-    setServices((prev) => prev.filter((s) => s.id !== svc.id));
-    setSelectedServiceIds((prev) => {
-      const next = new Set(prev);
-      next.delete(svc.id);
-      return next;
-    });
-  };
-
   // Seed default availability (Mon-Fri 9–12 + 1–5, lunch off) for users with none
   useEffect(() => {
     if (!profile || loading) return;
@@ -1419,14 +712,9 @@ export function Dashboard() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id, loading]);
 
-  const upcomingBookings = bookings.filter(
-    (b) => b.status === 'confirmed' && new Date(b.start_time) >= new Date()
-  );
-
-  const handleCreated = (service: Service, bookingUrl: string) => {
+  const handleCreated = (service: Service, _bookingUrl: string) => {
     setServices((prev) => [...prev, service]);
     setShowCreateModal(false);
-    setCreatedUrl(bookingUrl);
   };
 
   const uiMode = profile?.ui_mode === 'advanced' ? 'advanced' : 'simple';
@@ -1437,7 +725,7 @@ export function Dashboard() {
       icon: item.icon,
       label: item.label,
       badge: item.badge,
-      signByText: item.signByText,
+      docsCombined: item.docsCombined,
     })),
     ...(moreToolsNav.length
       ? [{
@@ -1449,7 +737,7 @@ export function Dashboard() {
             icon: item.icon,
             label: item.label,
             badge: item.badge,
-            signByText: item.signByText,
+            docsCombined: item.docsCombined,
           })),
         } satisfies NavItem]
       : []),
@@ -1479,7 +767,7 @@ export function Dashboard() {
   const navLinkClass = (item: NavItem) => {
     const active = isActive(item);
     const padding = active ? 'pl-[calc(0.75rem-3px)] pr-3' : 'px-3';
-    const highlight = item.signByText
+    const highlight = item.docsCombined
       ? active
         ? 'bg-violet-50 dark:bg-violet-500/10 text-violet-800 dark:text-violet-300 font-semibold border-l-[3px] border-violet-500 rounded-l-none'
         : 'text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-500/10'
@@ -1487,6 +775,18 @@ export function Dashboard() {
         ? 'bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400 font-semibold border-l-[3px] border-brand-600 dark:border-brand-500 rounded-l-none'
         : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-900';
     return `flex items-center gap-3 py-2.5 rounded-lg text-sm transition-colors ${padding} ${highlight}`;
+  };
+
+  const renderNavLabel = (item: NavItem, nested?: boolean) => {
+    if (item.docsCombined) {
+      return (
+        <span className={`${nested ? 'truncate' : ''} leading-tight`}>
+          Send Docs +{' '}
+          <span className="font-sign-by-text text-[1.15rem] leading-none">Sign-by-Text</span>
+        </span>
+      );
+    }
+    return <span className={nested ? 'truncate' : ''}>{item.label}</span>;
   };
 
   const renderNavLink = (
@@ -1505,13 +805,7 @@ export function Dashboard() {
       {item.icon ? <item.icon className="h-[18px] w-[18px] shrink-0" /> : null}
       {!opts?.collapsed && (
         <>
-          <span
-            className={`${opts?.nested ? 'truncate' : ''} ${
-              item.signByText ? 'font-sign-by-text text-[1.15rem] leading-none' : ''
-            }`}
-          >
-            {item.label}
-          </span>
+          {renderNavLabel(item, opts?.nested)}
           {item.badge ? (
             <span className="ml-auto shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400">
               {item.badge}

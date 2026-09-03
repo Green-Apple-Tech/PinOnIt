@@ -198,7 +198,7 @@ export function OnboardingBot() {
     goNext();
   };
 
-  if (isDismissed()) return null;
+  if (isDismissed() || isCompleted()) return null;
 
   const showBubble = !visible || minimized;
   const showBadge = !completed && !visible;

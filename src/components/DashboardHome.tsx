@@ -7,7 +7,12 @@ import {
   ClipboardSignature,
   Clock,
   FileText,
+  Mail,
+  QrCode,
+  ShoppingBag,
   Sparkles,
+  Users,
+  type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
@@ -47,30 +52,70 @@ function formatShort(iso: string) {
   }).format(new Date(iso));
 }
 
-const TOOL_TILES = [
+type DashTool = {
+  to: string;
+  title: string;
+  blurb: string;
+  icon: LucideIcon;
+  accent: string;
+  docsCombined?: boolean;
+};
+
+const PRIMARY_TOOLS: DashTool[] = [
   {
     to: '/dashboard/appointments',
-    title: 'Book Clients',
+    title: 'Bookings',
     blurb: 'Calendar, availability, and new meetings.',
     icon: CalendarDays,
     accent: 'bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300',
   },
   {
-    to: documentsNewPath('sign'),
-    title: 'Sign-by-Text',
-    blurb: 'NDAs, waivers, addendums — verify & sign by SMS.',
+    to: '/dashboard/documents',
+    title: 'Send Docs + Sign-by-Text',
+    blurb: 'Quotes, invoices, NDAs, waivers — verify & sign by SMS when you need it.',
     icon: ClipboardSignature,
     accent: 'bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300',
-    signByText: true,
+    docsCombined: true,
   },
   {
-    to: documentsNewPath('send'),
-    title: 'Send Docs',
-    blurb: 'Quotes, invoices, receipts, and everyday docs.',
-    icon: FileText,
+    to: '/dashboard/reminders',
+    title: 'NeverMiss Reminders',
+    blurb: 'Email, SMS, and voice so nobody misses a meeting.',
+    icon: Bell,
     accent: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
   },
-] as const;
+];
+
+const OTHER_TOOLS: DashTool[] = [
+  {
+    to: '/dashboard/group-scheduling',
+    title: 'Group Scheduling',
+    blurb: 'Meeting polls & SMS coordination.',
+    icon: Users,
+    accent: 'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-300',
+  },
+  {
+    to: '/dashboard/paid-booking',
+    title: 'Paid Booking',
+    blurb: 'Collect payment at booking.',
+    icon: ShoppingBag,
+    accent: 'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-300',
+  },
+  {
+    to: '/dashboard/qr-code',
+    title: 'QR Codes',
+    blurb: 'Codes for cards, flyers, signs.',
+    icon: QrCode,
+    accent: 'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-300',
+  },
+  {
+    to: '/dashboard/signature',
+    title: 'Signature Creator',
+    blurb: 'Email signature with booking link.',
+    icon: Mail,
+    accent: 'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-300',
+  },
+];
 
 export function DashboardHome({ hostId, bookings, onOpenWizard, showWizardButton }: Props) {
   const [docs, setDocs] = useState<SmbDocument[]>([]);
@@ -145,7 +190,7 @@ export function DashboardHome({ hostId, bookings, onOpenWizard, showWizardButton
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
-            What’s happening across booking, Sign-by-Text, docs, and reminders.
+            What’s happening across booking, docs, and reminders.
           </p>
         </div>
         {showWizardButton && onOpenWizard && (
@@ -161,33 +206,64 @@ export function DashboardHome({ hostId, bookings, onOpenWizard, showWizardButton
         )}
       </div>
 
-      {/* Three key tools */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-6 md:mb-8">
-        {TOOL_TILES.map((tile) => {
-          const Icon = tile.icon;
-          return (
-            <Link
-              key={tile.to}
-              to={tile.to}
-              className="group rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-5 min-h-[7.5rem] shadow-sm hover:border-brand-300 dark:hover:border-brand-500/40 hover:shadow-md transition-all flex flex-col"
-            >
-              <div className={`h-10 w-10 rounded-xl flex items-center justify-center mb-3 ${tile.accent}`}>
-                <Icon className="h-5 w-5" />
-              </div>
-              <p
-                className={`text-lg font-bold text-gray-900 dark:text-white ${
-                  'signByText' in tile && tile.signByText ? 'font-sign-by-text text-xl text-brand-700 dark:text-brand-300' : ''
-                }`}
+      {/* All tools: 3 primary large, others compact */}
+      <div className="mb-6 md:mb-8 space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+          {PRIMARY_TOOLS.map((tile) => {
+            const Icon = tile.icon;
+            return (
+              <Link
+                key={tile.to}
+                to={tile.to}
+                className="group rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-5 min-h-[7.5rem] shadow-sm hover:border-brand-300 dark:hover:border-brand-500/40 hover:shadow-md transition-all flex flex-col"
               >
-                {tile.title}
-              </p>
-              <p className="mt-1 text-sm text-gray-500 dark:text-slate-400 flex-1">{tile.blurb}</p>
-              <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-brand-600 dark:text-brand-400 group-hover:gap-1.5 transition-all">
-                Open <ArrowRight className="h-3.5 w-3.5" />
-              </span>
-            </Link>
-          );
-        })}
+                <div className={`h-10 w-10 rounded-xl flex items-center justify-center mb-3 ${tile.accent}`}>
+                  <Icon className="h-5 w-5" />
+                </div>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">
+                  {tile.docsCombined ? (
+                    <>
+                      Send Docs +{' '}
+                      <span className="font-sign-by-text text-xl text-violet-700 dark:text-violet-300">
+                        Sign-by-Text
+                      </span>
+                    </>
+                  ) : (
+                    tile.title
+                  )}
+                </p>
+                <p className="mt-1 text-sm text-gray-500 dark:text-slate-400 flex-1">{tile.blurb}</p>
+                <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-brand-600 dark:text-brand-400 group-hover:gap-1.5 transition-all">
+                  Open <ArrowRight className="h-3.5 w-3.5" />
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {OTHER_TOOLS.map((tile) => {
+            const Icon = tile.icon;
+            return (
+              <Link
+                key={tile.to}
+                to={tile.to}
+                className="group flex items-center gap-2.5 rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2.5 hover:border-brand-300 dark:hover:border-brand-500/40 hover:shadow-sm transition-all"
+              >
+                <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${tile.accent}`}>
+                  <Icon className="h-3.5 w-3.5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold text-gray-900 dark:text-white truncate leading-snug">
+                    {tile.title}
+                  </p>
+                  <p className="text-[11px] text-gray-500 dark:text-slate-400 truncate leading-snug">
+                    {tile.blurb}
+                  </p>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
       </div>
 
       {/* Quick usage summary */}
@@ -228,9 +304,8 @@ export function DashboardHome({ hostId, bookings, onOpenWizard, showWizardButton
           title="Waiting for signature"
           icon={Clock}
           empty="Nothing waiting — nice."
-          linkTo={documentsNewPath('sign')}
-          linkLabel="Sign-by-Text"
-          linkClassName="font-sign-by-text"
+          linkTo={documentsNewPath()}
+          linkLabel="Open docs"
           rows={waitingSignature.map((d) => ({
             id: d.id,
             primary: d.recipient_name,

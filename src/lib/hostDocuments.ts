@@ -8,6 +8,7 @@ export const HOST_EDITABLE_TEMPLATE_TYPES: SmbDocumentType[] = [
   'quote',
   'invoice',
   'receipt',
+  'quick_addendum',
 ];
 
 export type HostDocumentTemplate = {
@@ -28,7 +29,3 @@ export type HostDocumentFile = {
   file_size_bytes: number;
   created_at: string;
 };
-
-export function isHostEditableTemplateType(type: string): type is SmbDocumentType {
-  return HOST_EDITABLE_TEMPLATE_TYPES.includes(type as SmbDocumentType);
-}

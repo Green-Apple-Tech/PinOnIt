@@ -67,11 +67,10 @@ describe('buildSidebarNav', () => {
     expect(primary.map((i) => i.label)).toEqual([
       'Dashboard',
       'Booking',
-      'Sign-by-Text',
-      'Send Docs',
+      'Send Docs + Sign-by-Text',
       'NeverMiss Reminders',
     ]);
-    expect(primary.some((i) => i.signByText)).toBe(true);
+    expect(primary.some((i) => i.docsCombined)).toBe(true);
     expect(moreTools.map((i) => i.label)).toEqual([
       'Group Scheduling',
       'Paid Booking',
@@ -91,8 +90,7 @@ describe('buildSidebarNav', () => {
   it('flattens every tool in advanced mode', () => {
     const { primary, moreTools, settings } = buildSidebarNav('advanced');
     expect(moreTools).toEqual([]);
-    expect(primary.some((i) => i.label === 'Sign-by-Text')).toBe(true);
-    expect(primary.some((i) => i.label === 'Send Docs')).toBe(true);
+    expect(primary.some((i) => i.label === 'Send Docs + Sign-by-Text')).toBe(true);
     expect(primary.some((i) => i.label === 'Paid Booking')).toBe(true);
     expect(primary.some((i) => i.label === 'QR Codes')).toBe(true);
     expect(settings.label).toBe('Settings');
