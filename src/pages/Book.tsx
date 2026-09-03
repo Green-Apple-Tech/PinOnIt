@@ -270,6 +270,31 @@ function titleIndicatesBlocking(title: string): boolean {
   return BLOCKING_TITLE_KEYWORDS.some((kw) => t.includes(kw));
 }
 
+function busyPeriodsFromEvents(
+  rawEvents: CalendarEvent[],
+  settings: CalendarConflictSettings,
+): BusyPeriod[] {
+  const busyPeriods: BusyPeriod[] = [];
+  for (const e of rawEvents) {
+    if (!shouldBlockCalendarEvent(e, settings)) continue;
+    if (e.all_day) {
+      const startDay = new Date(e.start_at);
+      startDay.setUTCHours(0, 0, 0, 0);
+      const endDay = new Date(e.end_at);
+      endDay.setUTCHours(23, 59, 59, 999);
+      busyPeriods.push({ start: startDay, end: endDay });
+    } else {
+      busyPeriods.push({ start: new Date(e.start_at), end: new Date(e.end_at) });
+    }
+  }
+  return busyPeriods;
+}
+
+type PublicBusyPayload = {
+  bookings?: Pick<Booking, 'id' | 'start_time' | 'end_time' | 'status'>[];
+  events?: CalendarEvent[];
+};
+
 /**
  * Decides whether a synced calendar event should block a booking slot.
  * Returns true = block this time, false = ignore it.
@@ -708,34 +733,20 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
     setLoading(true);
     (async () => {
       const { from, to } = publicBusyWindow();
-      const [availRes, bookRes, ovRes, calEvtRes] = await Promise.all([
+      const [availRes, busyRes, ovRes] = await Promise.all([
         supabase.from('availability').select('*').eq('host_id', hostId).eq('is_active', true),
-        supabase.from('bookings').select('id,start_time,end_time,status').eq('host_id', hostId).in('status', ['confirmed']).gte('start_time', from).lte('start_time', to),
+        supabase.rpc('get_public_busy_times', { p_host_id: hostId, p_from: from, p_to: to }),
         supabase.from('date_overrides').select('*').eq('host_id', hostId),
-        supabase.from('calendar_events').select('start_at,end_at,all_day,show_status,transparency,attendee_self_status,is_birthday_cal,is_holiday_cal,title').eq('host_id', hostId).gte('start_at', from).lte('start_at', to),
       ]);
+      const busy = (busyRes.data ?? {}) as PublicBusyPayload;
       setAvailability(availRes.data ?? []);
-      setBookings(((bookRes.data ?? []) as Booking[]).filter((b) => b.id !== originalId));
+      setBookings(((busy.bookings ?? []) as Booking[]).filter((b) => b.id !== originalId));
       setDateOverrides((ovRes.data as DateOverride[]) ?? []);
       const conflictSettings: CalendarConflictSettings = {
         ...DEFAULT_CALENDAR_CONFLICT_SETTINGS,
         ...(rescheduleSession.host.calendar_conflict_settings ?? {}),
       };
-      const rawEvents = (calEvtRes.data ?? []) as CalendarEvent[];
-      const busyPeriods: BusyPeriod[] = [];
-      for (const e of rawEvents) {
-        if (!shouldBlockCalendarEvent(e, conflictSettings)) continue;
-        if (e.all_day) {
-          const startDay = new Date(e.start_at);
-          startDay.setUTCHours(0, 0, 0, 0);
-          const endDay = new Date(e.end_at);
-          endDay.setUTCHours(23, 59, 59, 999);
-          busyPeriods.push({ start: startDay, end: endDay });
-        } else {
-          busyPeriods.push({ start: new Date(e.start_at), end: new Date(e.end_at) });
-        }
-      }
-      setCalendarBusyTimes(busyPeriods);
+      setCalendarBusyTimes(busyPeriodsFromEvents(busy.events ?? [], conflictSettings));
       setLoading(false);
     })();
   }, [rescheduleSession]);
@@ -790,15 +801,15 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
       }
 
       const { from, to } = publicBusyWindow();
-      const [svcRes, availRes, bookRes, ovRes, calEvtRes] = await Promise.all([
+      const [svcRes, availRes, busyRes, ovRes] = await Promise.all([
         serviceId
           ? supabase.from('services').select(SERVICE_SELECT).eq('id', serviceId).eq('is_active', true)
           : supabase.from('services').select(SERVICE_SELECT).eq('host_id', hostId).eq('is_active', true),
         supabase.from('availability').select('*').eq('host_id', hostId).eq('is_active', true),
-        supabase.from('bookings').select('id,start_time,end_time,status').eq('host_id', hostId).in('status', ['confirmed']).gte('start_time', from).lte('start_time', to),
+        supabase.rpc('get_public_busy_times', { p_host_id: hostId, p_from: from, p_to: to }),
         supabase.from('date_overrides').select('*').eq('host_id', hostId),
-        supabase.from('calendar_events').select('start_at,end_at,all_day,show_status,transparency,attendee_self_status,is_birthday_cal,is_holiday_cal,title').eq('host_id', hostId).gte('start_at', from).lte('start_at', to),
       ]);
+      const busy = (busyRes.data ?? {}) as PublicBusyPayload;
 
       const allServices = (svcRes.data as Service[]) ?? [];
       const publicServices = token
@@ -824,33 +835,14 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
       setServices(filteredServices);
 
       setAvailability(availRes.data ?? []);
-      setBookings((bookRes.data ?? []) as Booking[]);
+      setBookings((busy.bookings ?? []) as Booking[]);
       setDateOverrides((ovRes.data as DateOverride[]) ?? []);
 
-      // Resolve the host's calendar conflict settings (with defaults)
       const conflictSettings: CalendarConflictSettings = {
         ...DEFAULT_CALENDAR_CONFLICT_SETTINGS,
         ...(loadedProfile?.calendar_conflict_settings ?? {}),
       };
-
-      const rawEvents = (calEvtRes.data ?? []) as CalendarEvent[];
-      const busyPeriods: BusyPeriod[] = [];
-      for (const e of rawEvents) {
-        if (!shouldBlockCalendarEvent(e, conflictSettings)) continue;
-        if (e.all_day) {
-          // All-day events span entire calendar days — convert to UTC day boundaries
-          const startDay = new Date(e.start_at);
-          startDay.setUTCHours(0, 0, 0, 0);
-          const endDay = new Date(e.end_at);
-          // Google/iCal end date for all-day is exclusive (next day); Outlook is inclusive midnight
-          // We use the stored end_at as-is since it already covers the full day
-          endDay.setUTCHours(23, 59, 59, 999);
-          busyPeriods.push({ start: startDay, end: endDay });
-        } else {
-          busyPeriods.push({ start: new Date(e.start_at), end: new Date(e.end_at) });
-        }
-      }
-      setCalendarBusyTimes(busyPeriods);
+      setCalendarBusyTimes(busyPeriodsFromEvents(busy.events ?? [], conflictSettings));
       setLoading(false);
     })();
   }, [slug, token, searchParams]);

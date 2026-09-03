@@ -16,13 +16,12 @@ export function BookingActionPage() {
   useEffect(() => {
     if (!bookingId || !actionToken) return;
     supabase
-      .from('bookings')
-      .select('*, services(name, color, duration_minutes), profiles(full_name, slug)')
-      .eq('id', bookingId)
-      .eq('action_token', actionToken)
-      .maybeSingle()
+      .rpc('get_booking_for_guest_action', {
+        p_booking_id: bookingId,
+        p_action_token: actionToken,
+      })
       .then(({ data }) => {
-        setBooking(data as Booking | null);
+        setBooking((data as Booking | null) ?? null);
         setLoading(false);
       });
   }, [bookingId, actionToken]);

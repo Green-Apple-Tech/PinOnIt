@@ -218,26 +218,24 @@ export function PollVotePage() {
         .eq('poll_id', pollId)
         .order('start_time');
 
-      const { data: votes } = slotRows && slotRows.length > 0
-        ? await supabase.from('meeting_poll_votes').select('*').in('slot_id', slotRows.map(s => s.id))
-        : { data: [] };
-
-      const { data: responses } = await supabase
-        .from('meeting_poll_responses')
-        .select('id')
-        .eq('poll_id', pollId);
+      const { data: tally } = await supabase.rpc('get_meeting_poll_tally', { p_poll_id: pollId });
+      const tallyRow = (tally ?? {}) as {
+        total_responses?: number;
+        votes?: { slot_id: string; availability: string }[];
+      };
+      const votes = tallyRow.votes ?? [];
 
       const slots: SlotWithVotes[] = (slotRows ?? []).map(s => ({
         ...s,
-        yesCount: (votes ?? []).filter(v => v.slot_id === s.id && v.availability === 'yes').length,
-        maybeCount: (votes ?? []).filter(v => v.slot_id === s.id && v.availability === 'maybe').length,
-        totalVotes: (votes ?? []).filter(v => v.slot_id === s.id).length,
+        yesCount: votes.filter(v => v.slot_id === s.id && v.availability === 'yes').length,
+        maybeCount: votes.filter(v => v.slot_id === s.id && v.availability === 'maybe').length,
+        totalVotes: votes.filter(v => v.slot_id === s.id).length,
       }));
 
       setPoll({
         ...pollRow,
         slots,
-        totalResponses: (responses ?? []).length,
+        totalResponses: tallyRow.total_responses ?? 0,
         hostName: pollRow.profiles?.full_name ?? null,
       });
       setLoading(false);
@@ -253,20 +251,18 @@ export function PollVotePage() {
     setSubmitting(true);
     setSubmitError('');
 
-    const { data: response, error: rErr } = await supabase
-      .from('meeting_poll_responses')
-      .insert({ poll_id: poll.id, invitee_name: name.trim(), invitee_email: email.trim(), token: crypto.randomUUID() })
-      .select()
-      .maybeSingle();
+    const { error: rErr } = await supabase.rpc('submit_meeting_poll_response', {
+      p_poll_id: poll.id,
+      p_name: name.trim(),
+      p_email: email.trim(),
+      p_slot_ids: Array.from(selected),
+    });
 
-    if (rErr || !response) { setSubmitError(rErr?.message ?? 'Failed to submit.'); setSubmitting(false); return; }
-
-    const votes = Array.from(selected).map(slotId => ({
-      response_id: response.id,
-      slot_id: slotId,
-      availability: 'yes' as const,
-    }));
-    await supabase.from('meeting_poll_votes').insert(votes);
+    if (rErr) {
+      setSubmitError(/poll_closed/i.test(rErr.message) ? 'This poll is no longer open.' : 'Failed to submit.');
+      setSubmitting(false);
+      return;
+    }
 
     setDone(true);
     setSubmitting(false);
