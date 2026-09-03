@@ -1,6 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { appendSmsOptOut } from '../_shared/sms-opt-out.ts';
 import { normalizePhoneE164 } from '../_shared/phone.ts';
+import { expireStaleTrials, hostPlanIsActive } from '../_shared/hostPlan.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -62,6 +63,17 @@ Deno.serve(async (req: Request) => {
   if (!token) return json({ ok: false, error: 'token is required' }, 400);
 
   const admin = createClient(supabaseUrl, serviceRoleKey);
+  const { data: doc } = await admin
+    .from('documents')
+    .select('sender_id')
+    .eq('token', token)
+    .maybeSingle();
+  if (!doc?.sender_id) return json({ ok: false, error: 'Document not found' }, 404);
+  await expireStaleTrials(admin);
+  if (!(await hostPlanIsActive(admin, doc.sender_id as string))) {
+    return json({ ok: false, error: 'Host is not accepting document verification right now.' }, 403);
+  }
+
   const { data, error } = await admin.rpc('issue_document_otp', {
     p_token: token,
     p_force: Boolean(payload.force),

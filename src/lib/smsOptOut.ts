@@ -1,5 +1,6 @@
 /** TCPA / A2P opt-out footer for SMS and WhatsApp (matches edge functions). */
 export const SMS_OPT_OUT_FOOTER = 'Reply STOP to opt out.';
+export const SMS_REPLY_FOOTER = 'Reply 1 to cancel or 2 to reschedule.';
 
 export function appendSmsOptOut(body: string): string {
   const trimmed = body.trim();

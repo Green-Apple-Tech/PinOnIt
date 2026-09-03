@@ -9,10 +9,9 @@ export const PRO_PRICE_PER_MO = '$8.99/mo';
 export const REFERRALS_TO_COVER_PLAN = 9;
 
 /**
- * Stripe Price ID for Pro monthly.
- * Create an $8.99/mo price in Stripe, then set VITE_STRIPE_PRO_PRICE_ID (app)
- * and STRIPE_PRICE_ID (edge functions). Until then checkout still uses the
- * legacy $6 price id so deploys don't break — update ASAP.
+ * Stripe Price ID for Pro monthly ($8.99).
+ * Set VITE_STRIPE_PRO_PRICE_ID (app) and STRIPE_PRICE_ID (edge functions)
+ * to the live $8.99/mo price. Fallback is the current checkout price id.
  */
 export const STRIPE_PRO_PRICE_ID =
   (import.meta.env.VITE_STRIPE_PRO_PRICE_ID as string | undefined)?.trim() ||

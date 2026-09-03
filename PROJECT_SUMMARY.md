@@ -242,9 +242,9 @@ Do **not** rely on Bolt chat pull for routine deploys. Private repo is OK. See [
 - Global Terms & Conditions in Settings → Booking page (`global_require_terms`, `global_terms_text`); off by default; per-event override in event editor Policy tab
 - UI theme: interactive elements use indigo (`indigo-600` / `#4F46E5`); green reserved for success toasts, Done checkmarks, connected badges
 - Email Signature creator (live preview, Editor/Instructions tabs, all fields expanded)
-- Stripe subscription billing ($6/mo Pro plan)
+- Stripe subscription billing ($8.99/mo Pro plan)
 - 60-day free trial for Calendly switchers (CC required)
-- 14-day free trial for new users (CC required)
+- 14-day full-access trial for new users (no card)
 - Referral system with earnings ($1/mo per referral)
 - Referral leaderboard at /leaderboard
 - PayPal payment for paid bookings

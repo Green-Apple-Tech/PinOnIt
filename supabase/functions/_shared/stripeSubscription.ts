@@ -4,7 +4,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 export type AdminClient = ReturnType<typeof createClient>;
 
 export const PLAN_MAP: Record<string, 'pro'> = {
-  price_1TZHhhIVv38UYFOXMXT2EV8v: 'pro', // legacy $6 — keep recognizing existing subs
+  price_1TZHhhIVv38UYFOXMXT2EV8v: 'pro', // current Pro checkout price id
   price_pro_monthly: 'pro',
 };
 

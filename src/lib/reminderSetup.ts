@@ -1,7 +1,7 @@
-import { SMS_OPT_OUT_FOOTER } from './smsOptOut';
+import { SMS_OPT_OUT_FOOTER, SMS_REPLY_FOOTER } from './smsOptOut';
 
 const CONFIRMATION_SMS_BODY =
-  `Hi {{guest_name}}, your {{service_name}} with {{host_name}} is confirmed for {{date}} at {{time}}. {{location}} ${SMS_OPT_OUT_FOOTER}`;
+  `Hi {{guest_name}}, your {{service_name}} with {{host_name}} is confirmed for {{date}} at {{time}}. {{location}} ${SMS_REPLY_FOOTER} ${SMS_OPT_OUT_FOOTER}`;
 
 /** Turn on booking-confirmation SMS (template + send rule). Safe to call twice. */
 export async function enableConfirmationSms(hostId: string): Promise<void> {

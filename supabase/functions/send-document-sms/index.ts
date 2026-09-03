@@ -2,6 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { appendSmsOptOut } from '../_shared/sms-opt-out.ts';
 import { hostIdFromJwt, jsonAuthError } from '../_shared/callerAuth.ts';
 import { normalizePhoneE164 } from '../_shared/phone.ts';
+import { expireStaleTrials, hostPlanIsActive } from '../_shared/hostPlan.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -58,6 +59,14 @@ Deno.serve(async (req: Request) => {
 
   const hostId = await hostIdFromJwt(req, supabase);
   if (!hostId) return jsonAuthError(corsHeaders);
+
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  if (!serviceRoleKey) return json({ ok: false, error: 'Server is not configured' }, 500);
+  const admin = createClient(supabaseUrl, serviceRoleKey);
+  await expireStaleTrials(admin);
+  if (!(await hostPlanIsActive(admin, hostId))) {
+    return json({ ok: false, error: 'Reactivate Pro to send documents.' }, 403);
+  }
 
   let payload: { token?: string; signingUrl?: string };
   try {

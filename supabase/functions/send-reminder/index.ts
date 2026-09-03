@@ -1,5 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
-import { appendSmsOptOut } from '../_shared/sms-opt-out.ts';
+import { appendSmsOptOut, appendSmsGuestFooters } from '../_shared/sms-opt-out.ts';
 import { NOREPLY_FROM, SUPPORT_EMAIL } from '../_shared/contact-email.ts';
 import { bookingAllowsGuestSms, bookingAllowsGuestWhatsapp, hostAllowsSms, hostAllowsWhatsapp } from '../_shared/sms-compliance.ts';
 import { isServiceRoleRequest, jsonAuthError, hostIdFromJwt } from '../_shared/callerAuth.ts';
@@ -186,7 +186,11 @@ async function sendTwilioVoice(to: string, twiml: string): Promise<{ ok: boolean
   }
 }
 
-async function sendTwilioSms(to: string, body: string): Promise<{ ok: boolean; error?: string }> {
+async function sendTwilioSms(
+  to: string,
+  body: string,
+  kind: 'guest' | 'other' = 'other',
+): Promise<{ ok: boolean; error?: string }> {
   const twilioSid = Deno.env.get('TWILIO_ACCOUNT_SID');
   const twilioToken = Deno.env.get('TWILIO_AUTH_TOKEN');
   const messagingServiceSid = Deno.env.get('TWILIO_MESSAGING_SERVICE_SID');
@@ -205,7 +209,11 @@ async function sendTwilioSms(to: string, body: string): Promise<{ ok: boolean; e
           'Authorization': 'Basic ' + btoa(`${twilioSid}:${twilioToken}`),
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: new URLSearchParams({ MessagingServiceSid: messagingServiceSid, To: to, Body: appendSmsOptOut(body) }),
+        body: new URLSearchParams({
+          MessagingServiceSid: messagingServiceSid,
+          To: to,
+          Body: kind === 'guest' ? appendSmsGuestFooters(body) : appendSmsOptOut(body),
+        }),
       }
     );
     if (!res.ok) {
@@ -989,7 +997,7 @@ async function deliverChannel(opts: {
       ? (booking.guest_phone as string)
       : null;
     if (!to) return { ok: false, to: null, error: 'no SMS recipient' };
-    const result = await sendTwilioSms(to, msgBody);
+    const result = await sendTwilioSms(to, msgBody, 'guest');
     return { ok: result.ok, to, error: result.error };
   }
   if (channel === 'whatsapp') {
@@ -1315,7 +1323,7 @@ Deno.serve(async (req: Request) => {
             ? guestPhone
             : null;
           if (recipient) {
-            const result = await sendTwilioSms(recipient, withLink);
+            const result = await sendTwilioSms(recipient, withLink, 'guest');
             status = result.ok ? 'sent' : 'failed';
             errorText = result.error ?? '';
             if (result.ok) sent++;
@@ -1554,7 +1562,7 @@ Deno.serve(async (req: Request) => {
           '— PinOnIt',
         ].filter(Boolean).join(' ');
 
-        const result = await sendTwilioSms(smsTo, smsBody);
+        const result = await sendTwilioSms(smsTo, smsBody, 'guest');
         if (!result.ok) {
           console.warn('SMS delivery failed:', result.error);
           deliveryStatus = 'failed';
