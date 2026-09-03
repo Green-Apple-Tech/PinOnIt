@@ -642,7 +642,12 @@ export function RemindersPage({
             <BellRing className="h-6 w-6 md:h-7 md:w-7 text-brand-600 dark:text-brand-400" />
           </div>
           <div className="min-w-0">
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">NeverMiss Reminders</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">NeverMiss Reminders</h1>
+          <span className="text-[11px] font-semibold text-[#5864C6] dark:text-[#8891e8] bg-[#5864C6]/10 dark:bg-[#5864C6]/10 border border-[#5864C6]/20 dark:border-[#5864C6]/20 px-2.5 py-1 rounded-full">
+            Icon patch: 2026-09-03
+          </span>
+        </div>
             <p className="mt-1 text-base font-medium text-slate-700 dark:text-slate-200">
               Never miss a reminder.
             </p>
@@ -1071,7 +1076,7 @@ export function RemindersPage({
               <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">When</span>
               {CHANNEL_INFO.map((ch) => (
                 <div key={ch.key} className={`flex flex-col items-center justify-center gap-1 text-center ${ch.color}`}>
-                  <ChannelIcon channel={ch.key} className="h-5 w-5 shrink-0" />
+                  <ChannelIcon channel={ch.key} className={`h-5 w-5 shrink-0 ${ch.color}`} />
                   <span className="text-[10px] font-semibold uppercase tracking-wide leading-tight">
                     {ch.label}
                   </span>
