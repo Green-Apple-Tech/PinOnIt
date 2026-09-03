@@ -27,6 +27,13 @@ import { syncBookingToExternalCalendars } from '../lib/writeCalendarEvent';
 import { stripePromise } from '../lib/stripe';
 import { StripeBookingCheckout } from '../components/StripeBookingCheckout';
 import type { RescheduleSession } from '../lib/reschedule';
+import { usePageMeta } from '../lib/pageMeta';
+import {
+  bookingShareCanonical,
+  bookingShareDescription,
+  bookingShareImage,
+  bookingShareTitle,
+} from '../lib/bookingShareMeta';
 import {
   Calendar,
   Clock,
@@ -623,6 +630,15 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
   const timeRef = useRef<HTMLDivElement>(null);
   const detailsRef = useRef<HTMLDivElement>(null);
   const continueRef = useRef<HTMLDivElement>(null);
+
+  const shareTitle = bookingShareTitle(host);
+  usePageMeta({
+    title: `${shareTitle} | PinOnIt`,
+    ogTitle: shareTitle,
+    description: bookingShareDescription(host),
+    url: slug ? bookingShareCanonical(slug) : 'https://pinonit.com',
+    image: bookingShareImage(host),
+  });
 
   const handleDateSelect = useCallback((dateKey: string) => {
     setSelectedDate(dateKey);

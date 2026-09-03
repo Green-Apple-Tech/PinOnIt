@@ -37,6 +37,7 @@ deploy outlook-contacts-sync
 deploy send-quote
 deploy send-document-sms
 deploy send-document-otp --no-verify-jwt
+deploy booking-og --no-verify-jwt
 deploy send-reminder
 deploy coordinate-sms
 deploy booking-reply
