@@ -218,13 +218,23 @@ export {
   isSmbDocumentType,
   documentTypeMeta,
   documentTypeLabel,
+  documentUploadMaxLabel,
   defaultVerificationRequired,
   documentBodyIsEditable,
   documentNeedsRecipientAction,
   documentFilePublicUrl,
 } from './documentTypes';
 
-export { HOLD_UP_COPY, LEGAL_DISCLAIMER, WAIVER_HOST_HINT, CONTRACT_HOST_HINT } from './documentCopy';
+export {
+  HOLD_UP_COPY,
+  LEGAL_DISCLAIMER,
+  WAIVER_HOST_HINT,
+  CONTRACT_HOST_HINT,
+  SIGN_BY_TEXT_SCOPE_SUMMARY,
+  DOCUMENT_UPLOAD_READABILITY_HINT,
+  signByTextScopeDetail,
+  signByTextAckLabel,
+} from './documentCopy';
 
 export function topicCoverLine(topic: string) {
   const trimmed = topic.trim();

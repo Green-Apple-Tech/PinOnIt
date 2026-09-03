@@ -99,6 +99,8 @@ export interface Profile {
   business_region?: string | null;
   platform_terms_accepted_at?: string | null;
   platform_terms_version?: string | null;
+  /** When the host acknowledged Sign-by-Text single-signature / excluded-doc scope. */
+  sign_by_text_scope_accepted_at?: string | null;
   /** Company / DBA name for Doc Center “[Business Name]” and public branding. */
   business_name?: string | null;
   created_at: string;

@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import { documentsNewPath } from '../lib/documentActions';
 import {
   HOLD_UP_COPY,
+  SIGN_BY_TEXT_SCOPE_SUMMARY,
   documentTypeLabel,
   documentViewUrl,
 } from '../lib/documents';
@@ -71,6 +72,9 @@ export function DocumentsPage() {
             {' '}and Send Docs — one place. No login for the recipient.
           </p>
           <p className="mt-2 text-sm text-gray-600 dark:text-slate-300 max-w-2xl">{HOLD_UP_COPY}</p>
+          <p className="mt-2 text-sm text-gray-500 dark:text-slate-400 max-w-2xl leading-relaxed">
+            {SIGN_BY_TEXT_SCOPE_SUMMARY}
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link

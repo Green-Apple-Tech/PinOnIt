@@ -1,4 +1,4 @@
-import { HOLD_UP_COPY } from './documentCopy';
+import { HOLD_UP_COPY, SIGN_BY_TEXT_SCOPE_SUMMARY } from './documentCopy';
 
 export type PageHelpGuide = {
   title: string;
@@ -99,7 +99,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
   },
   documents: {
     title: 'Doc Center',
-    purpose: `Send quotes, invoices, receipts, NDAs, contracts, and liability waivers from one place. ${HOLD_UP_COPY}`,
+    purpose: `Send quotes, invoices, receipts, NDAs, contracts, and liability waivers from one place. ${HOLD_UP_COPY} ${SIGN_BY_TEXT_SCOPE_SUMMARY}`,
     steps: [
       'Tap New document and pick a type. Quotes, invoices, and receipts include line items and tax.',
       'Add the recipient name. Phone is required only when verification is on (default for NDAs, contracts, and waivers).',

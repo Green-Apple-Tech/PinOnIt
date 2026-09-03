@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('./supabase', () => ({ supabase: {} }));
 
-import { CONTRACT_HOST_HINT, WAIVER_HOST_HINT } from './documentCopy';
+import { CONTRACT_HOST_HINT, WAIVER_HOST_HINT, SIGN_BY_TEXT_SCOPE_SUMMARY, signByTextAckLabel, signByTextScopeDetail } from './documentCopy';
 import {
   CONTRACT_STARTER_TEXT,
   INVOICE_STARTER_TEXT,
@@ -14,6 +14,17 @@ import {
   injectWaiverRecipientPlaceholder,
   resolveHostBusinessName,
 } from './documents';
+
+describe('Sign-by-Text scope copy', () => {
+  it('names single-signature business use and excluded instruments', () => {
+    expect(SIGN_BY_TEXT_SCOPE_SUMMARY).toMatch(/single-signature/i);
+    expect(SIGN_BY_TEXT_SCOPE_SUMMARY).toMatch(/wills/i);
+    expect(SIGN_BY_TEXT_SCOPE_SUMMARY).toMatch(/powers of attorney/i);
+    expect(signByTextScopeDetail('5MB')).toMatch(/5MB/);
+    expect(signByTextScopeDetail('5MB')).toMatch(/evidentiary record/i);
+    expect(signByTextAckLabel('5MB')).toMatch(/I understand/i);
+  });
+});
 
 describe('contract starter vs host hint', () => {
   it('keeps the disclaimer out of the contract body', () => {

@@ -20,10 +20,12 @@ import {
   SMB_DOCUMENT_TYPES,
   DOCUMENT_UPLOAD_BUCKET,
   DOCUMENT_UPLOAD_MAX_BYTES,
+  DOCUMENT_UPLOAD_READABILITY_HINT,
   defaultDocumentBody,
   defaultWaiverText,
   documentBodyIsEditable,
   documentTypeLabel,
+  documentUploadMaxLabel,
   documentViewUrl,
   fillDocumentPlaceholders,
   businessNameOptions,
@@ -33,6 +35,8 @@ import {
   isUploadDocumentType,
   newDocumentToken,
   sendDocumentLink,
+  signByTextAckLabel,
+  signByTextScopeDetail,
 } from '../lib/documents';
 import type { HostDocumentFile, HostDocumentTemplate } from '../lib/hostDocuments';
 import type { DocumentTemplate, HostQuoteLineItem, SmbDocumentType } from '../lib/types';
@@ -99,6 +103,8 @@ export function CreateDocumentPage() {
     phone?: string;
   } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [scopeAcked, setScopeAcked] = useState(false);
+  const uploadMaxLabel = documentUploadMaxLabel();
 
   // Sync type/action from URL; verification default only when entry mode changes (nav).
   useEffect(() => {
@@ -154,6 +160,9 @@ export function CreateDocumentPage() {
   const isMoney = isMoneyDocumentType(documentType);
   const bodyEditable = documentBodyIsEditable(documentType) && !isLibraryPdf;
   const typeSelectValue = libraryFileId ? `${LIBRARY_FILE_PREFIX}${libraryFileId}` : documentType;
+  const scopeAlreadyAccepted = Boolean(profile?.sign_by_text_scope_accepted_at);
+  const needsScopeAck =
+    !scopeAlreadyAccepted && (verificationRequired || isUpload || isLibraryPdf || entryMode === 'sign');
   const knownBusinessNames = useMemo(
     () => businessNameOptions([
       profile?.business_name,
@@ -298,6 +307,10 @@ export function CreateDocumentPage() {
       setError('Choose a PDF to send for signature.');
       return;
     }
+    if (needsScopeAck && !scopeAcked) {
+      setError('Confirm you understand Sign-by-Text scope before sending.');
+      return;
+    }
     if (!topicText) {
       setError(isWaiver
         ? 'Add the activity or service this waiver covers.'
@@ -427,6 +440,14 @@ export function CreateDocumentPage() {
       await refreshProfile();
     }
 
+    if (user.id && needsScopeAck && scopeAcked && !scopeAlreadyAccepted) {
+      await supabase
+        .from('profiles')
+        .update({ sign_by_text_scope_accepted_at: new Date().toISOString() })
+        .eq('id', user.id);
+      await refreshProfile();
+    }
+
     const link = documentViewUrl(token);
     setSuccess({ token, smsStatus: phone ? 'sending' : 'idle', phone: recipientPhone || undefined });
     setSubmitting(false);
@@ -510,6 +531,9 @@ export function CreateDocumentPage() {
         New document
       </h1>
       <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">{HOLD_UP_COPY}</p>
+      <p className="mt-2 text-sm text-gray-600 dark:text-slate-300 leading-relaxed">
+        {signByTextScopeDetail(uploadMaxLabel)}
+      </p>
 
       <form onSubmit={(e) => void handleSubmit(e)} className="mt-6 space-y-5">
         <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-6 space-y-4">
@@ -607,9 +631,26 @@ export function CreateDocumentPage() {
                 {uploadFile ? ` Selected: ${uploadFile.name} (${formatBytes(uploadFile.size)}).` : ''}
               </p>
               <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
+                {DOCUMENT_UPLOAD_READABILITY_HINT}
+              </p>
+              <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
                 They get a text, enter a 2FA code, then sign with their finger — same simple flow as NDA/waiver.
                 Save reusable PDFs under Settings → Docs.
               </p>
+            </label>
+          )}
+          {needsScopeAck && (
+            <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-3">
+              <input
+                type="checkbox"
+                checked={scopeAcked}
+                onChange={(e) => setScopeAcked(e.target.checked)}
+                className="mt-1"
+                required
+              />
+              <span className="text-sm text-gray-800 dark:text-slate-100 leading-relaxed">
+                {signByTextAckLabel(uploadMaxLabel)}
+              </span>
             </label>
           )}
         </div>

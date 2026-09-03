@@ -6,8 +6,12 @@ import { formatErrorMessage } from '../lib/errors';
 import {
   DOCUMENT_UPLOAD_BUCKET,
   DOCUMENT_UPLOAD_MAX_BYTES,
+  DOCUMENT_UPLOAD_READABILITY_HINT,
   defaultDocumentBody,
   documentTypeLabel,
+  documentUploadMaxLabel,
+  signByTextAckLabel,
+  signByTextScopeDetail,
 } from '../lib/documents';
 import {
   HOST_EDITABLE_TEMPLATE_TYPES,
@@ -15,6 +19,7 @@ import {
   type HostDocumentTemplate,
 } from '../lib/hostDocuments';
 import type { DocumentTemplate, SmbDocumentType } from '../lib/types';
+import { useAuth } from '../hooks/useAuth';
 
 function formatBytes(n: number) {
   if (n < 1024) return `${n} B`;
@@ -29,6 +34,7 @@ type Props = {
 };
 
 export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateChange }: Props) {
+  const { profile, refreshProfile } = useAuth();
   const [globalTemplates, setGlobalTemplates] = useState<DocumentTemplate[]>([]);
   const [overrides, setOverrides] = useState<HostDocumentTemplate[]>([]);
   const [files, setFiles] = useState<HostDocumentFile[]>([]);
@@ -38,6 +44,9 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
   const [savingType, setSavingType] = useState<SmbDocumentType | null>(null);
   const [pdfName, setPdfName] = useState('');
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [scopeAcked, setScopeAcked] = useState(false);
+  const uploadMaxLabel = documentUploadMaxLabel();
+  const scopeAlreadyAccepted = Boolean(profile?.sign_by_text_scope_accepted_at);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -125,6 +134,10 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
 
   const uploadNamedPdf = async (file: File | null) => {
     if (!file) return;
+    if (!scopeAlreadyAccepted && !scopeAcked) {
+      toast.error('Confirm Sign-by-Text scope before uploading a PDF.');
+      return;
+    }
     setPdfBusy(true);
     try {
       if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
@@ -151,6 +164,13 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
       if (error) {
         await supabase.storage.from(DOCUMENT_UPLOAD_BUCKET).remove([path]);
         throw error;
+      }
+      if (!scopeAlreadyAccepted && scopeAcked) {
+        await supabase
+          .from('profiles')
+          .update({ sign_by_text_scope_accepted_at: new Date().toISOString() })
+          .eq('id', hostId);
+        await refreshProfile();
       }
       setPdfName('');
       toast.success('PDF saved — it will appear in Document Type when you send.');
@@ -183,6 +203,12 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
 
   return (
     <div className="space-y-6">
+      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 px-3 py-3">
+        <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
+          {signByTextScopeDetail(uploadMaxLabel)}
+        </p>
+      </div>
+
       <div className="space-y-2">
         <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Default document templates</h3>
         <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -249,6 +275,20 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
         <p className="text-xs text-slate-500 dark:text-slate-400">
           Upload a PDF once, name it, then pick it from Document Type when you send. PDF only, up to {formatBytes(DOCUMENT_UPLOAD_MAX_BYTES)}.
         </p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">{DOCUMENT_UPLOAD_READABILITY_HINT}</p>
+        {!scopeAlreadyAccepted && (
+          <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-3">
+            <input
+              type="checkbox"
+              checked={scopeAcked}
+              onChange={(e) => setScopeAcked(e.target.checked)}
+              className="mt-1"
+            />
+            <span className="text-sm text-slate-800 dark:text-slate-100 leading-relaxed">
+              {signByTextAckLabel(uploadMaxLabel)}
+            </span>
+          </label>
+        )}
         <div className="flex flex-col sm:flex-row gap-2">
           <input
             type="text"
