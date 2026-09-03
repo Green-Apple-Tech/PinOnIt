@@ -6,6 +6,10 @@ import { isServiceRoleRequest, jsonAuthError, hostIdFromJwt } from '../_shared/c
 import { isValidSlackWebhookUrl, notifySlackWebhook } from '../_shared/slack-webhook.ts';
 import { parseAlsoPeople, resolveAlsoPeople, type AlsoPerson } from '../_shared/reminder-also.ts';
 import { expireStaleTrials, hostPlanIsActive, loadActiveHostIds } from '../_shared/hostPlan.ts';
+import {
+  mergeReminderPrefsWithContactOverride,
+  normalizeContactReminderOverride,
+} from '../_shared/contact-reminder-override.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -879,8 +883,26 @@ async function dispatchScheduledReminders(supabase: SupabaseClient): Promise<num
       });
     }
 
-    const times = Array.isArray(booking.reminder_times) ? booking.reminder_times as string[] : [];
-    const channels = Array.isArray(booking.reminder_channels) ? booking.reminder_channels as string[] : [];
+    const baseTimes = Array.isArray(booking.reminder_times) ? booking.reminder_times as string[] : [];
+    const baseChannels = Array.isArray(booking.reminder_channels) ? booking.reminder_channels as string[] : [];
+    let times = baseTimes;
+    let channels = baseChannels;
+    const guestEmail = typeof booking.guest_email === 'string' ? booking.guest_email.trim().toLowerCase() : '';
+    if (guestEmail) {
+      const { data: contactRow } = await supabase
+        .from('contacts')
+        .select('reminder_override')
+        .eq('host_id', booking.host_id)
+        .eq('email', guestEmail)
+        .maybeSingle();
+      const override = normalizeContactReminderOverride(contactRow?.reminder_override);
+      const merged = mergeReminderPrefsWithContactOverride(
+        { channels: baseChannels, times: baseTimes },
+        override,
+      );
+      times = merged.times;
+      channels = merged.channels;
+    }
     for (const timeId of times) {
       const offset = GUEST_REMINDER_TIME_OFFSETS[timeId];
       if (typeof offset !== 'number') continue;

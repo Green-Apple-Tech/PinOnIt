@@ -33,6 +33,15 @@ import {
   openWhatsAppComposer as openSharedWhatsAppComposer,
   shareViaSystemSheet,
 } from '../lib/bookingShare';
+import {
+  CONTACT_REMINDER_CHANNEL_OPTIONS,
+  CONTACT_REMINDER_TIME_OPTIONS,
+  emptyContactReminderOverride,
+  normalizeContactReminderOverride,
+  type ContactReminderChannel,
+  type ContactReminderOverride,
+  type ContactReminderTimeId,
+} from '../lib/contactReminderOverride';
 
 interface Contact {
   id: string;
@@ -40,9 +49,11 @@ interface Contact {
   email: string;
   full_name: string | null;
   phone: string | null;
+  company: string | null;
   address: string | null;
   notes: string | null;
   source: string;
+  reminder_override?: unknown;
   created_at: string;
   updated_at: string;
 }
@@ -134,6 +145,11 @@ export function ContactsPage({ embedded = false }: { embedded?: boolean }) {
   const [editEmail, setEditEmail] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [editAddress, setEditAddress] = useState('');
+  const [editCompany, setEditCompany] = useState('');
+  const [overrideEnabled, setOverrideEnabled] = useState(false);
+  const [overrideDraft, setOverrideDraft] = useState<ContactReminderOverride>(emptyContactReminderOverride());
+  const [applyOverrideToCompany, setApplyOverrideToCompany] = useState(false);
+  const [savingOverride, setSavingOverride] = useState(false);
   const [savingContact, setSavingContact] = useState(false);
   const [editError, setEditError] = useState('');
 
@@ -499,8 +515,21 @@ export function ContactsPage({ embedded = false }: { embedded?: boolean }) {
     setEditEmail(contact.email);
     setEditPhone(contact.phone ? formatPhone(contact.phone) : '');
     setEditAddress(contact.address ?? '');
+    setEditCompany(contact.company ?? '');
     setEditError('');
   };
+
+  const hydrateReminderOverride = (contact: EnrichedContact) => {
+    const normalized = normalizeContactReminderOverride(contact.reminder_override);
+    setOverrideEnabled(Boolean(normalized));
+    setOverrideDraft(normalized ?? emptyContactReminderOverride());
+    setApplyOverrideToCompany(false);
+  };
+
+  useEffect(() => {
+    if (!selected) return;
+    hydrateReminderOverride(selected);
+  }, [selected?.id, selected?.reminder_override]);
 
   const handleStartEditContact = () => {
     if (!selected) return;
@@ -531,6 +560,7 @@ export function ContactsPage({ embedded = false }: { embedded?: boolean }) {
         email,
         phone: phoneVal,
         address: editAddress.trim() || null,
+        company: editCompany.trim() || null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', selected.id)
@@ -553,6 +583,89 @@ export function ContactsPage({ embedded = false }: { embedded?: boolean }) {
       showToast('Contact updated', 'success');
     }
     setSavingContact(false);
+  };
+
+  const toggleOverrideChannel = (channel: ContactReminderChannel) => {
+    setOverrideDraft((prev) => {
+      const has = prev.channels.includes(channel);
+      const channels = has ? prev.channels.filter((c) => c !== channel) : [...prev.channels, channel];
+      return { ...prev, channels: channels.length ? channels : prev.channels };
+    });
+  };
+
+  const toggleOverrideTime = (timeId: ContactReminderTimeId) => {
+    setOverrideDraft((prev) => {
+      const has = prev.times.includes(timeId);
+      const times = has ? prev.times.filter((t) => t !== timeId) : [...prev.times, timeId];
+      return { ...prev, times: times.length ? times : prev.times };
+    });
+  };
+
+  const handleSaveReminderOverride = async () => {
+    if (!selected || !profile) return;
+    setSavingOverride(true);
+    const payload = overrideEnabled
+      ? {
+          channels: overrideDraft.channels,
+          times: overrideDraft.times,
+        }
+      : null;
+    if (overrideEnabled && (!payload?.channels.length || !payload.times.length)) {
+      showToast('Pick at least one channel and one time.', 'error');
+      setSavingOverride(false);
+      return;
+    }
+
+    const { error } = await supabase
+      .from('contacts')
+      .update({ reminder_override: payload, updated_at: new Date().toISOString() })
+      .eq('id', selected.id)
+      .eq('host_id', profile.id);
+    if (error) {
+      showToast(error.message, 'error');
+      setSavingOverride(false);
+      return;
+    }
+
+    let companyUpdated = 0;
+    const companyKey = (selected.company || editCompany).trim().toLowerCase();
+    if (applyOverrideToCompany && companyKey) {
+      const siblings = contacts.filter(
+        (c) => c.id !== selected.id && (c.company ?? '').trim().toLowerCase() === companyKey,
+      );
+      if (siblings.length) {
+        const { error: companyErr } = await supabase
+          .from('contacts')
+          .update({ reminder_override: payload, updated_at: new Date().toISOString() })
+          .eq('host_id', profile.id)
+          .in('id', siblings.map((c) => c.id));
+        if (!companyErr) {
+          companyUpdated = siblings.length;
+          setContacts((prev) =>
+            prev.map((c) =>
+              c.id === selected.id || siblings.some((s) => s.id === c.id)
+                ? { ...c, reminder_override: payload }
+                : c,
+            ),
+          );
+        }
+      }
+    } else {
+      setContacts((prev) =>
+        prev.map((c) => (c.id === selected.id ? { ...c, reminder_override: payload } : c)),
+      );
+    }
+
+    setSelected((prev) => (prev ? { ...prev, reminder_override: payload } : prev));
+    showToast(
+      companyUpdated > 0
+        ? `Reminder defaults saved for this contact and ${companyUpdated} other${companyUpdated === 1 ? '' : 's'} at ${selected.company || 'this company'}`
+        : overrideEnabled
+          ? 'Custom reminder defaults saved'
+          : 'Using account-wide reminder defaults',
+      'success',
+    );
+    setSavingOverride(false);
   };
 
   const bookingUrl = profile?.slug
@@ -1074,6 +1187,17 @@ export function ContactsPage({ embedded = false }: { embedded?: boolean }) {
                 <p className="text-xs text-gray-400 mt-1">Used for SMS and WhatsApp invites</p>
               </div>
               <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Company</label>
+                <input
+                  type="text"
+                  value={editCompany}
+                  onChange={(e) => setEditCompany(e.target.value)}
+                  placeholder="Acme Plumbing"
+                  className={inputCls}
+                />
+                <p className="text-xs text-gray-400 mt-1">Optional — used to share reminder defaults across people at the same company</p>
+              </div>
+              <div>
                 <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Address</label>
                 <textarea
                   value={editAddress}
@@ -1100,11 +1224,105 @@ export function ContactsPage({ embedded = false }: { embedded?: boolean }) {
                 <span className="text-gray-900 dark:text-white">{selected.phone ? formatPhone(selected.phone) : '—'}</span>
               </div>
               <div className="flex gap-3">
+                <span className="w-16 shrink-0 text-xs font-medium text-gray-400 dark:text-slate-500">Company</span>
+                <span className="text-gray-900 dark:text-white">{selected.company || '—'}</span>
+              </div>
+              <div className="flex gap-3">
                 <span className="w-16 shrink-0 text-xs font-medium text-gray-400 dark:text-slate-500">Address</span>
                 <span className="text-gray-900 dark:text-white whitespace-pre-wrap">{selected.address || '—'}</span>
               </div>
             </div>
           )}
+        </div>
+
+        <div className="bg-white dark:bg-slate-900/50 border border-gray-200 dark:border-slate-800 rounded-2xl p-4 mb-4 space-y-4">
+          <div>
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">NeverMiss reminder defaults</p>
+            <p className="mt-1 text-xs text-gray-500 dark:text-slate-400 leading-relaxed">
+              Optional override for this person (matched by email on bookings). Leave off to use your account-wide NeverMiss defaults.
+            </p>
+          </div>
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-1 rounded border-gray-300 text-brand-600 focus:ring-brand-600"
+              checked={overrideEnabled}
+              onChange={(e) => setOverrideEnabled(e.target.checked)}
+            />
+            <span className="text-sm text-gray-800 dark:text-slate-200">
+              Custom reminder behavior for this contact
+            </span>
+          </label>
+          {overrideEnabled && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 mb-2">Channels</p>
+                <div className="flex flex-wrap gap-2">
+                  {CONTACT_REMINDER_CHANNEL_OPTIONS.map((opt) => {
+                    const on = overrideDraft.channels.includes(opt.id);
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => toggleOverrideChannel(opt.id)}
+                        className={`min-h-10 px-3 rounded-lg text-xs font-semibold border transition-colors ${
+                          on
+                            ? 'bg-brand-600 text-white border-brand-600'
+                            : 'bg-white dark:bg-slate-950 text-gray-600 dark:text-slate-300 border-gray-200 dark:border-slate-700'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 mb-2">Timing</p>
+                <div className="flex flex-wrap gap-2">
+                  {CONTACT_REMINDER_TIME_OPTIONS.map((opt) => {
+                    const on = overrideDraft.times.includes(opt.id);
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => toggleOverrideTime(opt.id)}
+                        className={`min-h-10 px-3 rounded-lg text-xs font-semibold border transition-colors ${
+                          on
+                            ? 'bg-brand-600 text-white border-brand-600'
+                            : 'bg-white dark:bg-slate-950 text-gray-600 dark:text-slate-300 border-gray-200 dark:border-slate-700'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              {(selected.company || editCompany).trim() && (
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="mt-1 rounded border-gray-300 text-brand-600 focus:ring-brand-600"
+                    checked={applyOverrideToCompany}
+                    onChange={(e) => setApplyOverrideToCompany(e.target.checked)}
+                  />
+                  <span className="text-sm text-gray-700 dark:text-slate-300">
+                    Also apply to other contacts at <strong className="font-semibold">{selected.company || editCompany}</strong>
+                  </span>
+                </label>
+              )}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => void handleSaveReminderOverride()}
+            disabled={savingOverride}
+            className="inline-flex items-center gap-1.5 min-h-10 px-4 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold disabled:opacity-50"
+          >
+            {savingOverride ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            Save reminder defaults
+          </button>
         </div>
 
         {/* Send booking link */}

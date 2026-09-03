@@ -13,12 +13,12 @@ import {
   Bell, Plus, Trash2, X, Check, Loader2, Mail, MessageSquare,
   Languages, Clock, ChevronDown, ChevronUp, Eye, Settings2,
   MoreVertical, AlertTriangle, Smartphone, Pencil, Zap,
-  ArrowRight, CheckCircle2, BellRing, Phone, Save, PhoneCall,
+  ArrowRight, BellRing, Phone, Save, PhoneCall,
 } from 'lucide-react';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import { resolveDefaultReminderChannel, getWhatsappNumber } from '../lib/reminderChannels';
 import { VoicePersonalReminder, PersonalReminderDefaultsEditor, type VoicePersonalReminderHandle } from '../components/VoicePersonalReminder';
-import { CoworkerReminderGuide } from '../components/CoworkerReminderGuide';
+import { AlsoRemindPeople } from '../components/AlsoRemindPeople';
 import { SMS_OPT_OUT_FOOTER } from '../lib/smsOptOut';
 import { SmsBookingConsent } from '../components/SmsConsentText';
 import {
@@ -98,35 +98,6 @@ const CHANNEL_TEMPLATES: Record<string, Record<Channel, { subject: string | null
     voice: { subject: null, body: 'Hi, this is a reminder from {{host_name}} that you have a {{service_name}} scheduled for {{date}} at {{time}}. We look forward to speaking with you.' },
   },
 };
-
-// ── Quick-setup templates ─────────────────────────────────────────────────────
-const QUICK_TEMPLATES = [
-  {
-    id: 'basic',
-    label: 'Email only',
-    badge: 'Quick start',
-    badgeColor: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300',
-    description: 'Email only, 1 hour before',
-    icon: Mail,
-    iconColor: 'text-blue-500',
-    combos: [{ slotKey: 'confirmation', channel: 'email' as Channel }, { slotKey: 'reminder_60m', channel: 'email' as Channel }],
-  },
-  {
-    id: 'pro',
-    label: 'Pro',
-    badge: 'Pro',
-    badgeColor: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300',
-    description: 'Email + SMS + WhatsApp (customizable timing)',
-    icon: MessageSquare,
-    iconColor: 'text-[#5864C6]',
-    combos: [
-      { slotKey: 'confirmation', channel: 'email' as Channel },
-      { slotKey: 'reminder_24h', channel: 'email' as Channel },
-      { slotKey: 'reminder_60m', channel: 'sms' as Channel },
-      { slotKey: 'reminder_30m', channel: 'whatsapp' as Channel },
-    ],
-  },
-];
 
 // ── Add reminder form step config ─────────────────────────────────────────────
 const TIMING_OPTIONS = [
@@ -289,7 +260,6 @@ export function RemindersPage({
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingSlot, setSavingSlot] = useState<string | null>(null);
-  const [applyingQuick, setApplyingQuick] = useState<string | null>(null);
 
   // Add-reminder wizard
   const [showAddForm, setShowAddForm] = useState(false);
@@ -304,7 +274,7 @@ export function RemindersPage({
   // Test SMS
   // Advanced section
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [advancedTab, setAdvancedTab] = useState<'templates' | 'rules' | 'critical' | 'voice'>('templates');
+  const [advancedTab, setAdvancedTab] = useState<'templates' | 'rules' | 'critical'>('templates');
 
   // Template form (advanced)
   const [showTemplateForm, setShowTemplateForm] = useState(false);
@@ -482,19 +452,6 @@ export function RemindersPage({
       await enableSlotChannel(slotKey, channel);
     }
     setSavingSlot(null);
-  };
-
-  const handleApplyQuickTemplate = async (qtId: string) => {
-    if (!profile) return;
-    setApplyingQuick(qtId);
-    const qt = QUICK_TEMPLATES.find((q) => q.id === qtId);
-    if (!qt) { setApplyingQuick(null); return; }
-    for (const combo of qt.combos) {
-      if (!isSlotChannelActive(combo.slotKey, combo.channel)) {
-        await enableSlotChannel(combo.slotKey, combo.channel);
-      }
-    }
-    setApplyingQuick(null);
   };
 
   // Wizard submit
@@ -693,16 +650,16 @@ export function RemindersPage({
               Never miss a reminder.
             </p>
             <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
-              Your team gets notified too, so nobody drops the ball — add coworkers in Settings and copy them on any event from Calendar.
+              Remind yourself, your guests, and teammates — set defaults below, then open Advanced for coworkers and voice.
             </p>
           </div>
         </div>
         <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-          Remind yourself, your guests, and coworkers. Manage the roster in{' '}
-          <Link to="/dashboard/settings?tab=coworkers" className="font-semibold text-[#5864C6] hover:underline">
-            Settings → Coworkers
+          Per-person reminder defaults live on each contact under{' '}
+          <Link to="/dashboard/settings?tab=contacts" className="font-semibold text-[#5864C6] hover:underline">
+            Settings → Contacts
           </Link>
-          , then pick who gets copied on each event from Calendar.
+          .
         </p>
         <button
           type="button"
@@ -713,8 +670,6 @@ export function RemindersPage({
           <Plus className="h-5 w-5" /> Add Reminder
         </button>
       </div>
-
-      <CoworkerReminderGuide />
 
       <p className="text-sm text-slate-500 dark:text-slate-400">
         Test SMS, WhatsApp, email, or Slack in{' '}
@@ -768,56 +723,6 @@ export function RemindersPage({
           >
             <Zap className="h-5 w-5" /> Set Up My First Reminder
           </button>
-          <p className="mt-4 text-xs text-slate-400">Or pick a quick-start template below</p>
-        </div>
-      )}
-
-      {/* ── QUICK SETUP TEMPLATES — hidden for Pro users ── */}
-      {!showAddForm && hasFullAccess && (
-        <div>
-          <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">
-            {hasAnyReminders ? 'Add more reminders with one click' : 'Quick-start templates'}
-          </p>
-          <div className="grid sm:grid-cols-2 gap-3">
-            {QUICK_TEMPLATES.map((qt) => {
-              const alreadyApplied = qt.combos.every((c) => isSlotChannelActive(c.slotKey, c.channel));
-              const Icon = qt.icon || Mail;
-              return (
-                <div
-                  key={qt.id}
-                  className={`rounded-2xl border p-5 transition-all ${
-                    alreadyApplied
-                      ? 'border-[#5864C6]/40 bg-[#5864C6]/5 dark:bg-[#5864C6]/10'
-                      : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 hover:border-[#5864C6]/40 dark:hover:border-[#5864C6]/40 hover:shadow-md'
-                  }`}
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${alreadyApplied ? 'bg-[#5864C6]/10 dark:bg-[#5864C6]/20' : 'bg-slate-100 dark:bg-slate-800'}`}>
-                      <Icon className={`h-5 w-5 ${alreadyApplied ? 'text-[#5864C6]' : qt.iconColor}`} />
-                    </div>
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${qt.badgeColor}`}>{qt.badge}</span>
-                  </div>
-                  <p className="text-sm font-bold text-slate-900 dark:text-white mb-1">{qt.label}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">{qt.description}</p>
-                  {alreadyApplied ? (
-                    <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#5864C6' }}>
-                      <CheckCircle2 className="h-4 w-4" /> Applied
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => handleApplyQuickTemplate(qt.id)}
-                      disabled={applyingQuick === qt.id}
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold hover:opacity-80 transition-colors disabled:opacity-50"
-                      style={{ color: '#5864C6' }}
-                    >
-                      {applyingQuick === qt.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
-                      Apply this template
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
         </div>
       )}
 
@@ -1318,31 +1223,55 @@ export function RemindersPage({
 
       <VoicePersonalReminder ref={personalReminderRef} />
 
-      {/* ── ADVANCED SECTION ── */}
+      {/* ── ADVANCED SECTION (closed by default) ── */}
       <div className="border border-slate-200 dark:border-slate-800 rounded-2xl">
         <button
+          type="button"
           onClick={() => setShowAdvanced((v) => !v)}
           className="w-full flex items-center justify-between px-5 py-4 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors rounded-2xl"
         >
           <span className="flex items-center gap-2">
             <Settings2 className="h-4 w-4 text-slate-400" />
-            Message Templates, Rules &amp; Critical Alerts
+            Advanced
           </span>
           {showAdvanced ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
         </button>
 
         {showAdvanced && (
-          <div className="border-t border-slate-200 dark:border-slate-800">
-            <div className="flex gap-0 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/30 overflow-x-auto">
+          <div className="border-t border-slate-200 dark:border-slate-800 space-y-6 p-5">
+            <section className="space-y-3">
+              <div>
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white">Co-worker / team notifications</h2>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  Optionally notify teammates alongside the customer reminder. You can also copy someone on one Calendar event.
+                </p>
+              </div>
+              <AlsoRemindPeople />
+            </section>
+
+            <section className="space-y-3 border-t border-slate-200 dark:border-slate-800 pt-5">
+              <div>
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white">Voice reminders</h2>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  Defaults for voice call reminders. Use <strong className="font-semibold">Add Reminder</strong> above to schedule a one-off personal reminder.
+                </p>
+              </div>
+              <PersonalReminderDefaultsEditor />
+            </section>
+
+            <div className="border-t border-slate-200 dark:border-slate-800 pt-2">
+              <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 px-1">
+                Templates, rules &amp; critical alerts
+              </p>
+            <div className="flex gap-0 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-900/30 overflow-x-auto">
               {([
-                { key: 'voice' as const, label: 'Voice defaults', icon: PhoneCall },
                 { key: 'templates' as const, label: 'Templates', icon: Mail },
                 { key: 'rules' as const, label: 'Rules', icon: Bell },
                 { key: 'critical' as const, label: 'Critical Alerts', icon: BellRing },
               ]).map((t) => {
                 const Icon = t.icon || Mail;
                 return (
-                <button key={t.key} onClick={() => setAdvancedTab(t.key)}
+                <button key={t.key} type="button" onClick={() => setAdvancedTab(t.key)}
                   className={`flex items-center gap-1.5 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${advancedTab === t.key ? 'border-[#5864C6] text-[#5864C6] dark:text-[#8891e8] bg-white dark:bg-slate-900/50' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>
                   <Icon className={`h-3.5 w-3.5 ${t.key === 'critical' ? 'text-red-500' : ''}`} />{t.label}
                 </button>
@@ -1350,9 +1279,7 @@ export function RemindersPage({
               })}
             </div>
 
-            <div className="p-5">
-              {advancedTab === 'voice' && <PersonalReminderDefaultsEditor />}
-
+            <div className="pt-2">
               {/* Templates tab */}
               {advancedTab === 'templates' && (
                 <div>
@@ -1910,6 +1837,7 @@ export function RemindersPage({
                 </div>
               )}
 
+            </div>
             </div>
           </div>
         )}
