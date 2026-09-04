@@ -41,6 +41,27 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      (function () {
+        function show(msg) {
+          var r = document.getElementById('root');
+          if (!r || r.childElementCount) return;
+          r.innerHTML =
+            '<div style="font-family:system-ui,sans-serif;max-width:28rem;margin:20vh auto;padding:24px;color:#0f172a">' +
+            '<h1 style="font-size:20px;font-weight:700;margin:0 0 8px">PinOnIt did not load</h1>' +
+            '<p style="font-size:14px;line-height:1.5;color:#475569">' + msg + '</p></div>';
+        }
+        window.addEventListener('error', function (e) {
+          var t = e.target;
+          if (t && t.tagName === 'SCRIPT') {
+            show('A script failed to load. Hard-refresh with Cmd+Shift+R, or open pinonit.com in a new tab.');
+          }
+        }, true);
+        setTimeout(function () {
+          show('The app did not start. Hard-refresh with Cmd+Shift+R, or open pinonit.com in a new tab.');
+        }, 8000);
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

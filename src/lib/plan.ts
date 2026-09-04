@@ -8,7 +8,7 @@ import {
   hostRowIsActive,
   isActivePlan,
   isComplimentaryPro,
-} from '@shared/planAccess';
+} from '../shared/planAccess';
 
 export type { PlanTier, ProfilePlanRow, SubscriptionPlanRow };
 

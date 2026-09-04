@@ -1,5 +1,7 @@
 /** Browser-only onboarding flags — must not outlive a DB wipe / fresh account. */
 
+import { storageGet, storageRemove, storageSet } from './safeStorage';
+
 export const ONBOARDING_LS_KEYS = [
   'onboarding_completed',
   'wizard_active',
@@ -11,37 +13,37 @@ export const ONBOARDING_LS_KEYS = [
 ] as const;
 
 export function onboardingIsCompletedLocal(): boolean {
-  return localStorage.getItem('onboarding_completed') === '1';
+  return storageGet('onboarding_completed') === '1';
 }
 
 export function wizardIsActiveLocal(): boolean {
-  return localStorage.getItem('wizard_active') === '1';
+  return storageGet('wizard_active') === '1';
 }
 
 export function wizardSavedStepLocal(): number {
-  return Number(localStorage.getItem('wizard_step') ?? '0');
+  return Number(storageGet('wizard_step') ?? '0');
 }
 
 export function markOnboardingCompletedLocal(): void {
-  localStorage.setItem('onboarding_completed', '1');
-  localStorage.removeItem('wizard_active');
-  localStorage.removeItem('wizard_step');
+  storageSet('onboarding_completed', '1');
+  storageRemove('wizard_active');
+  storageRemove('wizard_step');
 }
 
 export function setWizardActiveLocal(stepIndex: number): void {
-  localStorage.setItem('wizard_active', '1');
-  localStorage.setItem('wizard_step', String(stepIndex));
+  storageSet('wizard_active', '1');
+  storageSet('wizard_step', String(stepIndex));
 }
 
 export function clearWizardLocal(): void {
-  localStorage.removeItem('wizard_active');
-  localStorage.removeItem('wizard_step');
+  storageRemove('wizard_active');
+  storageRemove('wizard_step');
 }
 
 /** Clear stale client state after DB wipe, sign-out, or fresh login. */
 export function clearClientOnboardingState(): void {
   for (const key of ONBOARDING_LS_KEYS) {
-    localStorage.removeItem(key);
+    storageRemove(key);
   }
 }
 
@@ -49,6 +51,6 @@ export function clearClientOnboardingState(): void {
 export function clearStaleOnboardingLocalState(): void {
   for (const key of ONBOARDING_LS_KEYS) {
     if (key === 'wizard_active' || key === 'wizard_step') continue;
-    localStorage.removeItem(key);
+    storageRemove(key);
   }
 }

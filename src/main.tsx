@@ -1,6 +1,5 @@
 import { StrictMode, Component, type ErrorInfo, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App.tsx';
 import './index.css';
 import { supabaseConfigured } from './lib/supabase';
 
@@ -43,7 +42,7 @@ class RootErrorBoundary extends Component<{ children: ReactNode }, { error: Erro
       return (
         <BootMessage
           title="This page hit an error"
-          detail={`${this.state.error.message}. Reload, or open pinonit.com in a new tab if this is the Bolt preview.`}
+          detail={`${this.state.error.message}. Reload, or open pinonit.com in a new tab.`}
         />
       );
     }
@@ -51,27 +50,47 @@ class RootErrorBoundary extends Component<{ children: ReactNode }, { error: Erro
   }
 }
 
-const rootEl = document.getElementById('root');
-if (!rootEl) {
-  document.body.textContent = 'PinOnIt failed to start (missing #root).';
-} else if (!supabaseConfigured) {
-  createRoot(rootEl).render(
-    <BootMessage
-      title="Supabase keys are missing"
-      detail="Bolt preview needs VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY. Production Publish uses the same names in Bolt secrets. After they are set, refresh this preview."
-    />,
-  );
-} else {
+async function boot() {
+  const rootEl = document.getElementById('root');
+  if (!rootEl) {
+    document.body.textContent = 'PinOnIt failed to start (missing #root).';
+    return;
+  }
+
+  if (!supabaseConfigured) {
+    createRoot(rootEl).render(
+      <BootMessage
+        title="Supabase keys are missing"
+        detail="Bolt preview needs VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Secrets. Production Publish uses the same names. After they are set, refresh this preview — or open pinonit.com in a new tab."
+      />,
+    );
+    return;
+  }
+
   try {
     sessionStorage.removeItem(CHUNK_RELOAD_KEY);
   } catch {
     /* ignore */
   }
-  createRoot(rootEl).render(
-    <StrictMode>
-      <RootErrorBoundary>
-        <App />
-      </RootErrorBoundary>
-    </StrictMode>,
-  );
+
+  try {
+    const { default: App } = await import('./App.tsx');
+    createRoot(rootEl).render(
+      <StrictMode>
+        <RootErrorBoundary>
+          <App />
+        </RootErrorBoundary>
+      </StrictMode>,
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    createRoot(rootEl).render(
+      <BootMessage
+        title="PinOnIt failed to start"
+        detail={`${message}. Hard-refresh with Cmd+Shift+R, or open pinonit.com in a new tab.`}
+      />,
+    );
+  }
 }
+
+void boot();

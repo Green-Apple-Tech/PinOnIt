@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, MessageCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { storageGet, storageSet } from '../lib/safeStorage';
 
 const BOT_DISMISS_KEY = 'pinonit_bot_dismissed';
 const BOT_COMPLETED_KEY = 'pinonit_bot_completed';
@@ -63,14 +64,14 @@ const QUESTIONS: Question[] = [
 const PROGRESS_IDS = QUESTIONS.filter((q) => q.id !== 'done').map((q) => q.id);
 
 function isDismissed(): boolean {
-  const raw = localStorage.getItem(BOT_DISMISS_KEY);
+  const raw = storageGet(BOT_DISMISS_KEY);
   if (!raw) return false;
   const ts = Number(raw);
   return !Number.isNaN(ts) && Date.now() - ts < DISMISS_MS;
 }
 
 function isCompleted(): boolean {
-  return localStorage.getItem(BOT_COMPLETED_KEY) === '1';
+  return storageGet(BOT_COMPLETED_KEY) === '1';
 }
 
 function isValidEmail(value: string): boolean {
@@ -105,7 +106,7 @@ export function OnboardingBot() {
   }, []);
 
   const dismissBot = useCallback(() => {
-    localStorage.setItem(BOT_DISMISS_KEY, String(Date.now()));
+    storageSet(BOT_DISMISS_KEY, String(Date.now()));
     setVisible(false);
     setMinimized(true);
   }, []);
@@ -145,10 +146,10 @@ export function OnboardingBot() {
 
     if (question.id === 'done') {
       const leadEmail = email || nextAnswers.email || '';
-      localStorage.setItem(BOT_ANSWERS_KEY, JSON.stringify(nextAnswers));
+      storageSet(BOT_ANSWERS_KEY, JSON.stringify(nextAnswers));
 
       if (option === "Yes, let's go!") {
-        localStorage.setItem(BOT_COMPLETED_KEY, '1');
+        storageSet(BOT_COMPLETED_KEY, '1');
         setCompleted(true);
         saveLead(leadEmail, nextAnswers);
         const params = new URLSearchParams({
@@ -161,7 +162,7 @@ export function OnboardingBot() {
         return;
       }
 
-      localStorage.setItem(BOT_COMPLETED_KEY, '1');
+      storageSet(BOT_COMPLETED_KEY, '1');
       setCompleted(true);
       saveLead(leadEmail, nextAnswers).finally(() => dismissBot());
       return;

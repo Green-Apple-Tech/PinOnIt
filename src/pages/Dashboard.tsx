@@ -21,6 +21,7 @@ import {
 import { DashboardHome, type DashboardBookingGlance } from '../components/DashboardHome';
 import { parseRevealedTools, revealTool } from '../lib/progressiveDisclosure';
 import { defaultAvailabilityRows } from '../lib/availabilityGrid';
+import { storageGet, storageSet } from '../lib/safeStorage';
 import { PageHelpButton } from '../components/PageHelp';
 import { AddToHomeScreenPrompt } from '../components/AddToHomeScreenPrompt';
 import { EsignPromoBar } from '../components/EsignPromoBar';
@@ -353,7 +354,7 @@ export function Dashboard() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const planName = effectivePlan(subscription, profile);
-  const [checklistDismissed, setChecklistDismissed] = useState(() => localStorage.getItem('onboarding_checklist_dismissed') === '1');
+  const [checklistDismissed, setChecklistDismissed] = useState(() => storageGet('onboarding_checklist_dismissed') === '1');
   const [liveSlug, setLiveSlug] = useState<string | null>(null);
 
   // Expand while inside More Tools; collapse automatically when you leave that section.
@@ -555,7 +556,7 @@ export function Dashboard() {
     const allDone = calendarCount > 0 && services.length > 0 && !!profile.slug;
     if (!allDone) return;
     setChecklistDismissed(true);
-    localStorage.setItem('onboarding_checklist_dismissed', '1');
+    storageSet('onboarding_checklist_dismissed', '1');
     if (!profile.onboarding_completed) {
       void supabase.from('profiles').update({ onboarding_completed: true }).eq('id', profile.id);
     }
@@ -1050,7 +1051,7 @@ export function Dashboard() {
                       type="button"
                       onClick={() => {
                         setChecklistDismissed(true);
-                        localStorage.setItem('onboarding_checklist_dismissed', '1');
+                        storageSet('onboarding_checklist_dismissed', '1');
                       }}
                       className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded"
                       title="Don't show this again"

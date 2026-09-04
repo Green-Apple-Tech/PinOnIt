@@ -2,17 +2,18 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { resolveSessionTimeoutMinutes } from '../lib/sessionTimeout';
+import { storageGet, storageRemove, storageSet } from '../lib/safeStorage';
 
 const LAST_ACTIVITY_KEY = 'pinonit_last_activity';
 
 function readLastActivity(): number {
-  const raw = localStorage.getItem(LAST_ACTIVITY_KEY);
+  const raw = storageGet(LAST_ACTIVITY_KEY);
   const parsed = raw ? parseInt(raw, 10) : NaN;
   return Number.isFinite(parsed) ? parsed : Date.now();
 }
 
 function touchActivity() {
-  localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
+  storageSet(LAST_ACTIVITY_KEY, String(Date.now()));
 }
 
 export function SessionManager() {
@@ -23,7 +24,7 @@ export function SessionManager() {
   const signOutForInactivity = useCallback(async () => {
     if (signingOut.current) return;
     signingOut.current = true;
-    localStorage.removeItem(LAST_ACTIVITY_KEY);
+    storageRemove(LAST_ACTIVITY_KEY);
     await supabase.auth.signOut();
     window.location.href = '/login?signed_out=inactivity';
   }, []);
@@ -39,7 +40,7 @@ export function SessionManager() {
   useEffect(() => {
     if (!user || loading) return;
 
-    if (!localStorage.getItem(LAST_ACTIVITY_KEY)) {
+    if (!storageGet(LAST_ACTIVITY_KEY)) {
       touchActivity();
     }
 

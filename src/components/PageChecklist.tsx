@@ -1,6 +1,7 @@
 import { useState, type MouseEvent } from 'react';
 import { Check, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { storageGet, storageSet } from '../lib/safeStorage';
 
 export interface ChecklistItem {
   id: string;
@@ -19,8 +20,8 @@ interface PageChecklistProps {
 
 export function PageChecklist({ items, title = 'Get Started', storageKey }: PageChecklistProps) {
   const navigate = useNavigate();
-  const [collapsed, setCollapsed] = useState(() => localStorage.getItem(storageKey + '_open') === '0');
-  const [dismissed, setDismissed] = useState(() => localStorage.getItem(storageKey + '_dismissed') === '1');
+  const [collapsed, setCollapsed] = useState(() => storageGet(storageKey + '_open') === '0');
+  const [dismissed, setDismissed] = useState(() => storageGet(storageKey + '_dismissed') === '1');
 
   const allDone = items.every(i => i.done);
   const doneCount = items.filter(i => i.done).length;
@@ -30,12 +31,12 @@ export function PageChecklist({ items, title = 'Get Started', storageKey }: Page
   const handleToggleCollapse = () => {
     const next = !collapsed;
     setCollapsed(next);
-    localStorage.setItem(storageKey + '_open', next ? '0' : '1');
+    storageSet(storageKey + '_open', next ? '0' : '1');
   };
 
   const handleDismiss = (e: MouseEvent) => {
     e.stopPropagation();
-    localStorage.setItem(storageKey + '_dismissed', '1');
+    storageSet(storageKey + '_dismissed', '1');
     setDismissed(true);
   };
 
