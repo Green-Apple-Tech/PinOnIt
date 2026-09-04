@@ -1,5 +1,5 @@
 # Missing hashed JS must 404. SPA fallback of /assets/* → index.html makes
 # Bolt Publish races execute HTML as a module and the page stays blank.
+# Do not 404 /src/* — Bolt preview serves the Vite entry /src/main.tsx.
 /assets/*  /404.html  404
-/src/*     /404.html  404
 /*         /index.html  200
