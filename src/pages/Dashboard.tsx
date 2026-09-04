@@ -9,6 +9,7 @@ import { useTheme } from '../hooks/useTheme';
 import { supabase } from '../lib/supabase';
 import { syncStripeSubscription } from '../lib/stripe';
 import { effectivePlan, isActivePlan } from '../lib/plan';
+import { SMS_OPT_OUT_FOOTER } from '../lib/smsOptOut';
 import type { Service } from '../lib/types';
 import { LogOut, X, Check, Sun, Moon, Link2, Video, Phone, MapPin, ChevronRight, Loader2, Plus, ChevronLeft, LayoutGrid, Menu, Sparkles, Wrench as Tool, ChevronDown } from 'lucide-react';
 import {
@@ -124,14 +125,14 @@ function CreateLinkModal({ profile, onClose, onCreated }: CreateLinkModalProps) 
         reminderChannels.push({
           channel: 'sms',
           subject: null,
-          body: 'Reminder: your {{service_name}} with {{host_name}} starts in 1 hour at {{time}}. {{location}} Reply STOP to opt out.',
+          body: `Reminder: your {{service_name}} with {{host_name}} starts in 1 hour at {{time}}. {{location}} ${SMS_OPT_OUT_FOOTER}`,
         });
       }
       if (reminderWhatsapp) {
         reminderChannels.push({
           channel: 'whatsapp',
           subject: null,
-          body: 'Hi {{guest_name}}! Just a reminder that your *{{service_name}}* with {{host_name}} starts in 1 hour at {{time}}.\n\n{{location}}\n\nReply STOP to opt out.',
+          body: `Hi {{guest_name}}! Just a reminder that your *{{service_name}}* with {{host_name}} starts in 1 hour at {{time}}.\n\n{{location}}\n\n${SMS_OPT_OUT_FOOTER}`,
         });
       }
       for (const ch of reminderChannels) {

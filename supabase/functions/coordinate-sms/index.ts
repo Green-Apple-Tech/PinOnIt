@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { appendSmsOptOut } from "../_shared/sms-opt-out.ts";
+import { normalizePhoneE164 } from "../_shared/phone.ts";
 import { hostIdFromJwt, jsonAuthError } from "../_shared/callerAuth.ts";
 import { expireStaleTrials, hostPlanIsActive } from "../_shared/hostPlan.ts";
 
@@ -51,14 +52,6 @@ async function sendTwilioMessage(
     return false;
   }
   return true;
-}
-
-function normalizePhoneE164(phone: string): string {
-  const digits = phone.replace(/\D/g, "");
-  if (phone.startsWith("+")) return phone;
-  if (digits.length === 10) return `+1${digits}`;
-  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
-  return `+${digits}`;
 }
 
 /** Sends via WhatsApp when configured, otherwise SMS. */

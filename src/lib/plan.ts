@@ -1,83 +1,25 @@
-import type { Profile, Subscription } from './types';
+import type { Subscription } from './types';
+import {
+  pickBestSubscription as pickBestPlanRow,
+  type PlanTier,
+  type ProfilePlanRow,
+  type SubscriptionPlanRow,
+  effectivePlan,
+  hostRowIsActive,
+  isActivePlan,
+  isComplimentaryPro,
+} from '../../shared/planAccess';
 
-export type PlanTier = 'trial' | 'pro' | 'expired';
+export type { PlanTier, ProfilePlanRow, SubscriptionPlanRow };
 
-type PlanBits = Pick<Subscription, 'plan' | 'status' | 'trial_ends_at'> & {
-  stripe_current_period_end?: string | null;
+export {
+  effectivePlan,
+  hostRowIsActive,
+  isActivePlan,
+  isComplimentaryPro,
 };
 
-type ProfilePlanBits = Pick<Profile, 'plan'> & {
-  plan_override?: 'pro' | null;
-};
-
-export function isComplimentaryPro(
-  profile?: Pick<Profile, 'plan_override'> | null,
-): boolean {
-  return profile?.plan_override === 'pro';
-}
-
-/** Trial and paid Pro have full product access. */
-export function isActivePlan(plan: PlanTier): boolean {
-  return plan === 'trial' || plan === 'pro';
-}
-
-function localTrialExpired(trialEndsAt?: string | null): boolean {
-  if (!trialEndsAt) return false;
-  return new Date(trialEndsAt).getTime() <= Date.now();
-}
-
-/** Plan shown in the UI. Complimentary override wins over Stripe. */
-export function effectivePlan(
-  subscription?: PlanBits | null,
-  profile?: ProfilePlanBits | null,
-): PlanTier {
-  if (isComplimentaryPro(profile)) return 'pro';
-
-  if (subscription?.status === 'trialing' || subscription?.plan === 'trial') {
-    if (localTrialExpired(subscription.trial_ends_at)) return 'expired';
-    return 'trial';
-  }
-
-  if (subscription?.status === 'active' || subscription?.status === 'past_due') {
-    if (subscription.plan === 'pro') return 'pro';
-  }
-
-  if (subscription?.status === 'canceled') {
-    const periodEnd = subscription.stripe_current_period_end
-      ? new Date(subscription.stripe_current_period_end).getTime()
-      : 0;
-    if (subscription.plan === 'pro' && periodEnd > Date.now()) return 'pro';
-    return 'expired';
-  }
-
-  if (subscription?.plan === 'expired') return 'expired';
-  if (profile?.plan === 'trial') {
-    if (localTrialExpired(subscription?.trial_ends_at)) return 'expired';
-    return 'trial';
-  }
-  if (profile?.plan === 'pro') return 'pro';
-  if (profile?.plan === 'expired') return 'expired';
-
-  return 'expired';
-}
-
-function subscriptionScore(row: Subscription): number {
-  let score = 0;
-  if (row.stripe_subscription_id) score += 8;
-  if (typeof row.stripe_customer_id === 'string' && row.stripe_customer_id.startsWith('cus_')) score += 4;
-  if (row.plan === 'pro') score += 4;
-  else if (row.plan === 'trial') score += 3;
-  if (row.status === 'active') score += 3;
-  else if (row.status === 'trialing' || row.status === 'past_due') score += 2;
-  return score;
-}
-
-/** Prefer a live Stripe-backed row when duplicates exist. */
+/** Same ranking as the shared helper, typed to the app Subscription row. */
 export function pickBestSubscription(rows: Subscription[] | null | undefined): Subscription | null {
-  if (!rows?.length) return null;
-  return [...rows].sort((a, b) => {
-    const diff = subscriptionScore(b) - subscriptionScore(a);
-    if (diff !== 0) return diff;
-    return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
-  })[0];
+  return pickBestPlanRow(rows) as Subscription | null;
 }
