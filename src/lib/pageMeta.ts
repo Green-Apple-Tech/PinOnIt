@@ -1,12 +1,20 @@
 import { useEffect } from 'react';
 
-const DEFAULTS = {
+/** Homepage / product share card (keep in sync with index.html). */
+export const SITE_OG = {
   title: 'Your mini office by text | PinOnIt',
   description:
     'Booking + Sign by Text — waivers, NDAs, addendums, quotes, invoices. One simple app. $8.99/mo.',
   url: 'https://pinonit.com',
-  image: 'https://pinonit.com/pinonit_logo.png',
+  image: 'https://pinonit.com/og-why-pinonit.png',
+  /** Large landscape banner for the marketing site. */
+  twitterCard: 'summary_large_image' as const,
 };
+
+/** Booking-link share card — smaller side thumbnail in iMessage / Twitter. */
+export const BOOKING_OG_CARD = 'summary' as const;
+
+const DEFAULTS = SITE_OG;
 
 function upsertMeta(selector: string, attrs: Record<string, string>) {
   let el = document.head.querySelector(selector) as HTMLMetaElement | null;
@@ -34,6 +42,8 @@ export function usePageMeta(opts: {
   image: string;
   /** Short title for iMessage / social cards (falls back to title). */
   ogTitle?: string;
+  /** twitter:card — use `summary` for a smaller thumbnail. */
+  twitterCard?: 'summary' | 'summary_large_image';
 }) {
   useEffect(() => {
     const prev = document.title;
@@ -46,12 +56,13 @@ export function usePageMeta(opts: {
     });
     // iMessage truncates hard — prefer a short og/twitter title when provided
     const shareTitle = opts.ogTitle ?? opts.title;
+    const card = opts.twitterCard ?? SITE_OG.twitterCard;
     upsertMeta('meta[property="og:title"]', { property: 'og:title', content: shareTitle });
     upsertMeta('meta[property="og:description"]', { property: 'og:description', content: opts.description });
     upsertMeta('meta[property="og:url"]', { property: 'og:url', content: opts.url });
     upsertMeta('meta[property="og:image"]', { property: 'og:image', content: opts.image });
     upsertMeta('meta[property="og:type"]', { property: 'og:type', content: 'website' });
-    upsertMeta('meta[name="twitter:card"]', { name: 'twitter:card', content: 'summary_large_image' });
+    upsertMeta('meta[name="twitter:card"]', { name: 'twitter:card', content: card });
     upsertMeta('meta[name="twitter:title"]', { name: 'twitter:title', content: shareTitle });
     upsertMeta('meta[name="twitter:description"]', { name: 'twitter:description', content: opts.description });
     upsertMeta('meta[name="twitter:image"]', { name: 'twitter:image', content: opts.image });
@@ -59,11 +70,15 @@ export function usePageMeta(opts: {
     return () => {
       document.title = prev || DEFAULTS.title;
       upsertMeta('meta[name="description"]', { name: 'description', content: DEFAULTS.description });
-      upsertMeta('meta[property="og:title"]', { property: 'og:title', content: 'Book a Meeting - Click This Link' });
+      upsertMeta('meta[property="og:title"]', { property: 'og:title', content: DEFAULTS.title });
       upsertMeta('meta[property="og:description"]', { property: 'og:description', content: DEFAULTS.description });
       upsertMeta('meta[property="og:url"]', { property: 'og:url', content: DEFAULTS.url });
       upsertMeta('meta[property="og:image"]', { property: 'og:image', content: DEFAULTS.image });
+      upsertMeta('meta[name="twitter:card"]', { name: 'twitter:card', content: DEFAULTS.twitterCard });
+      upsertMeta('meta[name="twitter:title"]', { name: 'twitter:title', content: DEFAULTS.title });
+      upsertMeta('meta[name="twitter:description"]', { name: 'twitter:description', content: DEFAULTS.description });
+      upsertMeta('meta[name="twitter:image"]', { name: 'twitter:image', content: DEFAULTS.image });
       upsertLink('canonical', DEFAULTS.url);
     };
-  }, [opts.title, opts.description, opts.url, opts.image, opts.ogTitle]);
+  }, [opts.title, opts.description, opts.url, opts.image, opts.ogTitle, opts.twitterCard]);
 }

@@ -3,6 +3,13 @@
   to = "/404.html"
   status = 404
 
+# Booking / reserved single-segment paths — OG tags via booking-og (SPA shell)
+[[redirects]]
+  from = "/:slug"
+  to = "https://adlusgtlwgcfyxgeoias.supabase.co/functions/v1/booking-og/:slug"
+  status = 200
+  force = false
+
 [[redirects]]
   from = "/*"
   to = "/index.html"

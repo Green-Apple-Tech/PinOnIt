@@ -13,6 +13,15 @@ const APP_ORIGIN = (Deno.env.get('APP_URL') || DEFAULT_BOOKING_ORIGIN).replace(/
 const SPA_TTL_MS = 5 * 60 * 1000;
 const PAGE_TTL_MS = 5 * 60 * 1000;
 
+/** Keep in sync with index.html / src/lib/pageMeta.ts SITE_OG */
+const SITE_OG = {
+  title: 'Your mini office by text | PinOnIt',
+  description:
+    'Booking + Sign by Text — waivers, NDAs, addendums, quotes, invoices. One simple app. $8.99/mo.',
+  image: `${APP_ORIGIN}/og-why-pinonit.png`,
+  twitterCard: 'summary_large_image',
+};
+
 const RESERVED = new Set([
   '',
   'login',
@@ -38,6 +47,12 @@ const RESERVED = new Set([
   'src',
   'static',
   'book',
+  's',
+  'q',
+  'r',
+  'index.html',
+  'manifest.json',
+  '404.html',
 ]);
 
 const SLUG_RE = /^[a-z0-9][a-z0-9_-]{0,62}$/i;
@@ -72,13 +87,14 @@ function replaceMeta(html: string, attr: 'property' | 'name', key: string, conte
 
 function injectShareTags(
   html: string,
-  meta: { title: string; description: string; url: string; image: string },
+  meta: { title: string; description: string; url: string; image: string; twitterCard: string },
 ): string {
-  let out = html.replace(/<title>[^<]*<\/title>/i, `<title>${escapeHtml(meta.title)} | PinOnIt</title>`);
+  let out = html.replace(/<title>[^<]*<\/title>/i, `<title>${escapeHtml(meta.title)}</title>`);
   out = replaceMeta(out, 'property', 'og:title', meta.title);
   out = replaceMeta(out, 'property', 'og:description', meta.description);
   out = replaceMeta(out, 'property', 'og:url', meta.url);
   out = replaceMeta(out, 'property', 'og:image', meta.image);
+  out = replaceMeta(out, 'name', 'twitter:card', meta.twitterCard);
   out = replaceMeta(out, 'name', 'twitter:title', meta.title);
   out = replaceMeta(out, 'name', 'twitter:description', meta.description);
   out = replaceMeta(out, 'name', 'twitter:image', meta.image);
@@ -142,24 +158,51 @@ Deno.serve(async (req: Request) => {
 
   const shell = await spaHtml();
   if (!shell) {
-    return new Response('Booking page unavailable', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+    return new Response('Booking page unavailable', {
+      status: 503,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    });
   }
 
-  const canonical = slug && !RESERVED.has(slug)
-    ? bookingShareCanonical(slug, APP_ORIGIN)
-    : `${APP_ORIGIN}/`;
-
+  const isBookingSlug = Boolean(slug) && !RESERVED.has(slug) && SLUG_RE.test(slug);
   let host: BookingShareHost | null = null;
-  if (slug && !RESERVED.has(slug) && SLUG_RE.test(slug)) {
+  if (isBookingSlug) {
     host = await loadHost(slug);
   }
 
-  const meta = {
-    title: host ? bookingShareTitle(host) : 'Book a Meeting',
-    description: host ? bookingShareDescription(host) : 'Pick a time to meet.',
-    url: canonical,
-    image: host ? bookingShareImage(host, APP_ORIGIN) : DEFAULT_BOOKING_OG_IMAGE,
+  let meta: {
+    title: string;
+    description: string;
+    url: string;
+    image: string;
+    twitterCard: string;
   };
+
+  if (host) {
+    meta = {
+      title: bookingShareTitle(host),
+      description: bookingShareDescription(host),
+      url: bookingShareCanonical(slug, APP_ORIGIN),
+      image: bookingShareImage(host, APP_ORIGIN),
+      twitterCard: 'summary',
+    };
+  } else if (isBookingSlug) {
+    meta = {
+      title: 'Book a Meeting',
+      description: 'Pick a time to meet.',
+      url: bookingShareCanonical(slug, APP_ORIGIN),
+      image: DEFAULT_BOOKING_OG_IMAGE,
+      twitterCard: 'summary',
+    };
+  } else {
+    meta = {
+      title: SITE_OG.title,
+      description: SITE_OG.description,
+      url: `${APP_ORIGIN}/`,
+      image: SITE_OG.image,
+      twitterCard: SITE_OG.twitterCard,
+    };
+  }
 
   const html = injectShareTags(shell, meta);
   pageCache.set(cacheKey, { html, exp: Date.now() + PAGE_TTL_MS });

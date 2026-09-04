@@ -2,4 +2,10 @@
 # Bolt Publish races execute HTML as a module and the page stays blank.
 # Do not 404 /src/* — Bolt preview serves the Vite entry /src/main.tsx.
 /assets/*  /404.html  404
+
+# Single-segment paths → booking-og injects correct Open Graph tags for iMessage.
+# Real booking slugs get "Book a Meeting…"; reserved routes (login, etc.) get homepage OG.
+# Returns the SPA shell so browsers still load the app normally.
+/:slug  https://adlusgtlwgcfyxgeoias.supabase.co/functions/v1/booking-og/:slug  200
+
 /*         /index.html  200

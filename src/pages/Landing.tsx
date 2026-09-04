@@ -20,11 +20,12 @@ import { LandingFaq } from '../components/landing/LandingFaq';
 
 const HOME_META = {
   title: 'Your mini office by text | PinOnIt',
-  ogTitle: 'Your mini office by text',
+  ogTitle: 'Your mini office by text | PinOnIt',
   description:
     'Booking + Sign by Text — waivers, NDAs, addendums, quotes, invoices. One simple app. $8.99/mo.',
   url: 'https://pinonit.com/',
-  image: 'https://pinonit.com/pinonit_logo.png',
+  image: 'https://pinonit.com/og-why-pinonit.png',
+  twitterCard: 'summary_large_image' as const,
 };
 
 const HERO_MESSAGES = [

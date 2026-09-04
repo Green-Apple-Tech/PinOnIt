@@ -665,6 +665,8 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
     description: bookingShareDescription(host),
     url: slug ? bookingShareCanonical(slug) : 'https://pinonit.com',
     image: bookingShareImage(host),
+    // Smaller side thumbnail in iMessage / social (vs large homepage banner)
+    twitterCard: 'summary',
   });
 
   const handleDateSelect = useCallback((dateKey: string) => {
