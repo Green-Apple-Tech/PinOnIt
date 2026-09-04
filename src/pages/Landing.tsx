@@ -8,10 +8,11 @@ import {
   ArrowRight, Check,
   Sun, Moon, Menu, X,
   Calendar, Bell, Mail, ClipboardSignature, QrCode,
-  Receipt, Sparkles,
+  Receipt,
 } from 'lucide-react';
 import { ChannelBadges } from '../components/ChannelBadges';
 import { OnboardingBot } from '../components/OnboardingBot';
+import { EsignPromoBar } from '../components/EsignPromoBar';
 import { SmsPhoneMockup } from '../components/landing/SmsPhoneMockup';
 import { LandingComparisonTable } from '../components/landing/LandingComparisonTable';
 import { LandingPricingCard } from '../components/landing/LandingPricingCard';
@@ -113,21 +114,7 @@ export function Landing() {
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
       <header className="sticky top-0 z-50">
-      <a
-        href="#sign-by-text"
-        aria-label="New: eSignature via Text. Get something signed in seconds."
-        className="flex items-center justify-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-center transition-colors"
-      >
-        <Sparkles className="h-3.5 w-3.5 shrink-0 text-violet-200" aria-hidden="true" />
-        <span className="inline-flex items-center rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
-          New
-        </span>
-        <span className="text-sm font-medium leading-snug">
-          <strong className="font-bold">eSignature via Text</strong>
-          <span className="hidden sm:inline"> — get something signed in seconds!</span>
-          <span className="sm:hidden"> — signed in seconds</span>
-        </span>
-      </a>
+      <EsignPromoBar to="#sign-by-text" />
       <nav className="bg-white/95 dark:bg-slate-950/95 backdrop-blur border-b border-slate-200 dark:border-slate-800">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
           <Link to="/" className="shrink-0">

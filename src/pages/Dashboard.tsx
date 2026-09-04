@@ -23,6 +23,7 @@ import { parseRevealedTools, revealTool } from '../lib/progressiveDisclosure';
 import { defaultAvailabilityRows } from '../lib/availabilityGrid';
 import { PageHelpButton } from '../components/PageHelp';
 import { AddToHomeScreenPrompt } from '../components/AddToHomeScreenPrompt';
+import { EsignPromoBar } from '../components/EsignPromoBar';
 import {
   EXAMPLE_PAID_CONSULTATION_NAME,
   isExamplePaidConsultation,
@@ -909,7 +910,11 @@ export function Dashboard() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 text-gray-900 dark:text-white flex transition-colors">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 text-gray-900 dark:text-white flex flex-col transition-colors">
+      <div className="sticky top-0 z-50 shrink-0">
+        <EsignPromoBar to="/dashboard/documents" />
+      </div>
+      <div className="flex flex-1 min-h-0">
 
       {/* ── Trial success toast ── */}
       {trialToast && (
@@ -989,7 +994,7 @@ export function Dashboard() {
       <div className="flex-1 min-w-0 flex flex-col">
 
         {/* Desktop account bar — upper right */}
-        <header className="hidden md:flex sticky top-0 z-40 border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-2.5 items-center justify-between gap-3 shrink-0">
+        <header className="hidden md:flex sticky top-10 z-40 border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-2.5 items-center justify-between gap-3 shrink-0">
           <Link
             to="/why-pinonit"
             className="inline-flex items-center gap-1 text-sm font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors"
@@ -1000,7 +1005,7 @@ export function Dashboard() {
         </header>
 
         {/* Mobile top bar */}
-        <header className="md:hidden border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-950 sticky top-0 z-40 px-4 h-14 flex items-center justify-between">
+        <header className="md:hidden border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-950 sticky top-10 z-40 px-4 h-14 flex items-center justify-between">
           <button onClick={() => setMobileMenuOpen(true)} className="min-h-11 min-w-11 inline-flex items-center justify-center text-gray-500 hover:text-gray-900 dark:text-slate-400 dark:hover:text-white transition-colors">
             <Menu className="h-5 w-5" />
           </button>
@@ -1159,6 +1164,7 @@ export function Dashboard() {
       )}
 
       {isDashboardHome && <AddToHomeScreenPrompt />}
+    </div>
     </div>
   );
 }
