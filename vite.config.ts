@@ -13,6 +13,7 @@ export default defineConfig({
     hookTimeout: 60_000,
   },
   build: {
+    emptyOutDir: true,
     rollupOptions: {
       output: {
         manualChunks: {
