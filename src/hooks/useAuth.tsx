@@ -7,6 +7,7 @@ import type { User } from '@supabase/supabase-js';
 import { pickBestSubscription } from '../lib/plan';
 import type { Profile, Subscription } from '../lib/types';
 import { persistSignupAttribution } from '../lib/campaignAttribution';
+import { storageSet } from '../lib/safeStorage';
 
 interface AuthContextType {
   user: User | null;
@@ -143,7 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signInWithGoogle = async (intendedPath?: string) => {
-    if (intendedPath) localStorage.setItem('auth_redirect', intendedPath);
+    if (intendedPath) storageSet('auth_redirect', intendedPath);
     const base = import.meta.env.VITE_APP_URL ?? window.location.origin;
     return startOAuthRedirect('google', {
       redirectTo: `${base}/auth/callback`,
@@ -152,7 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signInWithMicrosoft = async (intendedPath?: string) => {
-    if (intendedPath) localStorage.setItem('auth_redirect', intendedPath);
+    if (intendedPath) storageSet('auth_redirect', intendedPath);
     const base = import.meta.env.VITE_APP_URL ?? window.location.origin;
     return startOAuthRedirect('azure', {
       redirectTo: `${base}/auth/callback`,

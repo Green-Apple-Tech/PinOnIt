@@ -9,4 +9,13 @@ export const supabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 export const supabase = createClient(
   supabaseUrl || 'https://invalid.supabase.co',
   supabaseAnonKey || 'public-anon-key',
+  {
+    auth: {
+      flowType: 'pkce',
+      // AuthCallback owns ?code= so we do not race a second PKCE exchange.
+      detectSessionInUrl: false,
+      persistSession: true,
+      autoRefreshToken: true,
+    },
+  },
 );

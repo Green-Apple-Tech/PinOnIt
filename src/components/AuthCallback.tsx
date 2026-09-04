@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { clearClientOnboardingState, clearStaleOnboardingLocalState, markOnboardingCompletedLocal, clearWizardLocal } from '../lib/onboardingState';
+import { storageGet, storageRemove } from '../lib/safeStorage';
+import { persistSignupAttribution } from '../lib/campaignAttribution';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 const REDIRECT_KEY = 'auth_redirect';
@@ -26,8 +28,8 @@ async function checkOnboardingCompleted(userId: string): Promise<{ completed: bo
 }
 
 function getPostLoginRedirect(): string {
-  const stored = localStorage.getItem(REDIRECT_KEY);
-  localStorage.removeItem(REDIRECT_KEY);
+  const stored = storageGet(REDIRECT_KEY);
+  storageRemove(REDIRECT_KEY);
   if (stored && stored.startsWith('/') && !stored.startsWith('//')) return stored;
   return '/dashboard';
 }
@@ -52,9 +54,21 @@ export function AuthCallback() {
     const code = extractParam('code');
 
     const handleSession = async (userId: string) => {
-      const { persistSignupAttribution } = await import('../lib/campaignAttribution');
-      await persistSignupAttribution(userId);
-      const { completed, wizardActive } = await checkOnboardingCompleted(userId);
+      void persistSignupAttribution(userId).catch(() => undefined);
+      let completed = true;
+      let wizardActive = false;
+      try {
+        const result = await Promise.race([
+          checkOnboardingCompleted(userId),
+          new Promise<{ completed: boolean; wizardActive: boolean }>((resolve) =>
+            setTimeout(() => resolve({ completed: true, wizardActive: false }), 8000),
+          ),
+        ]);
+        completed = result.completed;
+        wizardActive = result.wizardActive;
+      } catch {
+        completed = true;
+      }
       const redirect = getPostLoginRedirect();
       if (!completed) {
         if (wizardActive) {
@@ -64,24 +78,42 @@ export function AuthCallback() {
         }
         navigate('/dashboard?onboarding=1', { replace: true });
       } else {
-        // Returning hosts: don't let leftover wizard flags look like a first-time signup
         markOnboardingCompletedLocal();
         clearWizardLocal();
         navigate(redirect, { replace: true });
       }
     };
 
+    const fail = (message: string) => setErrorMsg(message);
+
     if (code) {
       exchanged.current = true;
-      supabase.auth.exchangeCodeForSession(code).then(({ data, error }) => {
-        if (error) {
-          setErrorMsg(error.message);
-        } else if (data.session?.user) {
-          handleSession(data.session.user.id);
-        } else {
-          navigate(getPostLoginRedirect(), { replace: true });
+      const timeout = window.setTimeout(() => {
+        fail('Sign-in timed out. Please try again.');
+      }, 15000);
+      void (async () => {
+        try {
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) {
+            const { data: existing } = await supabase.auth.getSession();
+            if (existing.session?.user) {
+              await handleSession(existing.session.user.id);
+              return;
+            }
+            fail(error.message);
+            return;
+          }
+          if (data.session?.user) {
+            await handleSession(data.session.user.id);
+          } else {
+            navigate(getPostLoginRedirect(), { replace: true });
+          }
+        } catch (err) {
+          fail(err instanceof Error ? err.message : 'Sign-in failed. Please try again.');
+        } finally {
+          window.clearTimeout(timeout);
         }
-      });
+      })();
       return;
     }
 
