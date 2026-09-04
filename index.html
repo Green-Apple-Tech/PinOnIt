@@ -51,10 +51,16 @@
             '<h1 style="font-size:20px;font-weight:700;margin:0 0 8px">PinOnIt did not load</h1>' +
             '<p style="font-size:14px;line-height:1.5;color:#475569">' + msg + '</p></div>';
         }
+        var retried = false;
         window.addEventListener('error', function (e) {
           var t = e.target;
           if (t && t.tagName === 'SCRIPT') {
-            show('A script failed to load. Hard-refresh with Cmd+Shift+R, or open pinonit.com in a new tab.');
+            if (!retried) {
+              retried = true;
+              setTimeout(function () { location.reload(true); }, 500);
+            } else {
+              show('A script failed to load. Hard-refresh with Cmd+Shift+R, or open pinonit.com in a new tab.');
+            }
           }
         }, true);
         setTimeout(function () {
