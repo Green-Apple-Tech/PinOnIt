@@ -1,5 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
-import { appendSmsOptOut } from '../_shared/sms-opt-out.ts';
+import { sendTwilioSmsGuarded } from '../_shared/sms-send-gate.ts';
 import { hostIdFromJwt, jsonAuthError } from '../_shared/callerAuth.ts';
 import { normalizePhoneE164 } from '../_shared/phone.ts';
 import { expireStaleTrials, hostPlanIsActive } from '../_shared/hostPlan.ts';
@@ -15,34 +15,6 @@ function json(body: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
-}
-
-async function sendTwilioSms(to: string, body: string) {
-  const twilioSid = Deno.env.get('TWILIO_ACCOUNT_SID');
-  const twilioToken = Deno.env.get('TWILIO_AUTH_TOKEN');
-  const messagingServiceSid = Deno.env.get('TWILIO_MESSAGING_SERVICE_SID');
-  if (!twilioSid || !twilioToken || !messagingServiceSid) {
-    return { ok: false, error: 'SMS is not configured' };
-  }
-  const res = await fetch(
-    `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: 'Basic ' + btoa(`${twilioSid}:${twilioToken}`),
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        MessagingServiceSid: messagingServiceSid,
-        To: to,
-        Body: appendSmsOptOut(body),
-      }),
-    },
-  );
-  if (!res.ok) {
-    return { ok: false, error: await res.text() };
-  }
-  return { ok: true };
 }
 
 Deno.serve(async (req: Request) => {
@@ -107,10 +79,16 @@ Deno.serve(async (req: Request) => {
       ? doc.document_type_custom.trim()
       : String(doc.document_type || 'document').replaceAll('_', ' ');
   const topicBit = doc.topic ? ` regarding ${doc.topic}` : '';
-  const sms = await sendTwilioSms(
+  const sms = await sendTwilioSmsGuarded(
+    admin,
     to,
     `Hi ${doc.recipient_name}, you have a ${kind}${topicBit} to review: ${signingUrl}`,
   );
-  if (!sms.ok) return json({ ok: false, error: sms.error });
+  if (!sms.ok) {
+    if (sms.skipped === 'opted_out') {
+      return json({ ok: false, error: 'Recipient opted out of SMS (STOP).' }, 403);
+    }
+    return json({ ok: false, error: sms.error });
+  }
   return json({ ok: true });
 });

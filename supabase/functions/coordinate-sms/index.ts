@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { appendSmsOptOut } from "../_shared/sms-opt-out.ts";
+import { smsIsOptedOut } from "../_shared/sms-send-gate.ts";
 import { normalizePhoneE164 } from "../_shared/phone.ts";
 import { hostIdFromJwt, jsonAuthError } from "../_shared/callerAuth.ts";
 import { expireStaleTrials, hostPlanIsActive } from "../_shared/hostPlan.ts";
@@ -56,6 +57,11 @@ async function sendTwilioMessage(
 
 /** Sends via WhatsApp when configured, otherwise SMS. */
 async function sendMessage(to: string, body: string): Promise<void> {
+  if (await smsIsOptedOut(supabase, to)) {
+    console.warn("Skipping coordinate SMS — recipient opted out (STOP):", to);
+    return;
+  }
+
   const smsFrom = Deno.env.get("TWILIO_PHONE_NUMBER");
   const whatsappFrom = Deno.env.get("TWILIO_WHATSAPP_NUMBER");
   const e164 = normalizePhoneE164(to);

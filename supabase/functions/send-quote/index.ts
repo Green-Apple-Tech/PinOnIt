@@ -1,5 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
-import { appendSmsOptOut } from '../_shared/sms-opt-out.ts';
+import { sendTwilioSmsGuarded } from '../_shared/sms-send-gate.ts';
 import { NOREPLY_FROM, SUPPORT_EMAIL } from '../_shared/contact-email.ts';
 import { jsonAuthError } from '../_shared/callerAuth.ts';
 import { expireStaleTrials, hostPlanIsActive } from '../_shared/hostPlan.ts';
@@ -85,36 +85,6 @@ async function sendResendEmail(to: string, subject: string, html: string, text: 
     return false;
   }
   return true;
-}
-
-async function sendTwilioSms(to: string, body: string) {
-  const twilioSid = Deno.env.get('TWILIO_ACCOUNT_SID');
-  const twilioToken = Deno.env.get('TWILIO_AUTH_TOKEN');
-  const messagingServiceSid = Deno.env.get('TWILIO_MESSAGING_SERVICE_SID');
-  if (!twilioSid || !twilioToken || !messagingServiceSid) {
-    return { ok: false, error: 'SMS is not configured' };
-  }
-  const res = await fetch(
-    `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: 'Basic ' + btoa(`${twilioSid}:${twilioToken}`),
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        MessagingServiceSid: messagingServiceSid,
-        To: to,
-        Body: appendSmsOptOut(body),
-      }),
-    },
-  );
-  if (!res.ok) {
-    const err = await res.text();
-    console.error('Twilio error:', err);
-    return { ok: false, error: err };
-  }
-  return { ok: true };
 }
 
 Deno.serve(async (req: Request) => {
@@ -242,9 +212,14 @@ Deno.serve(async (req: Request) => {
       } else {
         const payBit = quote.pay_elsewhere_url ? ` Pay: ${quote.pay_elsewhere_url}` : '';
         const msg = `${hostName} sent you a ${kind} for ${money}.${payBit} View: ${viewUrl}`;
-        const result = await sendTwilioSms(to, msg);
-        if (!result.ok) errors.push(result.error || 'Text failed to send.');
-        else if (!sentVia.includes('sms')) sentVia.push('sms');
+        const result = await sendTwilioSmsGuarded(supabase, to, msg);
+        if (!result.ok) {
+          errors.push(
+            result.skipped === 'opted_out'
+              ? 'Client opted out of SMS (STOP).'
+              : (result.error || 'Text failed to send.'),
+          );
+        } else if (!sentVia.includes('sms')) sentVia.push('sms');
       }
     }
 

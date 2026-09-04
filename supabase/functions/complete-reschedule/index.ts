@@ -1,5 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { appendSmsOptOut } from "../_shared/sms-opt-out.ts";
+import { sendTwilioSmsGuarded } from "../_shared/sms-send-gate.ts";
 import { NOREPLY_FROM } from "../_shared/contact-email.ts";
 import { isValidSlackWebhookUrl, notifySlackWebhook } from "../_shared/slack-webhook.ts";
 import { hostAllowsSms } from "../_shared/sms-compliance.ts";
@@ -23,32 +23,6 @@ function rpcReason(err: { message?: string } | null): string {
     if (msg.includes(key)) return key;
   }
   return "error";
-}
-
-async function sendTwilioSms(to: string, body: string): Promise<void> {
-  const twilioSid = Deno.env.get("TWILIO_ACCOUNT_SID");
-  const twilioToken = Deno.env.get("TWILIO_AUTH_TOKEN");
-  const messagingServiceSid = Deno.env.get("TWILIO_MESSAGING_SERVICE_SID");
-  if (!twilioSid || !twilioToken || !messagingServiceSid || !to) return;
-  try {
-    await fetch(
-      `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: "Basic " + btoa(`${twilioSid}:${twilioToken}`),
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-          MessagingServiceSid: messagingServiceSid,
-          To: to,
-          Body: appendSmsOptOut(body),
-        }),
-      },
-    );
-  } catch (e) {
-    console.error("host SMS failed:", e);
-  }
 }
 
 async function sendResendEmail(to: string[], subject: string, text: string): Promise<void> {
@@ -199,7 +173,7 @@ Deno.serve(async (req: Request) => {
       sms_opt_in: host?.sms_opt_in as boolean | null,
       default_reminder_channel: host?.default_reminder_channel as string | null,
     }) && host?.phone) {
-      await sendTwilioSms(String(host.phone), hostLine);
+      await sendTwilioSmsGuarded(supabase, String(host.phone), hostLine);
     }
     await notifySlackWebhook(host?.slack_webhook_url, hostLine);
 

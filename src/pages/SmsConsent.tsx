@@ -10,6 +10,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import {
+  SMS_BOOKING_CONSENT_CTA,
   SMS_CONSENT_PAGE_OPTIONAL_STATEMENT,
   SMS_OPTIONAL_BOOKING_NOTICE,
 } from '../lib/smsCompliance';
@@ -44,12 +45,14 @@ function SmsOptInForm() {
     }
     const e164 = normalizePhoneE164(phone.trim());
     setSubmitting(true);
-    const { error: insertError } = await supabase.from('sms_optins').insert({
-      name: name.trim() || null,
-      phone: e164,
-      consent: true,
-      source: 'sms_consent_page',
-      user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+    const { error: insertError } = await supabase.rpc('record_sms_optin_public', {
+      p_name: name.trim() || null,
+      p_phone: e164,
+      p_source: 'sms_consent_page',
+      p_user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+      p_disclosure_text: SMS_BOOKING_CONSENT_CTA,
+      p_page_url: typeof window !== 'undefined' ? window.location.href : null,
+      p_booking_id: null,
     });
     setSubmitting(false);
     if (insertError) {

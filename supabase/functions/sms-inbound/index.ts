@@ -1,12 +1,23 @@
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
-import { appendSmsOptOut } from "../_shared/sms-opt-out.ts";
+import { sendTwilioSmsGuarded } from "../_shared/sms-send-gate.ts";
 import { NOREPLY_FROM } from "../_shared/contact-email.ts";
 import { isValidSlackWebhookUrl, notifySlackWebhook } from "../_shared/slack-webhook.ts";
 import { hostAllowsSms } from "../_shared/sms-compliance.ts";
 import { assertTwilioSignature } from "../_shared/twilio-signature.ts";
 
 const APP_URL = (Deno.env.get("APP_URL") || "https://pinonit.com").replace(/\/$/, "");
-const OPT_OUT = new Set(["stop", "start", "help", "unsubscribe", "unstop"]);
+const OPT_OUT = new Set([
+  "stop",
+  "stopall",
+  "unsubscribe",
+  "cancel",
+  "end",
+  "quit",
+  "start",
+  "unstop",
+  "yes",
+  "help",
+]);
 
 function twiml(message: string): Response {
   const xml = `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${escapeXml(message)}</Message></Response>`;
@@ -130,39 +141,6 @@ async function upsertConversation(
   });
 }
 
-async function sendTwilioSms(to: string, body: string): Promise<string | null> {
-  const twilioSid = Deno.env.get("TWILIO_ACCOUNT_SID");
-  const twilioToken = Deno.env.get("TWILIO_AUTH_TOKEN");
-  const messagingServiceSid = Deno.env.get("TWILIO_MESSAGING_SERVICE_SID");
-  if (!twilioSid || !twilioToken || !messagingServiceSid || !to) return null;
-  try {
-    const res = await fetch(
-      `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: "Basic " + btoa(`${twilioSid}:${twilioToken}`),
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-          MessagingServiceSid: messagingServiceSid,
-          To: to,
-          Body: appendSmsOptOut(body),
-        }),
-      },
-    );
-    if (!res.ok) {
-      console.error("Twilio SMS failed:", await res.text());
-      return null;
-    }
-    const json = await res.json() as { sid?: string };
-    return json.sid ?? null;
-  } catch (e) {
-    console.error("Twilio SMS error:", e);
-    return null;
-  }
-}
-
 async function sendResendEmail(to: string[], subject: string, text: string): Promise<void> {
   const key = Deno.env.get("RESEND_API_KEY");
   if (!key || to.length === 0) return;
@@ -220,6 +198,7 @@ async function lookupBusinessName(supabase: SupabaseClient, from10: string): Pro
 }
 
 async function notifyOwner(
+  supabase: SupabaseClient,
   host: Record<string, unknown> | null,
   line: string,
   subject: string,
@@ -230,7 +209,7 @@ async function notifyOwner(
     sms_opt_in: host?.sms_opt_in as boolean | null,
     default_reminder_channel: host?.default_reminder_channel as string | null,
   }) && host?.phone) {
-    await sendTwilioSms(String(host.phone), line);
+    await sendTwilioSmsGuarded(supabase, String(host.phone), line);
   }
   await notifySlackWebhook(host?.slack_webhook_url, line);
 }
@@ -264,7 +243,7 @@ async function cancelBooking(
     body: inviteeMsg,
     booking_id: booking.id,
   });
-  await notifyOwner(host, hostLine, `Canceled: ${serviceName} with ${guest}`);
+  await notifyOwner(supabase, host, hostLine, `Canceled: ${serviceName} with ${guest}`);
 
   if (booking.action_token) {
     try {
@@ -324,7 +303,24 @@ Deno.serve(async (req: Request) => {
     booking_id: null,
   });
 
-  if (OPT_OUT.has(key)) return emptyTwiml();
+  // STOP / START — persist in our registry; Twilio Advanced Opt-Out still owns the auto-reply.
+  if (OPT_OUT.has(key)) {
+    if (key === "stop" || key === "unsubscribe" || key === "cancel" || key === "end" || key === "quit" || key === "stopall") {
+      const { error } = await supabase.rpc("record_sms_opt_out", {
+        p_phone: from,
+        p_source: `inbound_${key}`,
+      });
+      if (error) console.error("record_sms_opt_out failed:", error.message);
+    } else if (key === "start" || key === "unstop" || key === "yes") {
+      const { error } = await supabase.rpc("record_sms_opt_in", {
+        p_phone: from,
+        p_source: `inbound_${key}`,
+      });
+      if (error) console.error("record_sms_opt_in failed:", error.message);
+    }
+    // help / unknown keywords in OPT_OUT → no registry change
+    return emptyTwiml();
+  }
 
   const wantCancel = key === "1" || key === "cancel";
   const wantReschedule = key === "2" || key === "reschedule";

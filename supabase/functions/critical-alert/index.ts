@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
+import { smsIsOptedOut } from '../_shared/sms-send-gate.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -274,6 +275,8 @@ Deno.serve(async (req: Request) => {
         if (item.channel === 'sms') {
           if (!hostPhone) {
             err = 'no phone';
+          } else if (await smsIsOptedOut(supabase, hostPhone)) {
+            err = 'recipient opted out (STOP)';
           } else {
             const r = await sendTwilioSms(hostPhone, body);
             ok = r.ok;
@@ -282,6 +285,8 @@ Deno.serve(async (req: Request) => {
         } else if (item.channel === 'whatsapp') {
           if (!hostWhatsapp) {
             err = 'no whatsapp';
+          } else if (await smsIsOptedOut(supabase, hostWhatsapp)) {
+            err = 'recipient opted out (STOP)';
           } else {
             const r = await sendTwilioWhatsapp(hostWhatsapp, body);
             ok = r.ok;

@@ -18,8 +18,8 @@ import { SmsBookingConsentCheckbox } from '../components/SmsConsentText';
 import {
   buildNotifyViaPayload,
   resolveBookingSmsConsent,
-  shouldRecordSmsOptIn,
 } from '../lib/bookingSmsConsent';
+import { SMS_BOOKING_CONSENT_CTA } from '../lib/smsCompliance';
 import { resolveTermsText } from '../lib/terms';
 import { bookableEventTypes, serviceMatchesTypeToken } from '../lib/eventTypes';
 import { isUnusedSingleUseExpired } from '../lib/singleUseLinks';
@@ -624,7 +624,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [step, setStep] = useState<'service' | 'datetime' | 'details' | 'confirmed' | 'reminders'>('service');
   const [selectedChannels, setSelectedChannels] = useState<string[]>(['email']);
-  const [selectedTimes, setSelectedTimes] = useState<string[]>(['1hour']);
+  const [selectedTimes, setSelectedTimes] = useState<string[]>(['24hour', '1hour']);
   const [remindersDone, setRemindersDone] = useState(false);
   const [savingReminders, setSavingReminders] = useState(false);
 
@@ -997,6 +997,12 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
         reminder_channels: effectiveReminderChannels.length > 0 ? effectiveReminderChannels : ['email'],
         reminder_times: selectedTimes,
         stripe_payment_id: stripePaymentId,
+        sms_consent: smsConsentGranted,
+        whatsapp_consent: whatsappConsentGranted,
+        sms_consent_source: 'booking',
+        sms_consent_user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+        sms_consent_disclosure: SMS_BOOKING_CONSENT_CTA,
+        sms_consent_page_url: typeof window !== 'undefined' ? window.location.href : null,
       },
     });
     if (insertError || !data) {
@@ -1021,18 +1027,6 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
           answer: q.field_type === 'phone' ? normalizePhoneE164(answers[q.id] ?? '') : (answers[q.id] ?? ''),
         }));
         if (answerRows.length) await supabase.from('booking_answers').insert(answerRows);
-      }
-
-      if (shouldRecordSmsOptIn(phone, smsOptIn) && phoneVal) {
-        supabase.from('sms_optins').insert({
-          name: guestName.trim() || null,
-          phone: phoneVal,
-          consent: true,
-          source: 'booking',
-          user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
-        }).then(({ error }) => {
-          if (error) console.warn('SMS opt-in record failed:', error.message);
-        });
       }
 
       // Create Teams meeting link if host has Outlook Calendar connected
@@ -1115,6 +1109,12 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
               reminder_channels: effectiveReminderChannels.length > 0 ? effectiveReminderChannels : ['email'],
               reminder_times: selectedTimes,
               stripe_payment_id: null,
+              sms_consent: smsConsentGranted,
+              whatsapp_consent: whatsappConsentGranted,
+              sms_consent_source: 'booking',
+              sms_consent_user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+              sms_consent_disclosure: SMS_BOOKING_CONSENT_CTA,
+              sms_consent_page_url: typeof window !== 'undefined' ? window.location.href : null,
             },
           });
         }
