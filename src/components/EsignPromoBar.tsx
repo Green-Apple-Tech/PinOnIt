@@ -2,12 +2,13 @@ import { Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const BAR_CLASS =
-  'flex items-center justify-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-center transition-colors';
+  'flex items-center justify-center gap-2 px-4 py-2 text-white text-center transition-colors hover:brightness-110';
+const BAR_STYLE = { backgroundColor: '#5864C6' };
 
 function PromoCopy() {
   return (
     <>
-      <Sparkles className="h-3.5 w-3.5 shrink-0 text-violet-200" aria-hidden="true" />
+      <Sparkles className="h-3.5 w-3.5 shrink-0 text-white/80" aria-hidden="true" />
       <span className="inline-flex items-center rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
         New
       </span>
@@ -25,13 +26,13 @@ export function EsignPromoBar({ to }: { to: string }) {
   const label = 'New: eSignature via Text. Get something signed in seconds.';
   if (to.startsWith('#')) {
     return (
-      <a href={to} aria-label={label} className={BAR_CLASS}>
+      <a href={to} aria-label={label} className={BAR_CLASS} style={BAR_STYLE}>
         <PromoCopy />
       </a>
     );
   }
   return (
-    <Link to={to} aria-label={label} className={BAR_CLASS}>
+    <Link to={to} aria-label={label} className={BAR_CLASS} style={BAR_STYLE}>
       <PromoCopy />
     </Link>
   );
