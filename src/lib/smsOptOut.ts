@@ -4,4 +4,4 @@ export {
   appendSmsGuestFooters,
   appendSmsOptOut,
   appendSmsReplyFooter,
-} from '../../shared/smsOptOut';
+} from '@shared/smsOptOut';

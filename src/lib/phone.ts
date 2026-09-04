@@ -4,4 +4,4 @@ export {
   blurFormatPhone,
   formatPhoneDisplay,
   normalizePhoneE164,
-} from '../../shared/phone';
+} from '@shared/phone';

@@ -1,1 +1,5 @@
-/* /index.html  200
+# Missing hashed JS must 404. SPA fallback of /assets/* → index.html makes
+# Bolt Publish races execute HTML as a module and the page stays blank.
+/assets/*  /404.html  404
+/src/*     /404.html  404
+/*         /index.html  200

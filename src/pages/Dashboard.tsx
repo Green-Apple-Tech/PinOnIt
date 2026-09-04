@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { ExpiredBanner } from '../components/ExpiredBanner';
 import { useAuth } from '../hooks/useAuth';
@@ -914,7 +914,7 @@ export function Dashboard() {
       <div className="sticky top-0 z-50 shrink-0">
         <EsignPromoBar to="/dashboard/documents" />
       </div>
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1">
 
       {/* ── Trial success toast ── */}
       {trialToast && (
@@ -1106,7 +1106,15 @@ export function Dashboard() {
 
         {!isDashboardHome && (
           <div className="flex-1 min-w-0 w-full pb-[max(1rem,env(safe-area-inset-bottom))]">
-            <Outlet />
+            <Suspense
+              fallback={
+                <div className="flex items-center justify-center py-24">
+                  <Loader2 className="h-8 w-8 animate-spin text-brand-500" />
+                </div>
+              }
+            >
+              <Outlet />
+            </Suspense>
           </div>
         )}
 
