@@ -9,6 +9,8 @@ export default defineConfig({
     globals: false,
     environment: 'node',
     include: ['src/**/*.test.ts'],
+    testTimeout: 10_000,
+    hookTimeout: 60_000,
   },
   build: {
     rollupOptions: {

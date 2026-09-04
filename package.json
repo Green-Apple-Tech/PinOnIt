@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:guest-smoke": "GUEST_SMOKE_REQUIRED=1 vitest run src/lib/guestPaths.smoke.test.ts",
     "screenshots": "node scripts/capture-marketing-screenshots.mjs"
   },
   "dependencies": {
