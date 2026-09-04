@@ -8,7 +8,7 @@ import {
   ArrowRight, Check,
   Sun, Moon, Menu, X,
   Calendar, Bell, Mail, ClipboardSignature, QrCode,
-  Receipt,
+  Receipt, Sparkles,
 } from 'lucide-react';
 import { ChannelBadges } from '../components/ChannelBadges';
 import { OnboardingBot } from '../components/OnboardingBot';
@@ -112,7 +112,23 @@ export function Landing() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
-      <nav className="sticky top-0 z-50 bg-white/95 dark:bg-slate-950/95 backdrop-blur border-b border-slate-200 dark:border-slate-800">
+      <header className="sticky top-0 z-50">
+      <a
+        href="#sign-by-text"
+        aria-label="New: eSignature via Text. Get something signed in seconds."
+        className="flex items-center justify-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-center transition-colors"
+      >
+        <Sparkles className="h-3.5 w-3.5 shrink-0 text-violet-200" aria-hidden="true" />
+        <span className="inline-flex items-center rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+          New
+        </span>
+        <span className="text-sm font-medium leading-snug">
+          <strong className="font-bold">eSignature via Text</strong>
+          <span className="hidden sm:inline"> — get something signed in seconds!</span>
+          <span className="sm:hidden"> — signed in seconds</span>
+        </span>
+      </a>
+      <nav className="bg-white/95 dark:bg-slate-950/95 backdrop-blur border-b border-slate-200 dark:border-slate-800">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
           <Link to="/" className="shrink-0">
             <img src="/pinonit_logo.png" alt="Pin on It" className="h-11 w-auto" />
@@ -153,6 +169,7 @@ export function Landing() {
           </div>
         )}
       </nav>
+      </header>
 
       {/* Hero */}
       <section className="relative overflow-hidden pt-12 pb-16 md:pt-16 md:pb-24 px-6">
@@ -187,7 +204,7 @@ export function Landing() {
       </section>
 
       {/* Sign-by-Text featured */}
-      <section id="sign-by-text" className="py-16 md:py-20 px-6 bg-violet-50/80 dark:bg-violet-950/20 border-y border-violet-100 dark:border-violet-900/40 scroll-mt-16">
+      <section id="sign-by-text" className="py-16 md:py-20 px-6 bg-violet-50/80 dark:bg-violet-950/20 border-y border-violet-100 dark:border-violet-900/40 scroll-mt-28">
         <div className="max-w-5xl mx-auto grid lg:grid-cols-2 gap-10 items-center">
           <div>
             <p className="text-xs font-bold uppercase tracking-widest text-violet-600 dark:text-violet-300 mb-2">Featured workflow</p>
@@ -232,7 +249,7 @@ export function Landing() {
       </section>
 
       {/* How it works */}
-      <section id="demo" className="py-20 px-6 bg-slate-50 dark:bg-slate-900/40 scroll-mt-16">
+      <section id="demo" className="py-20 px-6 bg-slate-50 dark:bg-slate-900/40 scroll-mt-28">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl md:text-3xl font-bold text-center text-slate-900 dark:text-white mb-12">
             How it works in 10 seconds
@@ -353,7 +370,7 @@ export function Landing() {
       </section>
 
       {/* Six tools */}
-      <section id="tools" className="py-20 px-6 bg-white dark:bg-slate-950 scroll-mt-16">
+      <section id="tools" className="py-20 px-6 bg-white dark:bg-slate-950 scroll-mt-28">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-2xl md:text-3xl font-bold text-center text-slate-900 dark:text-white mb-12">
             Everything else you&apos;d expect, included
@@ -392,7 +409,7 @@ export function Landing() {
       </section>
 
       {/* Pricing */}
-      <section id="pricing" className="py-24 px-6 bg-white dark:bg-slate-950 scroll-mt-16">
+      <section id="pricing" className="py-24 px-6 bg-white dark:bg-slate-950 scroll-mt-28">
         <div className="max-w-lg mx-auto">
           <h2 className="text-2xl md:text-3xl font-bold text-center text-slate-900 dark:text-white mb-10">Pricing</h2>
           <LandingPricingCard variant="text-first" />
@@ -400,7 +417,7 @@ export function Landing() {
       </section>
 
       {/* FAQ */}
-      <section id="faq" className="py-20 px-6 bg-slate-50 dark:bg-slate-900/40 scroll-mt-16">
+      <section id="faq" className="py-20 px-6 bg-slate-50 dark:bg-slate-900/40 scroll-mt-28">
         <div className="max-w-2xl mx-auto">
           <h2 className="text-2xl md:text-3xl font-bold text-center text-slate-900 dark:text-white mb-10">FAQ</h2>
           <LandingFaq />
