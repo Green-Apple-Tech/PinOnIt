@@ -249,6 +249,7 @@ export {
   DOCUMENT_UPLOAD_READABILITY_HINT,
   signByTextScopeDetail,
   signByTextAckLabel,
+  requiresSignByTextScopeCheckbox,
 } from './documentCopy';
 
 export function topicCoverLine(topic: string) {

@@ -7,9 +7,29 @@ const CHUNK_RELOAD_KEY = 'pinonit-chunk-reload';
 
 function isStaleDeployError(error: Error) {
   const message = `${error.name} ${error.message}`;
-  return /Failed to fetch dynamically imported module|Loading chunk|Importing a module script failed|error loading dynamically imported module/i.test(
+  return /Failed to fetch dynamically imported module|Loading chunk|Importing a module script failed|error loading dynamically imported module|Failed to load module script/i.test(
     message,
   );
+}
+
+function hardReloadOnce() {
+  try {
+    if (sessionStorage.getItem(CHUNK_RELOAD_KEY)) return false;
+    sessionStorage.setItem(CHUNK_RELOAD_KEY, '1');
+  } catch {
+    return false;
+  }
+  const href = window.location.href;
+  if (typeof fetch === 'function') {
+    void fetch(href, { cache: 'reload', credentials: 'same-origin' })
+      .catch(() => undefined)
+      .finally(() => {
+        window.location.replace(href);
+      });
+  } else {
+    window.location.reload();
+  }
+  return true;
 }
 
 function BootMessage({ title, detail }: { title: string; detail: string }) {
@@ -29,13 +49,7 @@ class RootErrorBoundary extends Component<{ children: ReactNode }, { error: Erro
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error(error, info.componentStack);
     if (!isStaleDeployError(error)) return;
-    try {
-      if (sessionStorage.getItem(CHUNK_RELOAD_KEY)) return;
-      sessionStorage.setItem(CHUNK_RELOAD_KEY, '1');
-      window.location.reload();
-    } catch {
-      /* private mode / blocked storage */
-    }
+    hardReloadOnce();
   }
   render() {
     if (this.state.error) {
@@ -86,20 +100,12 @@ async function boot() {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (isStaleDeployError(error instanceof Error ? error : new Error(message))) {
-      try {
-        if (!sessionStorage.getItem(CHUNK_RELOAD_KEY)) {
-          sessionStorage.setItem(CHUNK_RELOAD_KEY, '1');
-          window.location.reload();
-          return;
-        }
-      } catch {
-        /* private mode / blocked storage */
-      }
+      if (hardReloadOnce()) return;
     }
     createRoot(rootEl).render(
       <BootMessage
         title="PinOnIt failed to start"
-        detail={`${message}. Hard-refresh with Cmd+Shift+R, or open pinonit.com in a new tab.`}
+        detail={`${message}. Hard-refresh with Cmd+Shift+R, or open pinonit.com in a new tab / Incognito.`}
       />,
     );
   }

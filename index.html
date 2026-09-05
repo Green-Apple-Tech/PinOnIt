@@ -4,6 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
     <!-- Branding -->
     <title>Your mini office by text | PinOnIt</title>
     <link rel="icon" type="image/png" href="/pinonit_logo.png" />
@@ -46,35 +50,83 @@
     <script>
       (function () {
         var RELOAD_KEY = 'pinonit-script-reload';
+        var WATCHDOG_MS = 8000;
+
         function isAppScript(src) {
           if (!src) return false;
           return src.indexOf('/assets/') !== -1 || src.indexOf('/src/main.') !== -1;
         }
+
         function show(msg) {
           var r = document.getElementById('root');
           if (!r || r.childElementCount) return;
           r.innerHTML =
             '<div style="font-family:system-ui,sans-serif;max-width:28rem;margin:20vh auto;padding:24px;color:#0f172a">' +
             '<h1 style="font-size:20px;font-weight:700;margin:0 0 8px">PinOnIt did not load</h1>' +
-            '<p style="font-size:14px;line-height:1.5;color:#475569">' + msg + '</p></div>';
+            '<p style="font-size:14px;line-height:1.5;color:#475569">' + msg + '</p>' +
+            '<p style="font-size:13px;line-height:1.5;color:#64748b;margin-top:12px">On Chrome: hard-refresh (Cmd+Shift+R / Ctrl+Shift+R), or open pinonit.com in a new tab / Incognito.</p></div>';
         }
+
+        /** Chrome often reloads from memory cache; force a network fetch of the HTML shell first. */
+        function hardReload() {
+          var href = window.location.href;
+          try {
+            if (window.fetch) {
+              fetch(href, { cache: 'reload', credentials: 'same-origin' })
+                .catch(function () {})
+                .finally(function () {
+                  window.location.replace(href);
+                });
+              return;
+            }
+          } catch (e) { /* ignore */ }
+          window.location.reload();
+        }
+
         function recoverOrShow(msg) {
           try {
             if (!sessionStorage.getItem(RELOAD_KEY)) {
               sessionStorage.setItem(RELOAD_KEY, '1');
-              // Stale cached HTML after Publish often 404s hashed /assets/*.js — one reload fixes it.
-              window.location.reload();
+              // Stale cached HTML after Publish often 404s hashed /assets/*.js — one hard reload fixes it.
+              hardReload();
               return;
             }
           } catch (e) { /* private mode */ }
           show(msg);
         }
+
+        function looksLikeStaleModule(msg) {
+          if (!msg) return false;
+          return /Failed to fetch dynamically imported module|Loading chunk|Importing a module script failed|error loading dynamically imported module|Failed to load module script/i.test(
+            String(msg),
+          );
+        }
+
         window.addEventListener('error', function (e) {
           var t = e.target;
           if (t && t.tagName === 'SCRIPT' && isAppScript(t.src)) {
             recoverOrShow('A script failed to load. Hard-refresh with Cmd+Shift+R, or open pinonit.com in a new tab.');
+            return;
+          }
+          if (e.message && looksLikeStaleModule(e.message)) {
+            recoverOrShow(e.message);
           }
         }, true);
+
+        window.addEventListener('unhandledrejection', function (e) {
+          var reason = e && e.reason;
+          var msg = reason && reason.message ? reason.message : String(reason || '');
+          if (looksLikeStaleModule(msg)) {
+            recoverOrShow(msg);
+          }
+        });
+
+        // Blank #root with no script error (Chrome memory-cache miss) — one recovery attempt.
+        window.setTimeout(function () {
+          var r = document.getElementById('root');
+          if (!r || r.childElementCount) return;
+          recoverOrShow('The app took too long to start. Reloading once to clear a stale Chrome cache…');
+        }, WATCHDOG_MS);
       })();
     </script>
     <!-- Vite entry. `vite build` replaces this with /assets/index-*.js. Do not delete. -->

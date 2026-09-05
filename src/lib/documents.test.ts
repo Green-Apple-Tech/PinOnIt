@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('./supabase', () => ({ supabase: {} }));
 
-import { CONTRACT_HOST_HINT, WAIVER_HOST_HINT, SIGN_BY_TEXT_SCOPE_SUMMARY, signByTextAckLabel, signByTextScopeDetail } from './documentCopy';
+import { CONTRACT_HOST_HINT, WAIVER_HOST_HINT, SIGN_BY_TEXT_SCOPE_SUMMARY, signByTextAckLabel, signByTextScopeDetail, requiresSignByTextScopeCheckbox } from './documentCopy';
 import {
   CONTRACT_STARTER_TEXT,
   INVOICE_STARTER_TEXT,
@@ -23,6 +23,13 @@ describe('Sign-by-Text scope copy', () => {
     expect(signByTextScopeDetail('5MB')).toMatch(/5MB/);
     expect(signByTextScopeDetail('5MB')).toMatch(/evidentiary record/i);
     expect(signByTextAckLabel('5MB')).toMatch(/I understand/i);
+  });
+
+  it('requires checkbox every PDF send, but only once for built-in templates', () => {
+    expect(requiresSignByTextScopeCheckbox({ isUpload: true, scopeAlreadyAccepted: true })).toBe(true);
+    expect(requiresSignByTextScopeCheckbox({ isUpload: true, scopeAlreadyAccepted: false })).toBe(true);
+    expect(requiresSignByTextScopeCheckbox({ isUpload: false, scopeAlreadyAccepted: false })).toBe(true);
+    expect(requiresSignByTextScopeCheckbox({ isUpload: false, scopeAlreadyAccepted: true })).toBe(false);
   });
 });
 

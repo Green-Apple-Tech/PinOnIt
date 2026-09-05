@@ -26,3 +26,16 @@ export function signByTextScopeDetail(maxLabel = '5MB') {
 export function signByTextAckLabel(maxLabel = '5MB') {
   return `I understand Sign-by-Text / Send Docs is only for lawful single-signature business documents. I will not use it for wills, trusts, powers of attorney (POA), deeds, court or judge filings/orders, notarized instruments, multi-signer closings, or illegal/fraudulent content. Uploaded PDFs must be clear and complete (PDF, up to ${maxLabel}).`;
 }
+
+/**
+ * Full scope checkbox:
+ * - every send for uploaded / library PDFs (host-controlled content)
+ * - first send only for built-in templates (durable ack on profile)
+ */
+export function requiresSignByTextScopeCheckbox(opts: {
+  isUpload: boolean;
+  scopeAlreadyAccepted: boolean;
+}): boolean {
+  if (opts.isUpload) return true;
+  return !opts.scopeAlreadyAccepted;
+}
