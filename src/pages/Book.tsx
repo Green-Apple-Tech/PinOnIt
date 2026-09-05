@@ -47,8 +47,6 @@ import {
   User,
   Mail,
   Globe,
-  ChevronLeft,
-  ChevronRight,
   Phone,
   Video,
   AlertCircle,
@@ -196,8 +194,6 @@ function formatCashappDisplay(tag: string): string {
   return `$${tag.replace(/^\$/, '')}`;
 }
 
-const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const DAY_SHORT = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
 const BOOKING_NAVY = '#1a1f36';
 
 function formatTimezoneDisplay(tz: string): string {
@@ -225,12 +221,12 @@ function formatTime12(time: string): string {
   return `${display}:${m} ${ampm}`;
 }
 
-function formatSelectedDateLabel(dateKey: string): string {
+function formatSelectedDateHeading(dateKey: string): string {
   return new Date(dateKey + 'T12:00:00').toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
-  });
+  }).toUpperCase();
 }
 
 function toDateKey(d: Date): string {
@@ -353,7 +349,13 @@ function shouldBlockCalendarEvent(
   return true;
 }
 
-function buildSlots(availability: AvailabilitySlot[], existingBookings: Booking[], service: Service, dateOverrides: DateOverride[], year: number, month: number, busyTimes: BusyPeriod[] = []): Map<string, string[]> {
+function buildSlots(
+  availability: AvailabilitySlot[],
+  existingBookings: Booking[],
+  service: Service,
+  dateOverrides: DateOverride[],
+  busyTimes: BusyPeriod[] = [],
+): Map<string, string[]> {
   const result = new Map<string, string[]>();
   const now = new Date();
   const minNotice = new Date(now.getTime() + service.min_notice_hours * 3600000);
@@ -371,14 +373,20 @@ function buildSlots(availability: AvailabilitySlot[], existingBookings: Booking[
   const overrideMap = new Map<string, DateOverride>();
   for (const ov of dateOverrides) overrideMap.set(ov.override_date, ov);
 
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  for (let d = 1; d <= daysInMonth; d++) {
+  const cursor = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const lastDay = new Date(windowEnd.getFullYear(), windowEnd.getMonth(), windowEnd.getDate());
+  while (cursor <= lastDay) {
+    const year = cursor.getFullYear();
+    const month = cursor.getMonth();
+    const d = cursor.getDate();
     const date = new Date(year, month, d);
     const dk = toDateKey(date);
-    if (date < now || date > windowEnd) continue;
 
     const override = overrideMap.get(dk);
-    if (override?.is_blocked) continue;
+    if (override?.is_blocked) {
+      cursor.setDate(cursor.getDate() + 1);
+      continue;
+    }
 
     let windows: { start: string; end: string }[] = [];
     if (override && !override.is_blocked && override.start_time && override.end_time) {
@@ -387,10 +395,16 @@ function buildSlots(availability: AvailabilitySlot[], existingBookings: Booking[
       const daySlots = availByDay.get(date.getDay()) ?? [];
       windows = daySlots.map((s) => ({ start: s.start_time, end: s.end_time }));
     }
-    if (!windows.length) continue;
+    if (!windows.length) {
+      cursor.setDate(cursor.getDate() + 1);
+      continue;
+    }
 
     const bookingsOnDay = existingBookings.filter((b) => toDateKey(new Date(b.start_time)) === dk);
-    if (service.max_bookings_per_day !== null && bookingsOnDay.length >= service.max_bookings_per_day) continue;
+    if (service.max_bookings_per_day !== null && bookingsOnDay.length >= service.max_bookings_per_day) {
+      cursor.setDate(cursor.getDate() + 1);
+      continue;
+    }
 
     const slots: string[] = [];
     for (const win of windows) {
@@ -402,11 +416,14 @@ function buildSlots(availability: AvailabilitySlot[], existingBookings: Booking[
       while (cur + service.duration_minutes + service.buffer_after_minutes <= endMinutes) {
         const slotH = Math.floor(cur / 60);
         const slotM = cur % 60;
-        const slotKey = `${String(slotH).padStart(2,'0')}:${String(slotM).padStart(2,'0')}`;
+        const slotKey = `${String(slotH).padStart(2, '0')}:${String(slotM).padStart(2, '0')}`;
         const slotStart = new Date(year, month, d, slotH, slotM);
         const slotEnd = new Date(slotStart.getTime() + (service.duration_minutes + service.buffer_after_minutes) * 60000);
         const blockStart = new Date(slotStart.getTime() - service.buffer_before_minutes * 60000);
-        if (slotStart < minNotice) { cur += increment; continue; }
+        if (slotStart < minNotice) {
+          cur += increment;
+          continue;
+        }
         const bookingConflict = existingBookings.some((b) => {
           const bStart = new Date(b.start_time);
           const bEnd = new Date(b.end_time);
@@ -418,8 +435,18 @@ function buildSlots(availability: AvailabilitySlot[], existingBookings: Booking[
       }
     }
     if (slots.length) result.set(dk, slots);
+    cursor.setDate(cursor.getDate() + 1);
   }
   return result;
+}
+
+function dateStripParts(dateKey: string): { weekday: string; day: string; month: string } {
+  const d = new Date(dateKey + 'T12:00:00');
+  return {
+    weekday: d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
+    day: String(d.getDate()),
+    month: d.toLocaleDateString('en-US', { month: 'short' }),
+  };
 }
 
 function ReminderWizard({
@@ -627,10 +654,6 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
   const [selectedTimes, setSelectedTimes] = useState<string[]>(['24hour', '1hour']);
   const [remindersDone, setRemindersDone] = useState(false);
   const [savingReminders, setSavingReminders] = useState(false);
-
-  const today = new Date();
-  const [calYear, setCalYear] = useState(today.getFullYear());
-  const [calMonth, setCalMonth] = useState(today.getMonth());
 
   const [guestName, setGuestName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
@@ -859,8 +882,8 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
 
   const slotMap = useMemo(() => {
     if (!selectedService) return new Map<string, string[]>();
-    return buildSlots(availability, bookings, selectedService, dateOverrides, calYear, calMonth, calendarBusyTimes);
-  }, [selectedService, availability, bookings, dateOverrides, calYear, calMonth, calendarBusyTimes]);
+    return buildSlots(availability, bookings, selectedService, dateOverrides, calendarBusyTimes);
+  }, [selectedService, availability, bookings, dateOverrides, calendarBusyTimes]);
 
   const isRecurringService = !!(selectedService?.is_recurring && selectedService.recurrence_frequency);
 
@@ -888,6 +911,24 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
     });
     return next;
   }, [slotMap, selectedService, bookings]);
+
+  const bookableDates = useMemo(
+    () => [...displaySlotMap.keys()].sort(),
+    [displaySlotMap],
+  );
+
+  useEffect(() => {
+    if (step !== 'datetime') return;
+    if (selectedDate && displaySlotMap.has(selectedDate)) return;
+    const first = bookableDates[0] ?? null;
+    if (first) {
+      setSelectedDate(first);
+      setSelectedSlot(null);
+    } else if (selectedDate) {
+      setSelectedDate(null);
+      setSelectedSlot(null);
+    }
+  }, [step, bookableDates, displaySlotMap, selectedDate]);
 
   const handleSelectService = async (svc: Service) => {
     const { data: freshSvc } = await supabase.from('services').select(SERVICE_SELECT).eq('id', svc.id).maybeSingle();
@@ -1234,18 +1275,6 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
     [selectedChannels, selectedTimes]
   );
 
-  const calendarDays = useMemo(() => {
-    const firstDay = new Date(calYear, calMonth, 1).getDay();
-    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
-    const days: (number | null)[] = [];
-    for (let i = 0; i < firstDay; i++) days.push(null);
-    for (let d = 1; d <= daysInMonth; d++) days.push(d);
-    return days;
-  }, [calYear, calMonth]);
-
-  const prevMonth = () => { if (calMonth === 0) { setCalYear(y => y - 1); setCalMonth(11); } else setCalMonth(m => m - 1); setSelectedDate(null); setSelectedSlot(null); };
-  const nextMonth = () => { if (calMonth === 11) { setCalYear(y => y + 1); setCalMonth(0); } else setCalMonth(m => m + 1); setSelectedDate(null); setSelectedSlot(null); };
-
   // ── Theme system ──────────────────────────────────────────────────────────────
   type ThemeId = 'clean' | 'bold' | 'warm';
   interface ThemeDef {
@@ -1553,116 +1582,134 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
 
             {step === 'datetime' && selectedService && (
               <div>
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className={`font-bold ${calendlyStyle ? 'text-xl text-slate-800' : 'text-xl'}`} style={calendlyStyle ? undefined : { color: pageTextColor }}>{isReschedule ? 'Pick a new time' : 'Select date & time'}</h2>
-                  {!isReschedule && (
-                    <button onClick={() => { setStep('service'); setSelectedService(null); setSelectedDate(null); setSelectedSlot(null); }}
-                      className={`text-sm transition-colors ${calendlyStyle ? 'text-slate-500 hover:text-slate-800' : ''}`} style={calendlyStyle ? undefined : { color: pageMutedColor }}>Change service</button>
-                  )}
+                <div className="mb-5">
+                  <div className="h-1 w-full rounded-full bg-slate-100 overflow-hidden mb-5">
+                    <div
+                      className="h-full rounded-full transition-all duration-300"
+                      style={{ width: '66%', backgroundColor: accentColor }}
+                    />
+                  </div>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex flex-wrap items-center gap-2.5 min-w-0">
+                      <h2 className={`font-bold truncate ${calendlyStyle ? 'text-xl text-slate-800' : 'text-xl'}`} style={calendlyStyle ? undefined : { color: pageTextColor }}>
+                        {isReschedule ? 'Pick a new time' : selectedService.name}
+                      </h2>
+                      <span
+                        className="inline-flex items-center gap-1.5 shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold"
+                        style={{ backgroundColor: `${accentColor}14`, color: accentColor }}
+                      >
+                        <Clock className="h-3.5 w-3.5" />
+                        {selectedService.duration_minutes} min
+                      </span>
+                    </div>
+                    {!isReschedule && (
+                      <button onClick={() => { setStep('service'); setSelectedService(null); setSelectedDate(null); setSelectedSlot(null); }}
+                        className={`text-xs font-semibold uppercase tracking-wide shrink-0 transition-colors ${calendlyStyle ? 'text-slate-400 hover:text-slate-700' : ''}`}
+                        style={calendlyStyle ? undefined : { color: pageMutedColor }}>
+                        Edit
+                      </button>
+                    )}
+                  </div>
                 </div>
-              <div className="flex flex-col gap-6">
-                  {!selectedDate ? (
-                    <div>
-                      <div className="flex items-center justify-between mb-4">
-                        <button onClick={prevMonth} className="min-h-[40px] min-w-[40px] flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors rounded-lg">
-                          <ChevronLeft className="h-5 w-5" />
-                        </button>
-                        <h3 className={`font-semibold ${calendlyStyle ? 'text-base text-slate-800' : 'text-base'}`}>{MONTH_NAMES[calMonth]} {calYear}</h3>
-                        <button onClick={nextMonth} className="min-h-[40px] min-w-[40px] flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors rounded-lg">
-                          <ChevronRight className="h-5 w-5" />
-                        </button>
+
+                <div className="flex flex-col gap-6">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-3">
+                      Select a date
+                    </p>
+                    {bookableDates.length === 0 ? (
+                      <p className="text-sm text-slate-500 py-6 text-center border border-dashed border-slate-200 rounded-2xl">
+                        No open times in the booking window. Try another service or check back later.
+                      </p>
+                    ) : (
+                      <div className="-mx-1 px-1 overflow-x-auto pb-1 [scrollbar-width:thin]">
+                        <div className="flex gap-2.5 min-w-min">
+                          {bookableDates.map((dk) => {
+                            const parts = dateStripParts(dk);
+                            const selected = dk === selectedDate;
+                            return (
+                              <button
+                                key={dk}
+                                type="button"
+                                onClick={() => handleDateSelect(dk)}
+                                className={`flex flex-col items-center justify-center shrink-0 w-[4.5rem] py-3 rounded-2xl border text-center transition-all ${
+                                  selected
+                                    ? 'text-white border-transparent shadow-sm'
+                                    : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
+                                }`}
+                                style={selected ? { backgroundColor: accentColor, borderColor: accentColor } : undefined}
+                              >
+                                <span className={`text-[10px] font-semibold tracking-wide ${selected ? 'text-white/80' : 'text-slate-400'}`}>
+                                  {parts.weekday}
+                                </span>
+                                <span className="text-xl font-bold leading-tight mt-0.5">{parts.day}</span>
+                                <span className={`text-[11px] mt-0.5 ${selected ? 'text-white/80' : 'text-slate-500'}`}>
+                                  {parts.month}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-                      <div className="grid grid-cols-7 mb-2">
-                        {DAY_SHORT.map((d) => <div key={d} className="text-center text-xs uppercase text-slate-400 font-medium py-1 tracking-wide">{d}</div>)}
+                    )}
+
+                    <div className="mt-5">
+                      <label className="block text-xs font-medium text-slate-500 mb-1.5">Timezone</label>
+                      <div className="relative">
+                        <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                        <select
+                          value={guestTimezone}
+                          onChange={(e) => setGuestTimezone(e.target.value)}
+                          className={`w-full appearance-none pl-9 pr-9 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-800 ${focusRing} focus:outline-none focus:ring-2 transition`}
+                        >
+                          {TIMEZONES.map((tz) => <option key={tz} value={tz}>{formatTimezoneDisplay(tz)}</option>)}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                       </div>
-                      <div className="grid grid-cols-7 gap-y-1">
-                        {calendarDays.map((d, i) => {
-                          if (!d) return <div key={`empty-${i}`} />;
-                          const dk = `${calYear}-${String(calMonth + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-                          const hasSlots = displaySlotMap.has(dk);
-                          const isToday = dk === toDateKey(today);
-                          const isPast = new Date(calYear, calMonth, d) < today && !isToday;
-                          const disabled = !hasSlots || isPast;
+                      <p className="mt-1.5 text-xs text-slate-500">{formatTimezoneDisplay(guestTimezone)}</p>
+                    </div>
+                  </div>
+
+                  {selectedDate && (
+                    <div ref={timeRef}>
+                      <div className="flex items-center justify-between mb-3 gap-3">
+                        <h4 className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                          {formatSelectedDateHeading(selectedDate)}
+                        </h4>
+                        {selectedSlot && (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedSlot(null)}
+                            className="text-xs font-semibold uppercase tracking-wide text-slate-400 hover:text-slate-700"
+                          >
+                            Edit
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-3 gap-2.5">
+                        {(displaySlotMap.get(selectedDate) ?? []).map((slot) => {
+                          const active = slot === selectedSlot;
                           return (
-                            <button key={dk} disabled={disabled} onClick={() => handleDateSelect(dk)}
-                              className={`mx-auto h-9 w-9 flex items-center justify-center text-base font-medium transition-all rounded-full ${
-                                disabled
-                                  ? 'text-slate-300 cursor-not-allowed'
-                                  : isToday
-                                    ? 'text-slate-800 ring-2 ring-[#1a1f36] ring-offset-1 hover:bg-[#EEF2FF]'
-                                    : 'text-slate-800 hover:bg-[#EEF2FF]'
-                              }`}>
-                              {d}
+                            <button
+                              key={slot}
+                              type="button"
+                              onClick={() => handleSlotSelect(slot)}
+                              className={`py-3 px-2 rounded-xl text-sm font-medium transition-all border ${
+                                active
+                                  ? 'text-white border-transparent shadow-sm'
+                                  : 'bg-white border-slate-200 text-slate-800 hover:border-slate-300'
+                              }`}
+                              style={active ? { backgroundColor: accentColor, borderColor: accentColor } : undefined}
+                            >
+                              {formatTime12(slot)}
                             </button>
                           );
                         })}
                       </div>
-                      <div className="mt-6 pt-4 border-t border-slate-100">
-                        <label className="block text-xs font-medium text-slate-500 mb-1.5">Timezone</label>
-                        <div className="relative">
-                          <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                          <select
-                            value={guestTimezone}
-                            onChange={(e) => setGuestTimezone(e.target.value)}
-                            className={`w-full appearance-none pl-9 pr-9 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 ${focusRing} focus:outline-none focus:ring-2 transition`}
-                          >
-                            {TIMEZONES.map((tz) => <option key={tz} value={tz}>{formatTimezoneDisplay(tz)}</option>)}
-                          </select>
-                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                        </div>
-                        <p className="mt-1.5 text-xs text-slate-500">{formatTimezoneDisplay(guestTimezone)}</p>
-                      </div>
+                      {(displaySlotMap.get(selectedDate) ?? []).length === 0 && (
+                        <p className="text-sm text-slate-500 mt-2">No times left on this day.</p>
+                      )}
                     </div>
-                  ) : (
-                    <div className="flex items-center justify-between p-3 bg-indigo-50 border border-indigo-200 rounded-xl">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-indigo-600" />
-                        <span className="text-sm font-medium text-indigo-900">
-                          {formatSelectedDateLabel(selectedDate)}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => { setSelectedDate(null); setSelectedSlot(null); }}
-                        className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
-                      >
-                        Change
-                      </button>
-                    </div>
-                  )}
-
-                  {selectedDate && !selectedSlot && (
-                    <div ref={timeRef}>
-                      <h4 className="text-base font-medium text-slate-800 mb-3">Select a time</h4>
-                      <div className="grid grid-cols-2 gap-2">
-                        {(displaySlotMap.get(selectedDate) ?? []).map((slot) => (
-                          <button key={slot} type="button" onClick={() => handleSlotSelect(slot)}
-                            className="py-3 px-4 rounded-lg text-sm font-medium transition-all bg-white border border-slate-200 text-slate-800 hover:bg-[#EEF2FF] hover:border-slate-300">
-                            {formatTime12(slot)}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedDate && selectedSlot && (
-                    <div className="flex items-center justify-between p-3 bg-indigo-50 border border-indigo-200 rounded-xl">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-indigo-600" />
-                        <span className="text-sm font-medium text-indigo-900">{formatTime12(selectedSlot)}</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedSlot(null)}
-                        className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
-                      >
-                        Change
-                      </button>
-                    </div>
-                  )}
-
-                  {!selectedDate && (
-                    <p className="text-sm text-slate-500">Select a date to see available times.</p>
                   )}
                 </div>
                 {selectedDate && selectedSlot && isRecurringService && (
@@ -1690,8 +1737,8 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                   </div>
                 )}
                 {selectedDate && selectedSlot && (
-                  <div ref={continueRef} className="mt-4 flex justify-end">
-                    <button type="button" onClick={goToDetails} className={`w-full sm:w-auto px-6 py-3 text-white font-semibold transition-colors inline-flex items-center justify-center gap-2 min-h-[48px] ${calendlyStyle ? 'rounded-xl bg-[#1a1f36] hover:opacity-90' : 'rounded-lg'}`} style={calendlyStyle ? undefined : { backgroundColor: accentColor }}>
+                  <div ref={continueRef} className="mt-5 flex justify-end">
+                    <button type="button" onClick={goToDetails} className={`w-full sm:w-auto px-6 py-3 text-white font-semibold transition-colors inline-flex items-center justify-center gap-2 min-h-[48px] ${calendlyStyle ? 'rounded-xl bg-[#1a1f36] hover:opacity-90' : 'rounded-xl'}`} style={calendlyStyle ? undefined : { backgroundColor: accentColor }}>
                       Continue <ArrowRight className="h-4 w-4" />
                     </button>
                   </div>
@@ -1701,9 +1748,15 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
 
             {step === 'details' && selectedService && selectedDate && selectedSlot && (
               <div ref={detailsRef}>
+                <div className="h-1 w-full rounded-full bg-slate-100 overflow-hidden mb-5">
+                  <div
+                    className="h-full rounded-full transition-all duration-300"
+                    style={{ width: '100%', backgroundColor: accentColor }}
+                  />
+                </div>
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-bold" style={{ color: pageTextColor }}>Your details</h2>
-                  <button onClick={() => setStep('datetime')} className="text-sm transition-colors" style={{ color: pageMutedColor }}>Change time</button>
+                  <button onClick={() => setStep('datetime')} className="text-xs font-semibold uppercase tracking-wide transition-colors" style={{ color: pageMutedColor }}>Edit</button>
                 </div>
                 {/* Required fields legend */}
                 <p className="text-xs text-slate-400 dark:text-slate-500 mb-4 flex items-center gap-1">
