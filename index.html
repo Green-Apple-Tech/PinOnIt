@@ -45,6 +45,7 @@
     <div id="root"></div>
     <script>
       (function () {
+        var RELOAD_KEY = 'pinonit-script-reload';
         function isAppScript(src) {
           if (!src) return false;
           return src.indexOf('/assets/') !== -1 || src.indexOf('/src/main.') !== -1;
@@ -57,10 +58,21 @@
             '<h1 style="font-size:20px;font-weight:700;margin:0 0 8px">PinOnIt did not load</h1>' +
             '<p style="font-size:14px;line-height:1.5;color:#475569">' + msg + '</p></div>';
         }
+        function recoverOrShow(msg) {
+          try {
+            if (!sessionStorage.getItem(RELOAD_KEY)) {
+              sessionStorage.setItem(RELOAD_KEY, '1');
+              // Stale cached HTML after Publish often 404s hashed /assets/*.js — one reload fixes it.
+              window.location.reload();
+              return;
+            }
+          } catch (e) { /* private mode */ }
+          show(msg);
+        }
         window.addEventListener('error', function (e) {
           var t = e.target;
           if (t && t.tagName === 'SCRIPT' && isAppScript(t.src)) {
-            show('A script failed to load. Hard-refresh with Cmd+Shift+R, or open pinonit.com in a new tab.');
+            recoverOrShow('A script failed to load. Hard-refresh with Cmd+Shift+R, or open pinonit.com in a new tab.');
           }
         }, true);
       })();

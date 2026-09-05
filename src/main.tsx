@@ -69,6 +69,7 @@ async function boot() {
 
   try {
     sessionStorage.removeItem(CHUNK_RELOAD_KEY);
+    sessionStorage.removeItem('pinonit-script-reload');
   } catch {
     /* ignore */
   }
@@ -84,6 +85,17 @@ async function boot() {
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    if (isStaleDeployError(error instanceof Error ? error : new Error(message))) {
+      try {
+        if (!sessionStorage.getItem(CHUNK_RELOAD_KEY)) {
+          sessionStorage.setItem(CHUNK_RELOAD_KEY, '1');
+          window.location.reload();
+          return;
+        }
+      } catch {
+        /* private mode / blocked storage */
+      }
+    }
     createRoot(rootEl).render(
       <BootMessage
         title="PinOnIt failed to start"
