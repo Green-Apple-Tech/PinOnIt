@@ -57,6 +57,8 @@ import {
   Zap,
   ExternalLink,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 const REMINDER_CHANNELS = [
@@ -214,11 +216,26 @@ function formatTimezoneDisplay(tz: string): string {
 }
 
 function formatTime12(time: string): string {
-  const [h, m] = time.split(':');
-  const hour = parseInt(h);
+  const match = String(time ?? '').trim().match(/(\d{1,2}):(\d{2})/);
+  if (!match) return String(time ?? '').trim() || '—';
+  const hour = parseInt(match[1], 10);
+  const mins = match[2];
+  if (Number.isNaN(hour)) return String(time);
   const ampm = hour >= 12 ? 'PM' : 'AM';
-  const display = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-  return `${display}:${m} ${ampm}`;
+  const display = hour % 12 || 12;
+  return `${display}:${mins} ${ampm}`;
+}
+
+function formatTimezoneAbbr(tz: string): string {
+  try {
+    return (
+      new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'short' })
+        .formatToParts(new Date())
+        .find((p) => p.type === 'timeZoneName')?.value ?? tz
+    );
+  } catch {
+    return tz.replace(/_/g, ' ');
+  }
 }
 
 function formatSelectedDateHeading(dateKey: string): string {
@@ -678,6 +695,8 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
   const [recurringAcknowledged, setRecurringAcknowledged] = useState(false);
 
   const timeRef = useRef<HTMLDivElement>(null);
+  const dateStripRef = useRef<HTMLDivElement>(null);
+  const [dateStripCanScroll, setDateStripCanScroll] = useState({ left: false, right: false });
   const detailsRef = useRef<HTMLDivElement>(null);
   const continueRef = useRef<HTMLDivElement>(null);
 
@@ -929,6 +948,33 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
       setSelectedSlot(null);
     }
   }, [step, bookableDates, displaySlotMap, selectedDate]);
+
+  const updateDateStripScroll = useCallback(() => {
+    const el = dateStripRef.current;
+    if (!el) return;
+    setDateStripCanScroll({
+      left: el.scrollLeft > 4,
+      right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (step !== 'datetime') return;
+    updateDateStripScroll();
+    const el = dateStripRef.current;
+    if (!el) return;
+    el.addEventListener('scroll', updateDateStripScroll, { passive: true });
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(updateDateStripScroll) : null;
+    ro?.observe(el);
+    return () => {
+      el.removeEventListener('scroll', updateDateStripScroll);
+      ro?.disconnect();
+    };
+  }, [step, bookableDates, updateDateStripScroll]);
+
+  const scrollDateStrip = useCallback((dir: -1 | 1) => {
+    dateStripRef.current?.scrollBy({ left: dir * 180, behavior: 'smooth' });
+  }, []);
 
   const handleSelectService = async (svc: Service) => {
     const { data: freshSvc } = await supabase.from('services').select(SERVICE_SELECT).eq('id', svc.id).maybeSingle();
@@ -1445,7 +1491,9 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
       <main className={`${calendlyStyle ? 'max-w-6xl' : 'max-w-5xl'} mx-auto px-4 py-6 md:py-8`}>
         <div className={calendlyStyle ? 'bg-white shadow-lg rounded-2xl border border-slate-200 overflow-hidden' : ''}>
         <div className={calendlyStyle ? 'grid lg:grid-cols-[3fr_7fr]' : 'grid lg:grid-cols-[280px_1fr] gap-6 md:gap-8'}>
-          <aside className={`${calendlyStyle ? 'p-6 md:p-8 lg:border-r border-slate-200 space-y-5' : 'space-y-4'}`}>
+          <aside className={`${calendlyStyle ? 'p-6 md:p-8 lg:border-r border-slate-200 space-y-5' : 'space-y-4'} ${
+            step === 'datetime' || step === 'details' ? 'hidden lg:block' : ''
+          }`}>
             <div className={`flex gap-4 ${calendlyStyle ? 'flex-col sm:flex-row lg:flex-col items-start' : 'items-center gap-3'}`}>
               {pageBusinessPhoto ? (
                 <img
@@ -1457,7 +1505,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                   className={`rounded-full object-cover ${calendlyStyle ? 'h-16 w-16' : 'h-14 w-14'}`}
                 />
               ) : (
-                <div className={`rounded-full flex items-center justify-center text-white font-bold ${calendlyStyle ? 'h-16 w-16 text-xl' : 'h-14 w-14 text-lg'}`}
+                <div className={`rounded-full flex items-center justify-center font-bold ${calendlyStyle ? 'h-16 w-16 text-xl text-slate-700' : 'h-14 w-14 text-lg text-white'}`}
                   style={{ backgroundColor: accentColor + '33', border: `2px solid ${accentColor}` }}>
                   {(pageDisplayName || 'H').charAt(0).toUpperCase()}
                 </div>
@@ -1498,7 +1546,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
             )}
           </aside>
 
-          <div className={calendlyStyle ? 'p-6 md:p-8' : ''}>
+          <div className={calendlyStyle ? 'p-4 sm:p-6 md:p-8' : ''}>
             {step === 'service' && (
               <div>
                 <h2 className="text-xl font-bold mb-1" style={{ color: pageTextColor }}>Book an appointment</h2>
@@ -1582,37 +1630,55 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
 
             {step === 'datetime' && selectedService && (
               <div>
-                <div className="mb-5">
-                  <div className="h-1 w-full rounded-full bg-slate-100 overflow-hidden mb-5">
+                <div className="flex items-center gap-2.5 mb-4 lg:hidden">
+                  {pageBusinessPhoto ? (
+                    <img
+                      src={pageBusinessPhoto}
+                      alt={pageDisplayName}
+                      width={36}
+                      height={36}
+                      loading="lazy"
+                      className="h-9 w-9 rounded-full object-cover shrink-0"
+                    />
+                  ) : (
+                    <div
+                      className="h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold text-slate-700 shrink-0"
+                      style={{ backgroundColor: accentColor + '33', border: `1.5px solid ${accentColor}` }}
+                    >
+                      {(pageDisplayName || 'H').charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-slate-800 truncate">{pageDisplayName || 'Host'}</p>
+                    {pageTagline && <p className="text-xs text-slate-500 truncate">{pageTagline}</p>}
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <div className="h-1 w-full rounded-full bg-slate-100 overflow-hidden mb-3">
                     <div
                       className="h-full rounded-full transition-all duration-300"
                       style={{ width: '66%', backgroundColor: accentColor }}
                     />
                   </div>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex flex-wrap items-center gap-2.5 min-w-0">
-                      <h2 className={`font-bold truncate ${calendlyStyle ? 'text-xl text-slate-800' : 'text-xl'}`} style={calendlyStyle ? undefined : { color: pageTextColor }}>
-                        {isReschedule ? 'Pick a new time' : selectedService.name}
-                      </h2>
-                      <span
-                        className="inline-flex items-center gap-1.5 shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold"
-                        style={{ backgroundColor: `${accentColor}14`, color: accentColor }}
-                      >
-                        <Clock className="h-3.5 w-3.5" />
-                        {selectedService.duration_minutes} min
-                      </span>
-                    </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium text-slate-700 truncate">
+                      {isReschedule ? 'Pick a new time' : selectedService.name}
+                      <span className="text-slate-400 font-normal"> · {selectedService.duration_minutes} min</span>
+                    </p>
                     {!isReschedule && (
-                      <button onClick={() => { setStep('service'); setSelectedService(null); setSelectedDate(null); setSelectedSlot(null); }}
-                        className={`text-xs font-semibold uppercase tracking-wide shrink-0 transition-colors ${calendlyStyle ? 'text-slate-400 hover:text-slate-700' : ''}`}
-                        style={calendlyStyle ? undefined : { color: pageMutedColor }}>
+                      <button
+                        type="button"
+                        onClick={() => { setStep('service'); setSelectedService(null); setSelectedDate(null); setSelectedSlot(null); }}
+                        className="text-xs font-semibold uppercase tracking-wide shrink-0 text-slate-400 hover:text-slate-700"
+                      >
                         Edit
                       </button>
                     )}
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-6">
+                <div className="flex flex-col gap-5">
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-3">
                       Select a date
@@ -1622,86 +1688,96 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                         No open times in the booking window. Try another service or check back later.
                       </p>
                     ) : (
-                      <div className="-mx-1 px-1 overflow-x-auto pb-1 [scrollbar-width:thin]">
-                        <div className="flex gap-2.5 min-w-min">
-                          {bookableDates.map((dk) => {
-                            const parts = dateStripParts(dk);
-                            const selected = dk === selectedDate;
-                            return (
-                              <button
-                                key={dk}
-                                type="button"
-                                onClick={() => handleDateSelect(dk)}
-                                className={`flex flex-col items-center justify-center shrink-0 w-[4.5rem] py-3 rounded-2xl border text-center transition-all ${
-                                  selected
-                                    ? 'text-white border-transparent shadow-sm'
-                                    : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
-                                }`}
-                                style={selected ? { backgroundColor: accentColor, borderColor: accentColor } : undefined}
-                              >
-                                <span className={`text-[10px] font-semibold tracking-wide ${selected ? 'text-white/80' : 'text-slate-400'}`}>
-                                  {parts.weekday}
-                                </span>
-                                <span className="text-xl font-bold leading-tight mt-0.5">{parts.day}</span>
-                                <span className={`text-[11px] mt-0.5 ${selected ? 'text-white/80' : 'text-slate-500'}`}>
-                                  {parts.month}
-                                </span>
-                              </button>
-                            );
-                          })}
+                      <div className="relative">
+                        {dateStripCanScroll.left && (
+                          <button
+                            type="button"
+                            aria-label="Earlier dates"
+                            onClick={() => scrollDateStrip(-1)}
+                            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 h-9 w-9 rounded-full bg-white/95 border border-slate-200 shadow-sm flex items-center justify-center text-slate-500 hover:text-slate-800"
+                          >
+                            <ChevronLeft className="h-5 w-5" />
+                          </button>
+                        )}
+                        <div
+                          ref={dateStripRef}
+                          className="overflow-x-auto scroll-smooth pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                        >
+                          <div className="flex gap-2.5 min-w-min px-0.5">
+                            {bookableDates.map((dk) => {
+                              const parts = dateStripParts(dk);
+                              const selected = dk === selectedDate;
+                              return (
+                                <button
+                                  key={dk}
+                                  type="button"
+                                  onClick={() => handleDateSelect(dk)}
+                                  className={`flex flex-col items-center justify-center shrink-0 w-[4.25rem] py-2.5 rounded-2xl border text-center transition-all ${
+                                    selected
+                                      ? 'text-white border-transparent shadow-sm'
+                                      : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
+                                  }`}
+                                  style={selected ? { backgroundColor: accentColor, borderColor: accentColor } : undefined}
+                                >
+                                  <span className={`text-[10px] font-semibold tracking-wide ${selected ? 'text-white/85' : 'text-slate-400'}`}>
+                                    {parts.weekday}
+                                  </span>
+                                  <span className="text-xl font-bold leading-tight mt-0.5">{parts.day}</span>
+                                  <span className={`text-[11px] mt-0.5 ${selected ? 'text-white/85' : 'text-slate-500'}`}>
+                                    {parts.month}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
+                        {dateStripCanScroll.right && (
+                          <button
+                            type="button"
+                            aria-label="Later dates"
+                            onClick={() => scrollDateStrip(1)}
+                            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-9 w-9 rounded-full bg-white/95 border border-slate-200 shadow-sm flex items-center justify-center text-slate-500 hover:text-slate-800"
+                          >
+                            <ChevronRight className="h-5 w-5" />
+                          </button>
+                        )}
                       </div>
                     )}
-
-                    <div className="mt-5">
-                      <label className="block text-xs font-medium text-slate-500 mb-1.5">Timezone</label>
-                      <div className="relative">
-                        <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                        <select
-                          value={guestTimezone}
-                          onChange={(e) => setGuestTimezone(e.target.value)}
-                          className={`w-full appearance-none pl-9 pr-9 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-800 ${focusRing} focus:outline-none focus:ring-2 transition`}
-                        >
-                          {TIMEZONES.map((tz) => <option key={tz} value={tz}>{formatTimezoneDisplay(tz)}</option>)}
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                      </div>
-                      <p className="mt-1.5 text-xs text-slate-500">{formatTimezoneDisplay(guestTimezone)}</p>
-                    </div>
                   </div>
 
                   {selectedDate && (
                     <div ref={timeRef}>
                       <div className="flex items-center justify-between mb-3 gap-3">
-                        <h4 className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                        <h4 className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">
                           {formatSelectedDateHeading(selectedDate)}
                         </h4>
-                        {selectedSlot && (
-                          <button
-                            type="button"
-                            onClick={() => setSelectedSlot(null)}
-                            className="text-xs font-semibold uppercase tracking-wide text-slate-400 hover:text-slate-700"
-                          >
-                            Edit
-                          </button>
-                        )}
+                        <span className="text-xs font-semibold text-slate-500 shrink-0">
+                          {formatTimezoneAbbr(guestTimezone)}
+                        </span>
                       </div>
-                      <div className="grid grid-cols-3 gap-2.5">
+                      <div
+                        className="grid grid-cols-3 gap-2.5"
+                        style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '10px' }}
+                      >
                         {(displaySlotMap.get(selectedDate) ?? []).map((slot) => {
                           const active = slot === selectedSlot;
+                          const label = formatTime12(slot);
                           return (
                             <button
                               key={slot}
                               type="button"
                               onClick={() => handleSlotSelect(slot)}
-                              className={`py-3 px-2 rounded-xl text-sm font-medium transition-all border ${
-                                active
-                                  ? 'text-white border-transparent shadow-sm'
-                                  : 'bg-white border-slate-200 text-slate-800 hover:border-slate-300'
+                              aria-label={label}
+                              className={`min-h-[44px] py-2.5 px-1.5 rounded-xl text-sm font-medium transition-all border ${
+                                active ? 'border-transparent shadow-sm' : 'border-slate-200 hover:border-slate-300'
                               }`}
-                              style={active ? { backgroundColor: accentColor, borderColor: accentColor } : undefined}
+                              style={
+                                active
+                                  ? { backgroundColor: accentColor, borderColor: accentColor, color: '#ffffff' }
+                                  : { backgroundColor: '#ffffff', color: '#1e293b' }
+                              }
                             >
-                              {formatTime12(slot)}
+                              {label}
                             </button>
                           );
                         })}
@@ -1709,6 +1785,21 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                       {(displaySlotMap.get(selectedDate) ?? []).length === 0 && (
                         <p className="text-sm text-slate-500 mt-2">No times left on this day.</p>
                       )}
+
+                      <div className="mt-4 relative">
+                        <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                        <select
+                          value={guestTimezone}
+                          onChange={(e) => setGuestTimezone(e.target.value)}
+                          aria-label="Timezone"
+                          className={`w-full appearance-none pl-9 pr-9 py-2 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 ${focusRing} focus:outline-none focus:ring-2 transition`}
+                        >
+                          {TIMEZONES.map((tz) => (
+                            <option key={tz} value={tz}>{formatTimezoneDisplay(tz)}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                      </div>
                     </div>
                   )}
                 </div>
