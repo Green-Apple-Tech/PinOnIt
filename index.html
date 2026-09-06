@@ -46,11 +46,31 @@
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&display=swap" rel="stylesheet" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="boot-splash" style="font-family:system-ui,sans-serif;max-width:28rem;margin:20vh auto;padding:24px;color:#0f172a;text-align:center">
+        <p style="font-size:15px;font-weight:600;margin:0">Loading PinOnIt…</p>
+      </div>
+    </div>
     <script>
       (function () {
-        var RELOAD_KEY = 'pinonit-script-reload';
-        var WATCHDOG_MS = 8000;
+        var WATCHDOG_MS = 5000;
+        var CB = '_cb';
+
+        // Google/Microsoft OAuth returns to /auth/callback with a one-time code.
+        // iPhone Safari often reuses a stale cached HTML shell that points at deleted
+        // /assets/*.js hashes — force one network document load before the app boots.
+        try {
+          var path = location.pathname || '';
+          if (
+            (path === '/auth/callback' || path.indexOf('/auth/callback') === 0) &&
+            location.search.indexOf(CB + '=') === -1
+          ) {
+            var fresh = new URL(location.href);
+            fresh.searchParams.set(CB, String(Date.now()));
+            location.replace(fresh.href);
+            return;
+          }
+        } catch (e) { /* continue boot */ }
 
         function isAppScript(src) {
           if (!src) return false;
@@ -59,39 +79,38 @@
 
         function show(msg) {
           var r = document.getElementById('root');
-          if (!r || r.childElementCount) return;
+          if (!r) return;
           r.innerHTML =
             '<div style="font-family:system-ui,sans-serif;max-width:28rem;margin:20vh auto;padding:24px;color:#0f172a">' +
             '<h1 style="font-size:20px;font-weight:700;margin:0 0 8px">PinOnIt did not load</h1>' +
             '<p style="font-size:14px;line-height:1.5;color:#475569">' + msg + '</p>' +
-            '<p style="font-size:13px;line-height:1.5;color:#64748b;margin-top:12px">On Chrome: hard-refresh (Cmd+Shift+R / Ctrl+Shift+R), or open pinonit.com in a new tab / Incognito.</p></div>';
+            '<p style="font-size:13px;line-height:1.5;color:#64748b;margin-top:12px">Close this tab and open <a href="https://pinonit.com/login">pinonit.com/login</a>, or hard-refresh (Safari: hold reload).</p></div>';
         }
 
-        /** Chrome often reloads from memory cache; force a network fetch of the HTML shell first. */
+        /** URL cache-bust — sessionStorage alone fails in some iOS privacy modes. */
         function hardReload() {
-          var href = window.location.href;
           try {
-            if (window.fetch) {
-              fetch(href, { cache: 'reload', credentials: 'same-origin' })
-                .catch(function () {})
-                .finally(function () {
-                  window.location.replace(href);
-                });
+            var url = new URL(window.location.href);
+            if (!url.searchParams.has(CB)) {
+              url.searchParams.set(CB, String(Date.now()));
+              window.location.replace(url.href);
               return;
             }
-          } catch (e) { /* ignore */ }
-          window.location.reload();
+          } catch (e) { /* fall through */ }
+          show('Could not refresh this page. Close the tab and open pinonit.com/login again.');
         }
 
         function recoverOrShow(msg) {
           try {
-            if (!sessionStorage.getItem(RELOAD_KEY)) {
-              sessionStorage.setItem(RELOAD_KEY, '1');
-              // Stale cached HTML after Publish often 404s hashed /assets/*.js — one hard reload fixes it.
+            var url = new URL(window.location.href);
+            if (!url.searchParams.has(CB)) {
               hardReload();
               return;
             }
-          } catch (e) { /* private mode */ }
+          } catch (e) {
+            hardReload();
+            return;
+          }
           show(msg);
         }
 
@@ -103,9 +122,10 @@
         }
 
         window.addEventListener('error', function (e) {
+          if (window.__PINONIT_BOOTED__) return;
           var t = e.target;
           if (t && t.tagName === 'SCRIPT' && isAppScript(t.src)) {
-            recoverOrShow('A script failed to load. Hard-refresh with Cmd+Shift+R, or open pinonit.com in a new tab.');
+            recoverOrShow('A script failed to load. Close this tab and open pinonit.com/login again.');
             return;
           }
           if (e.message && looksLikeStaleModule(e.message)) {
@@ -114,6 +134,7 @@
         }, true);
 
         window.addEventListener('unhandledrejection', function (e) {
+          if (window.__PINONIT_BOOTED__) return;
           var reason = e && e.reason;
           var msg = reason && reason.message ? reason.message : String(reason || '');
           if (looksLikeStaleModule(msg)) {
@@ -121,11 +142,27 @@
           }
         });
 
-        // Blank #root with no script error (Chrome memory-cache miss) — one recovery attempt.
+        // bfcache restore after Google redirect — force a real reload
+        window.addEventListener('pageshow', function (e) {
+          if (e.persisted) {
+            try {
+              var url = new URL(window.location.href);
+              url.searchParams.set(CB, String(Date.now()));
+              window.location.replace(url.href);
+            } catch (err) {
+              window.location.reload();
+            }
+          }
+        });
+
         window.setTimeout(function () {
+          if (window.__PINONIT_BOOTED__) return;
           var r = document.getElementById('root');
-          if (!r || r.childElementCount) return;
-          recoverOrShow('The app took too long to start. Reloading once to clear a stale Chrome cache…');
+          if (!r) return;
+          // Splash only — React never mounted
+          if (r.querySelector('#boot-splash') && r.children.length <= 1) {
+            recoverOrShow('The app took too long to start. Refreshing…');
+          }
         }, WATCHDOG_MS);
       })();
     </script>

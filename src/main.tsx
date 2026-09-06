@@ -4,6 +4,19 @@ import './index.css';
 import { supabaseConfigured } from './lib/supabase';
 
 const CHUNK_RELOAD_KEY = 'pinonit-chunk-reload';
+const CACHE_BUST_PARAM = '_cb';
+
+function stripCacheBustParam() {
+  try {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has(CACHE_BUST_PARAM)) return;
+    url.searchParams.delete(CACHE_BUST_PARAM);
+    const next = `${url.pathname}${url.search}${url.hash}`;
+    window.history.replaceState(null, '', next || url.pathname);
+  } catch {
+    /* ignore */
+  }
+}
 
 function isStaleDeployError(error: Error) {
   const message = `${error.name} ${error.message}`;
@@ -12,23 +25,30 @@ function isStaleDeployError(error: Error) {
   );
 }
 
-function hardReloadOnce() {
+function cacheBustReload(): boolean {
   try {
-    if (sessionStorage.getItem(CHUNK_RELOAD_KEY)) return false;
-    sessionStorage.setItem(CHUNK_RELOAD_KEY, '1');
+    const url = new URL(window.location.href);
+    if (url.searchParams.has(CACHE_BUST_PARAM)) return false;
+    url.searchParams.set(CACHE_BUST_PARAM, String(Date.now()));
+    window.location.replace(url.href);
+    return true;
   } catch {
     return false;
   }
-  const href = window.location.href;
-  if (typeof fetch === 'function') {
-    void fetch(href, { cache: 'reload', credentials: 'same-origin' })
-      .catch(() => undefined)
-      .finally(() => {
-        window.location.replace(href);
-      });
-  } else {
-    window.location.reload();
+}
+
+function hardReloadOnce() {
+  try {
+    if (sessionStorage.getItem(CHUNK_RELOAD_KEY)) {
+      // Prefer URL bust if session key is stuck from a prior attempt
+      return cacheBustReload();
+    }
+    sessionStorage.setItem(CHUNK_RELOAD_KEY, '1');
+  } catch {
+    return cacheBustReload();
   }
+  if (cacheBustReload()) return true;
+  window.location.reload();
   return true;
 }
 
@@ -56,7 +76,7 @@ class RootErrorBoundary extends Component<{ children: ReactNode }, { error: Erro
       return (
         <BootMessage
           title="This page hit an error"
-          detail={`${this.state.error.message}. Reload, or open pinonit.com in a new tab.`}
+          detail={`${this.state.error.message}. Close the tab and open pinonit.com/login again.`}
         />
       );
     }
@@ -65,6 +85,8 @@ class RootErrorBoundary extends Component<{ children: ReactNode }, { error: Erro
 }
 
 async function boot() {
+  stripCacheBustParam();
+
   const rootEl = document.getElementById('root');
   if (!rootEl) {
     document.body.textContent = 'PinOnIt failed to start (missing #root).';
@@ -90,6 +112,7 @@ async function boot() {
 
   try {
     const { default: App } = await import('./App.tsx');
+    (window as Window & { __PINONIT_BOOTED__?: boolean }).__PINONIT_BOOTED__ = true;
     createRoot(rootEl).render(
       <StrictMode>
         <RootErrorBoundary>
@@ -105,7 +128,7 @@ async function boot() {
     createRoot(rootEl).render(
       <BootMessage
         title="PinOnIt failed to start"
-        detail={`${message}. Hard-refresh with Cmd+Shift+R, or open pinonit.com in a new tab / Incognito.`}
+        detail={`${message}. Close the tab and open pinonit.com/login again.`}
       />,
     );
   }
