@@ -226,18 +226,6 @@ function formatTime12(time: string): string {
   return `${display}:${mins} ${ampm}`;
 }
 
-function formatTimezoneAbbr(tz: string): string {
-  try {
-    return (
-      new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'short' })
-        .formatToParts(new Date())
-        .find((p) => p.type === 'timeZoneName')?.value ?? tz
-    );
-  } catch {
-    return tz.replace(/_/g, ' ');
-  }
-}
-
 function formatSelectedDateHeading(dateKey: string): string {
   return new Date(dateKey + 'T12:00:00').toLocaleDateString('en-US', {
     weekday: 'long',
@@ -1369,8 +1357,10 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
   const pageBorderColor = pageTheme.border;
 
   const calendlyStyle = !isPaidBookingPage;
-  const accentColor = calendlyStyle ? BOOKING_NAVY : pageBtnColor;
-  const focusRing = calendlyStyle ? 'focus:ring-[#1a1f36]' : 'focus:ring-indigo-600';
+  const phonePicker = step === 'datetime';
+  const pickerAccent = '#5864C6';
+  const accentColor = phonePicker ? pickerAccent : calendlyStyle ? BOOKING_NAVY : pageBtnColor;
+  const focusRing = phonePicker || calendlyStyle ? 'focus:ring-[#5864C6]' : 'focus:ring-indigo-600';
 
   const serviceShowsDescription = (svc: Service) => {
     if (!pageShowDesc || !svc.description) return false;
@@ -1469,12 +1459,12 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
   );
 
   return (
-    <div className={`min-h-screen transition-colors ${calendlyStyle ? 'bg-white text-slate-800' : ''}`} style={calendlyStyle ? undefined : { backgroundColor: pageBgColor, color: pageTextColor }}>
-      {!calendlyStyle && <div className="h-1.5 w-full" style={{ backgroundColor: pageTheme.accentBar }} />}
-      <header className={`${calendlyStyle ? 'bg-white border-b border-slate-200' : 'border-b sticky top-0 z-40 backdrop-blur-xl'} transition-colors`}
-        style={calendlyStyle ? undefined : { borderColor: pageBorderColor, backgroundColor: pageBgColor + 'cc' }}>
-        <div className={`${calendlyStyle ? 'max-w-6xl' : 'max-w-5xl'} mx-auto px-6 h-14 flex items-center justify-between`}>
-          <Link to="/" className={`flex items-center gap-1.5 transition-colors text-sm ${calendlyStyle ? 'text-slate-500 hover:text-slate-800' : ''}`} style={calendlyStyle ? undefined : { color: pageMutedColor }}>
+    <div className={`min-h-screen transition-colors ${phonePicker ? 'bg-slate-100 text-slate-800' : calendlyStyle ? 'bg-white text-slate-800' : ''}`} style={phonePicker || calendlyStyle ? undefined : { backgroundColor: pageBgColor, color: pageTextColor }}>
+      {!calendlyStyle && !phonePicker && <div className="h-1.5 w-full" style={{ backgroundColor: pageTheme.accentBar }} />}
+      <header className={`${phonePicker || calendlyStyle ? 'bg-transparent' : 'border-b sticky top-0 z-40 backdrop-blur-xl'} transition-colors`}
+        style={phonePicker || calendlyStyle ? undefined : { borderColor: pageBorderColor, backgroundColor: pageBgColor + 'cc' }}>
+        <div className={`${phonePicker ? 'max-w-[420px]' : calendlyStyle ? 'max-w-6xl' : 'max-w-5xl'} mx-auto px-4 h-14 flex items-center justify-between`}>
+          <Link to="/" className={`flex items-center gap-1.5 transition-colors text-sm ${phonePicker || calendlyStyle ? 'text-slate-500 hover:text-slate-800' : ''}`} style={phonePicker || calendlyStyle ? undefined : { color: pageMutedColor }}>
             <ArrowLeft className="h-4 w-4" /> Back
           </Link>
           <div className="flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500">
@@ -1488,11 +1478,11 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
         </div>
       </header>
 
-      <main className={`${calendlyStyle ? 'max-w-6xl' : 'max-w-5xl'} mx-auto px-4 py-6 md:py-8`}>
-        <div className={calendlyStyle ? 'bg-white shadow-lg rounded-2xl border border-slate-200 overflow-hidden' : ''}>
-        <div className={calendlyStyle ? 'grid lg:grid-cols-[3fr_7fr]' : 'grid lg:grid-cols-[280px_1fr] gap-6 md:gap-8'}>
+      <main className={`${phonePicker ? 'max-w-[420px]' : calendlyStyle ? 'max-w-6xl' : 'max-w-5xl'} mx-auto px-4 py-4 md:py-8`}>
+        <div className={phonePicker || calendlyStyle ? 'bg-white shadow-lg rounded-2xl border border-slate-200 overflow-hidden' : ''}>
+        <div className={phonePicker ? 'grid grid-cols-1' : calendlyStyle ? 'grid lg:grid-cols-[3fr_7fr]' : 'grid lg:grid-cols-[280px_1fr] gap-6 md:gap-8'}>
           <aside className={`${calendlyStyle ? 'p-6 md:p-8 lg:border-r border-slate-200 space-y-5' : 'space-y-4'} ${
-            step === 'datetime' || step === 'details' ? 'hidden lg:block' : ''
+            phonePicker ? 'hidden' : step === 'details' ? 'hidden lg:block' : ''
           }`}>
             <div className={`flex gap-4 ${calendlyStyle ? 'flex-col sm:flex-row lg:flex-col items-start' : 'items-center gap-3'}`}>
               {pageBusinessPhoto ? (
@@ -1546,7 +1536,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
             )}
           </aside>
 
-          <div className={calendlyStyle ? 'p-4 sm:p-6 md:p-8' : ''}>
+          <div className={phonePicker ? 'p-5 sm:p-6' : calendlyStyle ? 'p-4 sm:p-6 md:p-8' : ''}>
             {step === 'service' && (
               <div>
                 <h2 className="text-xl font-bold mb-1" style={{ color: pageTextColor }}>Book an appointment</h2>
@@ -1630,7 +1620,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
 
             {step === 'datetime' && selectedService && (
               <div>
-                <div className="flex items-center gap-2.5 mb-4 lg:hidden">
+                <div className="flex items-center gap-2.5 mb-4">
                   {pageBusinessPhoto ? (
                     <img
                       src={pageBusinessPhoto}
@@ -1655,27 +1645,10 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                 </div>
 
                 <div className="mb-4">
-                  <div className="h-1 w-full rounded-full bg-slate-100 overflow-hidden mb-3">
-                    <div
-                      className="h-full rounded-full transition-all duration-300"
-                      style={{ width: '66%', backgroundColor: accentColor }}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-medium text-slate-700 truncate">
-                      {isReschedule ? 'Pick a new time' : selectedService.name}
-                      <span className="text-slate-400 font-normal"> · {selectedService.duration_minutes} min</span>
-                    </p>
-                    {!isReschedule && (
-                      <button
-                        type="button"
-                        onClick={() => { setStep('service'); setSelectedService(null); setSelectedDate(null); setSelectedSlot(null); }}
-                        className="text-xs font-semibold uppercase tracking-wide shrink-0 text-slate-400 hover:text-slate-700"
-                      >
-                        Edit
-                      </button>
-                    )}
-                  </div>
+                  <p className="text-base font-bold text-slate-800">
+                    {isReschedule ? 'Pick a new time' : selectedService.name}
+                    <span className="text-slate-400 font-normal"> · {selectedService.duration_minutes} min</span>
+                  </p>
                 </div>
 
                 <div className="flex flex-col gap-5">
@@ -1694,16 +1667,16 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                             type="button"
                             aria-label="Earlier dates"
                             onClick={() => scrollDateStrip(-1)}
-                            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 h-9 w-9 rounded-full bg-white/95 border border-slate-200 shadow-sm flex items-center justify-center text-slate-500 hover:text-slate-800"
+                            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-500"
                           >
-                            <ChevronLeft className="h-5 w-5" />
+                            <ChevronLeft className="h-4 w-4" />
                           </button>
                         )}
                         <div
                           ref={dateStripRef}
                           className="overflow-x-auto scroll-smooth pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
                         >
-                          <div className="flex gap-2.5 min-w-min px-0.5">
+                          <div className="flex gap-2 min-w-min px-0.5">
                             {bookableDates.map((dk) => {
                               const parts = dateStripParts(dk);
                               const selected = dk === selectedDate;
@@ -1712,18 +1685,18 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                                   key={dk}
                                   type="button"
                                   onClick={() => handleDateSelect(dk)}
-                                  className={`flex flex-col items-center justify-center shrink-0 w-[4.25rem] py-2.5 rounded-2xl border text-center transition-all ${
+                                  className={`flex flex-col items-center justify-center shrink-0 w-[4.5rem] py-2.5 rounded-xl border text-center transition-all ${
                                     selected
-                                      ? 'text-white border-transparent shadow-sm'
-                                      : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
+                                      ? 'text-white border-transparent'
+                                      : 'bg-white border-slate-200 text-slate-800'
                                   }`}
                                   style={selected ? { backgroundColor: accentColor, borderColor: accentColor } : undefined}
                                 >
-                                  <span className={`text-[10px] font-semibold tracking-wide ${selected ? 'text-white/85' : 'text-slate-400'}`}>
+                                  <span className={`text-[10px] font-semibold tracking-wide ${selected ? 'text-white/90' : 'text-slate-500'}`}>
                                     {parts.weekday}
                                   </span>
-                                  <span className="text-xl font-bold leading-tight mt-0.5">{parts.day}</span>
-                                  <span className={`text-[11px] mt-0.5 ${selected ? 'text-white/85' : 'text-slate-500'}`}>
+                                  <span className="text-lg font-bold leading-none mt-0.5">{parts.day}</span>
+                                  <span className={`text-[11px] mt-0.5 ${selected ? 'text-white/90' : 'text-slate-500'}`}>
                                     {parts.month}
                                   </span>
                                 </button>
@@ -1736,9 +1709,9 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                             type="button"
                             aria-label="Later dates"
                             onClick={() => scrollDateStrip(1)}
-                            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-9 w-9 rounded-full bg-white/95 border border-slate-200 shadow-sm flex items-center justify-center text-slate-500 hover:text-slate-800"
+                            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-500"
                           >
-                            <ChevronRight className="h-5 w-5" />
+                            <ChevronRight className="h-4 w-4" />
                           </button>
                         )}
                       </div>
@@ -1748,16 +1721,22 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                   {selectedDate && (
                     <div ref={timeRef}>
                       <div className="flex items-center justify-between mb-3 gap-3">
-                        <h4 className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">
+                        <h4 className="text-xs font-bold uppercase tracking-[0.12em] text-slate-800">
                           {formatSelectedDateHeading(selectedDate)}
                         </h4>
-                        <span className="text-xs font-semibold text-slate-500 shrink-0">
-                          {formatTimezoneAbbr(guestTimezone)}
-                        </span>
+                        {!isReschedule && (
+                          <button
+                            type="button"
+                            onClick={() => { setStep('service'); setSelectedService(null); setSelectedDate(null); setSelectedSlot(null); }}
+                            className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 hover:text-slate-700 shrink-0"
+                          >
+                            Edit
+                          </button>
+                        )}
                       </div>
                       <div
-                        className="grid grid-cols-3 gap-2.5"
-                        style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '10px' }}
+                        className="grid grid-cols-3 gap-2"
+                        style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px' }}
                       >
                         {(displaySlotMap.get(selectedDate) ?? []).map((slot) => {
                           const active = slot === selectedSlot;
@@ -1768,13 +1747,11 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                               type="button"
                               onClick={() => handleSlotSelect(slot)}
                               aria-label={label}
-                              className={`min-h-[44px] py-2.5 px-1.5 rounded-xl text-sm font-medium transition-all border ${
-                                active ? 'border-transparent shadow-sm' : 'border-slate-200 hover:border-slate-300'
-                              }`}
+                              className="h-11 rounded-xl text-[13px] font-semibold border leading-none"
                               style={
                                 active
                                   ? { backgroundColor: accentColor, borderColor: accentColor, color: '#ffffff' }
-                                  : { backgroundColor: '#ffffff', color: '#1e293b' }
+                                  : { backgroundColor: '#ffffff', borderColor: '#e2e8f0', color: '#1e293b' }
                               }
                             >
                               {label}
@@ -1829,7 +1806,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                 )}
                 {selectedDate && selectedSlot && (
                   <div ref={continueRef} className="mt-5 flex justify-end">
-                    <button type="button" onClick={goToDetails} className={`w-full sm:w-auto px-6 py-3 text-white font-semibold transition-colors inline-flex items-center justify-center gap-2 min-h-[48px] ${calendlyStyle ? 'rounded-xl bg-[#1a1f36] hover:opacity-90' : 'rounded-xl'}`} style={calendlyStyle ? undefined : { backgroundColor: accentColor }}>
+                    <button type="button" onClick={goToDetails} className="w-full px-6 py-3 text-white font-semibold rounded-xl transition-colors inline-flex items-center justify-center gap-2 min-h-[48px] hover:opacity-90" style={{ backgroundColor: accentColor }}>
                       Continue <ArrowRight className="h-4 w-4" />
                     </button>
                   </div>
