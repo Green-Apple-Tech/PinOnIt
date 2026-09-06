@@ -318,18 +318,26 @@ export function Landing() {
         </div>
       </section>
 
-      {/* Legal position */}
+      {/* ESIGN + audit record */}
       <section className="py-16 px-6 bg-white dark:bg-slate-950">
         <div className="max-w-3xl mx-auto text-center">
-          <p className="text-base md:text-lg text-slate-700 dark:text-slate-300 leading-relaxed mb-8">
-            Built for a strong legal position: SMS-verified, timestamped, 2FA-confirmed, and signed from their phone.
+          <p className="text-base md:text-lg text-slate-700 dark:text-slate-300 leading-relaxed mb-3">
+            Meets federal ESIGN Act requirements for electronic signatures.
+          </p>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-8">
+            Every signature includes a complete audit record:
           </p>
           <div className="grid sm:grid-cols-2 gap-3 text-left">
             {[
-              'Phone number verified by SMS code',
-              'Every view, code, and signature timestamped',
-              'Signature or initials captured on their screen',
-              'A copy of the record for both sides',
+              "Signer's mobile number, verified by one-time SMS code (2FA)",
+              "Signer's full name as entered",
+              'Exact timestamp of each event: opened, verified, consented, signed (with timezone)',
+              'IP address and user agent at signing',
+              'SHA-256 hash of the signed document',
+              'Snapshot of the exact document text and version signed',
+              'The signature image itself',
+              'The consent statement shown, captured verbatim',
+              'Unique document ID',
             ].map((item) => (
               <div key={item} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300">
                 <Check className="h-4 w-4 text-brand-500 shrink-0 mt-0.5" />

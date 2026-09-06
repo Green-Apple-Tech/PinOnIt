@@ -16,7 +16,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'How do you verify who signed?',
-    a: 'Their phone number is verified with an SMS code before they sign, and every step is timestamped. You get the full record.',
+    a: 'Their phone number is verified with a one-time SMS code (2FA) before they sign. Every signature includes a complete audit record — including timestamps, IP and device info, the signature image, consent text, document hash, and a unique document ID. Meets federal ESIGN Act requirements for electronic signatures.',
   },
   {
     q: 'Does it work with my calendar?',

@@ -3,17 +3,20 @@ import { useParams } from 'react-router-dom';
 import { AlertCircle, CheckCircle, Lock, PenLine, RotateCcw } from 'lucide-react';
 import {
   CONTRACT_HOST_HINT,
+  ESIGN_CONSENT_STATEMENT,
   LEGAL_DISCLAIMER,
   defaultVerificationRequired,
   documentNeedsRecipientAction,
   documentFilePublicUrl,
   fetchClientIp,
   fillDocumentPlaceholders,
+  generateDocumentCertificate,
   getDocumentByToken,
   isMoneyDocumentType,
   documentTypeLabel,
   recordDocumentEvent,
   sendDocumentOtp,
+  sha256Hex,
   topicCoverLine,
   verifyDocumentOtp,
 } from '../lib/documents';
@@ -45,6 +48,7 @@ export function DocumentConfirmPage() {
   const [otpNotice, setOtpNotice] = useState('');
   const [otpError, setOtpError] = useState('');
   const [fullTextOpen, setFullTextOpen] = useState(true);
+  const [esignConsent, setEsignConsent] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [hasMarked, setHasMarked] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -187,24 +191,51 @@ export function DocumentConfirmPage() {
     const verified = verificationOn(doc);
     const needsMark = verified && doc.confirmation_type !== 'confirm_receipt';
     if (needsMark && !hasMarked) return;
+    if (verified && !esignConsent) return;
     if (verified && !agreed) return;
     setError('');
     setSubmitting(true);
     const ip = await fetchClientIp();
     const signatureData =
       needsMark && canvasRef.current ? canvasRef.current.toDataURL('image/png') : 'confirmed';
+
+    const snapshot = doc.file_path
+      ? [
+          `Uploaded PDF: ${doc.file_name || 'document.pdf'}`,
+          doc.file_path ? `Storage path: ${doc.file_path}` : '',
+          doc.file_size_bytes != null ? `Size bytes: ${doc.file_size_bytes}` : '',
+          doc.topic ? `Topic: ${doc.topic}` : '',
+          `Recipient: ${doc.recipient_name}`,
+        ]
+          .filter(Boolean)
+          .join('\n')
+      : fillDocumentPlaceholders(doc.full_text || doc.summary_text || '', {
+          topic: doc.topic,
+          recipientName: doc.recipient_name,
+          businessName: doc.sender_business_name,
+          activityDescription: doc.topic,
+        }) || doc.topic || '';
+    const hash = await sha256Hex(snapshot);
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
     const { data, error: err } = await recordDocumentEvent({
       token,
       action: 'signed',
       signatureData,
       ip,
       userAgent: navigator.userAgent,
+      esignConsentText: verified ? ESIGN_CONSENT_STATEMENT : null,
+      documentSnapshotText: snapshot,
+      documentSha256: hash,
+      timezone,
     });
     if (err || !data?.ok) {
       setError(err?.message ?? data?.error ?? 'Could not submit');
       setSubmitting(false);
       return;
     }
+    // Best-effort certificate + host email; signing already succeeded.
+    void generateDocumentCertificate(token);
     setSubmitted(true);
     setSubmitting(false);
   }
@@ -468,6 +499,19 @@ export function DocumentConfirmPage() {
             )}
 
             {verifiedFlow && (
+            <>
+            <label className="flex items-start gap-3 bg-white rounded-2xl border border-slate-200 p-5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={esignConsent}
+                onChange={(e) => setEsignConsent(e.target.checked)}
+                className="mt-1"
+              />
+              <span className="text-sm text-slate-600">
+                <span className="font-semibold text-slate-800 block mb-1">Electronic records consent</span>
+                {ESIGN_CONSENT_STATEMENT}
+              </span>
+            </label>
             <label className="flex items-start gap-3 bg-white rounded-2xl border border-slate-200 p-5 cursor-pointer">
               <input
                 type="checkbox"
@@ -479,6 +523,7 @@ export function DocumentConfirmPage() {
                 I have reviewed this document and I confirm the action above.
               </span>
             </label>
+            </>
             )}
 
             {error && (
@@ -491,7 +536,11 @@ export function DocumentConfirmPage() {
             <button
               type="button"
               onClick={() => void handleConfirm()}
-              disabled={submitting || (verifiedFlow && !agreed) || (needsCanvas && !hasMarked)}
+              disabled={
+                submitting ||
+                (verifiedFlow && (!esignConsent || !agreed)) ||
+                (needsCanvas && !hasMarked)
+              }
               className="w-full min-h-12 rounded-xl bg-indigo-600 text-white font-semibold disabled:opacity-40"
             >
               {submitting ? 'Submitting…' : confirmLabel}

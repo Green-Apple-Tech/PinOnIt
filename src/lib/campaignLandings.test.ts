@@ -37,8 +37,9 @@ describe('campaignCopy', () => {
 });
 
 describe('HOLD_UP_COPY', () => {
-  it('uses the strong-legal-position line in both campaign and Doc Center copy', () => {
-    expect(DOC_HOLD_UP).toMatch(/SMS-verified/i);
-    expect(DOC_HOLD_UP).not.toMatch(/hold up if/i);
+  it('states ESIGN capability and audit record without predicting legal outcomes', () => {
+    expect(DOC_HOLD_UP).toMatch(/ESIGN Act/i);
+    expect(DOC_HOLD_UP).toMatch(/audit record/i);
+    expect(DOC_HOLD_UP).not.toMatch(/legally binding|court-proven|holds up in court|strong legal position/i);
   });
 });

@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle, Clock, Copy, Eye, FileText, Plus } from 'lucide-react';
+import { CheckCircle, Clock, Copy, Download, Eye, FileText, Plus } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { documentsNewPath } from '../lib/documentActions';
 import {
   documentTypeLabel,
   documentViewUrl,
+  generateDocumentCertificate,
 } from '../lib/documents';
+import { HOLD_UP_COPY } from '../lib/documentCopy';
 import type { SmbDocument, SmbDocumentStatus } from '../lib/types';
 
 const STATUS: Record<SmbDocumentStatus, { label: string; className: string; icon: typeof Clock }> = {
@@ -30,6 +32,7 @@ export function DocumentsPage() {
   const [docs, setDocs] = useState<SmbDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [certBusyId, setCertBusyId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!user?.id) return;
@@ -53,6 +56,18 @@ export function DocumentsPage() {
     window.setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const downloadCertificate = async (doc: SmbDocument) => {
+    setCertBusyId(doc.id);
+    const { data, error } = await generateDocumentCertificate(doc.token);
+    setCertBusyId(null);
+    if (error || !data?.ok || !data.download_url) {
+      window.alert(data?.error ?? error?.message ?? 'Could not open certificate');
+      return;
+    }
+    window.open(data.download_url, '_blank', 'noopener,noreferrer');
+    void load();
+  };
+
   const stats = {
     total: docs.length,
     pending: docs.filter((d) => d.status === 'pending').length,
@@ -68,7 +83,7 @@ export function DocumentsPage() {
             Send Docs + <span className="font-sign-by-text text-2xl md:text-3xl text-brand-700 dark:text-brand-300">Sign-by-Text</span>
           </h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-slate-400 max-w-2xl">
-            Quotes, invoices, NDAs, waivers — one place. No login for the recipient.
+            Quotes, invoices, NDAs, waivers — one place. No login for the recipient. {HOLD_UP_COPY}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -157,14 +172,27 @@ export function DocumentsPage() {
                       {doc.recipient_email ? ` · ${doc.recipient_email}` : ''}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => void copyLink(doc.token, doc.id)}
-                    className="inline-flex items-center gap-1.5 min-h-10 px-3 rounded-xl border border-gray-200 dark:border-slate-700 text-sm text-gray-600 dark:text-slate-300"
-                  >
-                    <Copy className="h-4 w-4" />
-                    {copiedId === doc.id ? 'Copied' : 'Copy link'}
-                  </button>
+                  <div className="flex flex-wrap gap-2 shrink-0">
+                    {doc.status === 'signed' && (
+                      <button
+                        type="button"
+                        onClick={() => void downloadCertificate(doc)}
+                        disabled={certBusyId === doc.id}
+                        className="inline-flex items-center gap-1.5 min-h-10 px-3 rounded-xl border border-gray-200 dark:border-slate-700 text-sm text-gray-600 dark:text-slate-300 disabled:opacity-50"
+                      >
+                        <Download className="h-4 w-4" />
+                        {certBusyId === doc.id ? 'Preparing…' : 'Certificate'}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => void copyLink(doc.token, doc.id)}
+                      className="inline-flex items-center gap-1.5 min-h-10 px-3 rounded-xl border border-gray-200 dark:border-slate-700 text-sm text-gray-600 dark:text-slate-300"
+                    >
+                      <Copy className="h-4 w-4" />
+                      {copiedId === doc.id ? 'Copied' : 'Copy link'}
+                    </button>
+                  </div>
                 </li>
               );
             })}

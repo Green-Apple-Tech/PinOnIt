@@ -1,10 +1,11 @@
 import { Link, useLocation } from 'react-router-dom';
-import { ArrowRight, Sun, Moon } from 'lucide-react';
+import { ArrowRight, Check, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
 import { usePageMeta } from '../lib/pageMeta';
 import { captureCampaignParams, signupHref } from '../lib/campaignAttribution';
 import { DOC_TYPE_SHORTCUTS, type CampaignCopy } from '../lib/campaignLandings';
+import { AUDIT_RECORD_ITEMS } from '../lib/documentCopy';
 import { useEffect } from 'react';
 
 function dashboardHref(path: string): string {
@@ -154,8 +155,18 @@ export function CampaignLanding({ copy }: { copy: CampaignCopy }) {
           <p className="text-lg font-semibold text-slate-900 dark:text-white leading-relaxed">
             {copy.secondaryUseCase}
           </p>
-          {copy.holdUp && copy.holdUp !== copy.topBanner ? (
+          {copy.holdUp ? (
             <p className="mt-6 text-base text-slate-600 dark:text-slate-300 leading-relaxed">{copy.holdUp}</p>
+          ) : null}
+          {copy.holdUp ? (
+            <ul className="mt-6 grid sm:grid-cols-2 gap-2 text-left max-w-2xl mx-auto">
+              {AUDIT_RECORD_ITEMS.map((item) => (
+                <li key={item} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300">
+                  <Check className="h-4 w-4 text-brand-500 shrink-0 mt-0.5" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
           ) : null}
           <Link
             to={ctaTo}

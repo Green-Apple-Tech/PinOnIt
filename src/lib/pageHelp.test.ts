@@ -30,7 +30,8 @@ describe('matchHelpFaq', () => {
   it('answers sign-by-text scope questions locally', () => {
     const faq = matchHelpFaq('Can I send a will with Sign-by-Text?');
     expect(faq?.id).toBe('sign-scope');
-    expect(faq?.answer).toMatch(/not for wills/i);
+    expect(faq?.answer).toMatch(/wills/i);
+    expect(faq?.answer).toMatch(/ESIGN/i);
   });
 
   it('answers how to send a document', () => {

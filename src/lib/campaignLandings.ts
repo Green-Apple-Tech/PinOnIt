@@ -74,7 +74,7 @@ export const CAMPAIGN_PAGES: Record<string, CampaignCopy> = {
       { icon: PenLine, title: 'They sign', desc: 'Signature, timestamp, and identity confirmation — from their phone.' },
     ],
     secondaryUseCase:
-      'Also works for liability waivers, contracts, invoices, and receipts — all with the same verified signature and audit trail.',
+      'Also works for liability waivers, contracts, invoices, and receipts — same electronic signature flow and complete audit record.',
     holdUp: HOLD_UP_COPY,
     disclaimer: LEGAL_DISCLAIMER,
     metaTitle: 'Send an NDA over text | PinOnIt Doc Center',

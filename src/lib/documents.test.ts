@@ -21,8 +21,10 @@ describe('Sign-by-Text scope copy', () => {
     expect(SIGN_BY_TEXT_SCOPE_SUMMARY).toMatch(/wills/i);
     expect(SIGN_BY_TEXT_SCOPE_SUMMARY).toMatch(/powers of attorney/i);
     expect(signByTextScopeDetail('5MB')).toMatch(/5MB/);
-    expect(signByTextScopeDetail('5MB')).toMatch(/evidentiary record/i);
+    expect(signByTextScopeDetail('5MB')).toMatch(/audit record/i);
     expect(signByTextAckLabel('5MB')).toMatch(/I understand/i);
+    expect(SIGN_BY_TEXT_SCOPE_SUMMARY).toMatch(/ESIGN/i);
+    expect(SIGN_BY_TEXT_SCOPE_SUMMARY).toMatch(/codicils/i);
   });
 
   it('requires checkbox every PDF send, but only once for built-in templates', () => {

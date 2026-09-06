@@ -243,6 +243,8 @@ export {
 export {
   HOLD_UP_COPY,
   LEGAL_DISCLAIMER,
+  AUDIT_RECORD_ITEMS,
+  ESIGN_CONSENT_STATEMENT,
   WAIVER_HOST_HINT,
   CONTRACT_HOST_HINT,
   SIGN_BY_TEXT_SCOPE_SUMMARY,
@@ -285,12 +287,22 @@ export async function getDocumentByToken(token: string) {
   return { data: data as PublicSmbDocument, error: null };
 }
 
+export async function sha256Hex(text: string): Promise<string> {
+  const data = new TextEncoder().encode(text);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 export async function recordDocumentEvent(params: {
   token: string;
   action: 'viewed' | 'signed';
   signatureData?: string | null;
   ip?: string | null;
   userAgent?: string | null;
+  esignConsentText?: string | null;
+  documentSnapshotText?: string | null;
+  documentSha256?: string | null;
+  timezone?: string | null;
 }) {
   const { data, error } = await supabase.rpc('record_document_event', {
     p_token: params.token,
@@ -298,8 +310,26 @@ export async function recordDocumentEvent(params: {
     p_signature_data: params.signatureData ?? null,
     p_ip: params.ip ?? null,
     p_user_agent: params.userAgent ?? null,
+    p_esign_consent_text: params.esignConsentText ?? null,
+    p_document_snapshot_text: params.documentSnapshotText ?? null,
+    p_document_sha256: params.documentSha256 ?? null,
+    p_timezone: params.timezone ?? null,
   });
-  const result = (data ?? null) as { ok?: boolean; error?: string; status?: string } | null;
+  const result = (data ?? null) as { ok?: boolean; error?: string; status?: string; id?: string } | null;
+  return { data: result, error };
+}
+
+/** Generate / retrieve certificate of completion after signing (or later from Doc Center). */
+export async function generateDocumentCertificate(token: string) {
+  const { data, error } = await supabase.functions.invoke('generate-document-certificate', {
+    body: { token },
+  });
+  const result = (data ?? null) as {
+    ok?: boolean;
+    error?: string;
+    certificate_path?: string;
+    download_url?: string;
+  } | null;
   return { data: result, error };
 }
 

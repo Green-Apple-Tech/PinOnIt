@@ -14,7 +14,7 @@ import {
 import { OnboardingBot } from '../components/OnboardingBot';
 import { CALENDLY_EXCLUSIVES } from '../lib/whyPinonit';
 import { NDA_HEADLINE, NDA_SUBHEAD } from '../lib/campaignLandings';
-import { HOLD_UP_COPY } from '../lib/documentCopy';
+import { HOLD_UP_COPY, AUDIT_RECORD_ITEMS } from '../lib/documentCopy';
 import { DocTypeShortcutRow } from '../components/CampaignLanding';
 import { usePageMeta } from '../lib/pageMeta';
 
@@ -483,6 +483,14 @@ export function CalendlyAlternative() {
             <p className="text-center text-sm sm:text-base font-semibold text-brand-800 dark:text-brand-100 max-w-3xl mx-auto leading-snug">
               {HOLD_UP_COPY}
             </p>
+            <ul className="mt-4 grid sm:grid-cols-2 gap-2 max-w-3xl mx-auto text-left">
+              {AUDIT_RECORD_ITEMS.map((item) => (
+                <li key={item} className="flex items-start gap-2 text-xs text-brand-900/80 dark:text-brand-100/80">
+                  <Check className="h-3.5 w-3.5 shrink-0 mt-0.5 text-brand-600" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6">
@@ -554,9 +562,17 @@ export function CalendlyAlternative() {
           </div>
 
           <div className="rounded-3xl border-2 border-brand-200 dark:border-brand-500/30 bg-gradient-to-br from-brand-50 to-white dark:from-brand-900/20 dark:to-slate-900 p-8 md:p-10 mb-8">
-            <p className="text-sm sm:text-base font-semibold text-brand-800 dark:text-brand-200 leading-snug max-w-3xl mb-6">
+            <p className="text-sm sm:text-base font-semibold text-brand-800 dark:text-brand-200 leading-snug max-w-3xl mb-4">
               {HOLD_UP_COPY}
             </p>
+            <ul className="mb-6 grid sm:grid-cols-2 gap-2 max-w-3xl">
+              {AUDIT_RECORD_ITEMS.map((item) => (
+                <li key={item} className="flex items-start gap-2 text-xs text-slate-600 dark:text-slate-300">
+                  <Check className="h-3.5 w-3.5 shrink-0 mt-0.5 text-brand-600" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
             <div className="flex items-start gap-4">
               <div className="h-12 w-12 rounded-2xl bg-brand-600 text-white flex items-center justify-center shrink-0">
                 <ClipboardSignature className="h-6 w-6" />

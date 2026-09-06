@@ -529,6 +529,14 @@ export interface SmbDocument {
   file_path?: string | null;
   file_name?: string | null;
   file_size_bytes?: number | null;
+  esign_consent_text?: string | null;
+  esign_consent_at?: string | null;
+  document_agreed_at?: string | null;
+  document_snapshot_text?: string | null;
+  document_sha256?: string | null;
+  certificate_path?: string | null;
+  certificate_generated_at?: string | null;
+  timezone_at_sign?: string | null;
 }
 
 export interface PublicSmbDocument {

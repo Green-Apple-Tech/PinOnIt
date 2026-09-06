@@ -10,8 +10,8 @@ export const PRODUCT_CAN = [
 ];
 
 export const PRODUCT_CANNOT = [
-  'Wills, trusts, powers of attorney (POA), deeds, court or judge filings/orders, notarized instruments, multi-signer closings, or illegal/fraudulent content.',
-  'Guarantee a document is legally valid for your situation — PinOnIt builds an evidentiary record (SMS, timestamps, confirmation); it is not a law firm or notary.',
+  'Wills, codicils, testamentary trusts, certain family-law and court documents, powers of attorney (POA), deeds, notarized instruments, multi-signer closings, or illegal/fraudulent content.',
+  'Provide legal advice or predict a legal outcome — Sign-by-Text meets federal ESIGN Act requirements for electronic signatures and captures a complete audit record; it is not a law firm or notary.',
   'Replace attorney review when your document needs specialized legal language.',
   'Act as DocuSign for complex enterprise multi-party workflows.',
   'Send reminders until you turn them on for that booking/event.',
@@ -32,11 +32,13 @@ export const HELP_FAQS: HelpFaq[] = [
       'can i send a will',
       'can i send a power of attorney',
       'is this legally binding',
+      'what is in the audit record',
       'what documents are not allowed',
       'can it notarize',
+      'esign',
     ],
     answer:
-      'Sign-by-Text is for lawful single-signature business documents (waivers, NDAs, addendums, estimates, job sign-offs). It is not for wills, trusts, powers of attorney (POA), deeds, court/judge papers, notarized docs, multi-signer closings, or illegal content. It builds an evidentiary record (SMS code, timestamps, signature) — it does not guarantee validity for every situation. When in doubt, ask your attorney.',
+      'Sign-by-Text is for lawful single-signature business documents (waivers, NDAs, addendums, estimates, job sign-offs). It is not intended for document types excluded from the federal ESIGN Act — including wills, codicils, testamentary trusts, and certain family-law and court documents — nor for powers of attorney (POA), deeds, notarized docs, multi-signer closings, or illegal content. Meets federal ESIGN Act requirements for electronic signatures. Every signature includes a complete audit record (SMS 2FA, name, event timestamps, IP/user agent, SHA-256 hash, document snapshot, signature image, consent text, unique document ID). PinOnIt does not provide legal advice — ask your attorney when in doubt.',
   },
   {
     id: 'how-send-doc',

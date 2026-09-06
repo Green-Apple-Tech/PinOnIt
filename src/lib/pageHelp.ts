@@ -130,13 +130,13 @@ const GUIDES: Record<string, PageHelpGuide> = {
       'Upload clear PDFs up to 5MB',
     ],
     cannotDo: [
-      'Wills, trusts, powers of attorney (POA), deeds, court or judge papers/orders, notarized or multi-signer docs, or illegal/fraudulent content',
-      'Guarantee legal validity for your situation — this builds an evidentiary record, not a notary service',
+      'Wills, codicils, testamentary trusts, certain family-law and court documents, powers of attorney (POA), deeds, notarized or multi-signer docs, or illegal/fraudulent content',
+      'Provide legal advice or predict a legal outcome — we describe the audit record we capture; consult an attorney for your situation',
     ],
     suggestedQuestions: [
       'What documents can I send?',
       'How do I get a signature by text?',
-      'Is this legally binding?',
+      'What is in the audit record?',
     ],
   },
   'paid-booking': {
