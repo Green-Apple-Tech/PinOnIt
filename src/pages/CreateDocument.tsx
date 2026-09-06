@@ -40,6 +40,7 @@ import {
 } from '../lib/documents';
 import {
   PLAIN_LANGUAGE_DISCLAIMER,
+  PLAIN_LANGUAGE_HEADING,
   PLAIN_LANGUAGE_OPT_IN_LABEL,
   PLAIN_LANGUAGE_TRUNCATE_NOTE,
   normalizePlainLanguageBullets,
@@ -1010,7 +1011,7 @@ export function CreateDocumentPage() {
               <div className="mb-4 rounded-xl border border-sky-200 dark:border-sky-800/50 bg-sky-50 dark:bg-sky-950/30 px-3 py-3 space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-xs font-bold uppercase tracking-wide text-sky-800 dark:text-sky-200">
-                    In plain language
+                    {PLAIN_LANGUAGE_HEADING}
                   </p>
                   {plainSummarizing && (
                     <span className="inline-flex items-center gap-1 text-xs text-sky-700 dark:text-sky-300">

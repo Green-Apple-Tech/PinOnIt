@@ -7,6 +7,9 @@ export const PLAIN_LANGUAGE_TRUNCATE_NOTE =
 export const PLAIN_LANGUAGE_DISCLAIMER =
   "This is a summary to help you understand. The full agreement below is what you're signing.";
 
+/** Heading above the AI summary block. */
+export const PLAIN_LANGUAGE_HEADING = 'Quick Summary of the document';
+
 /** Opt-in checkbox — default unchecked. Reveals the AI summary. */
 export const PLAIN_LANGUAGE_OPT_IN_LABEL =
   'Check for a fast AI summary. Still read the full text — summaries miss details.';

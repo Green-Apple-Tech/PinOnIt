@@ -16,6 +16,7 @@ import {
 } from '../lib/documents';
 import {
   PLAIN_LANGUAGE_DISCLAIMER,
+  PLAIN_LANGUAGE_HEADING,
   PLAIN_LANGUAGE_OPT_IN_LABEL,
   PLAIN_LANGUAGE_TRUNCATE_NOTE,
   normalizePlainLanguageBullets,
@@ -360,7 +361,7 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
 
                     <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 p-3 space-y-2">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">In plain language</p>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{PLAIN_LANGUAGE_HEADING}</p>
                         {summarizingType === type && (
                           <span className="inline-flex items-center gap-1 text-xs text-slate-400">
                             <Loader2 className="h-3 w-3 animate-spin" /> Updating…

@@ -23,6 +23,7 @@ import {
 import { quoteTotals } from '../lib/quoteMath';
 import {
   PLAIN_LANGUAGE_DISCLAIMER,
+  PLAIN_LANGUAGE_HEADING,
   PLAIN_LANGUAGE_OPT_IN_LABEL,
   PLAIN_LANGUAGE_TRUNCATE_NOTE,
   plainLanguageBulletsFromStored,
@@ -357,7 +358,7 @@ export function DocumentConfirmPage() {
             <>
               {showPlainLanguage && (
                 <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 space-y-2">
-                  <p className="text-xs font-bold uppercase tracking-wide text-sky-800">In plain language</p>
+                  <p className="text-xs font-bold uppercase tracking-wide text-sky-800">{PLAIN_LANGUAGE_HEADING}</p>
                   <label className="flex items-start gap-2 text-sm text-sky-950 cursor-pointer">
                     <input
                       type="checkbox"
