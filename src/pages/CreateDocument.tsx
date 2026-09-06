@@ -235,18 +235,19 @@ export function CreateDocumentPage() {
   ]);
 
   // Seed plain-language summary from saved template (host override or platform).
+  // Opt-in checkbox always starts unchecked — reveal only when the user checks it.
   useEffect(() => {
     if (isUpload || isLibraryPdf) {
       setPlainSummary('');
       setPlainSummaryHash('');
-      setPlainSummaryEnabled(true);
+      setPlainSummaryEnabled(false);
       setPlainSummaryTruncated(false);
       return;
     }
     const src = hostOverride ?? selectedTemplate;
     setPlainSummary(src?.plain_language_summary?.trim() || '');
     setPlainSummaryHash(src?.plain_language_source_hash?.trim() || '');
-    setPlainSummaryEnabled(src?.plain_language_enabled === true);
+    setPlainSummaryEnabled(false);
     setPlainSummaryTruncated(Boolean(src?.plain_language_truncated));
   }, [documentType, isUpload, isLibraryPdf, hostOverride, selectedTemplate]);
 

@@ -115,7 +115,7 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
       return {
         text: override.plain_language_summary ?? '',
         hash: override.plain_language_source_hash ?? '',
-        enabled: override.plain_language_enabled === true,
+        enabled: false,
         truncated: Boolean(override.plain_language_truncated),
       };
     }
@@ -123,7 +123,7 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
     return {
       text: global?.plain_language_summary ?? '',
       hash: global?.plain_language_source_hash ?? '',
-      enabled: global?.plain_language_enabled === true,
+      enabled: false,
       truncated: Boolean(global?.plain_language_truncated),
     };
   };
