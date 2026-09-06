@@ -39,19 +39,19 @@ export type DashboardNavItem = {
 /** Primary sidebar — product areas only (Settings is appended after More Tools). */
 export const SIMPLE_PRIMARY_NAV: MoreToolsNavItem[] = [
   { label: 'Dashboard', icon: LayoutGrid, path: '/dashboard' },
-  { label: 'Calendar', icon: CalendarCheck, path: '/dashboard/appointments' },
-  {
-    label: 'Booking',
-    icon: ExternalLink,
-    path: '/dashboard/booking',
-    activePaths: ['/dashboard/booking'],
-  },
   {
     label: DOCS_COMBINED_NAV_LABEL,
     icon: ClipboardSignature,
     path: '/dashboard/documents',
     docsCombined: true,
     activePathPrefixes: ['/dashboard/documents'],
+  },
+  { label: 'Calendar', icon: CalendarCheck, path: '/dashboard/appointments' },
+  {
+    label: 'Booking',
+    icon: ExternalLink,
+    path: '/dashboard/booking',
+    activePaths: ['/dashboard/booking'],
   },
   { label: 'NeverMiss Reminders', icon: Bell, path: '/dashboard/reminders' },
 ];

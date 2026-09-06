@@ -72,6 +72,14 @@ type DashTool = {
 
 const PRIMARY_TOOLS: DashTool[] = [
   {
+    to: '/dashboard/documents',
+    title: 'Send Docs + Sign-by-Text',
+    blurb: 'Quotes, invoices, NDAs, waivers — verify & sign by SMS when you need it.',
+    icon: ClipboardSignature,
+    accent: 'bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300',
+    docsCombined: true,
+  },
+  {
     to: '/dashboard/appointments',
     title: 'Calendar',
     blurb: 'Your schedule, upcoming meetings, and availability.',
@@ -84,14 +92,6 @@ const PRIMARY_TOOLS: DashTool[] = [
     blurb: 'Your booking page, services, and sharing tools.',
     icon: ExternalLink,
     accent: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300',
-  },
-  {
-    to: '/dashboard/documents',
-    title: 'Send Docs + Sign-by-Text',
-    blurb: 'Quotes, invoices, NDAs, waivers — verify & sign by SMS when you need it.',
-    icon: ClipboardSignature,
-    accent: 'bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300',
-    docsCombined: true,
   },
   {
     to: '/dashboard/reminders',
