@@ -1871,14 +1871,15 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                        Full name <span className="text-red-400">*</span>
+                        Name <span className="text-red-400">*</span>
                       </label>
                       <div className="relative">
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500" />
-                        <input type="text" placeholder="Jane Smith" value={guestName} onChange={(e) => setGuestName(e.target.value)} required
+                        <input type="text" placeholder="Jane" value={guestName} onChange={(e) => setGuestName(e.target.value)} required
                           readOnly={isReschedule}
                           className={`w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition ${isReschedule ? 'bg-slate-50 dark:bg-slate-800 cursor-not-allowed' : ''} ${!guestName ? 'border-slate-300 dark:border-slate-700' : 'border-indigo-500 dark:border-indigo-600'}`} />
                       </div>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">First name is fine.</p>
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
@@ -2212,7 +2213,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                     <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5 mt-1">
                       <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                       {detailsError
-                        || (!guestName.trim() ? 'Full name is required.'
+                        || (!guestName.trim() ? 'Name is required.'
                           : !isReschedule && !guestEmail.trim() ? 'Email address is required.'
                           : requiresTerms && !termsAgreed ? 'Please agree to the terms above.'
                           : hasRequiredQuestions ? 'Please answer all required questions.'
