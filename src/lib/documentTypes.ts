@@ -81,8 +81,9 @@ export function documentTypeLabel(type: SmbDocumentType, custom?: string | null)
   return documentTypeMeta(type)?.label ?? type;
 }
 
+/** Default ON for almost all Doc Center types — quote is view-only. */
 export function defaultVerificationRequired(type: SmbDocumentType) {
-  return type === 'nda' || type === 'contract' || type === 'waiver' || type === 'upload' || type === 'quick_addendum';
+  return type !== 'quote';
 }
 
 export function documentBodyIsEditable(type: SmbDocumentType) {

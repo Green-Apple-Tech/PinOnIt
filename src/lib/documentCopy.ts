@@ -50,14 +50,13 @@ export function signByTextAckLabel(maxLabel = '5MB') {
 }
 
 /**
- * Full scope checkbox:
- * - every send for uploaded / library PDFs (host-controlled content)
- * - first send only for built-in templates (durable ack on profile)
+ * Full scope checkbox — once per account (durable on profile).
+ * After `sign_by_text_scope_accepted_at` is set, do not show the paragraph again.
  */
 export function requiresSignByTextScopeCheckbox(opts: {
   isUpload: boolean;
   scopeAlreadyAccepted: boolean;
 }): boolean {
-  if (opts.isUpload) return true;
+  void opts.isUpload;
   return !opts.scopeAlreadyAccepted;
 }

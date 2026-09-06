@@ -27,8 +27,8 @@ describe('Sign-by-Text scope copy', () => {
     expect(SIGN_BY_TEXT_SCOPE_SUMMARY).toMatch(/codicils/i);
   });
 
-  it('requires checkbox every PDF send, but only once for built-in templates', () => {
-    expect(requiresSignByTextScopeCheckbox({ isUpload: true, scopeAlreadyAccepted: true })).toBe(true);
+  it('requires scope checkbox only until the account has acknowledged once', () => {
+    expect(requiresSignByTextScopeCheckbox({ isUpload: true, scopeAlreadyAccepted: true })).toBe(false);
     expect(requiresSignByTextScopeCheckbox({ isUpload: true, scopeAlreadyAccepted: false })).toBe(true);
     expect(requiresSignByTextScopeCheckbox({ isUpload: false, scopeAlreadyAccepted: false })).toBe(true);
     expect(requiresSignByTextScopeCheckbox({ isUpload: false, scopeAlreadyAccepted: true })).toBe(false);

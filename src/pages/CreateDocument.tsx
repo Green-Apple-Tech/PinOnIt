@@ -34,7 +34,6 @@ import {
   sendDocumentLink,
   signByTextAckLabel,
   signByTextScopeDetail,
-  SIGN_BY_TEXT_SCOPE_SUMMARY,
   requiresSignByTextScopeCheckbox,
   summarizeDocumentTemplate,
 } from '../lib/documents';
@@ -243,10 +242,14 @@ export function CreateDocumentPage() {
     setPlainSummaryTruncated(Boolean(src?.plain_language_truncated));
   }, [documentType, isUpload, isLibraryPdf, hostOverride, selectedTemplate]);
 
-  // Debounced generate in the background when template body changes (never for uploads).
+  // Debounced generate in the background for any template text (never uploads).
   useEffect(() => {
-    if (isUpload || isLibraryPdf || !bodyEditable) return;
-    const text = customText.trim();
+    if (isUpload || isLibraryPdf) return;
+    const text = (
+      bodyEditable
+        ? customText
+        : hostOverrideText || selectedTemplate?.full_text || defaultDocumentBody(documentType)
+    ).trim();
     if (!text) return;
 
     if (plainSummaryTimer.current) window.clearTimeout(plainSummaryTimer.current);
@@ -269,7 +272,15 @@ export function CreateDocumentPage() {
       if (plainSummaryTimer.current) window.clearTimeout(plainSummaryTimer.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [customText, documentType, isUpload, isLibraryPdf, bodyEditable]);
+  }, [
+    customText,
+    documentType,
+    isUpload,
+    isLibraryPdf,
+    bodyEditable,
+    hostOverrideText,
+    selectedTemplate?.full_text,
+  ]);
 
   useEffect(() => {
     if (defaultsApplied || !profile || !isMoney) return;
@@ -682,7 +693,7 @@ export function CreateDocumentPage() {
               </p>
             </label>
           )}
-          {isUpload && (
+          {isUpload && needsScopeCheckbox && (
             <div className="rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/60 dark:bg-amber-950/20 p-2.5">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300 mb-1.5">
                 Sign-by-Text scope
@@ -708,11 +719,7 @@ export function CreateDocumentPage() {
                 {signByTextAckLabel(uploadMaxLabel)}
               </span>
             </label>
-          ) : (
-            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-950/40 px-3 py-2.5">
-              {SIGN_BY_TEXT_SCOPE_SUMMARY}
-            </p>
-          )}
+          ) : null}
         </div>
 
         <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-6 space-y-4">
