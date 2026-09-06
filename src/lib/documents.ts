@@ -333,6 +333,33 @@ export async function generateDocumentCertificate(token: string) {
   return { data: result, error };
 }
 
+/** Generate or skip plain-language template summary (never for uploads / never at signing). */
+export async function summarizeDocumentTemplate(params: {
+  fullText: string;
+  existingHash?: string | null;
+  existingSummary?: string | null;
+  force?: boolean;
+}) {
+  const { data, error } = await supabase.functions.invoke('summarize-document-template', {
+    body: {
+      full_text: params.fullText,
+      existing_hash: params.existingHash ?? null,
+      existing_summary: params.existingSummary ?? null,
+      force: Boolean(params.force),
+    },
+  });
+  const result = (data ?? null) as {
+    ok?: boolean;
+    error?: string;
+    skipped?: boolean;
+    hash?: string;
+    truncated?: boolean;
+    summary?: string[];
+    summary_text?: string;
+  } | null;
+  return { data: result, error };
+}
+
 export async function verifyDocumentOtp(token: string, code: string) {
   const { data, error } = await supabase.rpc('verify_document_otp', {
     p_token: token,

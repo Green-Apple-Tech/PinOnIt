@@ -150,7 +150,8 @@ export function CreateDocumentPage() {
     ? libraryFiles.find((f) => f.id === libraryFileId) ?? null
     : null;
   const selectedTemplate = templates.find((t) => t.document_type === documentType) ?? null;
-  const hostOverrideText = hostOverrides.find((o) => o.document_type === documentType)?.full_text?.trim() || null;
+  const hostOverride = hostOverrides.find((o) => o.document_type === documentType) ?? null;
+  const hostOverrideText = hostOverride?.full_text?.trim() || null;
   const isWaiver = documentType === 'waiver';
   const isUpload = isUploadDocumentType(documentType);
   const isLibraryPdf = Boolean(selectedLibraryFile);
@@ -402,6 +403,14 @@ export function CreateDocumentPage() {
       activityDescription: topicText,
     });
 
+    // Display-only: copy template plain-language summary when enabled (never for uploads).
+    const templateSummarySource = hostOverride ?? selectedTemplate;
+    const copyPlainSummary =
+      !isUpload &&
+      templateSummarySource &&
+      templateSummarySource.plain_language_enabled !== false &&
+      Boolean(templateSummarySource.plain_language_summary?.trim());
+
     const { error: err } = await supabase.from('documents').insert({
       token,
       sender_id: user.id,
@@ -426,6 +435,12 @@ export function CreateDocumentPage() {
       file_path: filePath,
       file_name: fileName,
       file_size_bytes: fileSize,
+      plain_language_summary: copyPlainSummary
+        ? templateSummarySource.plain_language_summary!.trim()
+        : null,
+      plain_language_truncated: copyPlainSummary
+        ? Boolean(templateSummarySource.plain_language_truncated)
+        : false,
     });
 
     if (err) {

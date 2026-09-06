@@ -16,6 +16,10 @@ export type HostDocumentTemplate = {
   host_id: string;
   document_type: SmbDocumentType;
   full_text: string;
+  plain_language_summary?: string | null;
+  plain_language_source_hash?: string | null;
+  plain_language_enabled?: boolean | null;
+  plain_language_truncated?: boolean | null;
   updated_at: string;
   created_at: string;
 };

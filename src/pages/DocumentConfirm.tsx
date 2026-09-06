@@ -21,6 +21,11 @@ import {
   verifyDocumentOtp,
 } from '../lib/documents';
 import { quoteTotals } from '../lib/quoteMath';
+import {
+  PLAIN_LANGUAGE_DISCLAIMER,
+  PLAIN_LANGUAGE_TRUNCATE_NOTE,
+  plainLanguageBulletsFromStored,
+} from '../lib/plainLanguageSummary';
 import type { HostQuoteLineItem, PublicSmbDocument } from '../lib/types';
 
 function money(amount: number, currency = 'USD') {
@@ -47,7 +52,6 @@ export function DocumentConfirmPage() {
   const [otpBusy, setOtpBusy] = useState(false);
   const [otpNotice, setOtpNotice] = useState('');
   const [otpError, setOtpError] = useState('');
-  const [fullTextOpen, setFullTextOpen] = useState(true);
   const [esignConsent, setEsignConsent] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [hasMarked, setHasMarked] = useState(false);
@@ -301,6 +305,12 @@ export function DocumentConfirmPage() {
       })
     : '';
 
+  const plainBullets =
+    doc && !doc.file_path
+      ? plainLanguageBulletsFromStored(doc.plain_language_summary)
+      : [];
+  const showPlainLanguage = plainBullets.length > 0;
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-10">
       <header className="bg-white border-b border-slate-200">
@@ -341,40 +351,42 @@ export function DocumentConfirmPage() {
               ) : null}
             </div>
           )}
-          {doc && !doc.file_path && doc.document_type === 'waiver' ? (
-            <p className="mt-3 text-sm text-slate-700 whitespace-pre-line leading-relaxed">
-              {doc.topic ? `This waiver covers: ${doc.topic}\n\n` : ''}
-              {fullBody}
-            </p>
-          ) : !doc?.file_path ? (
+          {doc && !doc.file_path && (
             <>
-              {doc && (
-                <p className="mt-3 text-sm text-slate-600 whitespace-pre-line">
-                  {doc.document_type === 'nda' && topicCoverLine(doc.topic) ? `${topicCoverLine(doc.topic)}\n\n` : ''}
-                  {doc.topic && doc.document_type !== 'nda' && doc.document_type !== 'waiver' ? `${doc.topic}\n\n` : ''}
-                  {doc.summary_text}
-                </p>
+              {showPlainLanguage && (
+                <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3">
+                  <p className="text-xs font-bold uppercase tracking-wide text-sky-800">In plain language</p>
+                  <ul className="mt-2 space-y-1.5 list-disc pl-4 text-sm text-sky-950 leading-relaxed">
+                    {plainBullets.map((b) => (
+                      <li key={b}>{b}</li>
+                    ))}
+                  </ul>
+                  {doc.plain_language_truncated && (
+                    <p className="mt-2 text-[11px] text-sky-800/80">{PLAIN_LANGUAGE_TRUNCATE_NOTE}</p>
+                  )}
+                  <p className="mt-2 text-[11px] text-sky-800/80 leading-relaxed">{PLAIN_LANGUAGE_DISCLAIMER}</p>
+                </div>
               )}
-              {doc?.document_type === 'contract' && (
+              {doc.document_type === 'contract' && (
                 <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-900 leading-relaxed">
                   <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">Warning</p>
                   <p className="mt-1">{CONTRACT_HOST_HINT}</p>
                 </div>
               )}
-              <button
-                type="button"
-                onClick={() => setFullTextOpen((v) => !v)}
-                className="mt-3 text-sm font-medium text-indigo-600"
-              >
-                {fullTextOpen ? 'Hide full text' : 'Read full text'}
-              </button>
-              {fullTextOpen && doc && (
-                <div className="mt-3 text-sm text-slate-700 whitespace-pre-line leading-relaxed bg-slate-50 rounded-xl p-4">
-                  {fullBody}
-                </div>
-              )}
+              {doc.document_type === 'nda' && topicCoverLine(doc.topic) ? (
+                <p className="mt-3 text-sm text-slate-600 whitespace-pre-line">{topicCoverLine(doc.topic)}</p>
+              ) : null}
+              {doc.topic && doc.document_type !== 'nda' && doc.document_type !== 'waiver' ? (
+                <p className="mt-3 text-sm text-slate-600">{doc.topic}</p>
+              ) : null}
+              {doc.document_type === 'waiver' && doc.topic ? (
+                <p className="mt-3 text-sm text-slate-600">This waiver covers: {doc.topic}</p>
+              ) : null}
+              <div className="mt-3 max-h-[28rem] overflow-y-auto text-sm text-slate-700 whitespace-pre-line leading-relaxed bg-slate-50 rounded-xl p-4 border border-slate-100">
+                {fullBody}
+              </div>
             </>
-          ) : null}
+          )}
           {showMoney && (
             <table className="w-full mt-6 text-sm">
               <tbody>

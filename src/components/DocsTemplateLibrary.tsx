@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronDown, ChevronUp, FileText, Loader2, Trash2, Upload } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { toast } from './Toast';
@@ -12,7 +12,13 @@ import {
   documentUploadMaxLabel,
   signByTextScopeDetail,
   signByTextAckLabel,
+  summarizeDocumentTemplate,
 } from '../lib/documents';
+import {
+  PLAIN_LANGUAGE_DISCLAIMER,
+  PLAIN_LANGUAGE_TRUNCATE_NOTE,
+  normalizePlainLanguageBullets,
+} from '../lib/plainLanguageSummary';
 import {
   HOST_EDITABLE_TEMPLATE_TYPES,
   type HostDocumentFile,
@@ -26,6 +32,13 @@ function formatBytes(n: number) {
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+type SummaryDraft = {
+  text: string;
+  hash: string;
+  enabled: boolean;
+  truncated: boolean;
+};
 
 type Props = {
   hostId: string;
@@ -41,12 +54,16 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
   const [loading, setLoading] = useState(true);
   const [openType, setOpenType] = useState<SmbDocumentType | null>('nda');
   const [drafts, setDrafts] = useState<Partial<Record<SmbDocumentType, string>>>({});
+  const [summaryDrafts, setSummaryDrafts] = useState<Partial<Record<SmbDocumentType, SummaryDraft>>>({});
+  const [summarizingType, setSummarizingType] = useState<SmbDocumentType | null>(null);
   const [savingType, setSavingType] = useState<SmbDocumentType | null>(null);
   const [pdfName, setPdfName] = useState('');
   const [pdfBusy, setPdfBusy] = useState(false);
   const [scopeAcked, setScopeAcked] = useState(false);
   const uploadMaxLabel = documentUploadMaxLabel();
   const scopeAlreadyAccepted = Boolean(profile?.sign_by_text_scope_accepted_at);
+  const debounceTimers = useRef<Partial<Record<SmbDocumentType, number>>>({});
+  const summarizeGen = useRef(0);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -68,6 +85,14 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
     void load();
   }, [load]);
 
+  useEffect(() => {
+    return () => {
+      for (const t of Object.values(debounceTimers.current)) {
+        if (t) window.clearTimeout(t);
+      }
+    };
+  }, []);
+
   const seedFor = (type: SmbDocumentType) => {
     const global = globalTemplates.find((t) => t.document_type === type)?.full_text?.trim();
     if (type === 'waiver' && waiverTemplate.trim()) return waiverTemplate;
@@ -81,6 +106,66 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
     return seedFor(type);
   };
 
+  const summaryFor = (type: SmbDocumentType): SummaryDraft => {
+    if (summaryDrafts[type]) return summaryDrafts[type]!;
+    const override = overrides.find((o) => o.document_type === type);
+    if (override) {
+      return {
+        text: override.plain_language_summary ?? '',
+        hash: override.plain_language_source_hash ?? '',
+        enabled: override.plain_language_enabled !== false,
+        truncated: Boolean(override.plain_language_truncated),
+      };
+    }
+    const global = globalTemplates.find((t) => t.document_type === type);
+    return {
+      text: global?.plain_language_summary ?? '',
+      hash: global?.plain_language_source_hash ?? '',
+      enabled: global?.plain_language_enabled !== false,
+      truncated: Boolean(global?.plain_language_truncated),
+    };
+  };
+
+  const requestSummary = async (type: SmbDocumentType, text: string, force = false) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const current = summaryFor(type);
+    const gen = ++summarizeGen.current;
+    setSummarizingType(type);
+    try {
+      const { data, error } = await summarizeDocumentTemplate({
+        fullText: trimmed,
+        existingHash: force ? null : current.hash,
+        existingSummary: force ? null : current.text,
+        force,
+      });
+      if (gen !== summarizeGen.current) return;
+      if (error || !data?.ok) {
+        toast.error(data?.error ?? error?.message ?? 'Could not generate summary');
+        return;
+      }
+      setSummaryDrafts((prev) => ({
+        ...prev,
+        [type]: {
+          text: data.summary_text || normalizePlainLanguageBullets(data.summary ?? []),
+          hash: data.hash || current.hash,
+          enabled: current.enabled,
+          truncated: Boolean(data.truncated),
+        },
+      }));
+    } finally {
+      if (gen === summarizeGen.current) setSummarizingType(null);
+    }
+  };
+
+  const scheduleSummary = (type: SmbDocumentType, text: string) => {
+    const prev = debounceTimers.current[type];
+    if (prev) window.clearTimeout(prev);
+    debounceTimers.current[type] = window.setTimeout(() => {
+      void requestSummary(type, text);
+    }, 900);
+  };
+
   const saveType = async (type: SmbDocumentType) => {
     const text = (drafts[type] ?? draftFor(type)).trim();
     if (!text) {
@@ -89,11 +174,23 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
     }
     setSavingType(type);
     try {
+      // Flush pending debounce so hash matches saved text.
+      const pending = debounceTimers.current[type];
+      if (pending) {
+        window.clearTimeout(pending);
+        debounceTimers.current[type] = undefined;
+        await requestSummary(type, text);
+      }
+      const summary = summaryDrafts[type] ?? summaryFor(type);
       const { error } = await supabase.from('host_document_templates').upsert(
         {
           host_id: hostId,
           document_type: type,
           full_text: text,
+          plain_language_summary: normalizePlainLanguageBullets(summary.text) || null,
+          plain_language_source_hash: summary.hash || null,
+          plain_language_enabled: summary.enabled,
+          plain_language_truncated: summary.truncated,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'host_id,document_type' },
@@ -122,6 +219,11 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
         await supabase.from('profiles').update({ waiver_template: null }).eq('id', hostId);
       }
       setDrafts((prev) => {
+        const next = { ...prev };
+        delete next[type];
+        return next;
+      });
+      setSummaryDrafts((prev) => {
         const next = { ...prev };
         delete next[type];
         return next;
@@ -209,17 +311,26 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
       <div className="space-y-2">
         <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Default document templates</h3>
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          Built-in wording is the starting point. Open a type, edit, and save your own version. Sending still works without customizing.
+          Built-in wording is the starting point. Open a type, edit, and save your own version. A plain-language summary is generated when you edit and can be turned off per template. Uploaded PDFs are never summarized.
         </p>
         <div className="space-y-2">
           {HOST_EDITABLE_TEMPLATE_TYPES.map((type) => {
             const open = openType === type;
             const customized = overrides.some((o) => o.document_type === type) || (type === 'waiver' && !!waiverTemplate.trim());
+            const summary = summaryFor(type);
             return (
               <div key={type} className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
                 <button
                   type="button"
-                  onClick={() => setOpenType(open ? null : type)}
+                  onClick={() => {
+                    setOpenType(open ? null : type);
+                    if (!open) {
+                      const text = draftFor(type);
+                      if (text.trim() && !summaryFor(type).text.trim()) {
+                        scheduleSummary(type, text);
+                      }
+                    }
+                  }}
                   className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-900/40"
                 >
                   <span className="flex items-center gap-2 min-w-0">
@@ -234,13 +345,58 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
                   {open ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
                 </button>
                 {open && (
-                  <div className="px-4 pb-4 space-y-2 border-t border-slate-100 dark:border-slate-800 pt-3">
+                  <div className="px-4 pb-4 space-y-3 border-t border-slate-100 dark:border-slate-800 pt-3">
                     <textarea
                       value={draftFor(type)}
-                      onChange={(e) => setDrafts((prev) => ({ ...prev, [type]: e.target.value }))}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setDrafts((prev) => ({ ...prev, [type]: value }));
+                        scheduleSummary(type, value);
+                      }}
                       rows={10}
                       className="w-full px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm text-slate-900 dark:text-white"
                     />
+
+                    <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">In plain language</p>
+                        {summarizingType === type && (
+                          <span className="inline-flex items-center gap-1 text-xs text-slate-400">
+                            <Loader2 className="h-3 w-3 animate-spin" /> Updating…
+                          </span>
+                        )}
+                      </div>
+                      <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={summary.enabled}
+                          onChange={(e) =>
+                            setSummaryDrafts((prev) => ({
+                              ...prev,
+                              [type]: { ...summaryFor(type), enabled: e.target.checked },
+                            }))
+                          }
+                        />
+                        Show plain-language summary on the signing page
+                      </label>
+                      <textarea
+                        value={summary.text}
+                        onChange={(e) =>
+                          setSummaryDrafts((prev) => ({
+                            ...prev,
+                            [type]: { ...summaryFor(type), text: e.target.value },
+                          }))
+                        }
+                        rows={5}
+                        placeholder="4–6 short bullets (one per line). Generated when you edit the template text."
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm"
+                      />
+                      <p className="text-[11px] text-slate-500 leading-relaxed">{PLAIN_LANGUAGE_DISCLAIMER}</p>
+                      {summary.truncated && (
+                        <p className="text-[11px] text-amber-700 dark:text-amber-300">{PLAIN_LANGUAGE_TRUNCATE_NOTE}</p>
+                      )}
+                    </div>
+
                     <div className="flex flex-wrap gap-2">
                       <button
                         type="button"
@@ -249,6 +405,14 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
                         className="min-h-10 px-4 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold disabled:opacity-60"
                       >
                         {savingType === type ? 'Saving…' : 'Save template'}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={savingType === type || summarizingType === type}
+                        onClick={() => void requestSummary(type, draftFor(type), true)}
+                        className="min-h-10 px-4 rounded-lg border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-600 dark:text-slate-300"
+                      >
+                        Regenerate summary
                       </button>
                       <button
                         type="button"
@@ -270,7 +434,7 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
       <div className="border-t border-slate-200 dark:border-slate-800 pt-4 space-y-3">
         <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Saved PDFs</h3>
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          Upload a PDF once, name it, then pick it from Document Type when you send. PDF only, up to {formatBytes(DOCUMENT_UPLOAD_MAX_BYTES)}.
+          Upload a PDF once, name it, then pick it from Document Type when you send. PDF only, up to {formatBytes(DOCUMENT_UPLOAD_MAX_BYTES)}. Uploaded PDFs are shown as-is — no plain-language summary.
         </p>
         <p className="text-xs text-slate-500 dark:text-slate-400">{DOCUMENT_UPLOAD_READABILITY_HINT}</p>
         <div className="rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/60 dark:bg-amber-950/20 p-2.5">

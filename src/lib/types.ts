@@ -494,6 +494,10 @@ export interface DocumentTemplate {
   confirmation_type: DocumentConfirmationType;
   summary_text: string;
   full_text: string;
+  plain_language_summary?: string | null;
+  plain_language_source_hash?: string | null;
+  plain_language_enabled?: boolean | null;
+  plain_language_truncated?: boolean | null;
   created_at: string;
 }
 
@@ -537,6 +541,9 @@ export interface SmbDocument {
   certificate_path?: string | null;
   certificate_generated_at?: string | null;
   timezone_at_sign?: string | null;
+  /** Display-only; never part of the signed audit/certificate. */
+  plain_language_summary?: string | null;
+  plain_language_truncated?: boolean | null;
 }
 
 export interface PublicSmbDocument {
@@ -568,6 +575,9 @@ export interface PublicSmbDocument {
   file_size_bytes?: number | null;
   /** Sender company name for leftover [Business Name] placeholders. */
   sender_business_name?: string | null;
+  /** Display-only plain-language bullets; never part of the signed record. */
+  plain_language_summary?: string | null;
+  plain_language_truncated?: boolean | null;
 }
 
 export const LOCATION_TYPES: Record<string, string> = {

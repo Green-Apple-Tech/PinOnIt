@@ -38,6 +38,7 @@ deploy send-quote
 deploy send-document-sms
 deploy send-document-otp --no-verify-jwt
 deploy generate-document-certificate --no-verify-jwt
+deploy summarize-document-template
 deploy booking-og --no-verify-jwt
 deploy send-reminder
 deploy coordinate-sms
