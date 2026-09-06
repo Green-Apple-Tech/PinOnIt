@@ -16,6 +16,7 @@ import {
 } from '../lib/documents';
 import {
   PLAIN_LANGUAGE_DISCLAIMER,
+  PLAIN_LANGUAGE_OPT_IN_LABEL,
   PLAIN_LANGUAGE_TRUNCATE_NOTE,
   normalizePlainLanguageBullets,
 } from '../lib/plainLanguageSummary';
@@ -113,7 +114,7 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
       return {
         text: override.plain_language_summary ?? '',
         hash: override.plain_language_source_hash ?? '',
-        enabled: override.plain_language_enabled !== false,
+        enabled: override.plain_language_enabled === true,
         truncated: Boolean(override.plain_language_truncated),
       };
     }
@@ -121,7 +122,7 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
     return {
       text: global?.plain_language_summary ?? '',
       hash: global?.plain_language_source_hash ?? '',
-      enabled: global?.plain_language_enabled !== false,
+      enabled: global?.plain_language_enabled === true,
       truncated: Boolean(global?.plain_language_truncated),
     };
   };
@@ -366,7 +367,7 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
                           </span>
                         )}
                       </div>
-                      <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200 cursor-pointer">
+                      <label className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-200 cursor-pointer">
                         <input
                           type="checkbox"
                           checked={summary.enabled}
@@ -376,24 +377,29 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
                               [type]: { ...summaryFor(type), enabled: e.target.checked },
                             }))
                           }
+                          className="mt-0.5"
                         />
-                        Show plain-language summary on the signing page
+                        <span>{PLAIN_LANGUAGE_OPT_IN_LABEL}</span>
                       </label>
-                      <textarea
-                        value={summary.text}
-                        onChange={(e) =>
-                          setSummaryDrafts((prev) => ({
-                            ...prev,
-                            [type]: { ...summaryFor(type), text: e.target.value },
-                          }))
-                        }
-                        rows={5}
-                        placeholder="4–6 short bullets (one per line). Generated when you edit the template text."
-                        className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm"
-                      />
-                      <p className="text-[11px] text-slate-500 leading-relaxed">{PLAIN_LANGUAGE_DISCLAIMER}</p>
-                      {summary.truncated && (
-                        <p className="text-[11px] text-amber-700 dark:text-amber-300">{PLAIN_LANGUAGE_TRUNCATE_NOTE}</p>
+                      {summary.enabled && (
+                        <>
+                          <textarea
+                            value={summary.text}
+                            onChange={(e) =>
+                              setSummaryDrafts((prev) => ({
+                                ...prev,
+                                [type]: { ...summaryFor(type), text: e.target.value },
+                              }))
+                            }
+                            rows={5}
+                            placeholder="4–6 short bullets (one per line). Generated when you edit the template text."
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm"
+                          />
+                          <p className="text-[11px] text-slate-500 leading-relaxed">{PLAIN_LANGUAGE_DISCLAIMER}</p>
+                          {summary.truncated && (
+                            <p className="text-[11px] text-amber-700 dark:text-amber-300">{PLAIN_LANGUAGE_TRUNCATE_NOTE}</p>
+                          )}
+                        </>
                       )}
                     </div>
 

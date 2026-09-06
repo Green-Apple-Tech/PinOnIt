@@ -40,6 +40,7 @@ import {
 } from '../lib/documents';
 import {
   PLAIN_LANGUAGE_DISCLAIMER,
+  PLAIN_LANGUAGE_OPT_IN_LABEL,
   PLAIN_LANGUAGE_TRUNCATE_NOTE,
   normalizePlainLanguageBullets,
 } from '../lib/plainLanguageSummary';
@@ -114,7 +115,7 @@ export function CreateDocumentPage() {
   const [scopeAcked, setScopeAcked] = useState(false);
   const [plainSummary, setPlainSummary] = useState('');
   const [plainSummaryHash, setPlainSummaryHash] = useState('');
-  const [plainSummaryEnabled, setPlainSummaryEnabled] = useState(true);
+  const [plainSummaryEnabled, setPlainSummaryEnabled] = useState(false);
   const [plainSummaryTruncated, setPlainSummaryTruncated] = useState(false);
   const [plainSummarizing, setPlainSummarizing] = useState(false);
   const plainSummaryTimer = useRef<number | null>(null);
@@ -244,7 +245,7 @@ export function CreateDocumentPage() {
     const src = hostOverride ?? selectedTemplate;
     setPlainSummary(src?.plain_language_summary?.trim() || '');
     setPlainSummaryHash(src?.plain_language_source_hash?.trim() || '');
-    setPlainSummaryEnabled(src?.plain_language_enabled !== false);
+    setPlainSummaryEnabled(src?.plain_language_enabled === true);
     setPlainSummaryTruncated(Boolean(src?.plain_language_truncated));
   }, [documentType, isUpload, isLibraryPdf, hostOverride, selectedTemplate]);
 
@@ -1017,13 +1018,14 @@ export function CreateDocumentPage() {
                     </span>
                   )}
                 </div>
-                <label className="flex items-center gap-2 text-sm text-sky-950 dark:text-sky-100 cursor-pointer">
+                <label className="flex items-start gap-2 text-sm text-sky-950 dark:text-sky-100 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={plainSummaryEnabled}
                     onChange={(e) => setPlainSummaryEnabled(e.target.checked)}
+                    className="mt-0.5"
                   />
-                  Show this summary on the signing page
+                  <span>{PLAIN_LANGUAGE_OPT_IN_LABEL}</span>
                 </label>
                 {plainSummaryEnabled && (
                   <>

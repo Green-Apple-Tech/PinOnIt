@@ -23,6 +23,7 @@ import {
 import { quoteTotals } from '../lib/quoteMath';
 import {
   PLAIN_LANGUAGE_DISCLAIMER,
+  PLAIN_LANGUAGE_OPT_IN_LABEL,
   PLAIN_LANGUAGE_TRUNCATE_NOTE,
   plainLanguageBulletsFromStored,
 } from '../lib/plainLanguageSummary';
@@ -54,6 +55,7 @@ export function DocumentConfirmPage() {
   const [otpError, setOtpError] = useState('');
   const [esignConsent, setEsignConsent] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [plainLanguageOpen, setPlainLanguageOpen] = useState(false);
   const [hasMarked, setHasMarked] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -354,17 +356,30 @@ export function DocumentConfirmPage() {
           {doc && !doc.file_path && (
             <>
               {showPlainLanguage && (
-                <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3">
+                <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 space-y-2">
                   <p className="text-xs font-bold uppercase tracking-wide text-sky-800">In plain language</p>
-                  <ul className="mt-2 space-y-1.5 list-disc pl-4 text-sm text-sky-950 leading-relaxed">
-                    {plainBullets.map((b) => (
-                      <li key={b}>{b}</li>
-                    ))}
-                  </ul>
-                  {doc.plain_language_truncated && (
-                    <p className="mt-2 text-[11px] text-sky-800/80">{PLAIN_LANGUAGE_TRUNCATE_NOTE}</p>
+                  <label className="flex items-start gap-2 text-sm text-sky-950 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={plainLanguageOpen}
+                      onChange={(e) => setPlainLanguageOpen(e.target.checked)}
+                      className="mt-0.5"
+                    />
+                    <span>{PLAIN_LANGUAGE_OPT_IN_LABEL}</span>
+                  </label>
+                  {plainLanguageOpen && (
+                    <>
+                      <ul className="space-y-1.5 list-disc pl-4 text-sm text-sky-950 leading-relaxed">
+                        {plainBullets.map((b) => (
+                          <li key={b}>{b}</li>
+                        ))}
+                      </ul>
+                      {doc.plain_language_truncated && (
+                        <p className="text-[11px] text-sky-800/80">{PLAIN_LANGUAGE_TRUNCATE_NOTE}</p>
+                      )}
+                      <p className="text-[11px] text-sky-800/80 leading-relaxed">{PLAIN_LANGUAGE_DISCLAIMER}</p>
+                    </>
                   )}
-                  <p className="mt-2 text-[11px] text-sky-800/80 leading-relaxed">{PLAIN_LANGUAGE_DISCLAIMER}</p>
                 </div>
               )}
               {doc.document_type === 'contract' && (
