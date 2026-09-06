@@ -39,10 +39,6 @@ import {
   summarizeDocumentTemplate,
 } from '../lib/documents';
 import {
-  PLAIN_LANGUAGE_DISCLAIMER,
-  PLAIN_LANGUAGE_HEADING,
-  PLAIN_LANGUAGE_OPT_IN_LABEL,
-  PLAIN_LANGUAGE_TRUNCATE_NOTE,
   normalizePlainLanguageBullets,
 } from '../lib/plainLanguageSummary';
 import type { HostDocumentFile, HostDocumentTemplate } from '../lib/hostDocuments';
@@ -114,11 +110,10 @@ export function CreateDocumentPage() {
   } | null>(null);
   const [copied, setCopied] = useState(false);
   const [scopeAcked, setScopeAcked] = useState(false);
+  /** Cached for the recipient signing page only — not shown on this sender form. */
   const [plainSummary, setPlainSummary] = useState('');
   const [plainSummaryHash, setPlainSummaryHash] = useState('');
-  const [plainSummaryEnabled, setPlainSummaryEnabled] = useState(false);
   const [plainSummaryTruncated, setPlainSummaryTruncated] = useState(false);
-  const [plainSummarizing, setPlainSummarizing] = useState(false);
   const plainSummaryTimer = useRef<number | null>(null);
   const plainSummaryGen = useRef(0);
   const uploadMaxLabel = documentUploadMaxLabel();
@@ -234,24 +229,21 @@ export function CreateDocumentPage() {
     selectedTemplate?.full_text,
   ]);
 
-  // Seed plain-language summary from saved template (host override or platform).
-  // Opt-in checkbox always starts unchecked — reveal only when the user checks it.
+  // Seed / refresh summary cache for the recipient (not shown on this page).
   useEffect(() => {
     if (isUpload || isLibraryPdf) {
       setPlainSummary('');
       setPlainSummaryHash('');
-      setPlainSummaryEnabled(false);
       setPlainSummaryTruncated(false);
       return;
     }
     const src = hostOverride ?? selectedTemplate;
     setPlainSummary(src?.plain_language_summary?.trim() || '');
     setPlainSummaryHash(src?.plain_language_source_hash?.trim() || '');
-    setPlainSummaryEnabled(false);
     setPlainSummaryTruncated(Boolean(src?.plain_language_truncated));
   }, [documentType, isUpload, isLibraryPdf, hostOverride, selectedTemplate]);
 
-  // Debounced generate when template body changes (never for uploads).
+  // Debounced generate in the background when template body changes (never for uploads).
   useEffect(() => {
     if (isUpload || isLibraryPdf || !bodyEditable) return;
     const text = customText.trim();
@@ -260,14 +252,12 @@ export function CreateDocumentPage() {
     if (plainSummaryTimer.current) window.clearTimeout(plainSummaryTimer.current);
     plainSummaryTimer.current = window.setTimeout(() => {
       const gen = ++plainSummaryGen.current;
-      setPlainSummarizing(true);
       void summarizeDocumentTemplate({
         fullText: text,
         existingHash: plainSummaryHash,
         existingSummary: plainSummary,
       }).then(({ data, error }) => {
         if (gen !== plainSummaryGen.current) return;
-        setPlainSummarizing(false);
         if (error || !data?.ok) return;
         setPlainSummary(data.summary_text || normalizePlainLanguageBullets(data.summary ?? []));
         if (data.hash) setPlainSummaryHash(data.hash);
@@ -278,7 +268,6 @@ export function CreateDocumentPage() {
     return () => {
       if (plainSummaryTimer.current) window.clearTimeout(plainSummaryTimer.current);
     };
-    // Only re-run when the body text / type changes — not when summary fields update.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customText, documentType, isUpload, isLibraryPdf, bodyEditable]);
 
@@ -466,11 +455,8 @@ export function CreateDocumentPage() {
       activityDescription: topicText,
     });
 
-    // Display-only: copy plain-language summary when enabled (never for uploads).
-    const copyPlainSummary =
-      !isUpload &&
-      plainSummaryEnabled &&
-      Boolean(plainSummary.trim());
+    // Display-only for the recipient signing page (never for uploads; never in the audit/certificate).
+    const copyPlainSummary = !isUpload && Boolean(plainSummary.trim());
 
     const { error: err } = await supabase.from('documents').insert({
       token,
@@ -1008,45 +994,6 @@ export function CreateDocumentPage() {
                   This is what they see and sign. Topic and recipient name fill in from the fields above.
                 </p>
               )}
-
-              <div className="mb-4 rounded-xl border border-sky-200 dark:border-sky-800/50 bg-sky-50 dark:bg-sky-950/30 px-3 py-3 space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-bold uppercase tracking-wide text-sky-800 dark:text-sky-200">
-                    {PLAIN_LANGUAGE_HEADING}
-                  </p>
-                  {plainSummarizing && (
-                    <span className="inline-flex items-center gap-1 text-xs text-sky-700 dark:text-sky-300">
-                      <Loader2 className="h-3 w-3 animate-spin" /> Generating…
-                    </span>
-                  )}
-                </div>
-                <label className="flex items-start gap-2 text-sm text-sky-950 dark:text-sky-100 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={plainSummaryEnabled}
-                    onChange={(e) => setPlainSummaryEnabled(e.target.checked)}
-                    className="mt-0.5"
-                  />
-                  <span>{PLAIN_LANGUAGE_OPT_IN_LABEL}</span>
-                </label>
-                {plainSummaryEnabled && (
-                  <>
-                    <textarea
-                      value={plainSummary}
-                      onChange={(e) => setPlainSummary(e.target.value)}
-                      rows={5}
-                      placeholder="4–6 short bullets appear here after the document text settles (about a second). You can edit them."
-                      className="w-full px-3 py-2 rounded-lg border border-sky-200 dark:border-sky-800 bg-white dark:bg-slate-950 text-sm text-slate-900 dark:text-white"
-                    />
-                    <p className="text-[11px] text-sky-800/80 dark:text-sky-200/80 leading-relaxed">
-                      {PLAIN_LANGUAGE_DISCLAIMER}
-                    </p>
-                    {plainSummaryTruncated && (
-                      <p className="text-[11px] text-amber-700 dark:text-amber-300">{PLAIN_LANGUAGE_TRUNCATE_NOTE}</p>
-                    )}
-                  </>
-                )}
-              </div>
 
               <p className="mt-1 mb-3 text-sm text-gray-800 dark:text-slate-100 whitespace-pre-line leading-relaxed rounded-xl border border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-950 px-3 py-3">
                 {filledBody}
