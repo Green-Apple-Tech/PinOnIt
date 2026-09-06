@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, Copy, Loader2, MessageSquare, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { ContactAutocomplete } from '../components/ContactAutocomplete';
 import { supabase } from '../lib/supabase';
 import { PHONE_HINT, PHONE_PLACEHOLDER, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import { revealTool } from '../lib/progressiveDisclosure';
@@ -657,6 +658,15 @@ export function CreateDocumentPage() {
         </div>
 
         <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-6 space-y-4">
+          <ContactAutocomplete
+            hostId={user?.id}
+            onSelect={(c) => {
+              setRecipientFirstName(c.firstName);
+              setRecipientLastName(c.lastName);
+              setRecipientEmail(c.email);
+              if (c.phone) setRecipientPhone(c.phone);
+            }}
+          />
           <label className="block">
             <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Recipient name <span className="text-red-500">*</span></span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">

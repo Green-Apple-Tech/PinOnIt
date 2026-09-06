@@ -8,6 +8,7 @@ import { parseBlockInput } from '../lib/bookingBlocks';
 import { toast } from '../components/Toast';
 import { syncBookingToExternalCalendarsAsHost } from '../lib/writeCalendarEvent';
 import { BookingAlsoRemindPicker } from '../components/BookingAlsoRemindPicker';
+import { ContactAutocomplete } from '../components/ContactAutocomplete';
 import { parseAlsoRemindIds } from '../lib/reminderAlso';
 import { hostCalendarWindow } from '../lib/queryWindow';
 import { CalendarConnections } from '../components/CalendarConnections';
@@ -209,6 +210,16 @@ function AddEventModal({ services, defaultDate, onClose, onSaved }: AddEventModa
             <p className="text-sm text-red-500 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 rounded-xl px-3 py-2">{error}</p>
           )}
           <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2">
+              <ContactAutocomplete
+                hostId={profile?.id}
+                onSelect={(c) => {
+                  setGuestName(c.fullName || [c.firstName, c.lastName].filter(Boolean).join(' '));
+                  setGuestEmail(c.email);
+                }}
+                inputClassName="w-full pl-9 pr-9 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
+              />
+            </div>
             <div className="col-span-2">
               <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">Guest Name</label>
               <input
