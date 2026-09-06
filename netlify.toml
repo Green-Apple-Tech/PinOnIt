@@ -1,12 +1,159 @@
+# Missing hashed JS must 404 — never SPA-fallback /assets/* to index.html.
 [[redirects]]
   from = "/assets/*"
   to = "/404.html"
   status = 404
 
-# Booking / reserved single-segment paths — OG tags via booking-og (SPA shell)
+# Reserved SPA routes — never proxy through Supabase booking-og (text/plain breaks iPhone Chrome).
+[[redirects]]
+  from = "/login"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/signup"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/auth"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/auth/*"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/dashboard"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/dashboard/*"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/documents"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/documents/*"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/onboarding"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/onboarding/*"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/booking"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/booking/*"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/book"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/book/*"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/terms"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/privacy"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/sms-consent"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/acceptable-use"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/status"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/leaderboard"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/calendly-alternative"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/why-pinonit"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/nda"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/reminders"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/poll"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/poll/*"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/ref"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/ref/*"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/s"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/s/*"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/q"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/q/*"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/r"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/r/*"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/d"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/d/*"
+  to = "/index.html"
+  status = 200
+
+# Host booking slugs — Netlify function forces text/html Content-Type
 [[redirects]]
   from = "/:slug"
-  to = "https://adlusgtlwgcfyxgeoias.supabase.co/functions/v1/booking-og/:slug"
+  to = "/.netlify/functions/booking-shell?slug=:slug"
   status = 200
   force = false
 
@@ -18,6 +165,7 @@
 [build]
   command = "npx vite build"
   publish = "dist"
+  functions = "netlify/functions"
 
 # Never cache the HTML shell. Do not put a year-long cache on /assets/* —
 # a Publish race 404 would be stored as immutable and the page stays blank.
@@ -32,3 +180,21 @@
   [headers.values]
     Cache-Control = "no-cache, no-store, must-revalidate"
     Pragma = "no-cache"
+
+[[headers]]
+  for = "/login"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Content-Type = "text/html; charset=utf-8"
+
+[[headers]]
+  for = "/dashboard"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Content-Type = "text/html; charset=utf-8"
+
+[[headers]]
+  for = "/auth/*"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Content-Type = "text/html; charset=utf-8"

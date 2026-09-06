@@ -3,9 +3,48 @@
 # Do not 404 /src/* — Bolt preview serves the Vite entry /src/main.tsx.
 /assets/*  /404.html  404
 
-# Single-segment paths → booking-og injects correct Open Graph tags for iMessage.
-# Real booking slugs get "Book a Meeting…"; reserved routes (login, etc.) get homepage OG.
-# Returns the SPA shell so browsers still load the app normally.
-/:slug  https://adlusgtlwgcfyxgeoias.supabase.co/functions/v1/booking-og/:slug  200
+# Reserved SPA routes — MUST be served as text/html from Netlify.
+# Proxying them through Supabase booking-og returns text/plain (+ CSP sandbox),
+# so iPhone Chrome shows the raw HTML source instead of the app (breaks Gmail OAuth).
+/login  /index.html  200
+/signup  /index.html  200
+/ref  /index.html  200
+/ref/*  /index.html  200
+/auth  /index.html  200
+/auth/*  /index.html  200
+/onboarding  /index.html  200
+/onboarding/*  /index.html  200
+/booking  /index.html  200
+/booking/*  /index.html  200
+/dashboard  /index.html  200
+/dashboard/*  /index.html  200
+/documents  /index.html  200
+/documents/*  /index.html  200
+/calendly-alternative  /index.html  200
+/nda  /index.html  200
+/reminders  /index.html  200
+/why-pinonit  /index.html  200
+/terms  /index.html  200
+/privacy  /index.html  200
+/sms-consent  /index.html  200
+/acceptable-use  /index.html  200
+/leaderboard  /index.html  200
+/status  /index.html  200
+/poll  /index.html  200
+/poll/*  /index.html  200
+/book  /index.html  200
+/book/*  /index.html  200
+/s  /index.html  200
+/s/*  /index.html  200
+/q  /index.html  200
+/q/*  /index.html  200
+/r  /index.html  200
+/r/*  /index.html  200
+/d  /index.html  200
+/d/*  /index.html  200
+
+# Host booking slugs — Netlify function rewrites Supabase HTML to text/html
+# (Supabase Edge Forces text/plain on HTML bodies; browsers then show source).
+/:slug  /.netlify/functions/booking-shell?slug=:slug  200
 
 /*         /index.html  200
