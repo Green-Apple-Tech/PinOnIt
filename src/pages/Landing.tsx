@@ -7,8 +7,8 @@ import { usePageMeta } from '../lib/pageMeta';
 import {
   ArrowRight, Check,
   Sun, Moon, Menu, X,
-  Calendar, Bell, Mail, ClipboardSignature, QrCode,
-  Receipt, DollarSign,
+  Calendar, CalendarDays, Bell, Mail, ClipboardSignature, QrCode,
+  Receipt, DollarSign, Users, ShoppingBag,
 } from 'lucide-react';
 import { ChannelBadges } from '../components/ChannelBadges';
 import { OnboardingBot } from '../components/OnboardingBot';
@@ -80,6 +80,24 @@ const TEXT_ACTION_CARDS = [
     you: 'Create and save your signature for documents and email.',
     theySee: 'Your brand, ready to send.',
   },
+  {
+    icon: Users,
+    title: 'Group Scheduling',
+    you: 'Polls and SMS coordinate so a group lands on one time.',
+    theySee: 'Tap the times that work: pinonit.com/p/…',
+  },
+  {
+    icon: ShoppingBag,
+    title: 'Paid Booking',
+    you: 'A price-list page. Stripe, PayPal, Venmo, Cash App, or your pay link.',
+    theySee: 'Book & pay — $85 lawn service.',
+  },
+  {
+    icon: CalendarDays,
+    title: 'Calendar sync',
+    you: 'Google and Outlook stay in sync so you do not double-book.',
+    theySee: 'Blocked — already on your calendar.',
+  },
 ];
 
 const OLD_VS_TEXT = [
@@ -95,16 +113,6 @@ const TRADE_CHIPS = [
   'Personal trainers', 'Pest control', 'Handymen', 'Financial advisors', 'Massage therapists',
   'Lash & beauty', 'HVAC', 'Notaries', 'Tattoo artists', 'Cleaners', 'Pool pros',
   'Photographers', 'Therapists', 'Salon suites',
-];
-
-const SIX_TOOLS = [
-  { icon: Calendar, title: 'Easy Booking', desc: 'Your booking page and links, synced to your calendar.' },
-  { icon: ClipboardSignature, title: 'Sign-by-Text', desc: 'Waivers, NDAs, addendums, simple contracts.' },
-  { icon: Bell, title: 'NeverMiss Reminders', desc: 'Never miss a reminder — you, customers, or your team.' },
-  { icon: Receipt, title: 'Business Documents', desc: 'Quotes, invoices, receipts — send in seconds, with a Pay button if you add your payment link.' },
-  { icon: DollarSign, title: 'Get paid', desc: 'Paste PayPal, Venmo, Cash App, Stripe, or any link. Guests tap Pay on the phone.' },
-  { icon: QrCode, title: 'QR Codes', desc: 'Booking page, link, or business — instant.' },
-  { icon: Mail, title: 'Signature Creator', desc: 'Save a signature for docs and email.' },
 ];
 
 export function Landing() {
@@ -173,32 +181,18 @@ export function Landing() {
         </div>
         <div className="relative max-w-6xl mx-auto grid lg:grid-cols-2 gap-10 lg:gap-12 items-center">
           <div className="text-center lg:text-left">
-            <p className="inline-flex flex-wrap items-center justify-center lg:justify-start gap-x-2 gap-y-1 px-3 py-1.5 mb-5 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 tracking-wide">
-              BOOK IT · REMIND IT · SEND IT · SIGN IT · PIN IT
-            </p>
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white leading-tight mb-4">
-              eSign by Text + Your Business Apps Combined
+            <h1 className="text-[clamp(1.15rem,2.4vw+0.75rem,2.75rem)] font-black tracking-tight text-slate-900 dark:text-white leading-none whitespace-nowrap mb-4">
+              Run your business by text.
             </h1>
-            <div className="mb-6 max-w-xl mx-auto lg:mx-0 rounded-2xl border border-brand-200 dark:border-brand-800 bg-brand-50/80 dark:bg-brand-500/10 px-4 py-3">
-              <p className="text-xs font-bold uppercase tracking-widest text-brand-600 dark:text-brand-400 mb-1">
-                What is Pin On It?
-              </p>
-              <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
-                Text → Book → Quote → Sign → Pay
-              </p>
-            </div>
             <p className="text-lg md:text-xl font-medium text-slate-600 dark:text-slate-300 leading-snug mb-8 max-w-xl mx-auto lg:mx-0">
-              <strong className="text-slate-900 dark:text-white">Sign by Text</strong> and <strong className="text-slate-900 dark:text-white">easy booking</strong> — plus reminders, invoices, QR codes, and more. No pile of apps. Just PinOnIt.
+              Book, sign, and get paid — no app, no DocuSign.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 mb-3">
-              <Link to="/signup" className="w-full sm:w-auto px-8 py-4 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-full text-base transition-all shadow-lg shadow-brand-200/60 dark:shadow-none inline-flex items-center justify-center gap-2">
-                Start free <ArrowRight className="h-4 w-4" />
-              </Link>
-              <a href="#demo" className="w-full sm:w-auto px-8 py-4 border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold rounded-full text-base hover:bg-slate-50 dark:hover:bg-slate-800 transition-all inline-flex items-center justify-center">
-                See how it works
-              </a>
-            </div>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Free trial, then $8.99/mo. Cancel anytime.</p>
+            <Link
+              to="/signup"
+              className="px-8 py-4 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-full text-base transition-all shadow-lg shadow-brand-200/60 dark:shadow-none inline-flex items-center justify-center gap-2"
+            >
+              Start free <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
           <div>
             <SmsPhoneMockup messages={HERO_MESSAGES} caption="Real flow. No app on her phone." />
@@ -274,11 +268,11 @@ export function Landing() {
         </div>
       </section>
 
-      {/* Five things by text */}
-      <section className="py-20 px-6 bg-white dark:bg-slate-950">
+      {/* 10 tools in one */}
+      <section id="tools" className="py-20 px-6 bg-white dark:bg-slate-950 scroll-mt-28">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-2xl md:text-3xl font-bold text-center text-slate-900 dark:text-white mb-12">
-            Booking. Reminders. Documents. Signatures. QR codes.
+            10 tools in one
           </h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {TEXT_ACTION_CARDS.map(({ icon: Icon, title, you, theySee, featured, channels }) => (
@@ -377,26 +371,6 @@ export function Landing() {
             ))}
           </div>
           <p className="text-sm text-slate-500 dark:text-slate-400">If your customers text you, PinOnIt fits.</p>
-        </div>
-      </section>
-
-      {/* Six tools */}
-      <section id="tools" className="py-20 px-6 bg-white dark:bg-slate-950 scroll-mt-28">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-2xl md:text-3xl font-bold text-center text-slate-900 dark:text-white mb-12">
-            Everything else you&apos;d expect, included
-          </h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {SIX_TOOLS.map(({ icon: Icon, title, desc }) => (
-              <div key={title} className="rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
-                <div className="h-10 w-10 rounded-xl bg-brand-50 dark:bg-brand-500/10 flex items-center justify-center mb-4">
-                  <Icon className="h-5 w-5 text-brand-600 dark:text-brand-400" />
-                </div>
-                <h3 className="font-bold text-slate-900 dark:text-white mb-2">{title}</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400">{desc}</p>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
