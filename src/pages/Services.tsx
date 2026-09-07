@@ -15,7 +15,9 @@ import {
 } from 'lucide-react';
 import { QRModal } from '../components/QRModal';
 import { ColorSwatchRow } from '../components/ColorSwatchRow';
+import { PaymentLinkFields } from '../components/PaymentLinkFields';
 import { revealTool } from '../lib/progressiveDisclosure';
+import { normalizeExternalUrl } from '../lib/paymentLink';
 
 interface SingleUseLink {
   id: string; host_id: string; service_id: string; token: string;
@@ -47,6 +49,8 @@ const DEFAULT_SERVICE = {
   venmo_handle: null as string | null,
   cashapp_handle: null as string | null,
   zelle_handle: null as string | null,
+  payment_link: null as string | null,
+  payment_link_label: null as string | null,
   payment_methods: [] as string[],
   require_terms: false, require_nda: false,
   show_description_on_booking_page: true, show_description_on_paid_booking: true,
@@ -82,6 +86,7 @@ function formatPrice(cents: number) {
 
 function buildPaymentMethods(form: FormState): string[] {
   const methods: string[] = [];
+  if (form.payment_link?.trim()) methods.push('link');
   if (form.paypal_handle?.trim() || form.paypal_me_link?.trim()) methods.push('paypal');
   if (form.venmo_handle?.trim()) methods.push('venmo');
   if (form.cashapp_handle?.trim()) methods.push('cashapp');
@@ -168,7 +173,7 @@ function PaymentTab({
   const paypalSelected = form.payment_provider === 'paypal';
   const p2pSelected = form.payment_provider === 'p2p';
 
-  const hasAnyP2P = !!(form.paypal_handle || form.paypal_me_link || form.venmo_handle || form.cashapp_handle || form.zelle_handle);
+  const hasAnyP2P = !!(form.payment_link || form.paypal_handle || form.paypal_me_link || form.venmo_handle || form.cashapp_handle || form.zelle_handle);
 
   return (
     <div className="space-y-5">
@@ -184,6 +189,13 @@ function PaymentTab({
       {howTo === 'zelle' && (
         <HowToModal title="How to find your Zelle contact" steps={ZELLE_HOW_TO_STEPS} onClose={() => setHowTo(null)} />
       )}
+
+      <PaymentLinkFields
+        url={form.payment_link ?? ''}
+        label={form.payment_link_label || 'Pay'}
+        onUrlChange={(v) => setField('payment_link', v || null)}
+        onLabelChange={(v) => setField('payment_link_label', v || null)}
+      />
 
       {/* 3 selection cards */}
       <div className="space-y-2.5">
@@ -528,6 +540,8 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
       venmo_handle: (svc as Service).venmo_handle ?? null,
       cashapp_handle: (svc as Service).cashapp_handle ?? (svc as Service).cashapp_tag ?? null,
       zelle_handle: (svc as Service).zelle_handle ?? (svc as Service).zelle_contact ?? null,
+      payment_link: (svc as Service).payment_link ?? null,
+      payment_link_label: (svc as Service).payment_link_label ?? null,
       payment_methods: (svc as any).payment_methods ?? [],
       require_terms: (svc as any).require_terms ?? false,
       require_nda: (svc as any).require_nda ?? false,
@@ -573,7 +587,8 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
     const cashapp = form.cashapp_handle?.trim() || null;
     const zelle = form.zelle_handle?.trim() || null;
     const paypal = form.paypal_handle?.trim() || form.paypal_me_link?.trim() || null;
-    const { cashapp_handle: _c, zelle_handle: _z, paypal_handle: _p, payment_methods: _pm, ...formFields } = form;
+    const paymentLink = normalizeExternalUrl(form.payment_link);
+    const { cashapp_handle: _c, zelle_handle: _z, paypal_handle: _p, payment_methods: _pm, payment_link: _pl, payment_link_label: _pll, ...formFields } = form;
     const basePayload = {
       ...formFields,
       price_cents: priceCents,
@@ -593,6 +608,8 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
       cashapp_handle: cashapp,
       zelle_handle: zelle,
       paypal_handle: paypal,
+      payment_link: paymentLink,
+      payment_link_label: form.payment_link_label?.trim() || (paymentLink ? 'Pay' : null),
       payment_methods: buildPaymentMethods(form),
     };
 

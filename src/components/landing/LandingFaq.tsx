@@ -3,6 +3,10 @@ import { ChevronDown } from 'lucide-react';
 
 const FAQ_ITEMS = [
   {
+    q: 'What is Pin On It?',
+    a: 'Text → Book → Quote → Sign → Pay. You text a booking link, quote, or document. They tap, pick a time, sign with a finger, and pay you through the link you add (PayPal, Venmo, Cash App, Stripe, or any pay page). No extra apps for them.',
+  },
+  {
     q: 'Does my customer need an app?',
     a: 'No. They get a normal text message and open a link in their phone\'s browser. Nothing to install, no account to create.',
   },

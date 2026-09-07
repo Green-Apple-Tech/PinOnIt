@@ -14,6 +14,7 @@ import {
   shouldStopRecurrence,
 } from '../lib/recurring';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
+import { normalizeExternalUrl } from '../lib/paymentLink';
 import { SmsBookingConsentCheckbox } from '../components/SmsConsentText';
 import {
   buildNotifyViaPayload,
@@ -85,7 +86,7 @@ function reminderTimeLabel(id: string): string {
   return REMINDER_TIMES.find((t) => t.id === id)?.label ?? id;
 }
 
-type BookPaymentMethod = 'stripe' | 'venmo' | 'paypal' | 'cashapp' | 'zelle';
+type BookPaymentMethod = 'stripe' | 'venmo' | 'paypal' | 'cashapp' | 'zelle' | 'link';
 
 interface BookPaymentOption {
   id: BookPaymentMethod;
@@ -101,6 +102,8 @@ export interface ServicePaymentHandles {
   venmo_handle: string;
   cashapp_handle: string;
   zelle_handle: string;
+  payment_link: string;
+  payment_link_label: string;
 }
 
 function getServicePaymentHandles(svc: Service): ServicePaymentHandles {
@@ -114,11 +117,13 @@ function getServicePaymentHandles(svc: Service): ServicePaymentHandles {
     venmo_handle: (ext.venmo_handle ?? '').trim().replace(/^@/, ''),
     cashapp_handle: (ext.cashapp_handle ?? ext.cashapp_tag ?? '').trim().replace(/^\$/, ''),
     zelle_handle: (ext.zelle_handle ?? ext.zelle_contact ?? '').trim(),
+    payment_link: (svc.payment_link ?? '').trim(),
+    payment_link_label: (svc.payment_link_label ?? '').trim() || 'Pay',
   };
 }
 
 function hasAnyPaymentHandle(handles: ServicePaymentHandles): boolean {
-  return !!(handles.paypal_handle || handles.venmo_handle || handles.cashapp_handle || handles.zelle_handle);
+  return !!(handles.payment_link || handles.paypal_handle || handles.venmo_handle || handles.cashapp_handle || handles.zelle_handle);
 }
 
 const SERVICE_SELECT = '*';
@@ -129,6 +134,17 @@ function buildPaymentOptions(svc: Service, stripeAvailable: boolean): BookPaymen
   const amount = (svc.price_cents / 100).toFixed(2);
   const currency = extended.paypal_currency ?? 'USD';
   const opts: BookPaymentOption[] = [];
+  const payUrl = normalizeExternalUrl(handles.payment_link);
+  if (payUrl) {
+    opts.push({
+      id: 'link',
+      label: handles.payment_link_label || 'Pay',
+      subtitle: handles.payment_link,
+      url: payUrl,
+      panelBg: 'bg-emerald-50 dark:bg-emerald-950/30',
+      panelText: 'text-emerald-800 dark:text-emerald-300',
+    });
+  }
 
   opts.push({
     id: 'stripe',
@@ -1378,6 +1394,10 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
     [selectedService]
   );
   const showP2PHandles = paymentHandles ? hasAnyPaymentHandle(paymentHandles) : false;
+  useEffect(() => {
+    if (!paymentHandles?.payment_link) return;
+    setPaymentMethod('link');
+  }, [selectedService?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const isHostViewer = !!(user?.id && host?.id && user.id === host.id);
   const selectedPaymentOption = paymentOptions.find((o) => o.id === paymentMethod);
   const showPaidBookingPayment = isPaidService && !(isRecurringService && (selectedService?.price_cents ?? 0) > 0) && !isReschedule;
@@ -2070,7 +2090,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                               target="_blank"
                               rel="noopener noreferrer"
                             >
-                              Add your payment handles in Services settings
+                              Add your payment link in Services settings
                             </a>
                             {' '}— guests will see them as payment options.
                           </p>
@@ -2122,6 +2142,12 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                         <div className="mt-4 border-t border-gray-200 dark:border-slate-700 pt-4">
                           <p className="text-xs text-gray-500 dark:text-slate-400 mb-3 text-center">Or pay via</p>
                           <div className="flex flex-col gap-2">
+                            {paymentHandles.payment_link && (
+                              <div className="flex items-center justify-between p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl">
+                                <span className="text-emerald-800 dark:text-emerald-300 font-semibold text-sm">{paymentHandles.payment_link_label || 'Pay'}</span>
+                                <span className="text-emerald-700 dark:text-emerald-400 text-sm truncate max-w-[60%]">{paymentHandles.payment_link}</span>
+                              </div>
+                            )}
                             {paymentHandles.paypal_handle && (
                               <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-xl">
                                 <span className="text-blue-700 dark:text-blue-300 font-semibold text-sm">PayPal</span>

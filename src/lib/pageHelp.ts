@@ -110,7 +110,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
     steps: [
       'Tap Create event type (or edit an existing one).',
       'Set the name, duration, and in-person / video / phone.',
-      'Add a price if you want to get paid when they book.',
+      'Add a price if you want to get paid when they book, and paste your payment link on the Payment tab.',
       'Save, then include it in your share link on the Dashboard.',
     ],
   },
@@ -121,12 +121,13 @@ const GUIDES: Record<string, PageHelpGuide> = {
     steps: [
       'Tap New document and pick Document Type (or a Saved PDF from Settings → Docs).',
       'Add recipient name. Phone is required when verification is on.',
+      'For quotes and invoices, paste your PayPal / Venmo / pay-anywhere link so they get a Pay button.',
       'Use “Require signature & 2FA code” for Sign-by-Text; leave it off for simple view/confirm sends.',
       'Copy the link from the list if you need to resend another way.',
     ],
     canDo: [
       'Send single-signature business docs with optional SMS 2FA + signature',
-      'Send quotes/invoices/receipts with line items',
+      'Send quotes/invoices/receipts with line items and a payment link',
       'Upload clear PDFs up to 5MB',
     ],
     cannotDo: [
@@ -234,10 +235,11 @@ const GUIDES: Record<string, PageHelpGuide> = {
   },
   'settings-docs': {
     title: 'Docs defaults',
-    purpose: 'Save waiver language, templates, and named PDFs that new sends can reuse.',
+    purpose: 'Save waiver language, templates, named PDFs, and your default payment link that new sends can reuse.',
     steps: [
       'Edit host templates and keep placeholders like [Recipient Name] so they fill when you send.',
       'Upload named PDFs (clear, complete, up to 5MB) for reuse in Document Type.',
+      'Add your PayPal, Venmo, or any pay link — it pre-fills on quotes and invoices.',
       'Save. New documents pick these up; you can still change any one send.',
     ],
   },

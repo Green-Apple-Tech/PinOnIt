@@ -96,6 +96,9 @@ export interface Profile {
   business_type?: string | null;
   default_tax_percent?: number | null;
   quote_line_defaults?: { description: string; amount: number }[] | null;
+  /** Prefills the Pay button URL on new quotes, invoices, and work orders. */
+  default_pay_url?: string | null;
+  default_pay_label?: string | null;
   business_region?: string | null;
   platform_terms_accepted_at?: string | null;
   platform_terms_version?: string | null;
@@ -162,6 +165,9 @@ export interface Service {
   venmo_handle: string | null;
   cashapp_handle: string | null;
   zelle_handle: string | null;
+  /** Any pay URL shown to guests (PayPal, Venmo, Stripe Payment Link, etc.). */
+  payment_link: string | null;
+  payment_link_label: string | null;
   /** @deprecated use cashapp_handle */
   cashapp_tag?: string | null;
   /** @deprecated use zelle_handle */

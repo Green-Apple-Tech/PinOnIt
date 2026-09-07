@@ -64,7 +64,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: doc, error } = await supabase
     .from('documents')
-    .select('id, recipient_name, recipient_phone, topic, document_type, document_type_custom, token')
+    .select('id, recipient_name, recipient_phone, topic, document_type, document_type_custom, token, pay_elsewhere_url')
     .eq('token', token)
     .eq('sender_id', hostId)
     .maybeSingle();
@@ -79,10 +79,13 @@ Deno.serve(async (req: Request) => {
       ? doc.document_type_custom.trim()
       : String(doc.document_type || 'document').replaceAll('_', ' ');
   const topicBit = doc.topic ? ` regarding ${doc.topic}` : '';
+  const payBit = typeof doc.pay_elsewhere_url === 'string' && doc.pay_elsewhere_url.trim()
+    ? ` Pay: ${doc.pay_elsewhere_url.trim()}`
+    : '';
   const sms = await sendTwilioSmsGuarded(
     admin,
     to,
-    `Hi ${doc.recipient_name}, you have a ${kind}${topicBit} to review: ${signingUrl}`,
+    `Hi ${doc.recipient_name}, you have a ${kind}${topicBit} to review: ${signingUrl}${payBit}`,
   );
   if (!sms.ok) {
     if (sms.skipped === 'opted_out') {

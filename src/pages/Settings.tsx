@@ -29,6 +29,7 @@ import { BookingBlocksSettings } from '../components/BookingBlocksSettings';
 import { readProfileCache, writeProfileCache } from '../lib/profileCache';
 import { injectWaiverRecipientPlaceholder } from '../lib/documents';
 import { DocsTemplateLibrary } from '../components/DocsTemplateLibrary';
+import { PaymentLinkFields } from '../components/PaymentLinkFields';
 import { SmsBookingConsent } from '../components/SmsConsentText';
 import { SESSION_TIMEOUT_OPTIONS, sessionTimeoutOptionValue } from '../lib/sessionTimeout';
 
@@ -457,6 +458,8 @@ export function SettingsPage() {
   const [quoteLines, setQuoteLines] = useState<QuoteLineDefault[]>(
     profile?.quote_line_defaults?.length ? profile.quote_line_defaults : [{ description: '', amount: 0 }],
   );
+  const [defaultPayUrl, setDefaultPayUrl] = useState(profile?.default_pay_url ?? '');
+  const [defaultPayLabel, setDefaultPayLabel] = useState(profile?.default_pay_label || 'Pay');
 
   const [brandColor, setBrandColor] = useState(profile?.brand_color ?? '#5864C6');
   const [logoUrl, setLogoUrl] = useState(profile?.avatar_url ?? '');
@@ -528,6 +531,8 @@ export function SettingsPage() {
     setWaiverTemplate(profile.waiver_template ? injectWaiverRecipientPlaceholder(profile.waiver_template) : '');
     setDocTaxPercent(Number(profile.default_tax_percent) || 0);
     setQuoteLines(profile.quote_line_defaults?.length ? profile.quote_line_defaults : [{ description: '', amount: 0 }]);
+    setDefaultPayUrl(profile.default_pay_url ?? '');
+    setDefaultPayLabel(profile.default_pay_label || 'Pay');
     setBusinessName(profile.business_name ?? '');
     bookingFieldsHydrated.current = true;
   }, [profile]);
@@ -766,20 +771,22 @@ export function SettingsPage() {
     setSaving(true);
     setSaved(false);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          waiver_template: waiverTemplate.trim() || null,
-          default_tax_percent: Number(docTaxPercent) || 0,
-          quote_line_defaults: cleanedLines,
-        })
-        .eq('id', profile.id);
-      if (error) throw error;
-      writeProfileCache({
-        ...profile,
+      const docsPayload = {
         waiver_template: waiverTemplate.trim() || null,
         default_tax_percent: Number(docTaxPercent) || 0,
         quote_line_defaults: cleanedLines,
+        default_pay_url: defaultPayUrl.trim() || null,
+        default_pay_label: defaultPayLabel.trim() || 'Pay',
+      };
+      let { error } = await supabase.from('profiles').update(docsPayload).eq('id', profile.id);
+      if (error) {
+        const { default_pay_url: _u, default_pay_label: _l, ...withoutPay } = docsPayload;
+        ({ error } = await supabase.from('profiles').update(withoutPay).eq('id', profile.id));
+      }
+      if (error) throw error;
+      writeProfileCache({
+        ...profile,
+        ...docsPayload,
       });
       await refreshProfile();
       toast.success('Doc defaults saved!');
@@ -1585,6 +1592,16 @@ export function SettingsPage() {
               <Plus className="h-4 w-4" /> Add line
             </button>
           </div>
+
+          <PaymentLinkFields
+            url={defaultPayUrl}
+            label={defaultPayLabel}
+            onUrlChange={setDefaultPayUrl}
+            onLabelChange={setDefaultPayLabel}
+          />
+          <p className="text-xs text-slate-400 dark:text-slate-500 -mt-2">
+            Pre-filled on new quotes, invoices, and work orders. You can still change it per send.
+          </p>
 
           {profile?.id && (
             <div className="border-t border-slate-200 dark:border-slate-800 pt-4">

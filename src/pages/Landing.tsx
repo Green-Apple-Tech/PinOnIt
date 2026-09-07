@@ -8,7 +8,7 @@ import {
   ArrowRight, Check,
   Sun, Moon, Menu, X,
   Calendar, Bell, Mail, ClipboardSignature, QrCode,
-  Receipt,
+  Receipt, DollarSign,
 } from 'lucide-react';
 import { ChannelBadges } from '../components/ChannelBadges';
 import { OnboardingBot } from '../components/OnboardingBot';
@@ -60,7 +60,13 @@ const TEXT_ACTION_CARDS = [
     icon: Receipt,
     title: 'Business Documents',
     you: 'Invoices, receipts, quotes, and everyday docs in seconds.',
-    theySee: 'Quote for $450 — tap to approve.',
+    theySee: 'Quote for $450 — tap to approve. Pay: paypal.me/…',
+  },
+  {
+    icon: DollarSign,
+    title: 'Get paid',
+    you: 'Add your PayPal, Venmo, Cash App, or any pay link. They tap Pay on the quote, invoice, or booking page.',
+    theySee: 'Pay here: paypal.me/yourname',
   },
   {
     icon: QrCode,
@@ -95,7 +101,8 @@ const SIX_TOOLS = [
   { icon: Calendar, title: 'Easy Booking', desc: 'Your booking page and links, synced to your calendar.' },
   { icon: ClipboardSignature, title: 'Sign-by-Text', desc: 'Waivers, NDAs, addendums, simple contracts.' },
   { icon: Bell, title: 'NeverMiss Reminders', desc: 'Never miss a reminder — you, customers, or your team.' },
-  { icon: Receipt, title: 'Business Documents', desc: 'Quotes, invoices, receipts — send in seconds.' },
+  { icon: Receipt, title: 'Business Documents', desc: 'Quotes, invoices, receipts — send in seconds, with a Pay button if you add your payment link.' },
+  { icon: DollarSign, title: 'Get paid', desc: 'Paste PayPal, Venmo, Cash App, Stripe, or any link. Guests tap Pay on the phone.' },
   { icon: QrCode, title: 'QR Codes', desc: 'Booking page, link, or business — instant.' },
   { icon: Mail, title: 'Signature Creator', desc: 'Save a signature for docs and email.' },
 ];
@@ -170,8 +177,16 @@ export function Landing() {
               BOOK IT · REMIND IT · SEND IT · SIGN IT · PIN IT
             </p>
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white leading-tight mb-4">
-              Run your business by text.
+              eSign by Text + Your Business Apps Combined
             </h1>
+            <div className="mb-6 max-w-xl mx-auto lg:mx-0 rounded-2xl border border-brand-200 dark:border-brand-800 bg-brand-50/80 dark:bg-brand-500/10 px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-widest text-brand-600 dark:text-brand-400 mb-1">
+                What is Pin On It?
+              </p>
+              <p className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
+                Text → Book → Quote → Sign → Pay
+              </p>
+            </div>
             <p className="text-lg md:text-xl font-medium text-slate-600 dark:text-slate-300 leading-snug mb-8 max-w-xl mx-auto lg:mx-0">
               <strong className="text-slate-900 dark:text-white">Sign by Text</strong> and <strong className="text-slate-900 dark:text-white">easy booking</strong> — plus reminders, invoices, QR codes, and more. No pile of apps. Just PinOnIt.
             </p>
@@ -244,7 +259,7 @@ export function Landing() {
           </h2>
           <div className="grid md:grid-cols-3 gap-8 mb-8">
             {[
-              { n: '1', title: 'You send it', body: 'Pick booking, Sign by Text (waiver, NDA, addendum…), quote, or invoice — and hit send. One tap.' },
+              { n: '1', title: 'You send it', body: 'Pick booking, Sign by Text (waiver, NDA, addendum…), quote, or invoice — add your pay link if they owe you — and hit send. One tap.' },
               { n: '2', title: 'They get a text', body: 'A normal SMS lands on their phone. No link to an app store, no account to create.' },
               { n: '3', title: 'They tap, reply, done', body: 'Sign with a finger, confirm with a code, or just reply. Every step is timestamped for you.' },
             ].map((step) => (

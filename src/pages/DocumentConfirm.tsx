@@ -21,6 +21,7 @@ import {
   verifyDocumentOtp,
 } from '../lib/documents';
 import { quoteTotals } from '../lib/quoteMath';
+import { normalizeExternalUrl } from '../lib/paymentLink';
 import {
   PLAIN_LANGUAGE_DISCLAIMER,
   PLAIN_LANGUAGE_HEADING,
@@ -434,10 +435,10 @@ export function DocumentConfirmPage() {
           )}
           {doc?.pay_elsewhere_url && (
             <a
-              href={doc.pay_elsewhere_url}
+              href={normalizeExternalUrl(doc.pay_elsewhere_url) ?? doc.pay_elsewhere_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3"
+              className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3"
             >
               Pay {doc.pay_elsewhere_label || 'now'}
             </a>

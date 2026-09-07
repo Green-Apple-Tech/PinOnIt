@@ -7,6 +7,8 @@ import { supabase } from '../lib/supabase';
 import { PHONE_HINT, PHONE_PLACEHOLDER, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import { revealTool } from '../lib/progressiveDisclosure';
 import { quoteTotals } from '../lib/quoteMath';
+import { documentShowsPayLink, normalizeExternalUrl } from '../lib/paymentLink';
+import { PaymentLinkFields } from '../components/PaymentLinkFields';
 import {
   resolveDocsEntryMode,
   type DocsEntryMode,
@@ -97,7 +99,7 @@ export function CreateDocumentPage() {
   const [taxPercent, setTaxPercent] = useState(0);
   const [notes, setNotes] = useState('');
   const [payUrl, setPayUrl] = useState('');
-  const [payLabel, setPayLabel] = useState('PayPal');
+  const [payLabel, setPayLabel] = useState('Pay');
   const [defaultsApplied, setDefaultsApplied] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -165,6 +167,7 @@ export function CreateDocumentPage() {
   const isUpload = isUploadDocumentType(documentType);
   const isLibraryPdf = Boolean(selectedLibraryFile);
   const isMoney = isMoneyDocumentType(documentType);
+  const showPayLink = documentShowsPayLink(documentType);
   const bodyEditable = documentBodyIsEditable(documentType) && !isLibraryPdf;
   const typeSelectValue = libraryFileId ? `${LIBRARY_FILE_PREFIX}${libraryFileId}` : documentType;
   const recipientName = `${recipientFirstName.trim()} ${recipientLastName.trim()}`.trim();
@@ -283,16 +286,21 @@ export function CreateDocumentPage() {
   ]);
 
   useEffect(() => {
-    if (defaultsApplied || !profile || !isMoney) return;
+    if (defaultsApplied || !profile) return;
+    if (!isMoney && !showPayLink) return;
     setDefaultsApplied(true);
-    if (profile.quote_line_defaults?.length) {
+    if (isMoney && profile.quote_line_defaults?.length) {
       setItems(profile.quote_line_defaults.map((i) => ({
         description: i.description,
         amount: Number(i.amount) || 0,
       })));
     }
-    setTaxPercent(Number(profile.default_tax_percent) || 0);
-  }, [profile, defaultsApplied, isMoney]);
+    if (isMoney) setTaxPercent(Number(profile.default_tax_percent) || 0);
+    if (showPayLink) {
+      if (profile.default_pay_url) setPayUrl(profile.default_pay_url);
+      if (profile.default_pay_label) setPayLabel(profile.default_pay_label);
+    }
+  }, [profile, defaultsApplied, isMoney, showPayLink]);
 
   const { subtotal, taxAmount, total } = useMemo(
     () => quoteTotals(items, taxPercent),
@@ -487,8 +495,8 @@ export function CreateDocumentPage() {
       line_items: lineItems,
       tax_percent: isMoney ? Number(taxPercent) || 0 : 0,
       notes: isMoney ? notes.trim() || null : null,
-      pay_elsewhere_url: isMoney && documentType !== 'receipt' ? payUrl.trim() || null : null,
-      pay_elsewhere_label: isMoney && documentType !== 'receipt' ? payLabel.trim() || null : null,
+      pay_elsewhere_url: showPayLink ? normalizeExternalUrl(payUrl) : null,
+      pay_elsewhere_label: showPayLink ? (payLabel.trim() || 'Pay') : null,
       currency: 'USD',
       file_path: filePath,
       file_name: fileName,
@@ -946,30 +954,16 @@ export function CreateDocumentPage() {
                 placeholder="Due Friday. Cash, check, or PayPal."
               />
             </label>
-            {documentType !== 'receipt' && (
-              <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_140px]">
-                <label className="block">
-                  <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Pay somewhere else (optional)</span>
-                  <input
-                    value={payUrl}
-                    onChange={(e) => setPayUrl(e.target.value)}
-                    className={fieldClass}
-                    placeholder="https://paypal.me/yourname"
-                    inputMode="url"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Button label</span>
-                  <input
-                    value={payLabel}
-                    onChange={(e) => setPayLabel(e.target.value)}
-                    className={fieldClass}
-                    placeholder="PayPal"
-                  />
-                </label>
-              </div>
-            )}
           </div>
+        )}
+
+        {showPayLink && (
+          <PaymentLinkFields
+            url={payUrl}
+            label={payLabel}
+            onUrlChange={setPayUrl}
+            onLabelChange={setPayLabel}
+          />
         )}
 
         {bodyEditable ? (

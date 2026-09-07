@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { quoteTotals } from '../lib/quoteMath';
+import { normalizeExternalUrl } from '../lib/paymentLink';
 import type { HostQuoteKind, HostQuoteLineItem } from '../lib/types';
 
 type PublicQuote = {
@@ -106,10 +107,10 @@ export function QuoteViewPage() {
 
           {quote.pay_elsewhere_url && (
             <a
-              href={quote.pay_elsewhere_url}
+              href={normalizeExternalUrl(quote.pay_elsewhere_url) ?? quote.pay_elsewhere_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-8 inline-flex w-full items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3"
+              className="mt-8 inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3"
             >
               Pay {quote.pay_elsewhere_label || 'now'}
             </a>
