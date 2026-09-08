@@ -17,6 +17,7 @@ import { SmsPhoneMockup } from '../components/landing/SmsPhoneMockup';
 import { LandingComparisonTable } from '../components/landing/LandingComparisonTable';
 import { LandingPricingCard } from '../components/landing/LandingPricingCard';
 import { LandingFaq } from '../components/landing/LandingFaq';
+import { PRO_PRICE_LABEL } from '../lib/pricing';
 
 const HOME_META = {
   title: 'Your mini office by text | PinOnIt',
@@ -185,7 +186,9 @@ export function Landing() {
               Run your business by text.
             </h1>
             <p className="text-lg md:text-xl font-medium text-slate-600 dark:text-slate-300 leading-snug mb-8 max-w-xl mx-auto lg:mx-0">
-              Replace Calendly and get more.
+              <span className="block">Replace Calendly.</span>
+              <span className="block">Replace Document eSign by text.</span>
+              <span className="block">{PRO_PRICE_LABEL} a month</span>
             </p>
             <Link
               to="/signup"
