@@ -125,7 +125,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
       'One place for quotes, invoices, receipts, NDAs, waivers, addendums, and PDF uploads. Turn on SMS verification & signature when you need it — recipients use a phone link, no app.',
     steps: [
       'Tap New document and pick Document Type (or a Saved PDF from Settings → Docs).',
-      'Add recipient name. Browse contacts to fill name and phone, or type them. Phone is required to text the link, and when SMS verification is on.',
+      'Add recipient name. Find in contacts fills name, phone, and email — or type them. Phone is required to text the link, and when SMS verification is on.',
       'For quotes and invoices, paste your PayPal / Venmo / pay-anywhere link so they get a Pay button.',
       'SMS verification is off by default for quotes and invoices, on for waivers, NDAs, and contracts. Change it per template in Settings → Docs, or with the checkbox on this screen. ESIGN consent and a signature stay on every document.',
       'Copy the link from the list if you need to resend another way.',
@@ -141,6 +141,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
     ],
     suggestedQuestions: [
       'What documents can I send?',
+      'How do I send a quote?',
       'How do I get a signature by text?',
       'What is in the audit record?',
     ],
@@ -163,7 +164,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
     ],
     cannotDo: [
       'Card payments or Stripe Connect — paste your own pay link',
-      'Waivers in this flow — use Sign-by-Text / Send Docs for those',
+      'A separate quotes tab — quotes are a document type in Send Docs',
     ],
     suggestedQuestions: ['How do they pay?', 'What does Viewed mean?', 'How do I mark a quote paid?'],
   },

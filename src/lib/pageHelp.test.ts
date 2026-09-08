@@ -43,6 +43,15 @@ describe('matchHelpFaq', () => {
     const faq = matchHelpFaq('How do I send an NDA?');
     expect(faq?.id).toBe('how-send-doc');
   });
+
+  it('answers quote, pay, status, and contact-picker questions locally', () => {
+    expect(matchHelpFaq('How do I send a quote?')?.id).toBe('how-send-quote');
+    expect(matchHelpFaq('Where is Quote-by-Text?')?.id).toBe('how-send-quote');
+    expect(matchHelpFaq('How do they pay?')?.id).toBe('how-they-pay');
+    expect(matchHelpFaq('What does Viewed mean?')?.id).toBe('quote-status');
+    expect(matchHelpFaq('How do I mark a quote paid?')?.id).toBe('quote-status');
+    expect(matchHelpFaq('Find in contacts does nothing')?.id).toBe('find-contacts');
+  });
 });
 
 describe('buildHelpContextPack', () => {

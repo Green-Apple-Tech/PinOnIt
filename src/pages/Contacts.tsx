@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useDebounce } from '../hooks/useDebounce';
 import { supabase } from '../lib/supabase';
+import { invalidateHostContactsCache } from '../lib/contactPicker';
 import { PageChecklist } from '../components/PageChecklist';
 import type { Booking, Service } from '../lib/types';
 import {
@@ -981,6 +982,7 @@ export function ContactsPage({ embedded = false }: { embedded?: boolean }) {
         .eq('host_id', profile.id)
         .order('created_at', { ascending: false });
       if (refreshed) setContacts(refreshed as Contact[]);
+      invalidateHostContactsCache(profile.id);
       showToast(
         n > 0 ? `${n} contact${n !== 1 ? 's' : ''} synced from Google Contacts` : 'Contacts synced successfully',
         'success',
@@ -1042,6 +1044,7 @@ export function ContactsPage({ embedded = false }: { embedded?: boolean }) {
         .eq('host_id', profile.id)
         .order('created_at', { ascending: false });
       if (refreshed) setContacts(refreshed as Contact[]);
+      invalidateHostContactsCache(profile.id);
       showToast(
         n > 0 ? `${n} contact${n !== 1 ? 's' : ''} synced from Outlook` : 'Contacts synced successfully',
         'success',

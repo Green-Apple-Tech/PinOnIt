@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle, Clock, Copy, Download, Eye, FileText, Plus } from 'lucide-react';
+import { CheckCircle, Clock, Copy, DollarSign, Download, Eye, FileText, Plus, XCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { documentsNewPath } from '../lib/documentActions';
@@ -21,6 +21,15 @@ const STATUS: Record<SmbDocumentStatus, { label: string; className: string; icon
   signed: { label: 'Confirmed', className: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300', icon: CheckCircle },
   declined: { label: 'Declined', className: 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300', icon: Clock },
   paid: { label: 'Paid', className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200', icon: CheckCircle },
+};
+
+const QUOTE_STATUS_UI: Record<string, { className: string; icon: typeof Clock }> = {
+  sent: { className: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300', icon: Clock },
+  viewed: { className: 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300', icon: Eye },
+  approved: { className: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300', icon: CheckCircle },
+  paid: { className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200', icon: DollarSign },
+  declined: { className: 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300', icon: XCircle },
+  expired: { className: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300', icon: Clock },
 };
 
 function formatWhen(iso: string) {
@@ -170,13 +179,12 @@ export function DocumentsPage() {
           <ul className="divide-y divide-gray-100 dark:divide-slate-800">
             {docs.map((doc) => {
               const quoteStatus = doc.document_type === 'quote' ? quoteHostStatus(doc) : null;
+              const quoteUi = quoteStatus ? QUOTE_STATUS_UI[quoteStatus.key] : null;
               const meta = quoteStatus
                 ? {
-                    ...((STATUS[(doc.status === 'signed' ? 'signed' : doc.status) as SmbDocumentStatus] ?? STATUS.pending)),
                     label: quoteStatus.label,
-                    ...(quoteStatus.key === 'expired'
-                      ? { className: 'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-300' }
-                      : {}),
+                    className: quoteUi?.className ?? STATUS.pending.className,
+                    icon: quoteUi?.icon ?? Clock,
                   }
                 : (STATUS[doc.status] ?? STATUS.pending);
               const Icon = meta.icon;

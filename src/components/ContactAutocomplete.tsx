@@ -51,6 +51,10 @@ export function ContactAutocomplete({
   const devicePicker = canSelectDeviceContacts();
 
   useEffect(() => {
+    if (hostId) void searchHostContacts(hostId, '', 1);
+  }, [hostId]);
+
+  useEffect(() => {
     if (!hostId) return;
     const q = query.trim();
     if (q.length < 1) {
@@ -357,7 +361,10 @@ function ContactResultRow({
           active ? 'bg-brand-50 dark:bg-brand-500/10' : 'hover:bg-gray-50 dark:hover:bg-slate-800'
         } ${hasPhone ? '' : 'opacity-70'}`}
         onMouseEnter={onHover}
-        onPointerDown={pickNow}
+        onPointerDown={(e) => {
+          e.preventDefault();
+        }}
+        onClick={pickNow}
       >
         <UserRound className={`mt-0.5 h-4 w-4 shrink-0 ${hasPhone ? 'text-gray-400' : 'text-amber-500'}`} />
         <span className="min-w-0 flex-1">

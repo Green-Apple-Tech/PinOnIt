@@ -6,6 +6,7 @@ import {
   contactFillPreview,
   expandPickerContact,
   rankPickerContacts,
+  filterPickerContacts,
 } from './contactPicker';
 
 describe('splitContactName', () => {
@@ -91,5 +92,18 @@ describe('rankPickerContacts', () => {
       { id: '2', email: 'b@x.com', full_name: 'Bob', phone: '3055551212', company: null, source: 'outlook' },
     ]);
     expect(ranked[0].full_name).toBe('Bob');
+  });
+});
+
+describe('filterPickerContacts', () => {
+  const rows = [
+    { id: '1', email: 'jane@example.com', full_name: 'Jane Smith', phone: '(305) 555-1212', company: 'Acme', source: 'manual' },
+    { id: '2', email: 'bob@x.com', full_name: 'Bob', phone: null, company: null, source: 'gmail' },
+  ];
+
+  it('matches name, email, and phone digits', () => {
+    expect(filterPickerContacts(rows, 'jane')).toHaveLength(1);
+    expect(filterPickerContacts(rows, '5551212')[0].full_name).toBe('Jane Smith');
+    expect(filterPickerContacts(rows, 'bob@x')).toHaveLength(1);
   });
 });

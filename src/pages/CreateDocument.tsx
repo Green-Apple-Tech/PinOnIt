@@ -12,6 +12,11 @@ import {
   validUntilFromDays,
   type QuotePayMode,
 } from '../lib/quoteSms';
+import {
+  appendQuotePreset,
+  buildQuoteLinePresets,
+  draftFromLastQuote,
+} from '../lib/quoteCompose';
 import { documentShowsPayLink, normalizeExternalUrl } from '../lib/paymentLink';
 import { PaymentLinkFields } from '../components/PaymentLinkFields';
 import {
@@ -50,7 +55,7 @@ import {
 import type { HostDocumentFile, HostDocumentTemplate } from '../lib/hostDocuments';
 import { resolveRequireOtp } from '../lib/documentTypes';
 import { QuoteLineItemRow } from '../components/QuoteLineItemRow';
-import type { DocumentTemplate, HostQuoteLineItem, SmbDocumentType } from '../lib/types';
+import type { DocumentTemplate, HostQuoteLineItem, SmbDocument, SmbDocumentType } from '../lib/types';
 
 const LIBRARY_FILE_PREFIX = 'file:';
 
@@ -112,7 +117,11 @@ export function CreateDocumentPage() {
   const [validDays, setValidDays] = useState(30);
   const [payMode, setPayMode] = useState<QuotePayMode>('off');
   const [depositAmount, setDepositAmount] = useState('');
-  const [defaultsApplied, setDefaultsApplied] = useState(false);
+  const [quotePresets, setQuotePresets] = useState<HostQuoteLineItem[]>([]);
+  const [lastQuote, setLastQuote] = useState<SmbDocument | null>(null);
+  const moneyDefaultsApplied = useRef(false);
+  const quoteDefaultsApplied = useRef(false);
+  const payDefaultsApplied = useRef(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState<{
@@ -198,6 +207,22 @@ export function CreateDocumentPage() {
     ]),
     [profile?.business_name, profile?.paid_booking_settings?.display_name, profile?.full_name],
   );
+
+  useEffect(() => {
+    if (!user?.id || !isQuote) return;
+    void supabase
+      .from('documents')
+      .select('*')
+      .eq('sender_id', user.id)
+      .eq('document_type', 'quote')
+      .order('created_at', { ascending: false })
+      .limit(20)
+      .then(({ data }) => {
+        const rows = (data as SmbDocument[]) ?? [];
+        setLastQuote(rows[0] ?? null);
+        setQuotePresets(buildQuoteLinePresets(profile?.quote_line_defaults, rows));
+      });
+  }, [user?.id, isQuote, profile?.quote_line_defaults]);
 
   useEffect(() => {
     if (isUpload) setScopeAcked(false);
@@ -300,27 +325,34 @@ export function CreateDocumentPage() {
   ]);
 
   useEffect(() => {
-    if (defaultsApplied || !profile) return;
-    if (!isMoney && !showPayLink) return;
-    setDefaultsApplied(true);
-    if (isMoney && profile.quote_line_defaults?.length) {
+    if (!profile || !isMoney || moneyDefaultsApplied.current) return;
+    moneyDefaultsApplied.current = true;
+    if (profile.quote_line_defaults?.length) {
       setItems(profile.quote_line_defaults.map((i) => ({
         description: i.description,
         amount: Number(i.amount) || 0,
       })));
     }
-    if (isMoney) setTaxPercent(Number(profile.default_tax_percent) || 0);
-    if (isQuote) {
-      setValidDays(Math.max(1, Number(profile.default_quote_valid_days) || 30));
-      if (profile.default_pay_url) setPayMode('full');
-      if (profile.default_pay_label) setPayLabel(profile.default_pay_label);
-      else setPayLabel('Pay Now');
+    setTaxPercent(Number(profile.default_tax_percent) || 0);
+  }, [profile, isMoney]);
+
+  useEffect(() => {
+    if (!profile || !isQuote || quoteDefaultsApplied.current) return;
+    quoteDefaultsApplied.current = true;
+    setValidDays(Math.max(1, Number(profile.default_quote_valid_days) || 30));
+    if (profile.default_pay_url) {
+      setPayUrl(profile.default_pay_url);
+      setPayMode('full');
     }
-    if (showPayLink) {
-      if (profile.default_pay_url) setPayUrl(profile.default_pay_url);
-      if (profile.default_pay_label && !isQuote) setPayLabel(profile.default_pay_label);
-    }
-  }, [profile, defaultsApplied, isMoney, isQuote, showPayLink]);
+    setPayLabel(profile.default_pay_label || 'Pay Now');
+  }, [profile, isQuote]);
+
+  useEffect(() => {
+    if (!profile || !showPayLink || isQuote || payDefaultsApplied.current) return;
+    payDefaultsApplied.current = true;
+    if (profile.default_pay_url) setPayUrl(profile.default_pay_url);
+    if (profile.default_pay_label) setPayLabel(profile.default_pay_label);
+  }, [profile, showPayLink, isQuote]);
 
   const { subtotal, taxAmount, total } = useMemo(
     () => quoteTotals(items, taxPercent),
@@ -348,6 +380,20 @@ export function CreateDocumentPage() {
     if (next !== 'other') setCustomTypeLabel('');
     const q = new URLSearchParams({ type: next });
     navigate(`/dashboard/documents/new?${q.toString()}`, { replace: true });
+  };
+
+  const duplicateLastQuote = () => {
+    if (!lastQuote) return;
+    const draft = draftFromLastQuote(lastQuote);
+    setItems(draft.items);
+    setNotes(draft.notes);
+    setTaxPercent(draft.taxPercent);
+    setPayUrl(draft.payUrl);
+    setPayLabel(draft.payLabel);
+    setPayMode(draft.payMode);
+    setDepositAmount(draft.depositAmount);
+    if (draft.firstName) setRecipientFirstName(draft.firstName);
+    if (draft.lastName) setRecipientLastName(draft.lastName);
   };
 
   const handleTypeSelect = (value: string) => {
@@ -883,7 +929,7 @@ export function CreateDocumentPage() {
                   ? PHONE_HINT
                   : verificationRequired
                     ? PHONE_HINT
-                    : 'Needed only if you want us to text the link, or if signature & 2FA is on.'}
+                    : 'Needed only if you want us to text the link, or if SMS verification is on.'}
               </p>
             )}
           </label>
@@ -954,6 +1000,32 @@ export function CreateDocumentPage() {
 
         {isMoney && (
           <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-6">
+            {isQuote && lastQuote && (
+              <button
+                type="button"
+                onClick={duplicateLastQuote}
+                className="mb-3 min-h-11 w-full rounded-xl border border-gray-200 dark:border-slate-700 text-sm font-semibold text-gray-700 dark:text-slate-200"
+              >
+                Duplicate last quote
+              </button>
+            )}
+            {isQuote && quotePresets.length > 0 && (
+              <div className="mb-3">
+                <p className="text-xs font-medium text-gray-600 dark:text-slate-400 mb-2">One-tap lines</p>
+                <div className="flex flex-wrap gap-2">
+                  {quotePresets.map((p) => (
+                    <button
+                      key={p.description}
+                      type="button"
+                      onClick={() => setItems((prev) => appendQuotePreset(prev, p))}
+                      className="min-h-10 px-3 rounded-full border border-gray-200 dark:border-slate-700 text-xs font-medium text-gray-700 dark:text-slate-200"
+                    >
+                      {p.description}{p.amount ? ` · ${money(p.amount)}` : ''}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-slate-400">Line items</span>
               <button

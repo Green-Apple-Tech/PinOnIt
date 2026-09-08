@@ -47,9 +47,56 @@ export const HELP_FAQS: HelpFaq[] = [
       'how do i send an nda',
       'how do i send a waiver',
       'how do i get a signature',
+      'how do i send an invoice',
     ],
     answer:
-      'Open Send Docs + Sign-by-Text → New document → pick Document Type → add recipient → turn on “Require signature & 2FA code” if you need SMS verify + sign → Send. Recipients open a link on their phone; no app required.',
+      'Open Send Docs + Sign-by-Text → New document → pick Document Type → add a recipient (Find in contacts fills name, phone, and email) → turn on “Require SMS verification code” if you need the extra code → Send. Recipients open a link on their phone; no app required. Quotes, waivers, and NDAs all use this same screen.',
+  },
+  {
+    id: 'how-send-quote',
+    questions: [
+      'how do i send a quote',
+      'where is quote by text',
+      'how do i send a price',
+      'new quote',
+      'send quote',
+    ],
+    answer:
+      'Quotes live in Send Docs — there is no separate Quote-by-Text tab. On a phone, tap New Quote on the dashboard. On desktop, open Send Docs → New document → Document Type: Estimate / Quote (or Send Quote on the list). Add a phone (required so we can text it), line items, tax, and optional Pay Now link. They approve with Sign-by-Text. Quotes show in the same documents list as Sent, Viewed, Approved, Declined, Paid, or Expired.',
+  },
+  {
+    id: 'how-they-pay',
+    questions: [
+      'how do they pay',
+      'how does payment work',
+      'zelle cash app venmo paypal',
+      'does pinonit take the money',
+    ],
+    answer:
+      'PinOnIt never takes the money. After they approve a quote, they tap Pay Now on your Zelle, Cash App, Venmo, or PayPal link. Set Off / Full / Deposit on the quote, and paste your own pay link. Mark paid on the documents list when the money lands — that texts them a receipt.',
+  },
+  {
+    id: 'quote-status',
+    questions: [
+      'what does viewed mean',
+      'what does sent mean',
+      'quote expired',
+      'how do i mark a quote paid',
+      'approved vs paid',
+    ],
+    answer:
+      'Sent means the text went out and they have not opened it yet. Viewed means they opened the link. Approved means they signed. Declined means they said no. Paid is after you tap Mark paid. Expired replaces Approve with contact-you copy once the valid-for days run out.',
+  },
+  {
+    id: 'find-contacts',
+    questions: [
+      'find in contacts does nothing',
+      'how do i pick a contact',
+      'contact picker empty',
+      'outlook contacts messed up',
+    ],
+    answer:
+      'Type a name, phone, or email under Find in contacts, or tap Browse. Choosing a result fills name, phone, and email and shows a chip you can clear. Each row shows what will fill. Contacts with no mobile are dimmed — pick them, then type a number so we can send by text. Outlook lists that jammed several people into one entry are split when you sync.',
   },
   {
     id: 'booking-link',

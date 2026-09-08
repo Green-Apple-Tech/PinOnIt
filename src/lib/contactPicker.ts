@@ -86,6 +86,73 @@ export function rankPickerContacts(rows: PickerContact[]): PickerContact[] {
   });
 }
 
+export function filterPickerContacts(rows: PickerContact[], query: string): PickerContact[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return rows;
+  const qDigits = q.replace(/\D/g, '');
+  return rows.filter((c) => {
+    if ((c.full_name ?? '').toLowerCase().includes(q)) return true;
+    if ((c.email ?? '').toLowerCase().includes(q)) return true;
+    if ((c.company ?? '').toLowerCase().includes(q)) return true;
+    const phone = c.phone ?? '';
+    if (phone.toLowerCase().includes(q)) return true;
+    if (qDigits.length >= 3 && phone.replace(/\D/g, '').includes(qDigits)) return true;
+    return false;
+  });
+}
+
+const CACHE_TTL_MS = 45_000;
+const CACHE_PAGE = 500;
+
+type HostContactCache = { at: number; rows: PickerContact[]; truncated: boolean };
+const hostContactCache = new Map<string, HostContactCache>();
+
+export function invalidateHostContactsCache(hostId?: string) {
+  if (hostId) hostContactCache.delete(hostId);
+  else hostContactCache.clear();
+}
+
+async function fetchContactsPage(
+  hostId: string,
+  query: string,
+  fetchLimit: number,
+): Promise<PickerContact[]> {
+  const escaped = query.trim().replace(/[%_,]/g, '');
+  let req = supabase
+    .from('contacts')
+    .select('id, email, full_name, phone, company, source')
+    .eq('host_id', hostId)
+    .order('full_name', { ascending: true, nullsFirst: false })
+    .limit(fetchLimit);
+
+  if (escaped) {
+    req = req.or(
+      `full_name.ilike.%${escaped}%,email.ilike.%${escaped}%,phone.ilike.%${escaped}%,company.ilike.%${escaped}%`,
+    );
+  }
+
+  const { data, error } = await req;
+  if (error) {
+    console.error('[contactPicker] search failed', error.message);
+    return [];
+  }
+  return (data ?? []) as PickerContact[];
+}
+
+async function loadCachedHostContacts(hostId: string): Promise<HostContactCache> {
+  const hit = hostContactCache.get(hostId);
+  if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit;
+  const raw = await fetchContactsPage(hostId, '', CACHE_PAGE);
+  const rows = rankPickerContacts(raw.flatMap(expandPickerContact));
+  const entry: HostContactCache = {
+    at: Date.now(),
+    rows,
+    truncated: raw.length >= CACHE_PAGE,
+  };
+  hostContactCache.set(hostId, entry);
+  return entry;
+}
+
 export function contactSourceLabel(source: string): string {
   switch (source) {
     case 'outlook':
@@ -112,37 +179,15 @@ export async function searchHostContacts(
   query: string,
   limit = 8,
 ): Promise<PickerContact[]> {
-  const escaped = query.trim().replace(/[%_,]/g, '');
+  const cached = await loadCachedHostContacts(hostId);
+  const local = rankPickerContacts(filterPickerContacts(cached.rows, query)).slice(0, limit);
+  const q = query.trim();
+  if (!q) return local;
+  if (local.length >= limit || !cached.truncated) return local;
+
   const fetchLimit = Math.min(Math.max(limit * 6, 40), 200);
-  let req = supabase
-    .from('contacts')
-    .select('id, email, full_name, phone, company, source')
-    .eq('host_id', hostId)
-    .order('full_name', { ascending: true, nullsFirst: false })
-    .limit(fetchLimit);
-
-  if (escaped) {
-    req = req.or(
-      `full_name.ilike.%${escaped}%,email.ilike.%${escaped}%,phone.ilike.%${escaped}%,company.ilike.%${escaped}%`,
-    );
-  }
-
-  const { data, error } = await req;
-  if (error) {
-    console.error('[contactPicker] search failed', error.message);
-    return [];
-  }
-  const expanded = ((data ?? []) as PickerContact[]).flatMap(expandPickerContact);
-  return rankPickerContacts(expanded).slice(0, limit);
-}
-
-/** @deprecated Use searchHostContacts — includes saved + booked people, not only Gmail/Outlook. */
-export async function searchSyncedContacts(
-  hostId: string,
-  query: string,
-  limit = 8,
-): Promise<PickerContact[]> {
-  return searchHostContacts(hostId, query, limit);
+  const remote = await fetchContactsPage(hostId, q, fetchLimit);
+  return rankPickerContacts(remote.flatMap(expandPickerContact)).slice(0, limit);
 }
 
 type DeviceContactPayload = {
