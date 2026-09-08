@@ -3,7 +3,8 @@ import { sendTwilioSmsGuarded } from '../_shared/sms-send-gate.ts';
 import { hostIdFromJwt, jsonAuthError } from '../_shared/callerAuth.ts';
 import { normalizePhoneE164 } from '../_shared/phone.ts';
 import { expireStaleTrials, hostPlanIsActive } from '../_shared/hostPlan.ts';
-import { quoteLinkSms, quoteTotalsFromLines, receiptLinkSms } from '../_shared/quoteSms.ts';
+import { quoteLinkSms, quotePaymentReminderSms, quoteTotalsFromLines, receiptLinkSms } from '../_shared/quoteSms.ts';
+import { logHostSmsUsage } from '../_shared/messageLog.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -50,7 +51,12 @@ Deno.serve(async (req: Request) => {
 
   const token = payload.token?.trim();
   const signingUrl = payload.signingUrl?.trim();
-  const purpose = payload.purpose === 'quote' || payload.purpose === 'receipt' ? payload.purpose : 'link';
+  const purpose =
+    payload.purpose === 'quote'
+    || payload.purpose === 'receipt'
+    || payload.purpose === 'payment_reminder'
+      ? payload.purpose
+      : 'link';
   if (!token || !signingUrl) {
     return json({ ok: false, error: 'token and signingUrl are required' }, 400);
   }
@@ -66,12 +72,20 @@ Deno.serve(async (req: Request) => {
 
   const { data: doc, error } = await supabase
     .from('documents')
-    .select('id, recipient_name, recipient_phone, topic, document_type, document_type_custom, token, pay_elsewhere_url, line_items, tax_percent')
+    .select('id, recipient_name, recipient_phone, topic, document_type, document_type_custom, token, status, pay_elsewhere_url, line_items, tax_percent')
     .eq('token', token)
     .eq('sender_id', hostId)
     .maybeSingle();
 
   if (error || !doc) return json({ ok: false, error: 'Document not found' }, 404);
+
+  if (purpose === 'payment_reminder') {
+    if (doc.document_type !== 'quote') return json({ ok: false, error: 'Not a quote' }, 400);
+    if (doc.status === 'paid') return json({ ok: false, error: 'Already marked paid' }, 400);
+    if (doc.status !== 'signed') {
+      return json({ ok: false, error: 'Payment reminders are only after they approve — never automatic.' }, 400);
+    }
+  }
 
   const to = normalizePhoneE164(doc.recipient_phone);
   if (!to) return json({ ok: false, error: 'Recipient phone number is not valid' });
@@ -105,10 +119,21 @@ Deno.serve(async (req: Request) => {
   const shortDescription = String(doc.topic || '').trim() || kind;
 
   let body: string;
-  if (purpose === 'receipt' || (purpose === 'link' && doc.document_type === 'receipt')) {
+  let subject = 'Document SMS';
+  if (purpose === 'payment_reminder') {
+    body = quotePaymentReminderSms({
+      businessName,
+      topic: shortDescription,
+      total,
+      link: signingUrl,
+    });
+    subject = 'Quote payment reminder';
+  } else if (purpose === 'receipt' || (purpose === 'link' && doc.document_type === 'receipt')) {
     body = receiptLinkSms({ businessName, shortDescription, total, link: signingUrl });
+    subject = 'Receipt';
   } else if (quoteLike && doc.document_type === 'quote') {
     body = quoteLinkSms({ businessName, shortDescription, total, link: signingUrl });
+    subject = 'Quote';
   } else {
     body = `Hi ${doc.recipient_name}, you have a ${kind}${topicBit} to review: ${signingUrl}${payBit}`;
   }
@@ -120,5 +145,12 @@ Deno.serve(async (req: Request) => {
     }
     return json({ ok: false, error: sms.error });
   }
+  await logHostSmsUsage(admin, {
+    hostId,
+    recipient: to,
+    subject,
+    body,
+    status: 'sent',
+  });
   return json({ ok: true });
 });

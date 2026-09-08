@@ -397,7 +397,7 @@ export async function markQuotePaid(token: string) {
 export async function sendDocumentLink(
   token: string,
   signingUrl: string,
-  purpose: 'link' | 'quote' | 'receipt' = 'link',
+  purpose: 'link' | 'quote' | 'receipt' | 'payment_reminder' = 'link',
 ) {
   const { data: sessionData } = await supabase.auth.getSession();
   const access = sessionData.session?.access_token;

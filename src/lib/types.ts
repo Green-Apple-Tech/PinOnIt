@@ -101,6 +101,10 @@ export interface Profile {
   default_pay_label?: string | null;
   /** Quote-by-Text validity in days; stored as valid_until when the quote is sent. */
   default_quote_valid_days?: number | null;
+  /** Automatic follow-up texts on unanswered quotes (Sent/Viewed). On by default. */
+  quote_followup_enabled?: boolean | null;
+  /** Days after send to text a follow-up. Default 3 and 7. */
+  quote_followup_days?: number[] | null;
   business_region?: string | null;
   platform_terms_accepted_at?: string | null;
   platform_terms_version?: string | null;
@@ -544,6 +548,7 @@ export interface SmbDocument {
   declined_at?: string | null;
   decline_reason?: string | null;
   paid_at?: string | null;
+  quote_followup_sent_days?: number[] | null;
   currency?: string;
   file_path?: string | null;
   file_name?: string | null;

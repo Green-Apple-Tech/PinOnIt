@@ -26,6 +26,72 @@ export function receiptLinkSms(opts: {
   return `${biz}: Receipt for ${desc} — ${formatMoneyUsd(opts.total)}. View: ${opts.link}`;
 }
 
+export function quoteFollowupSms(opts: {
+  businessName: string;
+  topic: string;
+  total: number;
+  link: string;
+}) {
+  const biz = opts.businessName.trim() || 'PinOnIt';
+  const topic = opts.topic.trim() || 'your job';
+  return `${biz}: Just following up on your quote for ${topic} — ${formatMoneyUsd(opts.total)}. View here: ${opts.link}`;
+}
+
+export function quotePaymentReminderSms(opts: {
+  businessName: string;
+  topic: string;
+  total: number;
+  link: string;
+}) {
+  const biz = opts.businessName.trim() || 'PinOnIt';
+  const topic = opts.topic.trim() || 'your job';
+  return `${biz}: Reminder to pay for ${topic} — ${formatMoneyUsd(opts.total)}. View here: ${opts.link}`;
+}
+
+export const DEFAULT_QUOTE_FOLLOWUP_DAYS = [3, 7] as const;
+
+export function normalizeQuoteFollowupDays(value: unknown): number[] {
+  const raw = Array.isArray(value)
+    ? value
+    : typeof value === 'string'
+      ? value.split(/[,\s]+/)
+      : DEFAULT_QUOTE_FOLLOWUP_DAYS;
+  const days = [...new Set(
+    raw
+      .map((n) => Math.round(Number(n)))
+      .filter((n) => Number.isFinite(n) && n >= 1 && n <= 30),
+  )].sort((a, b) => a - b);
+  if (!days.length) return [...DEFAULT_QUOTE_FOLLOWUP_DAYS];
+  return days.slice(0, 5);
+}
+
+export function quoteFollowupEligible(doc: {
+  status: string;
+  valid_until?: string | null;
+}, now = new Date()) {
+  if (doc.status === 'signed' || doc.status === 'declined' || doc.status === 'paid') return false;
+  if (doc.status !== 'pending' && doc.status !== 'viewed') return false;
+  if (isQuoteExpired(doc.valid_until, now)) return false;
+  return true;
+}
+
+/** Smallest interval that is due and not yet sent. At most one per dispatch tick. */
+export function nextDueQuoteFollowupDay(opts: {
+  createdAt: string;
+  alreadySent?: number[] | null;
+  intervals: number[];
+  now?: Date;
+}): number | null {
+  const created = new Date(opts.createdAt).getTime();
+  if (Number.isNaN(created)) return null;
+  const now = (opts.now ?? new Date()).getTime();
+  const ageDays = (now - created) / 86400000;
+  const sent = new Set((opts.alreadySent ?? []).map((n) => Number(n)));
+  const due = normalizeQuoteFollowupDays(opts.intervals)
+    .filter((day) => ageDays >= day && !sent.has(day));
+  return due[0] ?? null;
+}
+
 export function isQuoteExpired(validUntil: string | null | undefined, now = new Date()) {
   if (!validUntil) return false;
   const until = new Date(validUntil);
