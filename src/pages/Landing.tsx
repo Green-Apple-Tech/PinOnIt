@@ -185,7 +185,7 @@ export function Landing() {
               Run your business by text.
             </h1>
             <p className="text-lg md:text-xl font-medium text-slate-600 dark:text-slate-300 leading-snug mb-8 max-w-xl mx-auto lg:mx-0">
-              Book, sign, and get paid — no app, no DocuSign.
+              Replace Calendly and get more.
             </p>
             <Link
               to="/signup"
