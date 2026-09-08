@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, Copy, Loader2, MessageSquare, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Copy, Loader2, MessageSquare, Plus } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { ContactAutocomplete } from '../components/ContactAutocomplete';
 import { supabase } from '../lib/supabase';
@@ -43,6 +43,8 @@ import {
   normalizePlainLanguageBullets,
 } from '../lib/plainLanguageSummary';
 import type { HostDocumentFile, HostDocumentTemplate } from '../lib/hostDocuments';
+import { resolveRequireOtp } from '../lib/documentTypes';
+import { QuoteLineItemRow } from '../components/QuoteLineItemRow';
 import type { DocumentTemplate, HostQuoteLineItem, SmbDocumentType } from '../lib/types';
 
 const LIBRARY_FILE_PREFIX = 'file:';
@@ -124,7 +126,7 @@ export function CreateDocumentPage() {
     if (typeParam && isSmbDocumentType(typeParam)) {
       setDocumentType(typeParam);
       if (modeParam !== 'sign' && modeParam !== 'send' && actionParam !== 'sign' && actionParam !== 'send') {
-        setVerificationRequired(defaultVerificationRequired(typeParam));
+        setVerificationRequired(resolveRequireOtp(typeParam, undefined, undefined));
       }
     } else if (!typeParam) {
       setDocumentType('nda');
@@ -323,7 +325,7 @@ export function CreateDocumentPage() {
   const handleTypeChange = (next: SmbDocumentType) => {
     setLibraryFileId(null);
     setDocumentType(next);
-    setVerificationRequired(defaultVerificationRequired(next));
+    setVerificationRequired(resolveRequireOtp(next, hostOverrides.find((o) => o.document_type === next), templates.find((t) => t.document_type === next)));
     if (next !== 'upload') setUploadFile(null);
     if (next !== 'other') setCustomTypeLabel('');
     const q = new URLSearchParams({ type: next });
@@ -335,7 +337,7 @@ export function CreateDocumentPage() {
       const id = value.slice(LIBRARY_FILE_PREFIX.length);
       setLibraryFileId(id);
       setDocumentType('upload');
-      setVerificationRequired(defaultVerificationRequired('upload'));
+      setVerificationRequired(resolveRequireOtp('upload', hostOverrides.find((o) => o.document_type === 'upload'), templates.find((t) => t.document_type === 'upload')));
       setUploadFile(null);
       setCustomTypeLabel('');
       const q = new URLSearchParams({ type: 'upload' });
@@ -648,12 +650,12 @@ export function CreateDocumentPage() {
             />
             <span>
               <span className="block text-sm font-semibold text-gray-900 dark:text-white">
-                Require signature &amp; 2FA code
+                Require SMS verification code
               </span>
               <span className="block mt-1 text-xs text-gray-500 dark:text-slate-400">
                 {verificationRequired
-                  ? 'They enter an SMS code, then sign or confirm on their phone. Works with any document type.'
-                  : 'They view and confirm with one tap — no text verification code, no signature canvas. Turn on anytime before sending.'}
+                  ? 'They enter a 6-digit code we text to the same number, then sign. Default on for waivers, NDAs, and contracts — you can change this per template in Settings → Docs.'
+                  : 'No extra code. They already got the link by text. They still sign and check ESIGN consent. Default for quotes and invoices.'}
               </span>
             </span>
           </label>
@@ -877,43 +879,13 @@ export function CreateDocumentPage() {
             </div>
             <div className="space-y-3">
               {items.map((item, i) => (
-                <div key={i} className="flex flex-col sm:flex-row gap-2">
-                  <input
-                    value={item.description}
-                    onChange={(e) =>
-                      setItems((prev) => prev.map((row, idx) => (idx === i ? { ...row, description: e.target.value } : row)))
-                    }
-                    className={`${fieldClass} sm:flex-1`}
-                    placeholder="Lawn cleanup"
-                  />
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      min="0"
-                      step="0.01"
-                      value={item.amount || ''}
-                      onChange={(e) =>
-                        setItems((prev) =>
-                          prev.map((row, idx) => (idx === i ? { ...row, amount: Number(e.target.value) || 0 } : row)),
-                        )
-                      }
-                      className={`${fieldClass} sm:w-32 sm:mt-0`}
-                      placeholder="0.00"
-                      aria-label="Amount"
-                    />
-                    {items.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => setItems((prev) => prev.filter((_, idx) => idx !== i))}
-                        className="min-w-11 min-h-12 text-gray-400 hover:text-red-500"
-                        aria-label="Remove line"
-                      >
-                        <Trash2 className="h-5 w-5 mx-auto" />
-                      </button>
-                    )}
-                  </div>
-                </div>
+                <QuoteLineItemRow
+                  key={i}
+                  item={item}
+                  canRemove={items.length > 1}
+                  onChange={(next) => setItems((prev) => prev.map((row, idx) => (idx === i ? next : row)))}
+                  onRemove={() => setItems((prev) => prev.filter((_, idx) => idx !== i))}
+                />
               ))}
             </div>
             <div className="mt-4 grid grid-cols-2 gap-3">

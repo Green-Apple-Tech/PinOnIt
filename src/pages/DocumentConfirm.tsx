@@ -6,7 +6,6 @@ import {
   ESIGN_CONSENT_STATEMENT,
   LEGAL_DISCLAIMER,
   defaultVerificationRequired,
-  documentNeedsRecipientAction,
   documentFilePublicUrl,
   fetchClientIp,
   fillDocumentPlaceholders,
@@ -210,12 +209,13 @@ export function DocumentConfirmPage() {
   }
 
   async function handleConfirm() {
-    if (!token || !doc || !otpVerified) return;
-    const verified = verificationOn(doc);
-    const needsMark = verified && doc.confirmation_type !== 'confirm_receipt';
+    if (!token || !doc) return;
+    const requireOtp = verificationOn(doc);
+    if (requireOtp && !otpVerified) return;
+    const needsMark = doc.confirmation_type !== 'confirm_receipt';
     if (needsMark && !hasMarked) return;
-    if (verified && !esignConsent) return;
-    if (verified && !agreed) return;
+    if (!esignConsent) return;
+    if (!agreed) return;
     setError('');
     setSubmitting(true);
     const ip = await fetchClientIp();
@@ -247,7 +247,7 @@ export function DocumentConfirmPage() {
       signatureData,
       ip,
       userAgent: navigator.userAgent,
-      esignConsentText: verified ? ESIGN_CONSENT_STATEMENT : null,
+      esignConsentText: ESIGN_CONSENT_STATEMENT,
       documentSnapshotText: snapshot,
       documentSha256: hash,
       timezone,
@@ -355,23 +355,20 @@ export function DocumentConfirmPage() {
     );
   }
 
-  const verifiedFlow = doc ? verificationOn(doc) : true;
-  const viewOnly = doc ? !documentNeedsRecipientAction(doc.document_type) && !verifiedFlow : false;
-  const confirmLabel = !verifiedFlow
-    ? doc?.document_type === 'invoice'
+  const requireOtp = doc ? verificationOn(doc) : true;
+  const otpReady = !requireOtp || otpVerified;
+  const confirmLabel =
+    doc?.document_type === 'quote'
       ? 'Approve'
-      : doc?.document_type === 'receipt'
-      ? 'Confirm receipt'
-      : 'Confirm'
-    : doc?.document_type === 'quote'
-      ? 'Approve'
-      : doc?.confirmation_type === 'confirm_receipt'
-      ? 'Confirm receipt'
-      : doc?.confirmation_type === 'approve'
-      ? 'Approve with initials'
-      : 'Sign & submit';
+      : doc?.document_type === 'invoice'
+        ? 'Approve'
+        : doc?.confirmation_type === 'confirm_receipt'
+          ? 'Confirm receipt'
+          : doc?.confirmation_type === 'approve'
+            ? 'Approve with initials'
+            : 'Sign & submit';
 
-  const needsCanvas = verifiedFlow && doc?.confirmation_type !== 'confirm_receipt';
+  const needsCanvas = doc?.confirmation_type !== 'confirm_receipt';
   const canvasHint = doc?.confirmation_type === 'approve' ? 'Draw your initials' : 'Draw your signature';
   const lineItems: HostQuoteLineItem[] = Array.isArray(doc?.line_items) ? doc.line_items : [];
   const taxPercent = Number(doc?.tax_percent) || 0;
@@ -538,13 +535,7 @@ export function DocumentConfirmPage() {
           </div>
         )}
 
-        {viewOnly && !quoteExpired && (
-          <p className="text-sm text-slate-500 text-center px-2">
-            This quote is for your review. No signature or confirmation is required.
-          </p>
-        )}
-
-        {verifiedFlow && !quoteExpired && (
+        {requireOtp && !quoteExpired && (
         <div className="bg-white rounded-2xl border border-slate-200 p-5">
           <h2 className="text-sm font-semibold">Verify your phone</h2>
           {otpVerified ? (
@@ -584,7 +575,7 @@ export function DocumentConfirmPage() {
         </div>
         )}
 
-        {otpVerified && !viewOnly && !quoteExpired && (
+        {otpReady && !quoteExpired && (
           <>
             {needsCanvas && (
               <div className="bg-white rounded-2xl border border-slate-200 p-5">
@@ -620,8 +611,6 @@ export function DocumentConfirmPage() {
               </div>
             )}
 
-            {verifiedFlow && (
-            <>
             <label className="flex items-start gap-3 bg-white rounded-2xl border border-slate-200 p-5 cursor-pointer">
               <input
                 type="checkbox"
@@ -645,8 +634,6 @@ export function DocumentConfirmPage() {
                 I have reviewed this document and I confirm the action above.
               </span>
             </label>
-            </>
-            )}
 
             {error && (
               <div className="flex gap-2 text-sm text-red-600">
@@ -660,7 +647,8 @@ export function DocumentConfirmPage() {
               onClick={() => void handleConfirm()}
               disabled={
                 submitting ||
-                (verifiedFlow && (!esignConsent || !agreed)) ||
+                !esignConsent ||
+                !agreed ||
                 (needsCanvas && !hasMarked)
               }
               className="w-full min-h-12 rounded-xl bg-indigo-600 text-white font-semibold disabled:opacity-40"
@@ -672,7 +660,7 @@ export function DocumentConfirmPage() {
           </>
         )}
 
-        {isQuote && !quoteExpired && !viewOnly && (
+        {isQuote && !quoteExpired && (
           <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
             {!showDecline ? (
               <button

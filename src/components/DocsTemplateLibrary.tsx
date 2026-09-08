@@ -26,6 +26,7 @@ import {
   type HostDocumentFile,
   type HostDocumentTemplate,
 } from '../lib/hostDocuments';
+import { defaultRequireOtp, resolveRequireOtp } from '../lib/documentTypes';
 import type { DocumentTemplate, SmbDocumentType } from '../lib/types';
 import { useAuth } from '../hooks/useAuth';
 
@@ -193,6 +194,11 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
           plain_language_source_hash: summary.hash || null,
           plain_language_enabled: summary.enabled,
           plain_language_truncated: summary.truncated,
+          require_otp: resolveRequireOtp(
+            type,
+            overrides.find((o) => o.document_type === type),
+            globalTemplates.find((t) => t.document_type === type),
+          ),
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'host_id,document_type' },
@@ -404,6 +410,46 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
                       )}
                     </div>
 
+                    <label className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-200 cursor-pointer rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2.5">
+                      <input
+                        type="checkbox"
+                        checked={resolveRequireOtp(
+                          type,
+                          overrides.find((o) => o.document_type === type),
+                          globalTemplates.find((t) => t.document_type === type),
+                        )}
+                        onChange={(e) => {
+                          const requireOtp = e.target.checked;
+                          setOverrides((prev) => {
+                            const existing = prev.find((o) => o.document_type === type);
+                            if (existing) {
+                              return prev.map((o) => (o.document_type === type ? { ...o, require_otp: requireOtp } : o));
+                            }
+                            return [
+                              ...prev,
+                              {
+                                id: `local-${type}`,
+                                host_id: hostId,
+                                document_type: type,
+                                full_text: draftFor(type),
+                                require_otp: requireOtp,
+                                updated_at: new Date().toISOString(),
+                                created_at: new Date().toISOString(),
+                              },
+                            ];
+                          });
+                        }}
+                        className="mt-0.5"
+                      />
+                      <span>
+                        <span className="block font-semibold">Require SMS verification code</span>
+                        <span className="block text-xs text-slate-500 mt-0.5">
+                          {defaultRequireOtp(type)
+                            ? 'Default on for this type (waivers, NDAs, contracts, and similar). Uncheck to skip the extra code — they still sign and accept ESIGN.'
+                            : 'Default off for quotes and invoices. Turn on if you want a 6-digit code before they approve.'}
+                        </span>
+                      </span>
+                    </label>
                     <div className="flex flex-wrap gap-2">
                       <button
                         type="button"

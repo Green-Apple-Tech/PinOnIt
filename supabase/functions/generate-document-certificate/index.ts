@@ -102,7 +102,7 @@ Deno.serve(async (req: Request) => {
   const { data: doc, error: docErr } = await admin
     .from('documents')
     .select(
-      'id, token, sender_id, recipient_name, recipient_phone, document_type, document_type_custom, topic, status, created_at, viewed_at, otp_verified_at, esign_consent_at, esign_consent_text, document_agreed_at, signed_at, ip_address, user_agent, signature_data, document_snapshot_text, document_sha256, certificate_path, timezone_at_sign, file_name, file_path',
+      'id, token, sender_id, recipient_name, recipient_phone, document_type, document_type_custom, topic, status, created_at, viewed_at, otp_verified, otp_verified_at, verification_required, esign_consent_at, esign_consent_text, document_agreed_at, signed_at, ip_address, user_agent, signature_data, document_snapshot_text, document_sha256, certificate_path, timezone_at_sign, file_name, file_path',
     )
     .eq('token', token)
     .maybeSingle();
@@ -147,11 +147,14 @@ Deno.serve(async (req: Request) => {
     `Document type: ${typeLabel}`,
     `Topic: ${doc.topic || '—'}`,
     `Signer full name (as entered): ${doc.recipient_name}`,
-    `Signer mobile number: ${doc.recipient_phone || '—'}`,
+    `Signer mobile number (link destination): ${doc.recipient_phone || '—'}`,
     '',
     'Event timestamps (with timezone):',
+    `  Link sent to: ${doc.recipient_phone || '—'}`,
     `  Opened:    ${fmt(doc.viewed_at, tz)} (${tz})`,
-    `  Verified:  ${fmt(doc.otp_verified_at, tz)} (${tz})`,
+    doc.verification_required
+      ? `  SMS one-time code: Performed at ${fmt(doc.otp_verified_at, tz)} (${tz})${doc.otp_verified ? '' : ' — required but not recorded'}`
+      : '  SMS one-time code: Not performed. The recipient received this document as a text to the number above; opening that link is recorded. Do not treat this as SMS-code verification.',
     `  Consented: ${fmt(doc.esign_consent_at, tz)} (${tz})`,
     `  Signed:    ${fmt(doc.signed_at, tz)} (${tz})`,
     '',

@@ -81,17 +81,49 @@ export function documentTypeLabel(type: SmbDocumentType, custom?: string | null)
   return documentTypeMeta(type)?.label ?? type;
 }
 
-/** Default ON for almost all Doc Center types — quote is view-only. */
+/** SMS OTP default ON for liability / confidentiality / signature-heavy types. */
+const REQUIRE_OTP_TYPES = new Set<SmbDocumentType>([
+  'nda',
+  'waiver',
+  'contract',
+  'quick_addendum',
+  'consent_form',
+  'photo_video_release',
+  'rental_agreement',
+  'service_agreement',
+  'credit_card_authorization',
+  'recurring_service_authorization',
+  'property_access_authorization',
+  'upload',
+]);
+
+/** Default OFF for quotes and invoices. ON for waivers, NDAs, contracts, and similar. */
+export function defaultRequireOtp(type: SmbDocumentType) {
+  return REQUIRE_OTP_TYPES.has(type);
+}
+
+/** @deprecated Use defaultRequireOtp — same meaning (SMS verification, not signature). */
 export function defaultVerificationRequired(type: SmbDocumentType) {
-  return type !== 'quote';
+  return defaultRequireOtp(type);
+}
+
+export function resolveRequireOtp(
+  type: SmbDocumentType,
+  hostOverride?: { require_otp?: boolean | null } | null,
+  globalTemplate?: { require_otp?: boolean | null } | null,
+) {
+  if (typeof hostOverride?.require_otp === 'boolean') return hostOverride.require_otp;
+  if (typeof globalTemplate?.require_otp === 'boolean') return globalTemplate.require_otp;
+  return defaultRequireOtp(type);
 }
 
 export function documentBodyIsEditable(type: SmbDocumentType) {
   return type === 'nda' || type === 'contract' || type === 'waiver' || type === 'quick_addendum';
 }
 
-export function documentNeedsRecipientAction(type: SmbDocumentType) {
-  return type !== 'quote';
+/** Quotes, invoices, and every other send still get approve/sign + ESIGN. OTP is separate. */
+export function documentNeedsRecipientAction(_type: SmbDocumentType) {
+  return true;
 }
 
 export function documentFilePublicUrl(filePath: string) {

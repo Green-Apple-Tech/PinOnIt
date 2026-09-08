@@ -22,6 +22,7 @@ export type HostDocumentTemplate = {
   plain_language_truncated?: boolean | null;
   updated_at: string;
   created_at: string;
+  require_otp?: boolean | null;
 };
 
 export type HostDocumentFile = {
@@ -31,5 +32,5 @@ export type HostDocumentFile = {
   file_path: string;
   file_name: string;
   file_size_bytes: number;
-  created_at: string;
+  require_otp?: boolean | null;
 };

@@ -507,6 +507,7 @@ export interface DocumentTemplate {
   plain_language_enabled?: boolean | null;
   plain_language_truncated?: boolean | null;
   created_at: string;
+  require_otp?: boolean | null;
 }
 
 export interface SmbDocument {

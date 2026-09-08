@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle, MessageSquare, Plus, Trash2 } from 'lucide-react';
+import { CheckCircle, MessageSquare, Plus } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { PHONE_HINT, PHONE_PLACEHOLDER, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
@@ -9,6 +9,9 @@ import { quoteTotals } from '../lib/quoteMath';
 import { normalizeExternalUrl } from '../lib/paymentLink';
 import { PaymentLinkFields } from '../components/PaymentLinkFields';
 import { ContactAutocomplete } from '../components/ContactAutocomplete';
+import { QuoteLineItemRow } from '../components/QuoteLineItemRow';
+import { resolveRequireOtp } from '../lib/documentTypes';
+import type { HostDocumentTemplate } from '../lib/hostDocuments';
 import {
   defaultDocumentBody,
   documentViewUrl,
@@ -41,6 +44,7 @@ function emptyLine(): HostQuoteLineItem {
 export function CreateQuotePage() {
   const { user, profile, refreshProfile } = useAuth();
   const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
+  const [hostQuoteOverride, setHostQuoteOverride] = useState<HostDocumentTemplate | null>(null);
   const [recipientName, setRecipientName] = useState('');
   const [recipientPhone, setRecipientPhone] = useState('');
   const [items, setItems] = useState<HostQuoteLineItem[]>([emptyLine()]);
@@ -64,6 +68,17 @@ export function CreateQuotePage() {
       .eq('document_type', 'quote')
       .then(({ data }) => setTemplates((data as DocumentTemplate[]) ?? []));
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    void supabase
+      .from('host_document_templates')
+      .select('*')
+      .eq('host_id', user.id)
+      .eq('document_type', 'quote')
+      .maybeSingle()
+      .then(({ data }) => setHostQuoteOverride((data as HostDocumentTemplate) ?? null));
+  }, [user?.id]);
 
   useEffect(() => {
     if (!profile) return;
@@ -188,7 +203,7 @@ export function CreateQuotePage() {
       topic: topicText.slice(0, 150),
       custom_text: bodyForSave || null,
       status: 'pending',
-      verification_required: true,
+      verification_required: resolveRequireOtp('quote', hostQuoteOverride, quoteTemplate),
       line_items: lineItems,
       tax_percent: Number(taxPercent) || 0,
       notes: notes.trim() || null,
@@ -329,29 +344,13 @@ export function CreateQuotePage() {
         <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 space-y-3">
           <p className="text-sm font-semibold text-gray-900 dark:text-white">Line items</p>
           {items.map((item, i) => (
-            <div key={i} className="flex gap-2">
-              <input
-                value={item.description}
-                onChange={(e) => setItems((prev) => prev.map((row, j) => j === i ? { ...row, description: e.target.value } : row))}
-                className={`${fieldClass} flex-1`}
-                placeholder="Front yard cleanup"
-              />
-              <input
-                type="number"
-                inputMode="decimal"
-                min="0"
-                step="0.01"
-                value={item.amount || ''}
-                onChange={(e) => setItems((prev) => prev.map((row, j) => j === i ? { ...row, amount: Number(e.target.value) || 0 } : row))}
-                className={`${fieldClass} w-28`}
-                placeholder="0"
-              />
-              {items.length > 1 && (
-                <button type="button" onClick={() => setItems((prev) => prev.filter((_, j) => j !== i))} className="shrink-0 text-gray-400" aria-label="Remove line">
-                  <Trash2 className="h-5 w-5" />
-                </button>
-              )}
-            </div>
+            <QuoteLineItemRow
+              key={i}
+              item={item}
+              canRemove={items.length > 1}
+              onChange={(next) => setItems((prev) => prev.map((row, j) => (j === i ? next : row)))}
+              onRemove={() => setItems((prev) => prev.filter((_, j) => j !== i))}
+            />
           ))}
           <button
             type="button"

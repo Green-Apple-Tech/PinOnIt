@@ -1,16 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import { defaultVerificationRequired } from './documentTypes';
+import { defaultRequireOtp, defaultVerificationRequired, resolveRequireOtp } from './documentTypes';
 
-describe('defaultVerificationRequired', () => {
-  it('defaults signature + 2FA on for authorizations and most types', () => {
-    expect(defaultVerificationRequired('credit_card_authorization')).toBe(true);
-    expect(defaultVerificationRequired('nda')).toBe(true);
-    expect(defaultVerificationRequired('waiver')).toBe(true);
-    expect(defaultVerificationRequired('upload')).toBe(true);
-    expect(defaultVerificationRequired('invoice')).toBe(true);
+describe('defaultRequireOtp', () => {
+  it('defaults SMS OTP off for quotes and invoices', () => {
+    expect(defaultRequireOtp('quote')).toBe(false);
+    expect(defaultRequireOtp('invoice')).toBe(false);
+    expect(defaultVerificationRequired('quote')).toBe(false);
+    expect(defaultVerificationRequired('invoice')).toBe(false);
   });
 
-  it('leaves quotes view-only by default', () => {
-    expect(defaultVerificationRequired('quote')).toBe(false);
+  it('defaults SMS OTP on for waivers, NDAs, contracts, and similar', () => {
+    expect(defaultRequireOtp('nda')).toBe(true);
+    expect(defaultRequireOtp('waiver')).toBe(true);
+    expect(defaultRequireOtp('contract')).toBe(true);
+    expect(defaultRequireOtp('upload')).toBe(true);
+    expect(defaultRequireOtp('credit_card_authorization')).toBe(true);
+  });
+
+  it('lets a host template override the type default', () => {
+    expect(resolveRequireOtp('quote', { require_otp: true })).toBe(true);
+    expect(resolveRequireOtp('nda', { require_otp: false })).toBe(false);
+    expect(resolveRequireOtp('quote', null, { require_otp: true })).toBe(true);
   });
 });

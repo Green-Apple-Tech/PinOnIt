@@ -37,10 +37,13 @@ Deno.serve(async (req: Request) => {
   const admin = createClient(supabaseUrl, serviceRoleKey);
   const { data: doc } = await admin
     .from('documents')
-    .select('sender_id')
+    .select('sender_id, verification_required')
     .eq('token', token)
     .maybeSingle();
   if (!doc?.sender_id) return json({ ok: false, error: 'Document not found' }, 404);
+  if (doc.verification_required === false) {
+    return json({ ok: false, error: 'SMS verification is not required for this document' }, 400);
+  }
   await expireStaleTrials(admin);
   if (!(await hostPlanIsActive(admin, doc.sender_id as string))) {
     return json({ ok: false, error: 'Host is not accepting document verification right now.' }, 403);
