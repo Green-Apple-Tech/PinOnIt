@@ -22,6 +22,7 @@ describe('getPageHelp', () => {
   it('explains Quote-by-Text on the quotes routes', () => {
     expect(getPageHelp('/dashboard/quotes').title).toMatch(/quote-by-text/i);
     expect(getPageHelp('/dashboard/quotes/new').purpose).toMatch(/zelle|cash app|venmo|paypal/i);
+    expect(getPageHelp('/dashboard/documents/new', '?type=quote').title).toMatch(/quote-by-text/i);
   });
 
   it('explains Doc Center on the documents routes', () => {

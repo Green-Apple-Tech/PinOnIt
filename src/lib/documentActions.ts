@@ -81,9 +81,9 @@ export function documentsNewPath(mode?: DocsEntryMode | null, type?: SmbDocument
 }
 
 export function quotesPath() {
-  return '/dashboard/quotes';
+  return '/dashboard/documents';
 }
 
 export function quotesNewPath() {
-  return '/dashboard/quotes/new';
+  return documentsNewPath(null, 'quote');
 }

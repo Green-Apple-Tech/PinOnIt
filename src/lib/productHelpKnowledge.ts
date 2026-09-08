@@ -3,7 +3,7 @@ import type { PageHelpGuide } from './pageHelp';
 /** Product-wide limits — always shown and always injected into Ask. */
 export const PRODUCT_CAN = [
   'Book clients with one shareable link and calendar sync (Google, Outlook, Apple).',
-  'Send quotes, invoices, receipts, NDAs, waivers, addendums, and PDF uploads from Doc Center. Quote-by-Text is the driveway sender: they approve by Sign-by-Text, then Pay Now on your Zelle/Cash App/Venmo/PayPal.',
+  'Send quotes, invoices, receipts, NDAs, waivers, addendums, and PDF uploads from Send Docs. New Quote on the dashboard opens that same composer with quote selected: they approve by Sign-by-Text, then Pay Now on your Zelle/Cash App/Venmo/PayPal.',
   'Require SMS verification + signature when you need Sign-by-Text, or send without it for simple confirms.',
   'Send NeverMiss reminders by email, SMS, WhatsApp, or voice for bookings and events.',
   'Use QR codes, email signatures, paid booking pages, and group scheduling / SMS coordinate.',

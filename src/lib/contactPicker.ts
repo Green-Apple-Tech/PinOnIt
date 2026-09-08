@@ -1,5 +1,9 @@
 import { supabase } from './supabase';
 import { formatPhoneDisplay } from './phone';
+import {
+  expandImportedContact,
+  looksMalformedContact,
+} from './normalizeImportedContacts';
 
 export type PickerContact = {
   id: string;
@@ -40,6 +44,48 @@ export function toContactPickerSelection(c: PickerContact): ContactPickerSelecti
   };
 }
 
+export function contactHasPhone(c: Pick<PickerContact, 'phone'>): boolean {
+  return Boolean((c.phone ?? '').trim());
+}
+
+/** Fields this result will copy onto the compose form. */
+export function contactFillPreview(c: PickerContact): Array<'name' | 'phone' | 'email'> {
+  const fields: Array<'name' | 'phone' | 'email'> = [];
+  if ((c.full_name ?? '').trim()) fields.push('name');
+  if (contactHasPhone(c)) fields.push('phone');
+  if ((c.email ?? '').trim()) fields.push('email');
+  return fields;
+}
+
+export function expandPickerContact(c: PickerContact): PickerContact[] {
+  if (!looksMalformedContact(c.full_name, c.email)) return [c];
+  return expandImportedContact({
+    email: c.email,
+    full_name: c.full_name,
+    phone: c.phone,
+    company: c.company,
+    source: c.source,
+  }).map((row, i) => ({
+    id: `${c.id}:${row.email}:${i}`,
+    email: row.email,
+    full_name: row.full_name,
+    phone: row.phone,
+    company: row.company,
+    source: row.source,
+  }));
+}
+
+export function rankPickerContacts(rows: PickerContact[]): PickerContact[] {
+  return [...rows].sort((a, b) => {
+    const ap = contactHasPhone(a) ? 0 : 1;
+    const bp = contactHasPhone(b) ? 0 : 1;
+    if (ap !== bp) return ap - bp;
+    const an = (a.full_name || a.email || '').toLowerCase();
+    const bn = (b.full_name || b.email || '').toLowerCase();
+    return an.localeCompare(bn);
+  });
+}
+
 export function contactSourceLabel(source: string): string {
   switch (source) {
     case 'outlook':
@@ -67,12 +113,13 @@ export async function searchHostContacts(
   limit = 8,
 ): Promise<PickerContact[]> {
   const escaped = query.trim().replace(/[%_,]/g, '');
+  const fetchLimit = Math.min(Math.max(limit * 6, 40), 200);
   let req = supabase
     .from('contacts')
     .select('id, email, full_name, phone, company, source')
     .eq('host_id', hostId)
     .order('full_name', { ascending: true, nullsFirst: false })
-    .limit(limit);
+    .limit(fetchLimit);
 
   if (escaped) {
     req = req.or(
@@ -85,7 +132,8 @@ export async function searchHostContacts(
     console.error('[contactPicker] search failed', error.message);
     return [];
   }
-  return (data ?? []) as PickerContact[];
+  const expanded = ((data ?? []) as PickerContact[]).flatMap(expandPickerContact);
+  return rankPickerContacts(expanded).slice(0, limit);
 }
 
 /** @deprecated Use searchHostContacts — includes saved + booked people, not only Gmail/Outlook. */

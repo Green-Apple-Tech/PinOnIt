@@ -1,8 +1,11 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type PointerEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { Loader2, Search, Smartphone, UserRound, Users, X } from 'lucide-react';
+import { formatPhoneDisplay } from '../lib/phone';
 import {
   canSelectDeviceContacts,
+  contactFillPreview,
+  contactHasPhone,
   contactSourceLabel,
   searchHostContacts,
   selectDeviceContact,
@@ -14,6 +17,8 @@ import {
 type Props = {
   hostId: string | undefined;
   onSelect: (contact: ContactPickerSelection) => void;
+  /** Called when the confirmed chip is cleared. */
+  onClear?: () => void;
   /** Extra classes for the outer wrapper. */
   className?: string;
   /** Match surrounding form field styling. */
@@ -26,6 +31,7 @@ const BROWSE_LIMIT = 80;
 export function ContactAutocomplete({
   hostId,
   onSelect,
+  onClear,
   className = '',
   inputClassName,
   placeholder = 'Name, phone, or email…',
@@ -41,6 +47,7 @@ export function ContactAutocomplete({
   const [browseQuery, setBrowseQuery] = useState('');
   const [browseRows, setBrowseRows] = useState<PickerContact[]>([]);
   const [browseLoading, setBrowseLoading] = useState(false);
+  const [selected, setSelected] = useState<ContactPickerSelection | null>(null);
   const devicePicker = canSelectDeviceContacts();
 
   useEffect(() => {
@@ -107,6 +114,7 @@ export function ContactAutocomplete({
   if (!hostId) return null;
 
   const applySelection = (sel: ContactPickerSelection) => {
+    setSelected(sel);
     onSelect(sel);
     setQuery('');
     setResults([]);
@@ -119,6 +127,12 @@ export function ContactAutocomplete({
     applySelection(toContactPickerSelection(c));
   };
 
+  const clearSelection = () => {
+    setSelected(null);
+    setQuery('');
+    onClear?.();
+  };
+
   const pickFromPhone = async () => {
     const sel = await selectDeviceContact();
     if (sel) applySelection(sel);
@@ -129,64 +143,92 @@ export function ContactAutocomplete({
 
   return (
     <div ref={rootRef} className={`relative ${className}`}>
-      <div className="flex items-end gap-2">
-        <label className="block min-w-0 flex-1">
-          <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Find in contacts</span>
-          <div className="relative mt-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onFocus={() => {
-                if (results.length > 0) setOpen(true);
-              }}
-              onKeyDown={(e) => {
-                if (!open || results.length === 0) return;
-                if (e.key === 'ArrowDown') {
-                  e.preventDefault();
-                  setHighlight((h) => (h + 1) % results.length);
-                } else if (e.key === 'ArrowUp') {
-                  e.preventDefault();
-                  setHighlight((h) => (h - 1 + results.length) % results.length);
-                } else if (e.key === 'Enter') {
-                  e.preventDefault();
-                  pick(results[highlight]);
-                } else if (e.key === 'Escape') {
-                  setOpen(false);
-                }
-              }}
-              role="combobox"
-              aria-expanded={open}
-              aria-controls={listId}
-              aria-autocomplete="list"
-              autoComplete="off"
-              placeholder={placeholder}
-              className={inputClassName ?? defaultInput}
-            />
-            {loading && (
-              <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-gray-400" />
-            )}
+      {selected ? (
+        <div>
+          <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Chosen contact</span>
+          <div className="mt-1 flex items-start gap-2 rounded-xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/70 dark:bg-emerald-950/20 px-3 py-2.5">
+            <UserRound className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-300" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                {selected.fullName || selected.email || 'Contact'}
+              </p>
+              <p className="text-xs text-gray-600 dark:text-slate-400 truncate">
+                {[
+                  selected.phone || 'No mobile',
+                  selected.email,
+                ].filter(Boolean).join(' · ')}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={clearSelection}
+              className="p-1.5 rounded-lg text-gray-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+              aria-label="Clear selected contact"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
-        </label>
-        <button
-          type="button"
-          onClick={() => {
-            setBrowseQuery('');
-            setBrowseOpen(true);
-          }}
-          className="shrink-0 inline-flex items-center justify-center gap-1.5 min-h-11 px-3 rounded-xl border border-gray-200 dark:border-slate-700 text-sm font-semibold text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800"
-        >
-          <Users className="h-4 w-4" />
-          Browse
-        </button>
-      </div>
+        </div>
+      ) : (
+        <div className="flex items-end gap-2">
+          <label className="block min-w-0 flex-1">
+            <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Find in contacts</span>
+            <div className="relative mt-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onFocus={() => {
+                  if (results.length > 0) setOpen(true);
+                }}
+                onKeyDown={(e) => {
+                  if (!open || results.length === 0) return;
+                  if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    setHighlight((h) => (h + 1) % results.length);
+                  } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    setHighlight((h) => (h - 1 + results.length) % results.length);
+                  } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    pick(results[highlight]);
+                  } else if (e.key === 'Escape') {
+                    setOpen(false);
+                  }
+                }}
+                role="combobox"
+                aria-expanded={open}
+                aria-controls={listId}
+                aria-autocomplete="list"
+                autoComplete="off"
+                placeholder={placeholder}
+                className={inputClassName ?? defaultInput}
+              />
+              {loading && (
+                <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-gray-400" />
+              )}
+            </div>
+          </label>
+          <button
+            type="button"
+            onClick={() => {
+              setBrowseQuery('');
+              setBrowseOpen(true);
+            }}
+            className="shrink-0 inline-flex items-center justify-center gap-1.5 min-h-11 px-3 rounded-xl border border-gray-200 dark:border-slate-700 text-sm font-semibold text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800"
+          >
+            <Users className="h-4 w-4" />
+            Browse
+          </button>
+        </div>
+      )}
 
       {open && results.length > 0 && (
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-30 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg"
+          className="absolute z-30 mt-1 max-h-72 w-full overflow-auto rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg"
         >
           {results.map((c, i) => (
             <ContactResultRow
@@ -294,24 +336,50 @@ function ContactResultRow({
   onPick: () => void;
 }) {
   const label = contact.full_name?.trim() || contact.email || contact.phone || 'Contact';
-  const meta = [contact.email, contact.phone, contact.company].filter(Boolean).join(' · ');
+  const hasPhone = contactHasPhone(contact);
+  const fill = contactFillPreview(contact);
+  const phoneLabel = hasPhone
+    ? (formatPhoneDisplay(contact.phone!) || contact.phone)
+    : 'No mobile';
+  const emailLabel = (contact.email ?? '').trim() || null;
+
+  const pickNow = (e: PointerEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onPick();
+  };
+
   return (
     <li role="option" aria-selected={!!active}>
       <button
         type="button"
         className={`flex w-full items-start gap-2 px-3 py-2.5 text-left text-sm transition ${
           active ? 'bg-brand-50 dark:bg-brand-500/10' : 'hover:bg-gray-50 dark:hover:bg-slate-800'
-        }`}
+        } ${hasPhone ? '' : 'opacity-70'}`}
         onMouseEnter={onHover}
-        onClick={onPick}
+        onPointerDown={pickNow}
       >
-        <UserRound className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
+        <UserRound className={`mt-0.5 h-4 w-4 shrink-0 ${hasPhone ? 'text-gray-400' : 'text-amber-500'}`} />
         <span className="min-w-0 flex-1">
           <span className="block font-medium text-gray-900 dark:text-white truncate">{label}</span>
-          {meta && <span className="block text-xs text-gray-500 dark:text-slate-400 truncate">{meta}</span>}
+          <span className="block text-xs text-gray-500 dark:text-slate-400 truncate">
+            {phoneLabel}
+            {emailLabel ? ` · ${emailLabel}` : ''}
+          </span>
+          <span className="mt-0.5 block text-[11px] text-gray-400 dark:text-slate-500">
+            {fill.length > 0 ? `Will fill: ${fill.join(' · ')}` : 'No name, phone, or email to fill'}
+            {!hasPhone ? ' · add a number after you pick' : ''}
+          </span>
         </span>
-        <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
-          {contactSourceLabel(contact.source)}
+        <span className="shrink-0 flex flex-col items-end gap-1">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+            {contactSourceLabel(contact.source)}
+          </span>
+          {!hasPhone && (
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+              No mobile
+            </span>
+          )}
         </span>
       </button>
     </li>

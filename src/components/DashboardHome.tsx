@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { documentsNewPath, quotesNewPath } from '../lib/documentActions';
+import { documentsNewPath } from '../lib/documentActions';
 import { documentTypeLabel } from '../lib/documents';
 import type { SmbDocument } from '../lib/types';
 
@@ -68,22 +68,13 @@ type DashTool = {
   icon: LucideIcon;
   accent: string;
   docsCombined?: boolean;
-  quoteByText?: boolean;
 };
 
 const PRIMARY_TOOLS: DashTool[] = [
   {
-    to: quotesNewPath(),
-    title: 'Quote-by-Text',
-    blurb: 'Price it, text it, they approve. Pay with their Zelle / Cash App / Venmo / PayPal.',
-    icon: FileText,
-    accent: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
-    quoteByText: true,
-  },
-  {
     to: '/dashboard/documents',
     title: 'Send Docs + Sign-by-Text',
-    blurb: 'NDAs, waivers, invoices — verify & sign by SMS when you need it.',
+    blurb: 'Quotes, NDAs, waivers, invoices — verify & sign by SMS when you need it.',
     icon: ClipboardSignature,
     accent: 'bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300',
     docsCombined: true,
@@ -231,6 +222,14 @@ export function DashboardHome({ hostId, bookings, onOpenWizard, showWizardButton
         )}
       </div>
 
+      <Link
+        to={documentsNewPath(null, 'quote')}
+        className="md:hidden mb-4 flex items-center justify-center gap-2 min-h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold"
+      >
+        <FileText className="h-4 w-4" />
+        New Quote
+      </Link>
+
       {/* All tools: 3 primary large, others compact */}
       <div className="mb-6 md:mb-8 space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
@@ -246,9 +245,7 @@ export function DashboardHome({ hostId, bookings, onOpenWizard, showWizardButton
                   <Icon className="h-5 w-5" />
                 </div>
                 <p className="text-lg font-bold text-gray-900 dark:text-white">
-                  {tile.quoteByText ? (
-                    'Quote-by-Text'
-                  ) : tile.docsCombined ? (
+                  {tile.docsCombined ? (
                     <>
                       Send Docs +{' '}
                       <span className="font-sign-by-text text-xl text-violet-700 dark:text-violet-300">

@@ -30,7 +30,11 @@ function keyFromLocation(pathname: string, search: string, hash: string): string
   if (pathname.startsWith('/dashboard/appointments')) return 'calendar';
   if (pathname.startsWith('/dashboard/services')) return 'services';
   if (pathname.startsWith('/dashboard/quotes')) return 'quotes';
-  if (pathname.startsWith('/dashboard/documents')) return 'documents';
+  if (pathname.startsWith('/dashboard/documents')) {
+    const type = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search).get('type');
+    if (type === 'quote') return 'quotes';
+    return 'documents';
+  }
   if (pathname.startsWith('/dashboard/paid-booking')) return 'paid-booking';
   if (pathname.startsWith('/dashboard/group-scheduling/polls')) return 'polls';
   if (pathname.includes('coordinate')) return 'coordinate';
@@ -146,11 +150,11 @@ const GUIDES: Record<string, PageHelpGuide> = {
     purpose:
       'Text a price from the driveway. They open, approve with Sign-by-Text, then tap your Zelle / Cash App / Venmo / PayPal link. PinOnIt never handles money.',
     steps: [
-      'Tap Quote-by-Text (or SEND QUOTE). Browse contacts or type a phone; name is optional.',
-      'Add line items (description wide, amount with $), tax, optional note, and how many days the quote is good for (default 30).',
+      'From the dashboard, tap New Quote (or Send Docs → Quote). That opens the same compose screen as waivers and NDAs.',
+      'Browse contacts or type a phone; name is optional. Add line items, tax, optional note, and how many days the quote is good for (default 30).',
       'Choose Off, Full, or Deposit and paste your own pay link if they should see Pay Now after they approve.',
-      'SEND QUOTE texts them the total and link. They approve with a finger sign and ESIGN checkbox. SMS verification is off unless you turn it on for the quote template in Settings → Docs.',
-      'After they approve, tap Mark paid on the list row — that texts the receipt automatically.',
+      'Send texts them the total and link. They approve with a finger sign and ESIGN checkbox. SMS verification is off unless you turn it on for the quote template in Settings → Docs.',
+      'Quotes show in the documents list as Sent, Viewed, Approved, Declined, Paid, or Expired. After they approve, tap Mark paid — that texts the receipt automatically.',
     ],
     canDo: [
       'Tell opened-and-thinking from a text that never landed',

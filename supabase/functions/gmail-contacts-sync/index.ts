@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { dedupeContactRows } from "../_shared/dedupe-contacts.ts";
+import { normalizeImportedContacts } from "../_shared/normalize-imported-contacts.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -101,7 +102,7 @@ async function importGoogleContacts(
     })
     .filter((r) => r.email.includes("@"));
 
-  const uniqueRows = dedupeContactRows(fullRows);
+  const uniqueRows = dedupeContactRows(normalizeImportedContacts(fullRows));
   console.log("[gmail-contacts-sync] Contacts with email:", fullRows.length, "unique:", uniqueRows.length);
 
   if (!uniqueRows.length) return { imported: 0, fetched: 0 };

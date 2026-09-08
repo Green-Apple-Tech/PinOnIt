@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { splitContactName, toContactPickerSelection, contactSourceLabel } from './contactPicker';
+import {
+  splitContactName,
+  toContactPickerSelection,
+  contactSourceLabel,
+  contactFillPreview,
+  expandPickerContact,
+  rankPickerContacts,
+} from './contactPicker';
 
 describe('splitContactName', () => {
   it('splits first and last', () => {
@@ -45,5 +52,44 @@ describe('contactSourceLabel', () => {
     expect(contactSourceLabel('booking')).toBe('Booked');
     expect(contactSourceLabel('manual')).toBe('Saved');
     expect(contactSourceLabel('device')).toBe('Phone');
+  });
+});
+
+describe('contactFillPreview', () => {
+  it('lists name, phone, and email when present', () => {
+    expect(contactFillPreview({
+      id: '1',
+      email: 'jane@example.com',
+      full_name: 'Jane Smith',
+      phone: '3055551212',
+      company: null,
+      source: 'manual',
+    })).toEqual(['name', 'phone', 'email']);
+  });
+});
+
+describe('expandPickerContact', () => {
+  it('splits concatenated Outlook rows for search', () => {
+    const rows = expandPickerContact({
+      id: 'blob',
+      email: 'andy@sunshieldawnings.com',
+      full_name: 'cristina couto;peter stebbins;andy@sunshieldawnings.com',
+      phone: null,
+      company: null,
+      source: 'outlook',
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].email).toBe('andy@sunshieldawnings.com');
+    expect(rows[0].full_name).toBeNull();
+  });
+});
+
+describe('rankPickerContacts', () => {
+  it('puts contacts with a phone first', () => {
+    const ranked = rankPickerContacts([
+      { id: '1', email: 'a@x.com', full_name: 'Ann', phone: null, company: null, source: 'outlook' },
+      { id: '2', email: 'b@x.com', full_name: 'Bob', phone: '3055551212', company: null, source: 'outlook' },
+    ]);
+    expect(ranked[0].full_name).toBe('Bob');
   });
 });

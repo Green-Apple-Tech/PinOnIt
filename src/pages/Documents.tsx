@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { CheckCircle, Clock, Copy, Download, Eye, FileText, Plus } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
-import { documentsNewPath, quotesNewPath } from '../lib/documentActions';
+import { documentsNewPath } from '../lib/documentActions';
 import {
   documentTypeLabel,
   documentViewUrl,
@@ -126,7 +126,7 @@ export function DocumentsPage() {
           { to: documentsNewPath(null, 'nda'), label: 'Send NDA' },
           { to: documentsNewPath(null, 'waiver'), label: 'Send Waiver' },
           { to: documentsNewPath(null, 'invoice'), label: 'Send Invoice' },
-          { to: quotesNewPath(), label: 'Send Quote' },
+          { to: documentsNewPath(null, 'quote'), label: 'Send Quote' },
           { to: documentsNewPath(null, 'receipt'), label: 'Send Receipt' },
         ].map((btn) => (
           <Link
@@ -171,7 +171,13 @@ export function DocumentsPage() {
             {docs.map((doc) => {
               const quoteStatus = doc.document_type === 'quote' ? quoteHostStatus(doc) : null;
               const meta = quoteStatus
-                ? { ...STATUS[(doc.status === 'signed' ? 'signed' : doc.status) as SmbDocumentStatus] ?? STATUS.pending, label: quoteStatus.label }
+                ? {
+                    ...((STATUS[(doc.status === 'signed' ? 'signed' : doc.status) as SmbDocumentStatus] ?? STATUS.pending)),
+                    label: quoteStatus.label,
+                    ...(quoteStatus.key === 'expired'
+                      ? { className: 'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-300' }
+                      : {}),
+                  }
                 : (STATUS[doc.status] ?? STATUS.pending);
               const Icon = meta.icon;
               return (

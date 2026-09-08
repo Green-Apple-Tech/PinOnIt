@@ -3,10 +3,15 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, Copy, Loader2, MessageSquare, Plus } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { ContactAutocomplete } from '../components/ContactAutocomplete';
+import type { ContactPickerSelection } from '../lib/contactPicker';
 import { supabase } from '../lib/supabase';
 import { PHONE_HINT, PHONE_PLACEHOLDER, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import { revealTool } from '../lib/progressiveDisclosure';
 import { quoteTotals } from '../lib/quoteMath';
+import {
+  validUntilFromDays,
+  type QuotePayMode,
+} from '../lib/quoteSms';
 import { documentShowsPayLink, normalizeExternalUrl } from '../lib/paymentLink';
 import { PaymentLinkFields } from '../components/PaymentLinkFields';
 import {
@@ -86,6 +91,8 @@ export function CreateDocumentPage() {
   const [recipientLastName, setRecipientLastName] = useState('');
   const [recipientEmail, setRecipientEmail] = useState('');
   const [recipientPhone, setRecipientPhone] = useState('');
+  const [phonePrompt, setPhonePrompt] = useState('');
+  const phoneInputRef = useRef<HTMLInputElement>(null);
   const [topic, setTopic] = useState('');
   const [businessName, setBusinessName] = useState('');
   const [activityOptions, setActivityOptions] = useState<string[]>([]);
@@ -102,6 +109,9 @@ export function CreateDocumentPage() {
   const [notes, setNotes] = useState('');
   const [payUrl, setPayUrl] = useState('');
   const [payLabel, setPayLabel] = useState('Pay');
+  const [validDays, setValidDays] = useState(30);
+  const [payMode, setPayMode] = useState<QuotePayMode>('off');
+  const [depositAmount, setDepositAmount] = useState('');
   const [defaultsApplied, setDefaultsApplied] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -169,7 +179,9 @@ export function CreateDocumentPage() {
   const isUpload = isUploadDocumentType(documentType);
   const isLibraryPdf = Boolean(selectedLibraryFile);
   const isMoney = isMoneyDocumentType(documentType);
+  const isQuote = documentType === 'quote';
   const showPayLink = documentShowsPayLink(documentType);
+  const phoneRequired = verificationRequired || isQuote;
   const bodyEditable = documentBodyIsEditable(documentType) && !isLibraryPdf;
   const typeSelectValue = libraryFileId ? `${LIBRARY_FILE_PREFIX}${libraryFileId}` : documentType;
   const recipientName = `${recipientFirstName.trim()} ${recipientLastName.trim()}`.trim();
@@ -298,11 +310,17 @@ export function CreateDocumentPage() {
       })));
     }
     if (isMoney) setTaxPercent(Number(profile.default_tax_percent) || 0);
+    if (isQuote) {
+      setValidDays(Math.max(1, Number(profile.default_quote_valid_days) || 30));
+      if (profile.default_pay_url) setPayMode('full');
+      if (profile.default_pay_label) setPayLabel(profile.default_pay_label);
+      else setPayLabel('Pay Now');
+    }
     if (showPayLink) {
       if (profile.default_pay_url) setPayUrl(profile.default_pay_url);
-      if (profile.default_pay_label) setPayLabel(profile.default_pay_label);
+      if (profile.default_pay_label && !isQuote) setPayLabel(profile.default_pay_label);
     }
-  }, [profile, defaultsApplied, isMoney, showPayLink]);
+  }, [profile, defaultsApplied, isMoney, isQuote, showPayLink]);
 
   const { subtotal, taxAmount, total } = useMemo(
     () => quoteTotals(items, taxPercent),
@@ -372,6 +390,7 @@ export function CreateDocumentPage() {
     const libraryName = selectedLibraryFile?.name?.trim();
     const topicText = topic.trim();
     const phone = recipientPhone.trim() ? normalizePhoneE164(recipientPhone) : null;
+    const resolvedName = recipientName.trim() || (isQuote ? 'Customer' : '');
     if (documentType === 'other' && !customTypeLabel.trim()) {
       setError('Enter a custom document type.');
       return;
@@ -380,15 +399,15 @@ export function CreateDocumentPage() {
       setError('Choose a PDF to send for signature.');
       return;
     }
-    if (!recipientFirstName.trim() || !recipientLastName.trim()) {
-      setError('Add the recipient’s first and last name.');
+    if (!isQuote && !recipientFirstName.trim()) {
+      setError('Add the recipient’s first name.');
       return;
     }
     if (needsScopeCheckbox && !scopeAcked) {
       setError('Confirm you understand Sign-by-Text scope before sending.');
       return;
     }
-    if (!topicText) {
+    if (!topicText && !isQuote) {
       setError(isWaiver
         ? 'Add the activity or service this waiver covers.'
         : 'Add a short topic describing what this document covers.');
@@ -398,8 +417,14 @@ export function CreateDocumentPage() {
       setError('Add your business name — it appears as “from …” on the document. You can also save it in Settings → Profile.');
       return;
     }
+    if (isQuote && !phone) {
+      setError('Customer phone is required so we can text the quote.');
+      phoneInputRef.current?.focus();
+      return;
+    }
     if (verificationRequired && !phone) {
       setError('Add a valid phone number so the recipient can verify.');
+      phoneInputRef.current?.focus();
       return;
     }
     if (recipientPhone.trim() && !phone) {
@@ -413,6 +438,22 @@ export function CreateDocumentPage() {
     }
     if (bodyEditable && !customText.trim()) {
       setError('Add the document text for this send.');
+      return;
+    }
+    const lineItems = isMoney
+      ? items.filter((i) => i.description.trim() || i.amount)
+      : [];
+    if (isQuote && !lineItems.length) {
+      setError('Add at least one line.');
+      return;
+    }
+    if (isQuote && payMode !== 'off' && !normalizeExternalUrl(payUrl)) {
+      setError('Paste your Zelle, Cash App, Venmo, or PayPal link for Pay Now.');
+      return;
+    }
+    const depositCents = Math.round((Number(depositAmount) || 0) * 100);
+    if (isQuote && payMode === 'deposit' && depositCents <= 0) {
+      setError('Enter a deposit amount.');
       return;
     }
     setError('');
@@ -463,26 +504,34 @@ export function CreateDocumentPage() {
       }
     }
 
-    const lineItems = isMoney
-      ? items.filter((i) => i.description.trim() || i.amount)
-      : [];
+    const resolvedTopic = topicText || (isQuote ? (lineItems[0]?.description.trim() || 'Quote') : topicText);
     const bodySource = bodyEditable
       ? customText.trim()
       : (hostOverrideText || selectedTemplate.full_text?.trim() || defaultDocumentBody(documentType));
     const bodyForSave = fillDocumentPlaceholders(bodySource || '', {
-      topic: topicText,
-      recipientName: recipientName.trim(),
+      topic: resolvedTopic,
+      recipientName: resolvedName,
       businessName: businessName.trim(),
-      activityDescription: topicText,
+      activityDescription: resolvedTopic,
     });
 
     // Display-only for the recipient signing page (never for uploads; never in the audit/certificate).
     const copyPlainSummary = !isUpload && Boolean(plainSummary.trim());
+    const moneyTotals = quoteTotals(lineItems, taxPercent);
+    const payAmountCents = isQuote
+      ? (payMode === 'deposit' ? depositCents : payMode === 'full' ? Math.round(moneyTotals.total * 100) : null)
+      : null;
+    const quotePayUrl = isQuote
+      ? (payMode === 'off' ? null : normalizeExternalUrl(payUrl))
+      : (showPayLink ? normalizeExternalUrl(payUrl) : null);
+    const quotePayLabel = isQuote
+      ? (payMode === 'off' ? null : (payLabel.trim() || 'Pay Now'))
+      : (showPayLink ? (payLabel.trim() || 'Pay') : null);
 
     const { error: err } = await supabase.from('documents').insert({
       token,
       sender_id: user.id,
-      recipient_name: recipientName.trim(),
+      recipient_name: resolvedName,
       recipient_phone: phone,
       recipient_email: recipientEmail.trim() || null,
       document_type: selectedTemplate.document_type,
@@ -490,15 +539,20 @@ export function CreateDocumentPage() {
         ? customTypeLabel.trim()
         : (isLibraryPdf ? (libraryName || null) : null),
       template_id: selectedTemplate.id,
-      topic: topicText,
+      topic: resolvedTopic,
       custom_text: isUpload ? null : (bodyForSave || null),
       status: 'pending',
       verification_required: verificationRequired,
       line_items: lineItems,
       tax_percent: isMoney ? Number(taxPercent) || 0 : 0,
       notes: isMoney ? notes.trim() || null : null,
-      pay_elsewhere_url: showPayLink ? normalizeExternalUrl(payUrl) : null,
-      pay_elsewhere_label: showPayLink ? (payLabel.trim() || 'Pay') : null,
+      pay_elsewhere_url: quotePayUrl,
+      pay_elsewhere_label: quotePayLabel,
+      ...(isQuote ? {
+        pay_mode: payMode,
+        pay_amount_cents: payAmountCents,
+        valid_until: validUntilFromDays(validDays),
+      } : {}),
       currency: 'USD',
       file_path: filePath,
       file_name: fileName,
@@ -610,8 +664,13 @@ export function CreateDocumentPage() {
         All documents
       </Link>
       <h1 className="mt-3 text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
-        New document
+        {isQuote ? 'New quote' : 'New document'}
       </h1>
+      {isQuote && (
+        <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
+          Price it, text it, they approve. Pay with their Zelle / Cash App / Venmo / PayPal.
+        </p>
+      )}
 
       <form onSubmit={(e) => void handleSubmit(e)} className="mt-6 space-y-5">
         <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-6 space-y-4">
@@ -735,20 +794,35 @@ export function CreateDocumentPage() {
         <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-6 space-y-4">
           <ContactAutocomplete
             hostId={user?.id}
-            onSelect={(c) => {
+            onSelect={(c: ContactPickerSelection) => {
               setRecipientFirstName(c.firstName);
               setRecipientLastName(c.lastName);
               setRecipientEmail(c.email);
-              if (c.phone) setRecipientPhone(c.phone);
+              setRecipientPhone(c.phone);
+              if (!c.phone) {
+                setPhonePrompt('This contact has no mobile number. Enter one so we can send by text.');
+                window.requestAnimationFrame(() => phoneInputRef.current?.focus());
+              } else {
+                setPhonePrompt('');
+              }
+            }}
+            onClear={() => {
+              setRecipientFirstName('');
+              setRecipientLastName('');
+              setRecipientEmail('');
+              setRecipientPhone('');
+              setPhonePrompt('');
             }}
           />
           <label className="block">
-            <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Recipient name <span className="text-red-500">*</span></span>
+            <span className="text-xs font-medium text-gray-600 dark:text-slate-400">
+              Recipient name {isQuote ? '(optional)' : <span className="text-red-500">*</span>}
+            </span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
               <input
                 value={recipientFirstName}
                 onChange={(e) => setRecipientFirstName(e.target.value)}
-                required
+                required={!isQuote}
                 className={fieldClass.replace('mt-1 ', '')}
                 placeholder="Jane"
                 autoComplete="given-name"
@@ -757,7 +831,6 @@ export function CreateDocumentPage() {
               <input
                 value={recipientLastName}
                 onChange={(e) => setRecipientLastName(e.target.value)}
-                required
                 className={fieldClass.replace('mt-1 ', '')}
                 placeholder="Smith"
                 autoComplete="family-name"
@@ -765,7 +838,9 @@ export function CreateDocumentPage() {
               />
             </div>
             <p className="mt-1 text-xs text-gray-400">
-              Fills [Recipient Name] in the document below as you type.
+              {isQuote
+                ? 'Optional. Fills the quote greeting; we use “Customer” if you skip it.'
+                : 'Fills [Recipient Name] in the document below as you type. Last name is optional.'}
             </p>
           </label>
           <label className="block">
@@ -782,33 +857,45 @@ export function CreateDocumentPage() {
           </label>
           <label className="block">
             <span className="text-xs font-medium text-gray-600 dark:text-slate-400">
-              Phone {verificationRequired ? '' : '(optional)'}
+              Phone {phoneRequired ? <span className="text-red-500">*</span> : '(optional)'}
             </span>
             <input
+              ref={phoneInputRef}
+              id="document-recipient-phone"
               type="tel"
               inputMode="tel"
               value={recipientPhone}
-              onChange={(e) => setRecipientPhone(e.target.value)}
+              onChange={(e) => {
+                setRecipientPhone(e.target.value);
+                if (e.target.value.trim()) setPhonePrompt('');
+              }}
               onBlur={() => setRecipientPhone(blurFormatPhone(recipientPhone))}
-              required={verificationRequired}
-              className={fieldClass}
+              required={phoneRequired}
+              className={`${fieldClass} ${phonePrompt ? 'border-amber-400 focus:ring-amber-500' : ''}`}
               placeholder={PHONE_PLACEHOLDER}
               autoComplete="tel"
             />
-            <p className="mt-1 text-xs text-gray-400">
-              {verificationRequired
-                ? PHONE_HINT
-                : 'Needed only if you want us to text the link, or if signature & 2FA is on.'}
-            </p>
+            {phonePrompt ? (
+              <p className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-300">{phonePrompt}</p>
+            ) : (
+              <p className="mt-1 text-xs text-gray-400">
+                {isQuote
+                  ? PHONE_HINT
+                  : verificationRequired
+                    ? PHONE_HINT
+                    : 'Needed only if you want us to text the link, or if signature & 2FA is on.'}
+              </p>
+            )}
           </label>
           <label className="block">
             <span className="text-xs font-medium text-gray-600 dark:text-slate-400">
-              {isWaiver ? 'Activity / service description' : 'Topic'} <span className="text-red-500">*</span>
+              {isWaiver ? 'Activity / service description' : 'Topic'}{' '}
+              {isQuote ? '(optional)' : <span className="text-red-500">*</span>}
             </span>
             <input
               value={topic}
               onChange={(e) => setTopic(e.target.value.slice(0, 150))}
-              required
+              required={!isQuote}
               maxLength={150}
               list="document-activity-options"
               className={fieldClass}
@@ -929,7 +1016,67 @@ export function CreateDocumentPage() {
           </div>
         )}
 
-        {showPayLink && (
+        {isQuote && (
+          <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-6 space-y-4">
+            <label className="block">
+              <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Valid for (days)</span>
+              <input
+                type="number"
+                min="1"
+                max="365"
+                value={validDays}
+                onChange={(e) => setValidDays(Math.max(1, Math.min(365, Number(e.target.value) || 30)))}
+                className={`${fieldClass} w-32`}
+              />
+              <p className="mt-1 text-xs text-gray-400">Default 30. After that they see expired — contact you — instead of Approve.</p>
+            </label>
+            <div>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">Pay after they approve</p>
+              <p className="mt-1 text-xs text-gray-500">Your Zelle / Cash App / Venmo / PayPal. We never take the payment.</p>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                {([
+                  ['off', 'Off'],
+                  ['full', 'Full'],
+                  ['deposit', 'Deposit'],
+                ] as const).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setPayMode(id)}
+                    className={`min-h-11 rounded-xl text-sm font-semibold border ${
+                      payMode === id
+                        ? 'bg-emerald-600 text-white border-emerald-600'
+                        : 'border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-200'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {payMode === 'deposit' && (
+                <label className="block mt-3">
+                  <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Deposit amount</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={depositAmount}
+                    onChange={(e) => setDepositAmount(e.target.value)}
+                    className={fieldClass}
+                    placeholder="150"
+                  />
+                </label>
+              )}
+              {payMode !== 'off' && (
+                <div className="mt-3">
+                  <PaymentLinkFields url={payUrl} label={payLabel} onUrlChange={setPayUrl} onLabelChange={setPayLabel} />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {showPayLink && !isQuote && (
           <PaymentLinkFields
             url={payUrl}
             label={payLabel}
@@ -1010,7 +1157,7 @@ export function CreateDocumentPage() {
           className="w-full min-h-12 rounded-xl bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-semibold inline-flex items-center justify-center gap-2"
         >
           {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-          {submitting ? 'Creating…' : recipientPhone.trim() ? 'Create & send SMS' : 'Create & copy link'}
+          {submitting ? 'Creating…' : isQuote || recipientPhone.trim() ? 'Create & send SMS' : 'Create & copy link'}
         </button>
       </form>
     </main>
