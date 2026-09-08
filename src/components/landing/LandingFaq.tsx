@@ -3,32 +3,32 @@ import { ChevronDown } from 'lucide-react';
 
 const FAQ_ITEMS = [
   {
-    q: 'What is Pin On It?',
-    a: 'Text → Book → Quote → Sign → Pay. You text a booking link, quote, or document. They tap, pick a time, sign with a finger, and pay you through the link you add (PayPal, Venmo, Cash App, Stripe, or any pay page). No extra apps for them.',
+    q: 'What is PinOnIt?',
+    a: 'You run the job by text. Quote it, get it signed, send a booking link, and remind them before they show up. They tap a normal SMS — no app, no account.',
   },
   {
     q: 'Does my customer need an app?',
-    a: 'No. They get a normal text message and open a link in their phone\'s browser. Nothing to install, no account to create.',
+    a: 'No. They get a normal text and open a link in their phone’s browser. Nothing to install, no account to create, no email required.',
   },
   {
-    q: 'Do I need DocuSign or anything else?',
-    a: 'No. Sign by Text covers waivers, NDAs, addendums, contracts, quotes, invoices, and receipts — all inside PinOnIt.',
+    q: 'How do they sign?',
+    a: 'Sign-by-Text: we text a code to their phone, they draw their signature with a finger. Meets federal ESIGN Act requirements. Every signature includes a complete audit record. PinOnIt does not provide legal advice.',
   },
   {
-    q: 'What does my customer actually see?',
-    a: 'A text from your PinOnIt number with a short link. They tap it, see the document or booking page, and sign, approve, or pick a time. Most people finish in about 10 seconds.',
+    q: 'How do I get paid?',
+    a: 'Paste your own Zelle, Cash App, Venmo, or PayPal link. After they approve, they see Pay Now. PinOnIt never takes the money. When you’ve got it, one tap on the quote texts a receipt.',
   },
   {
-    q: 'How do you verify who signed?',
-    a: 'Their phone number is verified with a one-time SMS code (2FA) before they sign. Every signature includes a complete audit record — including timestamps, IP and device info, the signature image, consent text, document hash, and a unique document ID. Meets federal ESIGN Act requirements for electronic signatures.',
+    q: 'What about no-shows?',
+    a: 'Reminders go out by text, WhatsApp, email, or a voice call. They reply 1 to cancel or 2 to reschedule. That’s the phone-tag loop, closed.',
   },
   {
     q: 'Does it work with my calendar?',
-    a: 'Yes — Google Calendar, plus import from Calendly if you\'re switching.',
+    a: 'Yes. Google and Outlook stay in sync (including new bookings). Apple Calendar connects with a private iCloud link so busy times are blocked. You can import from Calendly if you’re switching.',
   },
   {
     q: 'Is it really $8.99 a month?',
-    a: 'Yes. One plan — booking, Sign by Text, reminders, docs, QR codes, and more. Free trial first.',
+    a: 'Yes. One plan. Free trial first.',
   },
 ];
 

@@ -39,10 +39,9 @@ export const LANDING_COMP_ROWS: LandingCompRow[] = [
 ];
 
 export const LANDING_PRICING_BULLETS_TEXT_FIRST = [
-  'Easy Booking (your page + links, synced to your calendar)',
-  'Sign by Text (waivers, NDAs, addendums, simple contracts)',
-  'NeverMiss Reminders (you, customers, or anyone — by SMS)',
-  'Business Documents (quotes, invoices, receipts)',
-  'QR Codes + Signature Creator',
-  'Paid booking when you want a deposit',
+  'Quote-by-Text and Invoice-by-Text',
+  'Sign-by-Text (code + finger sign, ESIGN audit record)',
+  'Book-by-Text — link, QR, Google / Outlook / Apple busy times',
+  'Reminders by SMS, WhatsApp, email, or voice — reply 1 to cancel, 2 to reschedule',
+  'Your pay link (Zelle, Cash App, Venmo, PayPal) — we never take the money',
 ];

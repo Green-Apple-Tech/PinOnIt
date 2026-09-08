@@ -2,9 +2,9 @@ import { useEffect } from 'react';
 
 /** Homepage / product share card (keep in sync with index.html). */
 export const SITE_OG = {
-  title: 'Your mini office by text | PinOnIt',
+  title: 'Run your business by text | PinOnIt',
   description:
-    'Booking + Sign by Text — waivers, NDAs, addendums, quotes, invoices. One simple app. $8.99/mo.',
+    'Quote a job in the driveway. Get it approved, signed, and paid before you drive away. Booking, Sign-by-Text, and reminders by SMS, WhatsApp, email, or voice. $8.99/month.',
   url: 'https://pinonit.com',
   image: 'https://pinonit.com/og-why-pinonit.png',
   /** Large landscape banner for the marketing site. */
@@ -52,7 +52,7 @@ export function usePageMeta(opts: {
     upsertMeta('meta[name="keywords"]', {
       name: 'keywords',
       content:
-        'run business by text, SMS booking, waiver by text, NDA by SMS, invoice by text, Calendly alternative, Doc Center, PinOnIt',
+        'run business by text, Quote-by-Text, Sign-by-Text, Book-by-Text, SMS reminders, invoice by text, PinOnIt',
     });
     // iMessage truncates hard — prefer a short og/twitter title when provided
     const shareTitle = opts.ogTitle ?? opts.title;

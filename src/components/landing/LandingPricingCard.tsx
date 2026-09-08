@@ -29,7 +29,7 @@ export function LandingPricingCard({ variant }: Props) {
             <span className="text-brand-200 text-sm">/mo</span>
           </div>
           <p className="mt-3 text-sm text-brand-50 font-medium">
-            Everything on this page. One plan. No per-signature fees, no add-ons.
+            Most businesses pay for three or four separate apps to do this.
           </p>
         </div>
         <ul className="space-y-2.5 flex-1 mb-8">
@@ -46,7 +46,7 @@ export function LandingPricingCard({ variant }: Props) {
           to="/signup"
           className="w-full py-3.5 rounded-full text-sm font-bold flex items-center justify-center bg-white text-brand-600 hover:bg-brand-50 transition-all"
         >
-          Start free
+          Start free trial
         </Link>
         <p className="mt-4 text-center text-xs text-brand-100">Free trial, cancel anytime.</p>
       </div>
