@@ -29,7 +29,8 @@ function keyFromLocation(pathname: string, search: string, hash: string): string
   }
   if (pathname.startsWith('/dashboard/appointments')) return 'calendar';
   if (pathname.startsWith('/dashboard/services')) return 'services';
-  if (pathname.startsWith('/dashboard/quotes') || pathname.startsWith('/dashboard/documents')) return 'documents';
+  if (pathname.startsWith('/dashboard/quotes')) return 'quotes';
+  if (pathname.startsWith('/dashboard/documents')) return 'documents';
   if (pathname.startsWith('/dashboard/paid-booking')) return 'paid-booking';
   if (pathname.startsWith('/dashboard/group-scheduling/polls')) return 'polls';
   if (pathname.includes('coordinate')) return 'coordinate';
@@ -139,6 +140,28 @@ const GUIDES: Record<string, PageHelpGuide> = {
       'How do I get a signature by text?',
       'What is in the audit record?',
     ],
+  },
+  quotes: {
+    title: 'Quote-by-Text',
+    purpose:
+      'Text a price from the driveway. They open, approve with Sign-by-Text, then tap your Zelle / Cash App / Venmo / PayPal link. PinOnIt never handles money.',
+    steps: [
+      'Tap Quote-by-Text (or SEND QUOTE). Phone is required; name is optional.',
+      'Add line items, tax, optional note, and how many days the quote is good for (default 30).',
+      'Choose Off, Full, or Deposit and paste your own pay link if they should see Pay Now after they approve.',
+      'SEND QUOTE texts them the total and link. Sent = text went out. Viewed = they opened it.',
+      'After they approve, tap Mark paid on the list row — that texts the receipt automatically.',
+    ],
+    canDo: [
+      'Tell opened-and-thinking from a text that never landed',
+      'Expire quotes so Approve is replaced with contact-the-business copy',
+      'Mark paid in one tap and send a receipt text',
+    ],
+    cannotDo: [
+      'Card payments or Stripe Connect — paste your own pay link',
+      'Waivers in this flow — use Sign-by-Text / Send Docs for those',
+    ],
+    suggestedQuestions: ['How do they pay?', 'What does Viewed mean?', 'How do I mark a quote paid?'],
   },
   'paid-booking': {
     title: 'Paid Booking',

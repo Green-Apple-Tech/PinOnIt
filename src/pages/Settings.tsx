@@ -460,6 +460,7 @@ export function SettingsPage() {
   );
   const [defaultPayUrl, setDefaultPayUrl] = useState(profile?.default_pay_url ?? '');
   const [defaultPayLabel, setDefaultPayLabel] = useState(profile?.default_pay_label || 'Pay');
+  const [quoteValidDays, setQuoteValidDays] = useState(Math.max(1, Number(profile?.default_quote_valid_days) || 30));
 
   const [brandColor, setBrandColor] = useState(profile?.brand_color ?? '#5864C6');
   const [logoUrl, setLogoUrl] = useState(profile?.avatar_url ?? '');
@@ -533,6 +534,7 @@ export function SettingsPage() {
     setQuoteLines(profile.quote_line_defaults?.length ? profile.quote_line_defaults : [{ description: '', amount: 0 }]);
     setDefaultPayUrl(profile.default_pay_url ?? '');
     setDefaultPayLabel(profile.default_pay_label || 'Pay');
+    setQuoteValidDays(Math.max(1, Number(profile.default_quote_valid_days) || 30));
     setBusinessName(profile.business_name ?? '');
     bookingFieldsHydrated.current = true;
   }, [profile]);
@@ -777,10 +779,15 @@ export function SettingsPage() {
         quote_line_defaults: cleanedLines,
         default_pay_url: defaultPayUrl.trim() || null,
         default_pay_label: defaultPayLabel.trim() || 'Pay',
+        default_quote_valid_days: Math.max(1, Math.min(365, Math.round(Number(quoteValidDays) || 30))),
       };
       let { error } = await supabase.from('profiles').update(docsPayload).eq('id', profile.id);
       if (error) {
-        const { default_pay_url: _u, default_pay_label: _l, ...withoutPay } = docsPayload;
+        const { default_quote_valid_days: _d, ...withoutDays } = docsPayload;
+        ({ error } = await supabase.from('profiles').update(withoutDays).eq('id', profile.id));
+      }
+      if (error) {
+        const { default_pay_url: _u, default_pay_label: _l, default_quote_valid_days: _d, ...withoutPay } = docsPayload;
         ({ error } = await supabase.from('profiles').update(withoutPay).eq('id', profile.id));
       }
       if (error) throw error;
@@ -1551,6 +1558,21 @@ export function SettingsPage() {
               className="w-32 px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
             />
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Applied to new quotes, invoices, and receipts.</p>
+          </div>
+
+          <div>
+            <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">Quote valid for (days)</label>
+            <input
+              type="number"
+              min="1"
+              max="365"
+              value={quoteValidDays}
+              onChange={(e) => setQuoteValidDays(Math.max(1, Math.min(365, Number(e.target.value) || 30)))}
+              className="w-32 px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
+            />
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+              Quote-by-Text stores an expiry when you send. Default 30 days. Expired quotes show contact-you copy instead of Approve.
+            </p>
           </div>
 
           <div className="space-y-2">

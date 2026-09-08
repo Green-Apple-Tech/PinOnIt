@@ -295,7 +295,7 @@ export async function sha256Hex(text: string): Promise<string> {
 
 export async function recordDocumentEvent(params: {
   token: string;
-  action: 'viewed' | 'signed';
+  action: 'viewed' | 'signed' | 'declined';
   signatureData?: string | null;
   ip?: string | null;
   userAgent?: string | null;
@@ -320,9 +320,12 @@ export async function recordDocumentEvent(params: {
 }
 
 /** Generate / retrieve certificate of completion after signing (or later from Doc Center). */
-export async function generateDocumentCertificate(token: string) {
+export async function generateDocumentCertificate(
+  token: string,
+  opts?: { event?: 'signed' | 'declined'; emailHost?: boolean },
+) {
   const { data, error } = await supabase.functions.invoke('generate-document-certificate', {
-    body: { token },
+    body: { token, event: opts?.event, emailHost: opts?.emailHost },
   });
   const result = (data ?? null) as {
     ok?: boolean;
@@ -382,7 +385,20 @@ export async function sendDocumentOtp(token: string, force = false) {
   return { data: result, error };
 }
 
-export async function sendDocumentLink(token: string, signingUrl: string) {
+export async function markQuotePaid(token: string) {
+  const { data, error } = await supabase.rpc('mark_quote_paid', { p_token: token });
+  const result = (data ?? null) as { ok?: boolean; error?: string; status?: string } | null;
+  if (error || !result?.ok) {
+    return { ok: false as const, error: error?.message ?? result?.error ?? 'Could not mark paid' };
+  }
+  return { ok: true as const, already: Boolean((result as { already?: boolean }).already) };
+}
+
+export async function sendDocumentLink(
+  token: string,
+  signingUrl: string,
+  purpose: 'link' | 'quote' | 'receipt' = 'link',
+) {
   const { data: sessionData } = await supabase.auth.getSession();
   const access = sessionData.session?.access_token;
   if (!access) return { ok: false, error: 'Sign in again to send.' };
@@ -393,7 +409,7 @@ export async function sendDocumentLink(token: string, signingUrl: string) {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${access}`,
     },
-    body: JSON.stringify({ token, signingUrl }),
+    body: JSON.stringify({ token, signingUrl, purpose }),
   });
   const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
   if (!res.ok || !json.ok) {

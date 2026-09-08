@@ -6,6 +6,7 @@ import {
   LayoutGrid,
   Mail,
   QrCode,
+  Receipt,
   Settings,
   ShoppingBag,
   Users,
@@ -25,6 +26,7 @@ export type MoreToolsNavItem = {
   activePathPrefixes?: string[];
   /** Mixed-label docs hub (Send Docs + Sign-by-Text). */
   docsCombined?: boolean;
+  quoteByText?: boolean;
 };
 
 export type DashboardNavItem = {
@@ -34,11 +36,19 @@ export type DashboardNavItem = {
   badge?: string;
   children?: DashboardNavItem[];
   docsCombined?: boolean;
+  quoteByText?: boolean;
 };
 
 /** Primary sidebar — product areas only (Settings is appended after More Tools). */
 export const SIMPLE_PRIMARY_NAV: MoreToolsNavItem[] = [
   { label: 'Dashboard', icon: LayoutGrid, path: '/dashboard' },
+  {
+    label: 'Quote-by-Text',
+    icon: Receipt,
+    path: '/dashboard/quotes',
+    quoteByText: true,
+    activePathPrefixes: ['/dashboard/quotes'],
+  },
   {
     label: DOCS_COMBINED_NAV_LABEL,
     icon: ClipboardSignature,
@@ -94,11 +104,14 @@ export function isMoreToolsNavActive(item: MoreToolsNavItem, pathname: string, s
 }
 
 export function isDashboardNavActive(
-  item: { to: string; label: string; docsCombined?: boolean },
+  item: { to: string; label: string; docsCombined?: boolean; quoteByText?: boolean },
   pathname: string,
   search = '',
   hash = '',
 ): boolean {
+  if (item.quoteByText || item.label === 'Quote-by-Text') {
+    return pathname === '/dashboard/quotes' || pathname.startsWith('/dashboard/quotes/');
+  }
   if (item.docsCombined || item.label === DOCS_COMBINED_NAV_LABEL) {
     return pathname === '/dashboard/documents' || pathname.startsWith('/dashboard/documents/');
   }
@@ -137,6 +150,7 @@ function toDashboardItem(item: MoreToolsNavItem): DashboardNavItem {
     label: item.label,
     badge: item.badge,
     docsCombined: item.docsCombined,
+    quoteByText: item.quoteByText,
   };
 }
 

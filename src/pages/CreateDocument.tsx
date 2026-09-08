@@ -538,7 +538,7 @@ export function CreateDocumentPage() {
     }
 
     if (!phone) return;
-    const sms = await sendDocumentLink(token, link);
+    const sms = await sendDocumentLink(token, link, documentType === 'quote' ? 'quote' : 'link');
     if (!sms.ok) {
       setSuccess({ token, smsStatus: 'failed', smsError: sms.error, phone: recipientPhone });
       return;

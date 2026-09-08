@@ -79,3 +79,11 @@ export function documentsNewPath(mode?: DocsEntryMode | null, type?: SmbDocument
   const qs = q.toString();
   return qs ? `/dashboard/documents/new?${qs}` : '/dashboard/documents/new';
 }
+
+export function quotesPath() {
+  return '/dashboard/quotes';
+}
+
+export function quotesNewPath() {
+  return '/dashboard/quotes/new';
+}

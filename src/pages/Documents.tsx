@@ -3,19 +3,24 @@ import { Link } from 'react-router-dom';
 import { CheckCircle, Clock, Copy, Download, Eye, FileText, Plus } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
-import { documentsNewPath } from '../lib/documentActions';
+import { documentsNewPath, quotesNewPath } from '../lib/documentActions';
 import {
   documentTypeLabel,
   documentViewUrl,
   generateDocumentCertificate,
+  markQuotePaid,
+  sendDocumentLink,
 } from '../lib/documents';
 import { HOLD_UP_COPY } from '../lib/documentCopy';
+import { quoteHostStatus } from '../lib/quoteSms';
 import type { SmbDocument, SmbDocumentStatus } from '../lib/types';
 
 const STATUS: Record<SmbDocumentStatus, { label: string; className: string; icon: typeof Clock }> = {
   pending: { label: 'Pending', className: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300', icon: Clock },
   viewed: { label: 'Viewed', className: 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300', icon: Eye },
   signed: { label: 'Confirmed', className: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300', icon: CheckCircle },
+  declined: { label: 'Declined', className: 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300', icon: Clock },
+  paid: { label: 'Paid', className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200', icon: CheckCircle },
 };
 
 function formatWhen(iso: string) {
@@ -33,6 +38,7 @@ export function DocumentsPage() {
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [certBusyId, setCertBusyId] = useState<string | null>(null);
+  const [paidBusyId, setPaidBusyId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!user?.id) return;
@@ -65,6 +71,22 @@ export function DocumentsPage() {
       return;
     }
     window.open(data.download_url, '_blank', 'noopener,noreferrer');
+    void load();
+  };
+
+  const onMarkPaid = async (doc: SmbDocument) => {
+    setPaidBusyId(doc.id);
+    const marked = await markQuotePaid(doc.token);
+    if (!marked.ok) {
+      setPaidBusyId(null);
+      window.alert(marked.error);
+      return;
+    }
+    const sms = await sendDocumentLink(doc.token, documentViewUrl(doc.token), 'receipt');
+    setPaidBusyId(null);
+    if (!sms.ok) {
+      window.alert(sms.error || 'Marked paid, but the receipt text did not send.');
+    }
     void load();
   };
 
@@ -104,7 +126,7 @@ export function DocumentsPage() {
           { to: documentsNewPath(null, 'nda'), label: 'Send NDA' },
           { to: documentsNewPath(null, 'waiver'), label: 'Send Waiver' },
           { to: documentsNewPath(null, 'invoice'), label: 'Send Invoice' },
-          { to: documentsNewPath(null, 'quote'), label: 'Send Quote' },
+          { to: quotesNewPath(), label: 'Send Quote' },
           { to: documentsNewPath(null, 'receipt'), label: 'Send Receipt' },
         ].map((btn) => (
           <Link
@@ -147,7 +169,10 @@ export function DocumentsPage() {
         ) : (
           <ul className="divide-y divide-gray-100 dark:divide-slate-800">
             {docs.map((doc) => {
-              const meta = STATUS[doc.status];
+              const quoteStatus = doc.document_type === 'quote' ? quoteHostStatus(doc) : null;
+              const meta = quoteStatus
+                ? { ...STATUS[(doc.status === 'signed' ? 'signed' : doc.status) as SmbDocumentStatus] ?? STATUS.pending, label: quoteStatus.label }
+                : (STATUS[doc.status] ?? STATUS.pending);
               const Icon = meta.icon;
               return (
                 <li key={doc.id} className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
@@ -173,6 +198,16 @@ export function DocumentsPage() {
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2 shrink-0">
+                    {doc.document_type === 'quote' && doc.status === 'signed' && (
+                      <button
+                        type="button"
+                        onClick={() => void onMarkPaid(doc)}
+                        disabled={paidBusyId === doc.id}
+                        className="inline-flex items-center gap-1.5 min-h-10 px-3 rounded-xl bg-emerald-600 text-white text-sm font-bold disabled:opacity-50"
+                      >
+                        {paidBusyId === doc.id ? 'Sending receipt…' : 'Mark paid'}
+                      </button>
+                    )}
                     {doc.status === 'signed' && (
                       <button
                         type="button"

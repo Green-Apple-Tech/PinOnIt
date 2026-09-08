@@ -250,4 +250,100 @@ describe.skipIf(!enabled)('guest paths as anonymous client', () => {
     const tallyRow = asRecord(tally);
     expect(Number(tallyRow.total_responses)).toBeGreaterThanOrEqual(1);
   }, 30_000);
+
+  it('quotes: view → approve/sign as anonymous client via RPCs only', async () => {
+    const { data: template, error: tplErr } = await admin
+      .from('document_templates')
+      .select('id')
+      .eq('document_type', 'quote')
+      .limit(1)
+      .maybeSingle();
+    expect(tplErr, tplErr?.message).toBeNull();
+    expect(template?.id).toEqual(expect.any(String));
+
+    const token = `qsmoke-${runId}`;
+    const { error: insErr } = await admin.from('documents').insert({
+      token,
+      sender_id: hostId,
+      recipient_name: 'Smoke Guest',
+      recipient_phone: '+15555550100',
+      document_type: 'quote',
+      template_id: template!.id,
+      topic: 'front yard cleanup',
+      status: 'pending',
+      verification_required: true,
+      otp_verified: true,
+      line_items: [{ description: 'front yard cleanup', amount: 450 }],
+      tax_percent: 0,
+      valid_until: new Date(Date.now() + 30 * 86400000).toISOString(),
+    });
+    expect(insErr, insErr?.message).toBeNull();
+
+    const { data: leaked } = await guest.from('documents').select('id').eq('token', token).maybeSingle();
+    expect(leaked).toBeNull();
+
+    const { error: guestInsertErr } = await guest.from('documents').insert({
+      token: `${token}-guest`,
+      sender_id: hostId,
+      recipient_name: 'Nope',
+      document_type: 'quote',
+      template_id: template!.id,
+      topic: 'should fail',
+      status: 'pending',
+    });
+    expect(guestInsertErr).toBeTruthy();
+
+    const { data: publicDoc, error: getErr } = await guest.rpc('get_document_by_token', { p_token: token });
+    expect(getErr, getErr?.message).toBeNull();
+    const row = asRecord(publicDoc);
+    expect(row.document_type).toBe('quote');
+    expect(row.status).toBe('pending');
+
+    const { data: viewed, error: viewErr } = await guest.rpc('record_document_event', {
+      p_token: token,
+      p_action: 'viewed',
+    });
+    expect(viewErr, viewErr?.message).toBeNull();
+    expect(asRecord(viewed).ok).toBe(true);
+
+    const { data: afterView } = await admin.from('documents').select('status').eq('token', token).maybeSingle();
+    expect(afterView?.status).toBe('viewed');
+
+    const { data: signed, error: signErr } = await guest.rpc('record_document_event', {
+      p_token: token,
+      p_action: 'signed',
+      p_esign_consent_text:
+        'I consent to do business electronically with the sender of this document, and I consent to receive related records electronically through PinOnIt.',
+      p_signature_data: 'data:image/png;base64,smoke',
+      p_document_snapshot_text: 'front yard cleanup — 450',
+      p_document_sha256: 'a'.repeat(64),
+    });
+    expect(signErr, signErr?.message).toBeNull();
+    expect(asRecord(signed).ok).toBe(true);
+    expect(asRecord(signed).status).toBe('signed');
+
+    const expiredToken = `qsmoke-exp-${runId}`;
+    await admin.from('documents').insert({
+      token: expiredToken,
+      sender_id: hostId,
+      recipient_name: 'Smoke Guest',
+      recipient_phone: '+15555550100',
+      document_type: 'quote',
+      template_id: template!.id,
+      topic: 'expired job',
+      status: 'pending',
+      verification_required: true,
+      otp_verified: true,
+      valid_until: new Date(Date.now() - 86400000).toISOString(),
+    });
+    const { data: expiredSign } = await guest.rpc('record_document_event', {
+      p_token: expiredToken,
+      p_action: 'signed',
+      p_esign_consent_text:
+        'I consent to do business electronically with the sender of this document, and I consent to receive related records electronically through PinOnIt.',
+      p_signature_data: 'data:image/png;base64,smoke',
+    });
+    expect(asRecord(expiredSign).ok).toBe(false);
+    expect(String(asRecord(expiredSign).error)).toMatch(/expir/i);
+  }, 30_000);
 });

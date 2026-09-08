@@ -23,7 +23,7 @@ const HOME_META = {
   title: 'Your mini office by text | PinOnIt',
   ogTitle: 'Your mini office by text | PinOnIt',
   description:
-    'Booking + Sign by Text — waivers, NDAs, addendums, quotes, invoices. One simple app. $8.99/mo.',
+    'Booking, Sign-by-Text, and Quote-by-Text. They approve by text; you get paid on your Zelle, Cash App, Venmo, or PayPal. $8.99/mo.',
   url: 'https://pinonit.com/',
   image: 'https://pinonit.com/og-why-pinonit.png',
   twitterCard: 'summary_large_image' as const,
@@ -51,6 +51,13 @@ const TEXT_ACTION_CARDS = [
     featured: true,
   },
   {
+    icon: Receipt,
+    title: 'Quote-by-Text',
+    you: 'Price the job, text it, they approve. Pay Now is your Zelle / Cash App / Venmo / PayPal — we never take the money.',
+    theySee: "Here's your quote for front yard — $450. View and approve: pinonit.com/d/…",
+    featured: true,
+  },
+  {
     icon: Bell,
     title: 'NeverMiss Reminders',
     you: 'Never miss a reminder. Ping customers — and optionally copy your team — by SMS, WhatsApp, email, or voice.',
@@ -60,7 +67,7 @@ const TEXT_ACTION_CARDS = [
   {
     icon: Receipt,
     title: 'Business Documents',
-    you: 'Invoices, receipts, quotes, and everyday docs in seconds.',
+    you: 'Invoices, receipts, and everyday docs in seconds.',
     theySee: 'Quote for $450 — tap to approve. Pay: paypal.me/…',
   },
   {
@@ -248,6 +255,51 @@ export function Landing() {
         </div>
       </section>
 
+      {/* Quote-by-Text featured */}
+      <section id="quote-by-text" className="py-16 md:py-20 px-6 bg-emerald-50/80 dark:bg-emerald-950/20 border-y border-emerald-100 dark:border-emerald-900/40 scroll-mt-28">
+        <div className="max-w-5xl mx-auto grid lg:grid-cols-2 gap-10 items-center">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-300 mb-2">Third workflow</p>
+            <h2 className="text-4xl md:text-5xl font-bold text-emerald-900 dark:text-emerald-200 leading-tight mb-3">
+              Quote-by-Text
+            </h2>
+            <p className="text-lg text-slate-700 dark:text-slate-200 font-medium mb-3">
+              Price it in the driveway. They approve on their phone. You get paid on the link you already use.
+            </p>
+            <p className="text-slate-600 dark:text-slate-300 mb-6">
+              Paste your Zelle, Cash App, Venmo, or PayPal. Pay Now shows after they approve. PinOnIt never handles the money.
+            </p>
+            <div className="flex flex-wrap gap-2 mb-6">
+              {['TEXT', 'VIEWED', 'APPROVE', 'PAY NOW', 'MARK PAID'].map((step, i) => (
+                <span key={step} className="inline-flex items-center gap-2">
+                  <span className="px-3 py-1.5 rounded-full bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800 text-xs font-bold text-emerald-800 dark:text-emerald-300 tracking-wide">
+                    {step}
+                  </span>
+                  {i < 4 && <span className="text-emerald-300 dark:text-emerald-700 text-sm">→</span>}
+                </span>
+              ))}
+            </div>
+            <Link
+              to="/signup"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-brand-500 hover:bg-brand-600 text-white font-bold text-sm shadow-md"
+            >
+              Try Quote-by-Text <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+          <div className="rounded-3xl border border-emerald-200 dark:border-emerald-800 bg-white dark:bg-slate-900 p-5 shadow-lg shadow-emerald-100/60 dark:shadow-none">
+            <SmsPhoneMockup
+              messages={[
+                { role: 'business' as const, text: "Pedro Lawn: Here's your quote for front yard cleanup — $450.00. View and approve: pinonit.com/d/k8x2" },
+                { role: 'system' as const, text: 'Opened · Viewed' },
+                { role: 'customer' as const, text: 'Approved with my finger ✅' },
+                { role: 'system' as const, text: 'Pay Now · your Cash App link' },
+              ]}
+              caption="Quote-by-Text — approve by SMS, pay on your link."
+            />
+          </div>
+        </div>
+      </section>
+
       {/* How it works */}
       <section id="demo" className="py-20 px-6 bg-slate-50 dark:bg-slate-900/40 scroll-mt-28">
         <div className="max-w-5xl mx-auto">
@@ -292,11 +344,13 @@ export function Landing() {
                   </div>
                   {featured && (
                     <span className="text-[11px] font-semibold text-violet-700 dark:text-violet-300">
-                      <span className="font-sign-by-text text-sm">Sign-by-Text</span>
+                      Featured
                     </span>
                   )}
                 </div>
-                <h3 className={`font-bold text-slate-900 dark:text-white mb-2 ${featured ? 'font-sign-by-text text-2xl text-violet-800 dark:text-violet-200' : ''}`}>
+                <h3 className={`font-bold text-slate-900 dark:text-white mb-2 ${
+                  title === 'Sign-by-Text' ? 'font-sign-by-text text-2xl text-violet-800 dark:text-violet-200' : featured ? 'text-xl text-emerald-800 dark:text-emerald-200' : ''
+                }`}>
                   {title}
                 </h3>
                 <p className="text-sm text-slate-600 dark:text-slate-300 mb-3">{you}</p>

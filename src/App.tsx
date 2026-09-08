@@ -70,6 +70,12 @@ const CoordinateMeetingsPage = lazy(() =>
 const DocumentsPage = lazy(() =>
   import('./pages/Documents').then((m) => ({ default: m.DocumentsPage })),
 );
+const QuotesPage = lazy(() =>
+  import('./pages/Quotes').then((m) => ({ default: m.QuotesPage })),
+);
+const CreateQuotePage = lazy(() =>
+  import('./pages/CreateQuote').then((m) => ({ default: m.CreateQuotePage })),
+);
 const CreateDocumentPage = lazy(() =>
   import('./pages/CreateDocument').then((m) => ({ default: m.CreateDocumentPage })),
 );
@@ -227,7 +233,8 @@ function App() {
               <Route path="coordinate" element={<CoordinateMeetingsPage />} />
               <Route path="qr-code" element={<QRCreatorPage />} />
               <Route path="qr" element={<Navigate to="/dashboard/qr-code" replace />} />
-              <Route path="quotes" element={<Navigate to="/dashboard/documents/new?type=quote" replace />} />
+              <Route path="quotes" element={<QuotesPage />} />
+              <Route path="quotes/new" element={<CreateQuotePage />} />
               <Route path="documents" element={<DocumentsPage />} />
               <Route path="documents/new" element={<CreateDocumentPage />} />
             </Route>

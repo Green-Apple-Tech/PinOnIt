@@ -3,6 +3,7 @@ import { sendTwilioSmsGuarded } from '../_shared/sms-send-gate.ts';
 import { hostIdFromJwt, jsonAuthError } from '../_shared/callerAuth.ts';
 import { normalizePhoneE164 } from '../_shared/phone.ts';
 import { expireStaleTrials, hostPlanIsActive } from '../_shared/hostPlan.ts';
+import { quoteLinkSms, quoteTotalsFromLines, receiptLinkSms } from '../_shared/quoteSms.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -40,7 +41,7 @@ Deno.serve(async (req: Request) => {
     return json({ ok: false, error: 'Reactivate Pro to send documents.' }, 403);
   }
 
-  let payload: { token?: string; signingUrl?: string };
+  let payload: { token?: string; signingUrl?: string; purpose?: string };
   try {
     payload = await req.json();
   } catch {
@@ -49,6 +50,7 @@ Deno.serve(async (req: Request) => {
 
   const token = payload.token?.trim();
   const signingUrl = payload.signingUrl?.trim();
+  const purpose = payload.purpose === 'quote' || payload.purpose === 'receipt' ? payload.purpose : 'link';
   if (!token || !signingUrl) {
     return json({ ok: false, error: 'token and signingUrl are required' }, 400);
   }
@@ -64,7 +66,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: doc, error } = await supabase
     .from('documents')
-    .select('id, recipient_name, recipient_phone, topic, document_type, document_type_custom, token, pay_elsewhere_url')
+    .select('id, recipient_name, recipient_phone, topic, document_type, document_type_custom, token, pay_elsewhere_url, line_items, tax_percent')
     .eq('token', token)
     .eq('sender_id', hostId)
     .maybeSingle();
@@ -74,6 +76,18 @@ Deno.serve(async (req: Request) => {
   const to = normalizePhoneE164(doc.recipient_phone);
   if (!to) return json({ ok: false, error: 'Recipient phone number is not valid' });
 
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('business_name, full_name, paid_booking_settings')
+    .eq('id', hostId)
+    .maybeSingle();
+  const settings = (profile?.paid_booking_settings ?? {}) as Record<string, unknown>;
+  const businessName =
+    (typeof profile?.business_name === 'string' && profile.business_name.trim())
+    || (typeof settings.display_name === 'string' && settings.display_name.trim())
+    || (typeof profile?.full_name === 'string' && profile.full_name.trim())
+    || 'PinOnIt';
+
   const kind =
     doc.document_type === 'other' && doc.document_type_custom?.trim()
       ? doc.document_type_custom.trim()
@@ -82,11 +96,24 @@ Deno.serve(async (req: Request) => {
   const payBit = typeof doc.pay_elsewhere_url === 'string' && doc.pay_elsewhere_url.trim()
     ? ` Pay: ${doc.pay_elsewhere_url.trim()}`
     : '';
-  const sms = await sendTwilioSmsGuarded(
-    admin,
-    to,
-    `Hi ${doc.recipient_name}, you have a ${kind}${topicBit} to review: ${signingUrl}${payBit}`,
+
+  const quoteLike = doc.document_type === 'quote' || purpose === 'quote' || purpose === 'receipt';
+  const total = quoteTotalsFromLines(
+    Array.isArray(doc.line_items) ? doc.line_items as { amount?: number }[] : [],
+    Number(doc.tax_percent) || 0,
   );
+  const shortDescription = String(doc.topic || '').trim() || kind;
+
+  let body: string;
+  if (purpose === 'receipt' || (purpose === 'link' && doc.document_type === 'receipt')) {
+    body = receiptLinkSms({ businessName, shortDescription, total, link: signingUrl });
+  } else if (quoteLike && doc.document_type === 'quote') {
+    body = quoteLinkSms({ businessName, shortDescription, total, link: signingUrl });
+  } else {
+    body = `Hi ${doc.recipient_name}, you have a ${kind}${topicBit} to review: ${signingUrl}${payBit}`;
+  }
+
+  const sms = await sendTwilioSmsGuarded(admin, to, body);
   if (!sms.ok) {
     if (sms.skipped === 'opted_out') {
       return json({ ok: false, error: 'Recipient opted out of SMS (STOP).' }, 403);

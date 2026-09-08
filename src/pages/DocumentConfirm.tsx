@@ -21,6 +21,7 @@ import {
   verifyDocumentOtp,
 } from '../lib/documents';
 import { quoteTotals } from '../lib/quoteMath';
+import { isQuoteExpired } from '../lib/quoteSms';
 import { normalizeExternalUrl } from '../lib/paymentLink';
 import {
   PLAIN_LANGUAGE_DISCLAIMER,
@@ -50,6 +51,9 @@ export function DocumentConfirmPage() {
   const [loading, setLoading] = useState(true);
   const [missing, setMissing] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [declined, setDeclined] = useState(false);
+  const [declineReason, setDeclineReason] = useState('');
+  const [showDecline, setShowDecline] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [otpBusy, setOtpBusy] = useState(false);
@@ -83,7 +87,12 @@ export function DocumentConfirmPage() {
       }
       setDoc(data);
       setOtpVerified(Boolean(data.otp_verified));
-      if (data.status === 'signed') {
+      if (data.status === 'declined') {
+        setDeclined(true);
+        setLoading(false);
+        return;
+      }
+      if (data.status === 'signed' || data.status === 'paid') {
         setSubmitted(true);
         setLoading(false);
         return;
@@ -97,6 +106,12 @@ export function DocumentConfirmPage() {
           ip,
           userAgent: navigator.userAgent,
         });
+      }
+
+      const expired = Boolean(data.expired) || isQuoteExpired(data.valid_until);
+      if (expired) {
+        setLoading(false);
+        return;
       }
 
       if (verificationOn(data) && !data.otp_verified) {
@@ -248,6 +263,28 @@ export function DocumentConfirmPage() {
     setSubmitting(false);
   }
 
+  async function handleDecline() {
+    if (!token || !doc || submitting) return;
+    setError('');
+    setSubmitting(true);
+    const ip = await fetchClientIp();
+    const { data, error: err } = await recordDocumentEvent({
+      token,
+      action: 'declined',
+      signatureData: declineReason.trim() || null,
+      ip,
+      userAgent: navigator.userAgent,
+    });
+    if (err || !data?.ok) {
+      setError(err?.message ?? data?.error ?? 'Could not decline');
+      setSubmitting(false);
+      return;
+    }
+    void generateDocumentCertificate(token, { event: 'declined' });
+    setDeclined(true);
+    setSubmitting(false);
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -264,17 +301,55 @@ export function DocumentConfirmPage() {
     );
   }
 
+  if (declined && doc) {
+    const biz = doc.sender_business_name?.trim() || 'the business';
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="max-w-sm text-center">
+          <h1 className="text-xl font-bold text-slate-900">Quote declined</h1>
+          <p className="mt-2 text-sm text-slate-500">We let {biz} know.</p>
+        </div>
+      </div>
+    );
+  }
+
   if (submitted && doc) {
     const typeLabel = documentTypeLabel(doc.document_type, doc.document_type_custom);
+    const isQuote = doc.document_type === 'quote';
+    const showPay = Boolean(doc.pay_elsewhere_url) && doc.pay_mode !== 'off' && doc.status !== 'paid';
+    const payHref = normalizeExternalUrl(doc.pay_elsewhere_url) ?? doc.pay_elsewhere_url;
+    const payAmount = doc.pay_amount_cents != null ? money(doc.pay_amount_cents / 100, doc.currency) : null;
+    const payCta =
+      doc.pay_mode === 'deposit' && payAmount
+        ? `Pay Now — ${payAmount} deposit`
+        : payAmount
+        ? `Pay Now — ${payAmount}`
+        : (doc.pay_elsewhere_label || 'Pay Now');
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
         <div className="max-w-sm text-center">
           <CheckCircle className="h-12 w-12 mx-auto text-emerald-500" />
-          <h1 className="mt-4 text-xl font-bold text-slate-900">Confirmed</h1>
+          <h1 className="mt-4 text-xl font-bold text-slate-900">
+            {doc.status === 'paid' ? 'Paid' : isQuote ? 'Approved' : 'Confirmed'}
+          </h1>
           <p className="mt-2 text-sm text-slate-500">
-            You have confirmed this {typeLabel}.
+            {doc.status === 'paid'
+              ? 'This quote is marked paid. Thank you.'
+              : isQuote
+              ? 'You approved this quote.'
+              : `You have confirmed this ${typeLabel}.`}
             {doc.signed_at && <span className="block mt-1">{formatDate(doc.signed_at)}</span>}
           </p>
+          {showPay && payHref && (
+            <a
+              href={payHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 min-h-12"
+            >
+              {payCta}
+            </a>
+          )}
         </div>
       </div>
     );
@@ -288,7 +363,9 @@ export function DocumentConfirmPage() {
       : doc?.document_type === 'receipt'
       ? 'Confirm receipt'
       : 'Confirm'
-    : doc?.confirmation_type === 'confirm_receipt'
+    : doc?.document_type === 'quote'
+      ? 'Approve'
+      : doc?.confirmation_type === 'confirm_receipt'
       ? 'Confirm receipt'
       : doc?.confirmation_type === 'approve'
       ? 'Approve with initials'
@@ -314,12 +391,20 @@ export function DocumentConfirmPage() {
       ? plainLanguageBulletsFromStored(doc.plain_language_summary)
       : [];
   const showPlainLanguage = plainBullets.length > 0;
+  const quoteExpired = Boolean(doc?.expired) || isQuoteExpired(doc?.valid_until);
+  const isQuote = doc?.document_type === 'quote';
+  const businessName = doc?.sender_business_name?.trim() || 'PinOnIt';
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-10">
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
-          <span className="font-bold tracking-tight">PinOnIt</span>
+          <span className="flex items-center gap-2 min-w-0">
+            {doc?.sender_logo_url ? (
+              <img src={doc.sender_logo_url} alt="" className="h-8 w-8 rounded-full object-cover shrink-0" />
+            ) : null}
+            <span className="font-bold tracking-tight truncate">{isQuote ? businessName : 'PinOnIt'}</span>
+          </span>
           <span className="inline-flex items-center gap-1 text-xs text-slate-400">
             <Lock className="h-3 w-3" /> Secure
           </span>
@@ -433,7 +518,7 @@ export function DocumentConfirmPage() {
           {doc?.notes && (
             <p className="mt-4 text-sm text-slate-600 whitespace-pre-wrap">{doc.notes}</p>
           )}
-          {doc?.pay_elsewhere_url && (
+          {doc?.pay_elsewhere_url && !isQuote && (
             <a
               href={normalizeExternalUrl(doc.pay_elsewhere_url) ?? doc.pay_elsewhere_url}
               target="_blank"
@@ -445,13 +530,21 @@ export function DocumentConfirmPage() {
           )}
         </div>
 
-        {viewOnly && (
+        {quoteExpired && isQuote && (
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 text-center">
+            <p className="text-sm text-slate-700">
+              This quote has expired — contact {businessName}.
+            </p>
+          </div>
+        )}
+
+        {viewOnly && !quoteExpired && (
           <p className="text-sm text-slate-500 text-center px-2">
             This quote is for your review. No signature or confirmation is required.
           </p>
         )}
 
-        {verifiedFlow && (
+        {verifiedFlow && !quoteExpired && (
         <div className="bg-white rounded-2xl border border-slate-200 p-5">
           <h2 className="text-sm font-semibold">Verify your phone</h2>
           {otpVerified ? (
@@ -491,7 +584,7 @@ export function DocumentConfirmPage() {
         </div>
         )}
 
-        {otpVerified && !viewOnly && (
+        {otpVerified && !viewOnly && !quoteExpired && (
           <>
             {needsCanvas && (
               <div className="bg-white rounded-2xl border border-slate-200 p-5">
@@ -577,6 +670,41 @@ export function DocumentConfirmPage() {
 
             <p className="text-xs text-slate-500 leading-relaxed">{LEGAL_DISCLAIMER}</p>
           </>
+        )}
+
+        {isQuote && !quoteExpired && !viewOnly && (
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
+            {!showDecline ? (
+              <button
+                type="button"
+                onClick={() => setShowDecline(true)}
+                className="w-full min-h-11 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600"
+              >
+                Decline
+              </button>
+            ) : (
+              <>
+                <label className="block">
+                  <span className="text-xs font-medium text-slate-500">Reason (optional)</span>
+                  <textarea
+                    value={declineReason}
+                    onChange={(e) => setDeclineReason(e.target.value)}
+                    rows={3}
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                    placeholder="Too high / timing / other"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => void handleDecline()}
+                  disabled={submitting}
+                  className="w-full min-h-11 rounded-xl bg-slate-800 text-white text-sm font-semibold disabled:opacity-40"
+                >
+                  {submitting ? 'Sending…' : 'Send decline'}
+                </button>
+              </>
+            )}
+          </div>
         )}
       </main>
     </div>

@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { documentsNewPath } from '../lib/documentActions';
+import { documentsNewPath, quotesNewPath } from '../lib/documentActions';
 import { documentTypeLabel } from '../lib/documents';
 import type { SmbDocument } from '../lib/types';
 
@@ -68,13 +68,22 @@ type DashTool = {
   icon: LucideIcon;
   accent: string;
   docsCombined?: boolean;
+  quoteByText?: boolean;
 };
 
 const PRIMARY_TOOLS: DashTool[] = [
   {
+    to: quotesNewPath(),
+    title: 'Quote-by-Text',
+    blurb: 'Price it, text it, they approve. Pay with their Zelle / Cash App / Venmo / PayPal.',
+    icon: FileText,
+    accent: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
+    quoteByText: true,
+  },
+  {
     to: '/dashboard/documents',
     title: 'Send Docs + Sign-by-Text',
-    blurb: 'Quotes, invoices, NDAs, waivers — verify & sign by SMS when you need it.',
+    blurb: 'NDAs, waivers, invoices — verify & sign by SMS when you need it.',
     icon: ClipboardSignature,
     accent: 'bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300',
     docsCombined: true,
@@ -237,7 +246,9 @@ export function DashboardHome({ hostId, bookings, onOpenWizard, showWizardButton
                   <Icon className="h-5 w-5" />
                 </div>
                 <p className="text-lg font-bold text-gray-900 dark:text-white">
-                  {tile.docsCombined ? (
+                  {tile.quoteByText ? (
+                    'Quote-by-Text'
+                  ) : tile.docsCombined ? (
                     <>
                       Send Docs +{' '}
                       <span className="font-sign-by-text text-xl text-violet-700 dark:text-violet-300">

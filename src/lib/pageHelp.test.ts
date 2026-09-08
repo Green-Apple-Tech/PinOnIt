@@ -19,8 +19,12 @@ describe('getPageHelp', () => {
     expect(getPageHelp('/dashboard/settings', '?tab=docs').purpose).toMatch(/waiver|template|PDF/i);
   });
 
-  it('explains Doc Center on the quotes and documents routes', () => {
-    expect(getPageHelp('/dashboard/quotes').title).toMatch(/send docs|sign-by-text|doc/i);
+  it('explains Quote-by-Text on the quotes routes', () => {
+    expect(getPageHelp('/dashboard/quotes').title).toMatch(/quote-by-text/i);
+    expect(getPageHelp('/dashboard/quotes/new').purpose).toMatch(/zelle|cash app|venmo|paypal/i);
+  });
+
+  it('explains Doc Center on the documents routes', () => {
     expect(getPageHelp('/dashboard/documents').title).toMatch(/send docs|sign-by-text/i);
     expect(getPageHelp('/dashboard/documents/new').cannotDo?.join(' ')).toMatch(/will|trust|notary/i);
   });

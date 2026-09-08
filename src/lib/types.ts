@@ -99,6 +99,8 @@ export interface Profile {
   /** Prefills the Pay button URL on new quotes, invoices, and work orders. */
   default_pay_url?: string | null;
   default_pay_label?: string | null;
+  /** Quote-by-Text validity in days; stored as valid_until when the quote is sent. */
+  default_quote_valid_days?: number | null;
   business_region?: string | null;
   platform_terms_accepted_at?: string | null;
   platform_terms_version?: string | null;
@@ -491,7 +493,7 @@ export type SmbDocumentType =
   | 'upload'
   | 'quick_addendum';
 export type DocumentConfirmationType = 'sign' | 'approve' | 'confirm_receipt';
-export type SmbDocumentStatus = 'pending' | 'viewed' | 'signed';
+export type SmbDocumentStatus = 'pending' | 'viewed' | 'signed' | 'declined' | 'paid';
 
 export interface DocumentTemplate {
   id: string;
@@ -535,6 +537,12 @@ export interface SmbDocument {
   notes?: string | null;
   pay_elsewhere_url?: string | null;
   pay_elsewhere_label?: string | null;
+  pay_mode?: 'off' | 'full' | 'deposit';
+  pay_amount_cents?: number | null;
+  valid_until?: string | null;
+  declined_at?: string | null;
+  decline_reason?: string | null;
+  paid_at?: string | null;
   currency?: string;
   file_path?: string | null;
   file_name?: string | null;
@@ -575,12 +583,17 @@ export interface PublicSmbDocument {
   notes?: string | null;
   pay_elsewhere_url?: string | null;
   pay_elsewhere_label?: string | null;
+  pay_mode?: 'off' | 'full' | 'deposit';
+  pay_amount_cents?: number | null;
+  valid_until?: string | null;
+  expired?: boolean;
   currency?: string;
   file_path?: string | null;
   file_name?: string | null;
   file_size_bytes?: number | null;
   /** Sender company name for leftover [Business Name] placeholders. */
   sender_business_name?: string | null;
+  sender_logo_url?: string | null;
   /** Display-only plain-language bullets; never part of the signed record. */
   plain_language_summary?: string | null;
   plain_language_truncated?: boolean | null;

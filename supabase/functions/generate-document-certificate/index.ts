@@ -1,5 +1,8 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { PDFDocument, StandardFonts, rgb } from 'npm:pdf-lib@1.17.1';
+import { sendTwilioSmsGuarded } from '../_shared/sms-send-gate.ts';
+import { notifySlackWebhook } from '../_shared/slack-webhook.ts';
+import { expireStaleTrials, hostPlanIsActive } from '../_shared/hostPlan.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -48,6 +51,23 @@ async function sendResendEmail(to: string, subject: string, html: string, resend
   return true;
 }
 
+async function notifyHostQuoteChannels(
+  admin: ReturnType<typeof createClient>,
+  hostId: string,
+  text: string,
+) {
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('phone, sms_opt_in, slack_webhook_url')
+    .eq('id', hostId)
+    .maybeSingle();
+  await notifySlackWebhook(profile?.slack_webhook_url, text);
+  if (!profile?.sms_opt_in || !profile.phone) return;
+  await expireStaleTrials(admin);
+  if (!(await hostPlanIsActive(admin, hostId))) return;
+  await sendTwilioSmsGuarded(admin, profile.phone as string, text);
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ ok: false, error: 'Method not allowed' }, 405);
@@ -59,7 +79,7 @@ Deno.serve(async (req: Request) => {
     return json({ ok: false, error: 'Server is not configured' }, 500);
   }
 
-  let payload: { token?: string; emailHost?: boolean };
+  let payload: { token?: string; emailHost?: boolean; event?: string };
   try {
     payload = await req.json();
   } catch {
@@ -88,7 +108,17 @@ Deno.serve(async (req: Request) => {
     .maybeSingle();
 
   if (docErr || !doc) return json({ ok: false, error: 'Document not found' }, 404);
-  if (doc.status !== 'signed') return json({ ok: false, error: 'Document is not signed yet' }, 400);
+
+  if (payload.event === 'declined') {
+    if (doc.status !== 'declined') return json({ ok: false, error: 'Document is not declined' }, 400);
+    if (callerId && callerId !== doc.sender_id) {
+      return json({ ok: false, error: 'Forbidden' }, 403);
+    }
+    await notifyHostQuoteChannels(admin, doc.sender_id as string, `${doc.recipient_name} declined your quote${doc.topic ? ` (${doc.topic})` : ''}.`);
+    return json({ ok: true, notified: true });
+  }
+
+  if (doc.status !== 'signed' && doc.status !== 'paid') return json({ ok: false, error: 'Document is not signed yet' }, 400);
   if (callerId && callerId !== doc.sender_id) {
     // Authenticated non-sender cannot fetch
     return json({ ok: false, error: 'Forbidden' }, 403);
@@ -261,6 +291,14 @@ Deno.serve(async (req: Request) => {
        <p>PinOnIt does not provide legal advice.</p>`,
       resendKey,
       fromEmail,
+    );
+  }
+
+  if (doc.document_type === 'quote') {
+    await notifyHostQuoteChannels(
+      admin,
+      doc.sender_id as string,
+      `${doc.recipient_name} approved your quote${doc.topic ? ` (${doc.topic})` : ''}.`,
     );
   }
 
