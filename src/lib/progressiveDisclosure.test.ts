@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildSidebarNav, navPathMatches } from './dashboardNav';
+import { buildSidebarNav, isDashboardNavActive, navPathMatches } from './dashboardNav';
 import { isBusinessType, isPlaceholderMeetingName, parseRevealedTools, presetsForBusinessType, profilePatchForBusinessType } from './progressiveDisclosure';
 import { taxRateForRegion } from './usSalesTax';
 import { quoteTotals } from './quoteMath';
@@ -72,6 +72,8 @@ describe('buildSidebarNav', () => {
       'NeverMiss Reminders',
     ]);
     expect(primary.some((i) => i.docsCombined)).toBe(true);
+    expect(primary.find((i) => i.docsCombined)?.children?.map((c) => c.label)).toEqual(['Quote-by-Text']);
+    expect(primary.find((i) => i.docsCombined)?.children?.[0]?.to).toBe('/dashboard/documents/new?type=quote');
     expect(moreTools.map((i) => i.label)).toEqual([
       'Group Scheduling',
       'Paid Booking',
@@ -129,6 +131,19 @@ describe('navPathMatches', () => {
     expect(navPathMatches('/dashboard/settings', '/dashboard/settings', '?tab=referrals', '')).toBe(true);
     expect(navPathMatches('/dashboard/settings?tab=availability', '/dashboard/settings', '?tab=availability', '')).toBe(true);
     expect(navPathMatches('/dashboard/settings?tab=referrals', '/dashboard/settings', '?tab=referrals', '')).toBe(true);
+  });
+});
+
+describe('isDashboardNavActive', () => {
+  const sendDocs = { to: '/dashboard/documents', label: 'Send Docs + Sign-by-Text', docsCombined: true };
+  const quote = { to: '/dashboard/documents/new?type=quote', label: 'Quote-by-Text', quoteByText: true };
+
+  it('treats Quote-by-Text as a child of Send Docs, not a sibling tab', () => {
+    expect(isDashboardNavActive(quote, '/dashboard/documents/new', '?type=quote')).toBe(true);
+    expect(isDashboardNavActive(sendDocs, '/dashboard/documents/new', '?type=quote')).toBe(false);
+    expect(isDashboardNavActive(sendDocs, '/dashboard/documents')).toBe(true);
+    expect(isDashboardNavActive(quote, '/dashboard/documents')).toBe(false);
+    expect(isDashboardNavActive(quote, '/dashboard/documents/new', '?type=nda')).toBe(false);
   });
 });
 

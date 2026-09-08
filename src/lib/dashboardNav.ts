@@ -6,12 +6,14 @@ import {
   LayoutGrid,
   Mail,
   QrCode,
+  Receipt,
   Settings,
   ShoppingBag,
   Users,
   type LucideIcon,
 } from 'lucide-react';
 import type { RevealedToolId, UiMode } from './progressiveDisclosure';
+import { documentsNewPath } from './documentActions';
 
 export const DOCS_COMBINED_NAV_LABEL = 'Send Docs + Sign-by-Text';
 
@@ -25,6 +27,8 @@ export type MoreToolsNavItem = {
   activePathPrefixes?: string[];
   /** Mixed-label docs hub (Send Docs + Sign-by-Text). */
   docsCombined?: boolean;
+  quoteByText?: boolean;
+  children?: MoreToolsNavItem[];
 };
 
 export type DashboardNavItem = {
@@ -34,6 +38,7 @@ export type DashboardNavItem = {
   badge?: string;
   children?: DashboardNavItem[];
   docsCombined?: boolean;
+  quoteByText?: boolean;
 };
 
 /** Primary sidebar — product areas only (Settings is appended after More Tools). */
@@ -45,6 +50,14 @@ export const SIMPLE_PRIMARY_NAV: MoreToolsNavItem[] = [
     path: '/dashboard/documents',
     docsCombined: true,
     activePathPrefixes: ['/dashboard/documents'],
+    children: [
+      {
+        label: 'Quote-by-Text',
+        icon: Receipt,
+        path: documentsNewPath(null, 'quote'),
+        quoteByText: true,
+      },
+    ],
   },
   { label: 'Calendar', icon: CalendarCheck, path: '/dashboard/appointments' },
   {
@@ -94,12 +107,21 @@ export function isMoreToolsNavActive(item: MoreToolsNavItem, pathname: string, s
 }
 
 export function isDashboardNavActive(
-  item: { to: string; label: string; docsCombined?: boolean },
+  item: { to: string; label: string; docsCombined?: boolean; quoteByText?: boolean },
   pathname: string,
   search = '',
   hash = '',
 ): boolean {
+  const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
+  const composingQuote =
+    pathname.startsWith('/dashboard/documents/new') && params.get('type') === 'quote';
+
+  if (item.quoteByText || item.label === 'Quote-by-Text') {
+    if (pathname === '/dashboard/quotes' || pathname.startsWith('/dashboard/quotes/')) return true;
+    return composingQuote;
+  }
   if (item.docsCombined || item.label === DOCS_COMBINED_NAV_LABEL) {
+    if (composingQuote) return false;
     return pathname === '/dashboard/documents' || pathname.startsWith('/dashboard/documents/');
   }
   return navPathMatches(item.to, pathname, search, hash);
@@ -137,6 +159,8 @@ function toDashboardItem(item: MoreToolsNavItem): DashboardNavItem {
     label: item.label,
     badge: item.badge,
     docsCombined: item.docsCombined,
+    quoteByText: item.quoteByText,
+    children: item.children?.map(toDashboardItem),
   };
 }
 

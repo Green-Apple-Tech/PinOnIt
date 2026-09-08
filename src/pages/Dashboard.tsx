@@ -36,6 +36,7 @@ type NavItem = {
   badge?: string;
   children?: NavItem[];
   docsCombined?: boolean;
+  quoteByText?: boolean;
 };
 
 // ── Quick-create booking link modal ──────────────────────────────────────────
@@ -727,14 +728,17 @@ export function Dashboard() {
 
   const uiMode = profile?.ui_mode === 'advanced' ? 'advanced' : 'simple';
   const { primary: primaryNav, moreTools: moreToolsNav, settings: settingsNav } = buildSidebarNav(uiMode);
+  const mapNav = (item: (typeof primaryNav)[number]): NavItem => ({
+    to: item.to,
+    icon: item.icon,
+    label: item.label,
+    badge: item.badge,
+    docsCombined: item.docsCombined,
+    quoteByText: item.quoteByText,
+    children: item.children?.map(mapNav),
+  });
   const mainNavItems: NavItem[] = [
-    ...primaryNav.map((item) => ({
-      to: item.to,
-      icon: item.icon,
-      label: item.label,
-      badge: item.badge,
-      docsCombined: item.docsCombined,
-    })),
+    ...primaryNav.map(mapNav),
     ...(moreToolsNav.length
       ? [{
           to: MORE_TOOLS_HUB_PATH,
@@ -779,6 +783,10 @@ export function Dashboard() {
       ? active
         ? 'bg-violet-50 dark:bg-violet-500/10 text-violet-800 dark:text-violet-300 font-semibold border-l-[3px] border-violet-500 rounded-l-none'
         : 'text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-500/10'
+      : item.quoteByText
+        ? active
+          ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 font-semibold border-l-[3px] border-emerald-600 rounded-l-none'
+          : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-900'
       : active
         ? 'bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400 font-semibold border-l-[3px] border-brand-600 dark:border-brand-500 rounded-l-none'
         : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-900';
@@ -875,9 +883,24 @@ export function Dashboard() {
     );
   };
 
+  const renderNestedNavGroup = (
+    item: NavItem,
+    opts?: { collapsed?: boolean; onNavigate?: () => void },
+  ) => (
+    <div key={item.to + item.label} className="space-y-0.5">
+      {renderNavLink(item, opts)}
+      <div className="ml-3 pl-2 border-l border-gray-200 dark:border-slate-800 space-y-0.5">
+        {item.children?.map((child) => renderNavLink(child, { ...opts, nested: true }))}
+      </div>
+    </div>
+  );
+
   const renderNavItem = (item: NavItem, opts?: { collapsed?: boolean; onNavigate?: () => void }) => {
-    if (item.children?.length && !opts?.collapsed) {
+    if (item.to === MORE_TOOLS_HUB_PATH && item.children?.length && !opts?.collapsed) {
       return renderMoreToolsGroup(item, opts);
+    }
+    if (item.children?.length && !opts?.collapsed) {
+      return renderNestedNavGroup(item, opts);
     }
     return renderNavLink(item, opts);
   };
