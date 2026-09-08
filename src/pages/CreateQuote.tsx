@@ -8,6 +8,7 @@ import { revealTool } from '../lib/progressiveDisclosure';
 import { quoteTotals } from '../lib/quoteMath';
 import { normalizeExternalUrl } from '../lib/paymentLink';
 import { PaymentLinkFields } from '../components/PaymentLinkFields';
+import { ContactAutocomplete } from '../components/ContactAutocomplete';
 import {
   defaultDocumentBody,
   documentViewUrl,
@@ -263,6 +264,13 @@ export function CreateQuotePage() {
       </p>
 
       <form onSubmit={(e) => void handleSubmit(e)} className="mt-5 space-y-4">
+        <ContactAutocomplete
+          hostId={user?.id}
+          onSelect={(c) => {
+            setRecipientName(c.fullName || [c.firstName, c.lastName].filter(Boolean).join(' '));
+            if (c.phone) setRecipientPhone(c.phone);
+          }}
+        />
         <label className="block">
           <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Customer phone <span className="text-red-500">*</span></span>
           <input

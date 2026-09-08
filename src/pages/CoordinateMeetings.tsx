@@ -24,6 +24,7 @@ import {
 } from '../lib/coordinateScheduling';
 import { Plus, X, ChevronRight, ChevronLeft, ChevronDown, Users, Clock, MapPin, MessageSquare, Check, Loader2, Trash2, AlertCircle, ArrowRight, Phone, Calendar, RefreshCw, CheckCircle2, Sparkles } from 'lucide-react';
 import { SmsBookingConsent } from '../components/SmsConsentText';
+import { ContactAutocomplete } from '../components/ContactAutocomplete';
 
 const BRAND = '#5864C6';
 
@@ -1736,6 +1737,17 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
 
                 {/* Name */}
                 <div>
+                  <ContactAutocomplete
+                    hostId={profile?.id}
+                    className="mb-3"
+                    onSelect={(c) => {
+                      updateParticipant(i, 'name', c.fullName || [c.firstName, c.lastName].filter(Boolean).join(' '));
+                      if (c.phone) {
+                        updateParticipant(i, 'phone', c.phone);
+                        setPhoneMasked((m) => m.map((v, idx) => (idx === i ? false : v)));
+                      }
+                    }}
+                  />
                   <SectionLabel>Full name</SectionLabel>
                   <input
                     type="text"

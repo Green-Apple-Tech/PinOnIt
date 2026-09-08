@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { splitContactName, toContactPickerSelection } from './contactPicker';
+import { splitContactName, toContactPickerSelection, contactSourceLabel } from './contactPicker';
 
 describe('splitContactName', () => {
   it('splits first and last', () => {
@@ -35,5 +35,15 @@ describe('toContactPickerSelection', () => {
     expect(sel.email).toBe('jane@example.com');
     expect(sel.phone).toContain('305');
     expect(sel.source).toBe('gmail');
+  });
+});
+
+describe('contactSourceLabel', () => {
+  it('labels known sources', () => {
+    expect(contactSourceLabel('gmail')).toBe('Gmail');
+    expect(contactSourceLabel('outlook')).toBe('Outlook');
+    expect(contactSourceLabel('booking')).toBe('Booked');
+    expect(contactSourceLabel('manual')).toBe('Saved');
+    expect(contactSourceLabel('device')).toBe('Phone');
   });
 });

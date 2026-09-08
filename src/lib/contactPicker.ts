@@ -40,43 +40,44 @@ export function toContactPickerSelection(c: PickerContact): ContactPickerSelecti
   };
 }
 
-/** True when the host has authorized Gmail and/or Outlook contacts sync. */
-export async function hostHasSyncedContactSources(hostId: string): Promise<boolean> {
-  const { data } = await supabase
-    .from('profiles')
-    .select('gmail_connected, gmail_contacts_count, outlook_contacts_connected, outlook_contacts_count')
-    .eq('id', hostId)
-    .maybeSingle();
-
-  if (!data) return false;
-  if (data.gmail_connected || (data.gmail_contacts_count ?? 0) > 0) return true;
-  if (data.outlook_contacts_connected || (data.outlook_contacts_count ?? 0) > 0) return true;
-  return false;
+export function contactSourceLabel(source: string): string {
+  switch (source) {
+    case 'outlook':
+      return 'Outlook';
+    case 'gmail':
+      return 'Gmail';
+    case 'booking':
+      return 'Booked';
+    case 'device':
+      return 'Phone';
+    case 'manual':
+      return 'Saved';
+    default:
+      return source?.trim() ? source : 'Saved';
+  }
 }
 
 /**
- * Search Gmail/Outlook-imported contacts (unified list).
- * Same email from both providers is one row (upsert on host_id+email).
+ * Search the host's people list (manual, bookings, Gmail, Outlook).
+ * Empty query returns a browse page of recent/alpha names.
  */
-export async function searchSyncedContacts(
+export async function searchHostContacts(
   hostId: string,
   query: string,
   limit = 8,
 ): Promise<PickerContact[]> {
-  const q = query.trim();
-  if (q.length < 1) return [];
-
-  const escaped = q.replace(/[%_,]/g, '');
+  const escaped = query.trim().replace(/[%_,]/g, '');
   let req = supabase
     .from('contacts')
     .select('id, email, full_name, phone, company, source')
     .eq('host_id', hostId)
-    .in('source', ['gmail', 'outlook'])
     .order('full_name', { ascending: true, nullsFirst: false })
     .limit(limit);
 
   if (escaped) {
-    req = req.or(`full_name.ilike.%${escaped}%,email.ilike.%${escaped}%,phone.ilike.%${escaped}%,company.ilike.%${escaped}%`);
+    req = req.or(
+      `full_name.ilike.%${escaped}%,email.ilike.%${escaped}%,phone.ilike.%${escaped}%,company.ilike.%${escaped}%`,
+    );
   }
 
   const { data, error } = await req;
@@ -85,4 +86,56 @@ export async function searchSyncedContacts(
     return [];
   }
   return (data ?? []) as PickerContact[];
+}
+
+/** @deprecated Use searchHostContacts — includes saved + booked people, not only Gmail/Outlook. */
+export async function searchSyncedContacts(
+  hostId: string,
+  query: string,
+  limit = 8,
+): Promise<PickerContact[]> {
+  return searchHostContacts(hostId, query, limit);
+}
+
+type DeviceContactPayload = {
+  name?: string[];
+  tel?: string[];
+  email?: string[];
+};
+
+type ContactsPickerNavigator = Navigator & {
+  contacts?: {
+    select: (
+      properties: string[],
+      options?: { multiple?: boolean },
+    ) => Promise<DeviceContactPayload[]>;
+  };
+};
+
+/** Android Chrome Contact Picker. iOS Safari does not support it. */
+export function canSelectDeviceContacts(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return typeof (navigator as ContactsPickerNavigator).contacts?.select === 'function';
+}
+
+export async function selectDeviceContact(): Promise<ContactPickerSelection | null> {
+  const picker = (navigator as ContactsPickerNavigator).contacts;
+  if (!picker?.select) return null;
+  try {
+    const [c] = await picker.select(['name', 'tel', 'email'], { multiple: false });
+    if (!c) return null;
+    const fullName = (c.name?.[0] ?? '').trim();
+    const { firstName, lastName } = splitContactName(fullName);
+    const tel = (c.tel?.[0] ?? '').trim();
+    return {
+      firstName,
+      lastName,
+      fullName,
+      email: (c.email?.[0] ?? '').trim(),
+      phone: tel ? formatPhoneDisplay(tel) : '',
+      source: 'device',
+    };
+  } catch {
+    return null;
+  }
 }

@@ -121,7 +121,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
       'One place for quotes, invoices, receipts, NDAs, waivers, addendums, and PDF uploads. Turn on SMS verification & signature when you need it — recipients use a phone link, no app.',
     steps: [
       'Tap New document and pick Document Type (or a Saved PDF from Settings → Docs).',
-      'Add recipient name. Phone is required when verification is on.',
+      'Add recipient name. Browse contacts to fill name and phone, or type them. Phone is required when verification is on.',
       'For quotes and invoices, paste your PayPal / Venmo / pay-anywhere link so they get a Pay button.',
       'Use “Require signature & 2FA code” for Sign-by-Text; leave it off for simple view/confirm sends.',
       'Copy the link from the list if you need to resend another way.',
@@ -146,7 +146,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
     purpose:
       'Text a price from the driveway. They open, approve with Sign-by-Text, then tap your Zelle / Cash App / Venmo / PayPal link. PinOnIt never handles money.',
     steps: [
-      'Tap Quote-by-Text (or SEND QUOTE). Phone is required; name is optional.',
+      'Tap Quote-by-Text (or SEND QUOTE). Browse contacts or type a phone; name is optional.',
       'Add line items, tax, optional note, and how many days the quote is good for (default 30).',
       'Choose Off, Full, or Deposit and paste your own pay link if they should see Pay Now after they approve.',
       'SEND QUOTE texts them the total and link. Sent = text went out. Viewed = they opened it.',
@@ -196,7 +196,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
     purpose: 'Text people who do not have a calendar. PinOnIt collects when they are free and you confirm a time.',
     steps: [
       'Set the date range you are trying to fill.',
-      'Add phone numbers and send the texts.',
+      'Add phone numbers (Browse contacts or type them) and send the texts.',
       'Review replies, then confirm the meeting.',
     ],
   },
