@@ -20,7 +20,7 @@ const HOME_META = {
   title: 'Run your business by text | PinOnIt',
   ogTitle: 'Run your business by text | PinOnIt',
   description:
-    'Quote a job in the driveway. Get it approved, signed, and paid before you drive away. Booking, Sign-by-Text, and reminders by SMS, WhatsApp, email, or voice. $8.99/month.',
+    'Quote a job in the driveway. Get it approved, signed, scheduled and paid before you drive away. Booking, Sign-by-Text, and reminders by SMS, WhatsApp, email, or voice. $8.99/month.',
   url: 'https://pinonit.com/',
   image: 'https://pinonit.com/og-why-pinonit.png',
   twitterCard: 'summary_large_image' as const,
@@ -144,7 +144,7 @@ export function Landing() {
               </span>
             </h1>
             <p className="text-lg md:text-xl font-medium text-slate-600 dark:text-slate-300 leading-snug mb-8 max-w-xl mx-auto lg:mx-0">
-              Quote a job in the driveway. Get it approved, signed, and paid before you drive away.
+              Quote a job in the driveway. Get it approved, signed, scheduled and paid before you drive away.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
               <Link

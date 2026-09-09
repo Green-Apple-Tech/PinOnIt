@@ -22,13 +22,13 @@
     <meta name="apple-mobile-web-app-title" content="Pin on It" />
 
     <!-- SEO -->
-    <meta name="description" content="Quote a job in the driveway. Get it approved, signed, and paid before you drive away. Booking, Sign-by-Text, and reminders by SMS, WhatsApp, email, or voice. $8.99/month." />
+    <meta name="description" content="Quote a job in the driveway. Get it approved, signed, scheduled and paid before you drive away. Booking, Sign-by-Text, and reminders by SMS, WhatsApp, email, or voice. $8.99/month." />
     <meta name="keywords" content="run business by text, Quote-by-Text, Sign-by-Text, Book-by-Text, SMS reminders, invoice by text, PinOnIt" />
     <meta name="robots" content="index, follow" />
 
     <!-- Open Graph — homepage / product (iMessage reads static HTML; booking slugs use booking-og) -->
     <meta property="og:title" content="Run your business by text | PinOnIt" />
-    <meta property="og:description" content="Quote a job in the driveway. Get it approved, signed, and paid before you drive away. Booking, Sign-by-Text, and reminders by SMS, WhatsApp, email, or voice. $8.99/month." />
+    <meta property="og:description" content="Quote a job in the driveway. Get it approved, signed, scheduled and paid before you drive away. Booking, Sign-by-Text, and reminders by SMS, WhatsApp, email, or voice. $8.99/month." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://pinonit.com" />
     <meta property="og:image" content="https://pinonit.com/og-why-pinonit.png" />
@@ -38,7 +38,7 @@
     <!-- Twitter — large landscape card for the marketing site -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Run your business by text | PinOnIt" />
-    <meta name="twitter:description" content="Quote a job in the driveway. Get it approved, signed, and paid before you drive away. Booking, Sign-by-Text, and reminders by SMS, WhatsApp, email, or voice. $8.99/month." />
+    <meta name="twitter:description" content="Quote a job in the driveway. Get it approved, signed, scheduled and paid before you drive away. Booking, Sign-by-Text, and reminders by SMS, WhatsApp, email, or voice. $8.99/month." />
     <meta name="twitter:image" content="https://pinonit.com/og-why-pinonit.png" />
     <!-- Sign-by-Text (cursive label only — do not use elsewhere) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -57,9 +57,14 @@
         var WATCHDOG_MS = path.indexOf('/auth/callback') === 0 ? 20000 : 5000;
         var CB = '_cb';
 
-        // Do not location.replace() on /auth/callback. The module script below still
-        // runs after this IIFE returns, so a reload burns Google's one-time `code`
-        // and iPhone users have to sign in twice. Stale-JS recovery stays below.
+        function isOauthReturn() {
+          var p = location.pathname || '';
+          return p.indexOf('/auth/callback') === 0;
+        }
+
+        // Never location.replace() on /auth/callback. A reload burns Google's one-time
+        // `code` (the module script can still run after this IIFE) and iPhone users
+        // have to complete Google sign-in twice. Show an error instead.
 
         function isAppScript(src) {
           if (!src) return false;
@@ -90,6 +95,10 @@
         }
 
         function recoverOrShow(msg) {
+          if (isOauthReturn()) {
+            show(msg);
+            return;
+          }
           try {
             var url = new URL(window.location.href);
             if (!url.searchParams.has(CB)) {

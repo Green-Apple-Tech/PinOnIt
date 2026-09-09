@@ -8,6 +8,7 @@ import { pickBestSubscription } from '../lib/plan';
 import type { Profile, Subscription } from '../lib/types';
 import { persistSignupAttribution } from '../lib/campaignAttribution';
 import { storageSet } from '../lib/safeStorage';
+import { oauthCallbackRedirect } from '../lib/oauthLogin';
 
 interface AuthContextType {
   user: User | null;
@@ -131,7 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const startOAuthRedirect = async (
     provider: 'google' | 'azure',
-    options: { redirectTo: string; scopes?: string; queryParams: Record<string, string> },
+    options: { redirectTo: string; scopes?: string; queryParams?: Record<string, string> },
   ) => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
@@ -139,23 +140,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     if (error) return { error: error.message };
     if (!data?.url) return { error: `Could not start ${provider === 'google' ? 'Google' : 'Microsoft'} sign-in. Try again.` };
-    window.location.assign(data.url);
+    // replace() so Back from the dashboard does not reopen Google and prompt again
+    window.location.replace(data.url);
     return { error: null };
   };
 
   const signInWithGoogle = async (intendedPath?: string) => {
     if (intendedPath) storageSet('auth_redirect', intendedPath);
-    const base = import.meta.env.VITE_APP_URL ?? window.location.origin;
     return startOAuthRedirect('google', {
-      redirectTo: `${base}/auth/callback`,
+      redirectTo: oauthCallbackRedirect(),
     });
   };
 
   const signInWithMicrosoft = async (intendedPath?: string) => {
     if (intendedPath) storageSet('auth_redirect', intendedPath);
-    const base = import.meta.env.VITE_APP_URL ?? window.location.origin;
     return startOAuthRedirect('azure', {
-      redirectTo: `${base}/auth/callback`,
+      redirectTo: oauthCallbackRedirect(),
       scopes: 'email profile openid User.Read',
       queryParams: { prompt: 'select_account' },
     });

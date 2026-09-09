@@ -1,12 +1,21 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { clearClientOnboardingState, clearStaleOnboardingLocalState, markOnboardingCompletedLocal, clearWizardLocal } from '../lib/onboardingState';
 import { storageGet, storageRemove } from '../lib/safeStorage';
 import { persistSignupAttribution } from '../lib/campaignAttribution';
+import {
+  clearOauthInflight,
+  isConsumedOauthCodeError,
+  markOauthInflight,
+  readOauthInflight,
+} from '../lib/oauthLogin';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 const REDIRECT_KEY = 'auth_redirect';
+
+/** One in-flight exchange per tab/module so Strict Mode or a double load cannot redeem the code twice. */
+const exchangeByCode = new Map<string, Promise<string | null>>();
 
 function extractParam(key: string): string | null {
   const fromSearch = new URLSearchParams(window.location.search).get(key);
@@ -34,15 +43,52 @@ function getPostLoginRedirect(): string {
   return '/dashboard';
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function waitForSessionUserId(timeoutMs: number): Promise<string | null> {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    const { data } = await supabase.auth.getSession();
+    if (data.session?.user?.id) return data.session.user.id;
+    await sleep(250);
+  }
+  return null;
+}
+
+async function exchangeCode(code: string): Promise<string | null> {
+  const existing = exchangeByCode.get(code);
+  if (existing) return existing;
+
+  const run = (async () => {
+    markOauthInflight(code);
+    try {
+      const { data: already } = await supabase.auth.getSession();
+      if (already.session?.user?.id) return already.session.user.id;
+
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+      if (data.session?.user?.id) return data.session.user.id;
+
+      if (error && isConsumedOauthCodeError(error.message)) {
+        return waitForSessionUserId(4000);
+      }
+      if (error) throw error;
+      return waitForSessionUserId(2000);
+    } finally {
+      clearOauthInflight();
+    }
+  })();
+
+  exchangeByCode.set(code, run);
+  return run;
+}
+
 export function AuthCallback() {
   const navigate = useNavigate();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  // Guard against double execution (React 18 Strict Mode runs effects twice in dev)
-  const exchanged = useRef(false);
 
   useEffect(() => {
-    if (exchanged.current) return;
-
     const urlError = extractParam('error');
     const urlErrorDesc = extractParam('error_description');
 
@@ -52,6 +98,7 @@ export function AuthCallback() {
     }
 
     const code = extractParam('code');
+    let cancelled = false;
 
     const handleSession = async (userId: string) => {
       void persistSignupAttribution(userId).catch(() => undefined);
@@ -69,6 +116,7 @@ export function AuthCallback() {
       } catch {
         completed = true;
       }
+      if (cancelled) return;
       const redirect = getPostLoginRedirect();
       if (!completed) {
         if (wizardActive) {
@@ -84,67 +132,63 @@ export function AuthCallback() {
       }
     };
 
-    const fail = (message: string) => setErrorMsg(message);
+    const fail = (message: string) => {
+      if (!cancelled) setErrorMsg(message);
+    };
 
     if (code) {
-      exchanged.current = true;
       const timeout = window.setTimeout(() => {
         fail('Sign-in timed out. Please try again.');
       }, 15000);
       void (async () => {
         try {
-          // A prior load (or a cache-bust reload) may already have exchanged this code.
-          const { data: existing } = await supabase.auth.getSession();
-          if (existing.session?.user) {
-            await handleSession(existing.session.user.id);
-            return;
-          }
-          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-          if (error) {
-            const { data: retry } = await supabase.auth.getSession();
-            if (retry.session?.user) {
-              await handleSession(retry.session.user.id);
+          if (readOauthInflight() === code && !exchangeByCode.has(code)) {
+            const raced = await waitForSessionUserId(4000);
+            if (raced) {
+              await handleSession(raced);
               return;
             }
-            fail(error.message);
+          }
+          const userId = await exchangeCode(code);
+          if (cancelled) return;
+          if (userId) {
+            await handleSession(userId);
             return;
           }
-          if (data.session?.user) {
-            await handleSession(data.session.user.id);
-          } else {
-            navigate(getPostLoginRedirect(), { replace: true });
-          }
+          fail('Sign-in failed. Please try again.');
         } catch (err) {
           fail(err instanceof Error ? err.message : 'Sign-in failed. Please try again.');
         } finally {
           window.clearTimeout(timeout);
         }
       })();
-      return;
+      return () => {
+        cancelled = true;
+        window.clearTimeout(timeout);
+      };
     }
 
-    // No code — wait for PKCE implicit flow via onAuthStateChange
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
         subscription.unsubscribe();
-        handleSession(session.user.id);
+        void handleSession(session.user.id);
       } else if (event === 'SIGNED_OUT') {
         subscription.unsubscribe();
-        setErrorMsg('Sign-in was cancelled or failed. Please try again.');
+        fail('Sign-in was cancelled or failed. Please try again.');
       }
     });
 
-    const timeout = setTimeout(() => {
+    const timeout = window.setTimeout(() => {
       subscription.unsubscribe();
-      setErrorMsg('Sign-in timed out. Please try again.');
+      fail('Sign-in timed out. Please try again.');
     }, 10000);
 
     return () => {
+      cancelled = true;
       subscription.unsubscribe();
-      clearTimeout(timeout);
+      window.clearTimeout(timeout);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [navigate]);
 
   if (errorMsg) {
     return (

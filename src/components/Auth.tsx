@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { supabase } from '../lib/supabase';
 import { Loader2, Mail, Lock, User, ArrowLeft, Sun, Moon, Eye, EyeOff } from 'lucide-react';
+import { isIosIsolatedWebView, readIosStandalone } from '../lib/oauthLogin';
 
 type View = 'login' | 'signup' | 'forgot';
 
@@ -39,6 +40,10 @@ export function AuthForm() {
   const redirectTo = locationState.from?.pathname ?? '/dashboard';
   const oauthInFlight = useRef(false);
   const pendingOauth = useRef<'google' | 'microsoft' | null>(null);
+  const isolatedOauth = isIosIsolatedWebView(
+    typeof navigator === 'undefined' ? '' : navigator.userAgent,
+    readIosStandalone(),
+  );
 
   useEffect(() => {
     // Don't steal an in-flight OAuth redirect if a session event fires first
@@ -181,6 +186,13 @@ export function AuthForm() {
           <div className="mb-6 flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/40 rounded-xl text-sm text-indigo-700 dark:text-indigo-500">
             <span className="text-lg">🎁</span>
             <span>You were referred! Sign up and your friend earns a $1/month credit.</span>
+          </div>
+        )}
+
+        {isolatedOauth && view !== 'forgot' && (
+          <div className="mb-6 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 rounded-xl text-sm text-amber-900 dark:text-amber-200 leading-relaxed">
+            Google sign-in on iPhone needs Safari. Tap <span className="font-semibold">···</span> then{' '}
+            <span className="font-semibold">Open in Safari</span>, and sign in once there — otherwise Google asks twice.
           </div>
         )}
 

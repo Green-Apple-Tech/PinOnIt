@@ -2,6 +2,7 @@ import { StrictMode, Component, type ErrorInfo, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import { supabaseConfigured } from './lib/supabase';
+import { isOauthReturnUrl } from './lib/oauthLogin';
 
 const CHUNK_RELOAD_KEY = 'pinonit-chunk-reload';
 const CACHE_BUST_PARAM = '_cb';
@@ -27,6 +28,7 @@ function isStaleDeployError(error: Error) {
 
 function cacheBustReload(): boolean {
   try {
+    if (isOauthReturnUrl(window.location.href)) return false;
     const url = new URL(window.location.href);
     if (url.searchParams.has(CACHE_BUST_PARAM)) return false;
     url.searchParams.set(CACHE_BUST_PARAM, String(Date.now()));
@@ -38,6 +40,7 @@ function cacheBustReload(): boolean {
 }
 
 function hardReloadOnce() {
+  if (isOauthReturnUrl(window.location.href)) return false;
   try {
     if (sessionStorage.getItem(CHUNK_RELOAD_KEY)) {
       // Prefer URL bust if session key is stuck from a prior attempt
