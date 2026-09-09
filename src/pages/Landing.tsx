@@ -132,10 +132,16 @@ export function Landing() {
         </div>
         <div className="relative max-w-6xl mx-auto grid lg:grid-cols-2 gap-10 lg:gap-12 items-center">
           <div className="text-center lg:text-left">
-            <h1 className="font-bold tracking-tight text-slate-900 dark:text-white leading-[1.28] mb-4">
-              <span className="block text-[clamp(1.05rem,2.6vw,1.35rem)]">Book a Meeting by Text</span>
-              <span className="block text-[clamp(1.2rem,3vw,1.55rem)]">Sign a Document by Text</span>
-              <span className="block text-[clamp(1.4rem,3.5vw,1.85rem)]">Run your business by text</span>
+            <h1 className="font-bold tracking-tight leading-[1.35] mb-4">
+              <span className="block text-[1.25rem] md:text-[1.5rem] text-brand-600 dark:text-brand-400">
+                Book a Meeting by Text
+              </span>
+              <span className="block text-[1.5rem] md:text-[1.75rem] text-violet-600 dark:text-violet-400">
+                Sign a Document by Text
+              </span>
+              <span className="block text-[1.75rem] md:text-[2rem] text-emerald-700 dark:text-emerald-400">
+                Run your business by text
+              </span>
             </h1>
             <p className="text-lg md:text-xl font-medium text-slate-600 dark:text-slate-300 leading-snug mb-8 max-w-xl mx-auto lg:mx-0">
               Quote a job in the driveway. Get it approved, signed, and paid before you drive away.
