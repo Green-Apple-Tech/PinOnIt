@@ -87,6 +87,13 @@ const PRIMARY_TOOLS: DashTool[] = [
     docsCombined: true,
   },
   {
+    to: '/dashboard/appointments',
+    title: 'Calendar',
+    blurb: 'Your schedule, upcoming meetings, and availability.',
+    icon: CalendarDays,
+    accent: 'bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300',
+  },
+  {
     to: '/dashboard/booking',
     title: 'Booking',
     blurb: 'Your booking page, services, and sharing tools.',
@@ -103,13 +110,6 @@ const PRIMARY_TOOLS: DashTool[] = [
 ];
 
 const OTHER_TOOLS: DashTool[] = [
-  {
-    to: '/dashboard/appointments',
-    title: 'Calendar',
-    blurb: 'Your schedule, upcoming meetings, and availability.',
-    icon: CalendarDays,
-    accent: 'bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300',
-  },
   {
     to: '/dashboard/group-scheduling',
     title: 'Group Scheduling',
@@ -262,7 +262,7 @@ export function DashboardHome({ hostId, bookings, onOpenWizard, showWizardButton
             );
           })}
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {OTHER_TOOLS.map((tile) => {
             const Icon = tile.icon;
             return (

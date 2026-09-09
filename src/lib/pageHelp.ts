@@ -50,10 +50,10 @@ const GUIDES: Record<string, PageHelpGuide> = {
   home: {
     title: 'Dashboard',
     purpose:
-      'Your home base — big tiles for Quote-by-Text, Send Docs + Sign-by-Text, Booking, and NeverMiss. Calendar and extra tools sit in the smaller row below. Glance cards show what needs attention.',
+      'Your home base — big tiles for Quote-by-Text, Send Docs + Sign-by-Text, Calendar, Booking, and NeverMiss, plus smaller shortcuts to the rest. Glance cards show what needs attention.',
     steps: [
       'Set your booking URL in Settings if you have not already (pinonit.com/yourname).',
-      'Use the large tiles for everyday work — Quote-by-Text is its own dashboard section and also a document type inside Send Docs. Calendar and extra tools are the smaller tiles below.',
+      'Use the large tiles for everyday work — Quote-by-Text is its own dashboard section and also a document type inside Send Docs. Calendar and Booking are both key tiles. Smaller tiles open extra tools.',
       'When someone books or signs, it shows in the glance cards below.',
       'Tap How to anytime — or Ask if you have a specific question.',
     ],
