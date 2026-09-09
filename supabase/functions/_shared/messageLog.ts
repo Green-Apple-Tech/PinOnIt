@@ -9,10 +9,11 @@ export async function logHostSmsUsage(
     subject: string;
     body: string;
     status?: 'sent' | 'failed';
+    bookingId?: string | null;
   },
 ): Promise<void> {
   const { error } = await supabase.from('message_log').insert({
-    booking_id: null,
+    booking_id: row.bookingId ?? null,
     host_id: row.hostId,
     template_id: null,
     channel: 'sms',

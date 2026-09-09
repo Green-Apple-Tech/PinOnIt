@@ -13,6 +13,27 @@ export function addRecurrence(date: Date, frequency: RecurrenceFrequency): Date 
   return next;
 }
 
+/** Guest book flow only inserts this many visits (first + next). Preview must match. */
+export const GUEST_RECURRING_MATERIALIZED_MAX = 2;
+
+export function guestRecurringDatesToCreate(
+  start: Date,
+  frequency: RecurrenceFrequency,
+  endType: RecurrenceEndType,
+  endDate: string | null,
+  endOccurrences: number | null,
+): Date[] {
+  const dates: Date[] = [new Date(start)];
+  const next = addRecurrence(start, frequency);
+  if (
+    dates.length < GUEST_RECURRING_MATERIALIZED_MAX
+    && !shouldStopRecurrence(next, 2, endType, endDate, endOccurrences)
+  ) {
+    dates.push(next);
+  }
+  return dates;
+}
+
 export function getUpcomingRecurrenceDates(
   start: Date,
   frequency: RecurrenceFrequency,

@@ -51,6 +51,7 @@ describe('matchHelpFaq', () => {
     expect(matchHelpFaq('What does Viewed mean?')?.id).toBe('quote-status');
     expect(matchHelpFaq('How do I mark a quote paid?')?.id).toBe('quote-status');
     expect(matchHelpFaq('Find in contacts does nothing')?.id).toBe('find-contacts');
+    expect(matchHelpFaq('On my way')?.id).toBe('on-my-way');
   });
 });
 

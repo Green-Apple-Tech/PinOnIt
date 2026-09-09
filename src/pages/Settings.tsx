@@ -23,6 +23,7 @@ import { QRModal } from '../components/QRModal';
 import { ColorSwatchRow } from '../components/ColorSwatchRow';
 import { toast } from '../components/Toast';
 import { SlackWebhookCard } from '../components/SlackWebhookCard';
+import { DEFAULT_ON_MY_WAY_TEMPLATE, ON_MY_WAY_SMS_ENABLED } from '../lib/onMyWay';
 import { NotificationTestPanel } from '../components/NotificationTestPanel';
 import { AlsoRemindPeople } from '../components/AlsoRemindPeople';
 import { BookingBlocksSettings } from '../components/BookingBlocksSettings';
@@ -486,6 +487,9 @@ export function SettingsPage() {
   const [voiceMessageTemplate, setVoiceMessageTemplate] = useState(profile?.voice_message_template ?? '');
   const [savingVoice, setSavingVoice] = useState(false);
   const [savedVoice, setSavedVoice] = useState(false);
+  const [onMyWayTemplate, setOnMyWayTemplate] = useState(profile?.on_my_way_template ?? '');
+  const [savingOnMyWay, setSavingOnMyWay] = useState(false);
+  const [savedOnMyWay, setSavedOnMyWay] = useState(false);
 
   // Emergency alert contacts
   const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([]);
@@ -644,6 +648,18 @@ export function SettingsPage() {
     setSavingVoice(false);
     setSavedVoice(true);
     setTimeout(() => setSavedVoice(false), 2000);
+  };
+
+  const handleSaveOnMyWayTemplate = async () => {
+    if (!user) return;
+    setSavingOnMyWay(true);
+    await supabase.from('profiles').update({
+      on_my_way_template: onMyWayTemplate.trim() || null,
+    }).eq('id', user.id);
+    setSavingOnMyWay(false);
+    setSavedOnMyWay(true);
+    void refreshProfile();
+    setTimeout(() => setSavedOnMyWay(false), 2000);
   };
 
   const handleLogoFile = useCallback(async (file: File) => {
@@ -1424,6 +1440,48 @@ export function SettingsPage() {
           >
             {savingVoice ? <Loader2 className="h-4 w-4 animate-spin" /> : savedVoice ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}
             {savedVoice ? 'Saved!' : 'Save'}
+          </button>
+        </div>
+      )}
+
+      {section === 'general' && tab === 'profile' && (
+        <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-4">
+          <div>
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white">On my way text</h2>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+              Calendar → Today → On my way. Merge fields:{' '}
+              <code className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-[11px]">{'{{business_name}}'}</code>{' '}
+              <code className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-[11px]">{'{{host_first_name}}'}</code>{' '}
+              <code className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-[11px]">{'{{eta}}'}</code>
+              . Footer is Reply STOP to opt out only.
+            </p>
+          </div>
+          {!ON_MY_WAY_SMS_ENABLED && (
+            <p className="text-xs text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-lg px-3 py-2">
+              On-my-way texts stay off until the SMS campaign sample is approved. Email fallback still works when the guest did not opt in to SMS.
+            </p>
+          )}
+          <textarea
+            value={onMyWayTemplate}
+            onChange={(e) => setOnMyWayTemplate(e.target.value)}
+            rows={3}
+            placeholder={DEFAULT_ON_MY_WAY_TEMPLATE}
+            className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500 transition resize-none"
+          />
+          <p className="text-xs text-slate-500 italic">
+            {(onMyWayTemplate.trim() || DEFAULT_ON_MY_WAY_TEMPLATE)
+              .replaceAll('{{business_name}}', 'Acme Lawn Care')
+              .replaceAll('{{host_first_name}}', 'Alex')
+              .replaceAll('{{eta}}', '20')}
+          </p>
+          <button
+            type="button"
+            onClick={() => void handleSaveOnMyWayTemplate()}
+            disabled={savingOnMyWay}
+            className="flex items-center gap-2 px-5 py-2.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-all"
+          >
+            {savingOnMyWay ? <Loader2 className="h-4 w-4 animate-spin" /> : savedOnMyWay ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}
+            {savedOnMyWay ? 'Saved!' : 'Save'}
           </button>
         </div>
       )}

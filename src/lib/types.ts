@@ -112,6 +112,9 @@ export interface Profile {
   sign_by_text_scope_accepted_at?: string | null;
   /** Company / DBA name for Doc Center “[Business Name]” and public branding. */
   business_name?: string | null;
+  on_my_way_template?: string | null;
+  on_my_way_default_eta_minutes?: number | null;
+  on_my_way_eta_usage?: Record<string, number> | null;
   created_at: string;
   updated_at: string;
 }
@@ -316,6 +319,8 @@ export interface Booking {
   is_recurring: boolean;
   recurrence_frequency: RecurrenceFrequency | null;
   parent_booking_id: string | null;
+  sent_on_my_way_at?: string | null;
+  on_my_way_eta_minutes?: number | null;
   created_at: string;
   updated_at: string;
   services?: Service;

@@ -9,6 +9,7 @@ import { toast } from '../components/Toast';
 import { syncBookingToExternalCalendarsAsHost } from '../lib/writeCalendarEvent';
 import { BookingAlsoRemindPicker } from '../components/BookingAlsoRemindPicker';
 import { ContactAutocomplete } from '../components/ContactAutocomplete';
+import { OnMyWayControls } from '../components/OnMyWayControls';
 import { parseAlsoRemindIds } from '../lib/reminderAlso';
 import { hostCalendarWindow } from '../lib/queryWindow';
 import { CalendarConnections } from '../components/CalendarConnections';
@@ -37,6 +38,7 @@ import {
   MessageSquare,
   Ban,
   Flag,
+  Navigation,
 } from 'lucide-react';
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -1385,6 +1387,16 @@ export function AppointmentsPage() {
                               <Bell className="h-3.5 w-3.5" />
                             </button>
 
+                            {isToday && !isInactive && (
+                              <OnMyWayControls
+                                booking={b}
+                                compact
+                                onSent={(patch) => {
+                                  setBookings((prev) => prev.map((row) => row.id === b.id ? { ...row, ...patch } : row));
+                                }}
+                              />
+                            )}
+
                             <button
                               onClick={(e) => { e.stopPropagation(); handleToggleCritical(b); }}
                               className={`shrink-0 p-1.5 rounded transition-colors ${b.is_critical ? 'text-red-500 bg-red-50 dark:bg-red-900/20' : 'text-slate-300 dark:text-slate-600 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10'}`}
@@ -1661,12 +1673,18 @@ export function AppointmentsPage() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2">
-                  <Repeat className="h-5 w-5 text-slate-500" />
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Recurring booking</h3>
+                  {detailBooking.is_recurring
+                    ? <Repeat className="h-5 w-5 text-slate-500" />
+                    : <Navigation className="h-5 w-5 text-slate-500" />}
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                    {detailBooking.is_recurring ? 'Recurring booking' : 'Booking'}
+                  </h3>
                 </div>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                  Recurring — {(detailBooking as Booking & { services?: Service }).services?.name ?? 'Appointment'}{' '}
-                  {detailBooking.recurrence_frequency ? formatRecurrenceHostLabel(detailBooking.recurrence_frequency) : ''}
+                  {(detailBooking as Booking & { services?: Service }).services?.name ?? 'Appointment'}
+                  {detailBooking.is_recurring && detailBooking.recurrence_frequency
+                    ? ` — ${formatRecurrenceHostLabel(detailBooking.recurrence_frequency)}`
+                    : ''}
                 </p>
               </div>
               <button onClick={() => setDetailBooking(null)} className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded"><X className="h-5 w-5" /></button>
@@ -1681,7 +1699,16 @@ export function AppointmentsPage() {
                 </p>
               )}
             </div>
-            {detailBooking.status !== 'canceled' && (
+            {toDateKey(new Date(detailBooking.start_time)) === toDateKey(today) && detailBooking.status !== 'canceled' && (
+              <OnMyWayControls
+                booking={detailBooking}
+                onSent={(patch) => {
+                  setBookings((prev) => prev.map((row) => row.id === detailBooking.id ? { ...row, ...patch } : row));
+                  setDetailBooking((prev) => prev ? { ...prev, ...patch } : prev);
+                }}
+              />
+            )}
+            {detailBooking.is_recurring && detailBooking.status !== 'canceled' && (
               <div className="flex flex-col gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                 <button onClick={() => handleCancelRecurringOccurrence(detailBooking)}
                   className="w-full py-2.5 text-sm font-semibold rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
@@ -1768,7 +1795,7 @@ export function AppointmentsPage() {
               </button>
             </>
           )}
-          {eventMenu.target.kind === 'booking' && eventMenu.target.booking.is_recurring && (
+          {eventMenu.target.kind === 'booking' && (
             <button
               type="button"
               className="w-full flex items-center gap-2 px-3 py-2 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
@@ -1777,7 +1804,10 @@ export function AppointmentsPage() {
                 setEventMenu(null);
               }}
             >
-              <Repeat className="h-4 w-4 text-slate-400" /> Recurring options
+              {eventMenu.target.booking.is_recurring
+                ? <Repeat className="h-4 w-4 text-slate-400" />
+                : <Navigation className="h-4 w-4 text-slate-400" />}
+              {eventMenu.target.booking.is_recurring ? 'Recurring options' : 'Booking details'}
             </button>
           )}
         </div>

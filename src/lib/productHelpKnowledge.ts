@@ -119,6 +119,17 @@ export const HELP_FAQS: HelpFaq[] = [
       'Open NeverMiss Reminders and turn on the reminder types you want (confirmation, 24h, 1h, etc.). Nothing sends until a reminder is enabled. You can also set the bell on a calendar event for that meeting only.',
   },
   {
+    id: 'on-my-way',
+    questions: [
+      'on my way',
+      'how do i say i am on the way',
+      'en route text',
+      'eta text',
+    ],
+    answer:
+      'On Calendar, open today’s agenda and tap On my way on that visit (or Booking details). Pick 10 / 20 / 30 / 45 minutes or type one. If they opted in to SMS, it texts them; if not, you can email instead. Edit the wording in Settings → Profile — {{eta}} is the minutes you pick. Reply STOP only, no cancel/reschedule replies. On-my-way texts stay off until our SMS campaign includes that sample.',
+  },
+  {
     id: 'pdf-size',
     questions: [
       'what size pdf',

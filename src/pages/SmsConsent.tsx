@@ -16,13 +16,7 @@ import {
 } from '../lib/smsCompliance';
 import { shouldRecordSmsOptIn } from '../lib/bookingSmsConsent';
 import { SUPPORT_EMAIL } from '../lib/contactEmail';
-
-const SMS_EXAMPLES = [
-  'Reminder: Your appointment with [Host Name] is tomorrow at [Time]. Reply STOP to unsubscribe.',
-  'Your appointment with [Host Name] has been confirmed for [Date] at [Time]. Reply STOP to unsubscribe.',
-  'Your appointment with [Host Name] has been rescheduled to [Date] at [Time]. Reply STOP to unsubscribe.',
-  'Your appointment with [Host Name] has been canceled. Contact the host for details. Reply STOP to unsubscribe.',
-];
+import { SMS_EXAMPLES } from './smsExamples';
 
 function SmsOptInForm() {
   const [name, setName] = useState('');

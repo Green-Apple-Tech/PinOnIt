@@ -10,7 +10,7 @@ import {
   formatRecurrenceBadge,
   formatRecurrencePeriod,
   getRecurrenceEndType,
-  getUpcomingRecurrenceDates,
+  guestRecurringDatesToCreate,
   shouldStopRecurrence,
 } from '../lib/recurring';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
@@ -915,7 +915,17 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
     const [y, m, d] = selectedDate.split('-').map(Number);
     const [sh, sm] = selectedSlot.split(':').map(Number);
     const start = new Date(y, m - 1, d, sh, sm);
-    return getUpcomingRecurrenceDates(start, selectedService.recurrence_frequency, 4);
+    const endType = getRecurrenceEndType(
+      selectedService.recurrence_end_date,
+      selectedService.recurrence_end_occurrences,
+    );
+    return guestRecurringDatesToCreate(
+      start,
+      selectedService.recurrence_frequency,
+      endType,
+      selectedService.recurrence_end_date,
+      selectedService.recurrence_end_occurrences,
+    );
   }, [isRecurringService, selectedService, selectedDate, selectedSlot]);
 
   const recurringFrequencyLabel = selectedService?.recurrence_frequency
@@ -1809,7 +1819,9 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                       </span>
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-slate-500 mb-2">Your upcoming appointments:</p>
+                      <p className="text-xs font-semibold text-slate-500 mb-2">
+                        We’ll book {recurringPreviewDates.length === 1 ? 'this visit' : 'these two visits'} now:
+                      </p>
                       <ul className="space-y-1.5">
                         {recurringPreviewDates.map((dt, i) => (
                           <li key={i} className="text-sm text-slate-700">
@@ -1818,8 +1830,8 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                           </li>
                         ))}
                       </ul>
-                      <p className="text-xs text-slate-500 mt-2 italic">
-                        ...and {selectedService?.recurrence_frequency === 'monthly' ? 'every month' : selectedService?.recurrence_frequency === 'biweekly' ? 'every 2 weeks' : 'every week'} after that
+                      <p className="text-xs text-slate-500 mt-2">
+                        Later visits are not created automatically. Ask the host to add more on their calendar if you need them.
                       </p>
                     </div>
                   </div>
@@ -1860,7 +1872,9 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                         </span>
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">Your upcoming appointments:</p>
+                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">
+                          We’ll book {recurringPreviewDates.length === 1 ? 'this visit' : 'these two visits'} now:
+                        </p>
                         <ul className="space-y-1.5">
                           {recurringPreviewDates.map((dt, i) => (
                             <li key={i} className="text-sm text-slate-700 dark:text-slate-300">
@@ -1869,15 +1883,15 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                             </li>
                           ))}
                         </ul>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 italic">
-                          ...and {selectedService.recurrence_frequency === 'monthly' ? 'every month' : selectedService.recurrence_frequency === 'biweekly' ? 'every 2 weeks' : 'every week'} after that
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                          Later visits are not created automatically. Ask the host to add more on their calendar if you need them.
                         </p>
                       </div>
                       <label className="flex items-start gap-2.5 cursor-pointer">
                         <input type="checkbox" checked={recurringAcknowledged} onChange={(e) => setRecurringAcknowledged(e.target.checked)}
                           className="mt-0.5 h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600 shrink-0" />
                         <span className="text-sm text-slate-700 dark:text-slate-300">
-                          I understand this is a recurring booking and I will be scheduled each {formatRecurrencePeriod(selectedService.recurrence_frequency)}
+                          I understand this {formatRecurrencePeriod(selectedService.recurrence_frequency)} service will book the visit{recurringPreviewDates.length === 1 ? '' : 's'} listed above
                           {isPaidService ? ' (payment to be arranged with host)' : ''}
                         </span>
                       </label>

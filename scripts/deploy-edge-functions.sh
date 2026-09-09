@@ -42,6 +42,7 @@ deploy dispatch-quote-reminders
 deploy summarize-document-template
 deploy booking-og --no-verify-jwt
 deploy send-reminder
+deploy send-on-my-way
 deploy coordinate-sms
 deploy booking-reply
 deploy complete-reschedule

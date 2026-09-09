@@ -78,7 +78,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
     purpose: 'See every PinOnIt booking and busy times from connected calendars. Call, text, or reschedule from here.',
     steps: [
       'Connect Google, Outlook, or Apple in Settings → Availability so you do not double-book.',
-      'Tap a meeting to see the client, location, and actions.',
+      'Tap a meeting to see the client, location, and actions. On the agenda Today group, tap On my way to text that you are en route (or email if they did not opt in to SMS).',
       'If the calendar looks empty, share your booking link from the Dashboard.',
     ],
     canDo: ['View and manage bookings', 'Open NeverMiss from an event bell'],
@@ -103,7 +103,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
       'Turn on Booking Confirmation and 24h / 1h guest reminders on this page.',
       'Optional: add coworkers under Settings and copy them on events from Calendar.',
       'Use Advanced for voice defaults and per-contact overrides in Contacts.',
-      'On Calendar, the bell on an event can customize that meeting only.',
+      'On Calendar, the bell on an event can customize that meeting only. Edit the On my way text under Settings → Profile ({{eta}} is the minutes you pick).',
     ],
     canDo: ['Remind guests and coworkers before meetings', 'Use email / SMS / WhatsApp / voice when enabled'],
     cannotDo: ['Reminders do not send until you enable them', 'PinOnIt cannot force a carrier to deliver every SMS'],
