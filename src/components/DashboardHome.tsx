@@ -96,7 +96,7 @@ const PRIMARY_TOOLS: DashTool[] = [
   {
     to: '/dashboard/booking',
     title: 'Booking',
-    blurb: 'Your booking page, services, and sharing tools.',
+    blurb: 'Your booking page, services, recurring bookings, and sharing tools.',
     icon: ExternalLink,
     accent: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300',
   },

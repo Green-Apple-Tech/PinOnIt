@@ -755,12 +755,12 @@ export function CreateDocumentPage() {
             />
             <span>
               <span className="block text-sm font-semibold text-gray-900 dark:text-white">
-                Require SMS verification code
+                Require SMS verification before they sign
               </span>
               <span className="block mt-1 text-xs text-gray-500 dark:text-slate-400">
                 {verificationRequired
-                  ? 'They enter a 6-digit code we text to the same number, then sign. Default on for waivers, NDAs, and contracts — you can change this per template in Settings → Docs.'
-                  : 'No extra code. They already got the link by text. They still sign and check ESIGN consent. Default for quotes and invoices.'}
+                  ? 'They enter a 6-digit code we text to the same number, then sign. Signature and ESIGN stay on either way. Default on for waivers, NDAs, and contracts — change it per template in Settings → Docs.'
+                  : 'They always sign and check ESIGN. This only adds a 6-digit code — leave it off if they already got the link by text. Default for quotes and invoices.'}
               </span>
             </span>
           </label>

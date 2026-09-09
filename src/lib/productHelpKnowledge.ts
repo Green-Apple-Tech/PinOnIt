@@ -4,7 +4,7 @@ import type { PageHelpGuide } from './pageHelp';
 export const PRODUCT_CAN = [
   'Book clients with one shareable link and calendar sync (Google, Outlook, Apple).',
   'Send quotes, invoices, receipts, NDAs, waivers, addendums, and PDF uploads from Send Docs. New Quote on the dashboard opens that same composer with quote selected: they approve by Sign-by-Text, then Pay Now on your Zelle/Cash App/Venmo/PayPal.',
-  'Require SMS verification + signature when you need Sign-by-Text, or send without it for simple confirms.',
+  'Every Send Docs item is signed with ESIGN consent. Optionally require a 6-digit SMS code first (on for waivers, NDAs, and contracts; off for quotes and invoices).',
   'Send NeverMiss reminders by email, SMS, WhatsApp, or voice for bookings and events.',
   'Use QR codes, email signatures, paid booking pages, and group scheduling / SMS coordinate.',
 ];
@@ -50,7 +50,7 @@ export const HELP_FAQS: HelpFaq[] = [
       'how do i send an invoice',
     ],
     answer:
-      'Open Send Docs + Sign-by-Text → New document → pick Document Type → add a recipient (Find in contacts fills name, phone, and email) → turn on “Require SMS verification code” if you need the extra code → Send. Recipients open a link on their phone; no app required. Quotes, waivers, and NDAs all use this same screen.',
+      'Open Send Docs + Sign-by-Text → New document → pick Document Type → add a recipient (Find in contacts fills name, phone, and email) → turn on “Require SMS verification before they sign” if you need the extra 6-digit code → Send. Recipients always sign and check ESIGN; the checkbox is only the extra code. Quotes, waivers, and NDAs all use this same screen.',
   },
   {
     id: 'how-send-quote',
@@ -97,6 +97,19 @@ export const HELP_FAQS: HelpFaq[] = [
     ],
     answer:
       'Type a name, phone, or email under Find in contacts, or tap Browse. Choosing a result fills name, phone, and email and shows a chip you can clear. Each row shows what will fill. Contacts with no mobile are dimmed — pick them, then type a number so we can send by text. Outlook lists that jammed several people into one entry are split when you sync.',
+  },
+  {
+    id: 'recurring-bookings',
+    questions: [
+      'where are recurring bookings',
+      'recurring service',
+      'how do i set up recurring',
+      'weekly lawn',
+      'standing jobs',
+      'repeating bookings',
+    ],
+    answer:
+      'Recurring bookings live on each service — there is no separate Recurring page. Open Booking → Recurring bookings, or Settings → Event types. Add or edit a service and turn on Recurring bookings (weekly, every 2 weeks, or monthly). Guests pick a time; PinOnIt books the first visit plus the next one. Manage those on Calendar.',
   },
   {
     id: 'booking-link',

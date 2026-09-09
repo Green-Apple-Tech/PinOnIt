@@ -14,7 +14,9 @@ import {
   Share2,
   ArrowRight,
   Loader2,
+  Repeat,
 } from 'lucide-react';
+import { formatRecurrenceBadge } from '../lib/recurring';
 
 export function BookingPage() {
   const { profile } = useAuth();
@@ -52,7 +54,7 @@ export function BookingPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Booking</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Your booking page, services, and sharing tools.
+          Your booking page, services, recurring bookings, and sharing tools.
         </p>
       </div>
 
@@ -138,6 +140,24 @@ export function BookingPage() {
         </Link>
       </div>
 
+      <Link
+        to="/dashboard/settings?tab=event-types&highlight=recurring"
+        className="flex items-start gap-4 rounded-2xl border border-indigo-200 dark:border-indigo-800/60 bg-indigo-50/70 dark:bg-indigo-950/20 p-5 md:p-6 mb-6 hover:border-indigo-300 dark:hover:border-indigo-600/60 hover:shadow-sm transition-all"
+      >
+        <div className="h-12 w-12 rounded-xl bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center shrink-0">
+          <Repeat className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Recurring bookings</h2>
+          <p className="text-sm text-slate-600 dark:text-slate-300 mb-2">
+            Weekly lawn, biweekly pool, monthly pest. Turn it on when you add or edit a service — it is not a separate menu.
+          </p>
+          <span className="inline-flex items-center gap-1 text-sm font-semibold text-indigo-700 dark:text-indigo-300">
+            Set up recurring <ArrowRight className="h-4 w-4" />
+          </span>
+        </div>
+      </Link>
+
       {/* Services list */}
       <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 md:p-6">
         <div className="flex items-center justify-between mb-4">
@@ -174,7 +194,15 @@ export function BookingPage() {
                 className="flex items-center justify-between gap-3 p-3 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700 transition-colors"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{svc.name}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{svc.name}</p>
+                    {svc.is_recurring && svc.recurrence_frequency && (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800/50">
+                        <Repeat className="h-3 w-3" />
+                        {formatRecurrenceBadge(svc.recurrence_frequency)}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     {svc.duration_minutes} min{svc.price_cents ? ` · $${(svc.price_cents / 100).toFixed(2)}` : ''}
                   </p>

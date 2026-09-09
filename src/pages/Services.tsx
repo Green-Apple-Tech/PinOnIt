@@ -11,7 +11,7 @@ import { LOCATION_TYPES, MEETING_TYPE_META } from '../lib/types';
 import {
   Plus, Trash2, X, Check, Loader2, MapPin, Clock, Settings2, MessageSquare,
   Copy, Smartphone, Mail, Pencil, ExternalLink, Link2, AlertCircle,
-  Search, CreditCard, QrCode, Zap, Bell, ChevronDown, Shield, HelpCircle, PhoneCall,
+  Search, CreditCard, QrCode, Zap, Bell, ChevronDown, Shield, HelpCircle, PhoneCall, Repeat,
 } from 'lucide-react';
 import { QRModal } from '../components/QRModal';
 import { ColorSwatchRow } from '../components/ColorSwatchRow';
@@ -514,6 +514,18 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, loading, services]);
 
+  useEffect(() => {
+    if (loading || searchParams.get('highlight') !== 'recurring') return;
+    const id = editingId ? 'recurring-bookings' : 'recurring-bookings-help';
+    const t = window.setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({
+        behavior: 'smooth',
+        block: editingId ? 'center' : 'start',
+      });
+    }, editingId ? 250 : 80);
+    return () => window.clearTimeout(t);
+  }, [searchParams, loading, editingId]);
+
   const openEdit = async (svc: Service) => {
     const currentType = svc.meeting_type ?? 'one_on_one';
     lastRegularMeetingType.current = currentType === 'group' ? 'group' : 'one_on_one';
@@ -579,7 +591,7 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
   const handleSave = async () => {
     if (!profile) return;
     if (!form.name.trim()) { setNameError('Event name is required.'); return; }
-    if (form.is_recurring && !form.recurrence_frequency) { setNameError('Select a recurrence frequency for recurring services.'); return; }
+    if (form.is_recurring && !form.recurrence_frequency) { setNameError('Select a recurrence frequency for recurring bookings.'); return; }
     setNameError('');
     setSaving(true);
     const priceCents = priceStr ? Math.round(parseFloat(priceStr) * 100) : 0;
@@ -752,7 +764,9 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Event types</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">Manage your meeting types and scheduling links.</p>
+          <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
+            Meeting types, scheduling links, and recurring bookings (weekly, every 2 weeks, or monthly).
+          </p>
         </div>
         <button
           onClick={() => openNew()}
@@ -763,6 +777,32 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
       </div>
 
       {/* Pro upgrade banner removed — trial includes unlimited event types */}
+
+      {searchParams.get('highlight') === 'recurring' && (
+        <div
+          id="recurring-bookings-help"
+          className="mb-6 rounded-2xl border border-indigo-200 dark:border-indigo-800/60 bg-indigo-50/80 dark:bg-indigo-950/20 p-4 md:p-5"
+        >
+          <div className="flex items-start gap-3">
+            <div className="h-10 w-10 rounded-xl bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center shrink-0">
+              <Repeat className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-gray-900 dark:text-white">Recurring bookings</p>
+              <p className="mt-1 text-sm text-gray-600 dark:text-slate-300">
+                This is the switch. Add a service or edit one below, then turn on Recurring bookings and pick weekly, every 2 weeks, or monthly.
+              </p>
+              <button
+                type="button"
+                onClick={() => openNew()}
+                className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-full"
+              >
+                <Plus className="h-4 w-4" /> Add a service
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Search bar */}
       {!loading && services.length > 0 && (
@@ -806,6 +846,11 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
                       {svc.meeting_type && svc.meeting_type !== 'one_on_one' && (
                         <span className={`text-xs px-2 py-0.5 rounded-full font-semibold border ${MEETING_TYPE_META[svc.meeting_type]?.badge ?? 'bg-gray-100 text-gray-600 border-gray-200'}`}>
                           {MEETING_TYPE_META[svc.meeting_type]?.label ?? svc.meeting_type}
+                        </span>
+                      )}
+                      {svc.is_recurring && (
+                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold border bg-indigo-50 text-indigo-700 border-indigo-100 dark:bg-indigo-500/15 dark:text-indigo-300 dark:border-indigo-800/50">
+                          <Repeat className="h-3 w-3" /> Recurring
                         </span>
                       )}
                     </div>
@@ -1151,11 +1196,11 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
                     </select>
                   </div>
 
-                  <div className="p-4 border border-gray-100 dark:border-slate-800 rounded-xl space-y-4 bg-gray-50/50 dark:bg-slate-900/30">
+                  <div id="recurring-bookings" className="p-4 border border-gray-100 dark:border-slate-800 rounded-xl space-y-4 bg-gray-50/50 dark:bg-slate-900/30">
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold text-gray-900 dark:text-white">Recurring service</p>
-                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">Let clients book a repeating time slot</p>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">Recurring bookings</p>
+                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">Weekly, every 2 weeks, or monthly — clients pick a repeating time</p>
                       </div>
                       <button type="button" onClick={() => {
                         const next = !form.is_recurring;

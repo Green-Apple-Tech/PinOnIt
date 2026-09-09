@@ -442,11 +442,11 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
                         className="mt-0.5"
                       />
                       <span>
-                        <span className="block font-semibold">Require SMS verification code</span>
+                        <span className="block font-semibold">Require SMS verification before they sign</span>
                         <span className="block text-xs text-slate-500 mt-0.5">
                           {defaultRequireOtp(type)
                             ? 'Default on for this type (waivers, NDAs, contracts, and similar). Uncheck to skip the extra code — they still sign and accept ESIGN.'
-                            : 'Default off for quotes and invoices. Turn on if you want a 6-digit code before they approve.'}
+                            : 'Default off for quotes and invoices. They always sign. Turn on if you want a 6-digit code first.'}
                         </span>
                       </span>
                     </label>

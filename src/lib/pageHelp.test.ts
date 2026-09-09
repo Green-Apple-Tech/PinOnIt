@@ -11,7 +11,14 @@ describe('getPageHelp', () => {
 
   it('explains event types and contacts on the settings tabs', () => {
     expect(getPageHelp('/dashboard/settings', '?tab=event-types').title).toMatch(/event type/i);
+    expect(getPageHelp('/dashboard/settings', '?tab=event-types').steps.join(' ')).toMatch(/recurring bookings/i);
     expect(getPageHelp('/dashboard/settings', '?tab=contacts').title).toMatch(/contact/i);
+  });
+
+  it('explains recurring bookings from the Booking hub', () => {
+    const g = getPageHelp('/dashboard/booking');
+    expect(g.title).toMatch(/booking/i);
+    expect(g.steps.join(' ')).toMatch(/recurring bookings/i);
   });
 
   it('explains the Docs settings tab', () => {
@@ -52,6 +59,7 @@ describe('matchHelpFaq', () => {
     expect(matchHelpFaq('How do I mark a quote paid?')?.id).toBe('quote-status');
     expect(matchHelpFaq('Find in contacts does nothing')?.id).toBe('find-contacts');
     expect(matchHelpFaq('On my way')?.id).toBe('on-my-way');
+    expect(matchHelpFaq('Where are recurring bookings?')?.id).toBe('recurring-bookings');
   });
 });
 

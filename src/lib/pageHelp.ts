@@ -28,6 +28,7 @@ function keyFromLocation(pathname: string, search: string, hash: string): string
     return 'settings';
   }
   if (pathname.startsWith('/dashboard/appointments')) return 'calendar';
+  if (pathname.startsWith('/dashboard/booking')) return 'booking';
   if (pathname.startsWith('/dashboard/services')) return 'services';
   if (pathname.startsWith('/dashboard/quotes')) return 'quotes';
   if (pathname.startsWith('/dashboard/documents')) {
@@ -73,6 +74,16 @@ const GUIDES: Record<string, PageHelpGuide> = {
       'Test it yourself in a private browser window before you send it to clients.',
     ],
   },
+  booking: {
+    title: 'Booking',
+    purpose: 'Your public booking page, the services on it, and how clients find a time.',
+    steps: [
+      'Copy your pinonit.com/yourname link and send it to clients.',
+      'Add or edit services with Manage (Settings → Event types).',
+      'For weekly or monthly jobs, tap Recurring bookings on this page — it is a toggle on each service, not its own menu. Guests get the first visit plus the next one on the calendar.',
+    ],
+    suggestedQuestions: ['Where are recurring bookings?', 'How do clients book me?'],
+  },
   calendar: {
     title: 'Bookings',
     purpose: 'See every PinOnIt booking and busy times from connected calendars. Call, text, or reschedule from here.',
@@ -111,18 +122,20 @@ const GUIDES: Record<string, PageHelpGuide> = {
   },
   services: {
     title: 'Event types',
-    purpose: 'Each event type is a meeting people can book — length, place, price, and questions.',
+    purpose: 'Each event type is a meeting people can book — length, place, price, questions, and whether it repeats.',
     steps: [
-      'Tap Create event type (or edit an existing one).',
+      'Tap New event type (or edit an existing one).',
       'Set the name, duration, and in-person / video / phone.',
+      'For weekly lawn, biweekly pool, or monthly pest, turn on Recurring bookings on the service, then pick weekly / every 2 weeks / monthly.',
       'Add a price if you want to get paid when they book, and paste your payment link on the Payment tab.',
-      'Save, then include it in your share link on the Dashboard.',
+      'Save, then share your booking link from Booking or the Dashboard.',
     ],
+    suggestedQuestions: ['Where are recurring bookings?'],
   },
   documents: {
     title: 'Send Docs + Sign-by-Text',
     purpose:
-      'One place for quotes, invoices, receipts, NDAs, waivers, addendums, and PDF uploads. Turn on SMS verification & signature when you need it — recipients use a phone link, no app.',
+      'One place for quotes, invoices, receipts, NDAs, waivers, addendums, and PDF uploads. Recipients always sign. Optionally require a 6-digit SMS code first — they use a phone link, no app.',
     steps: [
       'Tap New document and pick Document Type (or a Saved PDF from Settings → Docs).',
       'Add recipient name. Find in contacts fills name, phone, and email — or type them. Phone is required to text the link, and when SMS verification is on.',
@@ -131,7 +144,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
       'Copy the link from the list if you need to resend another way.',
     ],
     canDo: [
-      'Send single-signature business docs with optional SMS 2FA + signature',
+      'Send single-signature business docs — signature always, optional SMS 2FA first',
       'Send quotes/invoices/receipts with line items and a payment link',
       'Upload clear PDFs up to 5MB',
     ],
