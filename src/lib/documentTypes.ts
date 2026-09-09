@@ -81,7 +81,7 @@ export function documentTypeLabel(type: SmbDocumentType, custom?: string | null)
   return documentTypeMeta(type)?.label ?? type;
 }
 
-/** SMS OTP default ON for liability / confidentiality / signature-heavy types. */
+/** Sign-by-Text (SMS code + signature + ESIGN) default ON for liability / confidentiality types. */
 const REQUIRE_OTP_TYPES = new Set<SmbDocumentType>([
   'nda',
   'waiver',
@@ -97,12 +97,12 @@ const REQUIRE_OTP_TYPES = new Set<SmbDocumentType>([
   'upload',
 ]);
 
-/** Default OFF for quotes and invoices. ON for waivers, NDAs, contracts, and similar. */
+/** Default OFF for quotes and invoices (send-only). ON for waivers, NDAs, contracts, and similar. */
 export function defaultRequireOtp(type: SmbDocumentType) {
   return REQUIRE_OTP_TYPES.has(type);
 }
 
-/** @deprecated Use defaultRequireOtp — same meaning (SMS verification, not signature). */
+/** Same flag as require_otp / verification_required: signature + SMS verify together, or neither. */
 export function defaultVerificationRequired(type: SmbDocumentType) {
   return defaultRequireOtp(type);
 }
@@ -121,7 +121,7 @@ export function documentBodyIsEditable(type: SmbDocumentType) {
   return type === 'nda' || type === 'contract' || type === 'waiver' || type === 'quick_addendum';
 }
 
-/** Quotes, invoices, and every other send still get approve/sign + ESIGN. OTP is separate. */
+/** Kept for callers that always show a recipient page. Signature itself is `verification_required`. */
 export function documentNeedsRecipientAction(_type: SmbDocumentType) {
   return true;
 }

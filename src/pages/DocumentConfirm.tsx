@@ -210,8 +210,9 @@ export function DocumentConfirmPage() {
 
   async function handleConfirm() {
     if (!token || !doc) return;
-    const requireOtp = verificationOn(doc);
-    if (requireOtp && !otpVerified) return;
+    const requireSign = verificationOn(doc);
+    if (!requireSign) return;
+    if (requireSign && !otpVerified) return;
     const needsMark = doc.confirmation_type !== 'confirm_receipt';
     if (needsMark && !hasMarked) return;
     if (!esignConsent) return;
@@ -355,8 +356,8 @@ export function DocumentConfirmPage() {
     );
   }
 
-  const requireOtp = doc ? verificationOn(doc) : true;
-  const otpReady = !requireOtp || otpVerified;
+  const requireSign = doc ? verificationOn(doc) : true;
+  const otpReady = !requireSign || otpVerified;
   const confirmLabel =
     doc?.document_type === 'quote'
       ? 'Approve'
@@ -368,7 +369,7 @@ export function DocumentConfirmPage() {
             ? 'Approve with initials'
             : 'Sign & submit';
 
-  const needsCanvas = doc?.confirmation_type !== 'confirm_receipt';
+  const needsCanvas = Boolean(requireSign && doc?.confirmation_type !== 'confirm_receipt');
   const canvasHint = doc?.confirmation_type === 'approve' ? 'Draw your initials' : 'Draw your signature';
   const lineItems: HostQuoteLineItem[] = Array.isArray(doc?.line_items) ? doc.line_items : [];
   const taxPercent = Number(doc?.tax_percent) || 0;
@@ -515,7 +516,7 @@ export function DocumentConfirmPage() {
           {doc?.notes && (
             <p className="mt-4 text-sm text-slate-600 whitespace-pre-wrap">{doc.notes}</p>
           )}
-          {doc?.pay_elsewhere_url && !isQuote && (
+          {doc?.pay_elsewhere_url && !quoteExpired && (!isQuote || !requireSign) && doc.pay_mode !== 'off' && (
             <a
               href={normalizeExternalUrl(doc.pay_elsewhere_url) ?? doc.pay_elsewhere_url}
               target="_blank"
@@ -535,7 +536,7 @@ export function DocumentConfirmPage() {
           </div>
         )}
 
-        {requireOtp && !quoteExpired && (
+        {requireSign && !quoteExpired && (
         <div className="bg-white rounded-2xl border border-slate-200 p-5">
           <h2 className="text-sm font-semibold">Verify your phone</h2>
           {otpVerified ? (
@@ -575,7 +576,7 @@ export function DocumentConfirmPage() {
         </div>
         )}
 
-        {otpReady && !quoteExpired && (
+        {requireSign && otpReady && !quoteExpired && (
           <>
             {needsCanvas && (
               <div className="bg-white rounded-2xl border border-slate-200 p-5">

@@ -8,12 +8,23 @@ import {
 } from './quoteSms';
 
 describe('quote SMS copy', () => {
-  it('names the business, job, total, and approve link', () => {
+  it('names the business, job, total, and view link', () => {
     const sms = quoteLinkSms({
       businessName: 'Pedro Lawn',
       shortDescription: 'front yard cleanup',
       total: 450,
       link: 'https://pinonit.com/d/abc',
+    });
+    expect(sms).toBe("Pedro Lawn: Here's your quote for front yard cleanup — $450.00. View: https://pinonit.com/d/abc");
+  });
+
+  it('asks them to approve when Sign-by-Text is on', () => {
+    const sms = quoteLinkSms({
+      businessName: 'Pedro Lawn',
+      shortDescription: 'front yard cleanup',
+      total: 450,
+      link: 'https://pinonit.com/d/abc',
+      requireSignature: true,
     });
     expect(sms).toBe("Pedro Lawn: Here's your quote for front yard cleanup — $450.00. View and approve: https://pinonit.com/d/abc");
   });

@@ -212,7 +212,7 @@ export function DocumentsPage() {
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2 shrink-0">
-                    {doc.document_type === 'quote' && doc.status === 'signed' && (
+                    {doc.document_type === 'quote' && ['pending', 'viewed', 'signed'].includes(doc.status) && (
                       <button
                         type="button"
                         onClick={() => void onMarkPaid(doc)}

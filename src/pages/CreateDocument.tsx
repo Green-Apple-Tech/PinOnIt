@@ -198,6 +198,7 @@ export function CreateDocumentPage() {
   const needsScopeCheckbox = requiresSignByTextScopeCheckbox({
     isUpload,
     scopeAlreadyAccepted,
+    verificationRequired,
   });
   const knownBusinessNames = useMemo(
     () => businessNameOptions([
@@ -755,12 +756,12 @@ export function CreateDocumentPage() {
             />
             <span>
               <span className="block text-sm font-semibold text-gray-900 dark:text-white">
-                Require SMS verification before they sign
+                Require a signature & SMS verify
               </span>
               <span className="block mt-1 text-xs text-gray-500 dark:text-slate-400">
                 {verificationRequired
-                  ? 'They enter a 6-digit code we text to the same number, then sign. Signature and ESIGN stay on either way. Default on for waivers, NDAs, and contracts — change it per template in Settings → Docs.'
-                  : 'They always sign and check ESIGN. This only adds a 6-digit code — leave it off if they already got the link by text. Default for quotes and invoices.'}
+                  ? 'They enter a 6-digit code we text to the same number, then sign and check ESIGN. Default on for waivers, NDAs, and contracts — change it per template in Settings → Docs.'
+                  : 'Just send the link. They can view it, and Pay Now if you added a pay link. No signature, no extra code. Default for quotes and invoices.'}
               </span>
             </span>
           </label>
@@ -929,7 +930,7 @@ export function CreateDocumentPage() {
                   ? PHONE_HINT
                   : verificationRequired
                     ? PHONE_HINT
-                    : 'Needed only if you want us to text the link, or if SMS verification is on.'}
+                    : 'Needed only if you want us to text the link, or if signature & SMS verify is on.'}
               </p>
             )}
           </label>
@@ -1100,10 +1101,10 @@ export function CreateDocumentPage() {
                 onChange={(e) => setValidDays(Math.max(1, Math.min(365, Number(e.target.value) || 30)))}
                 className={`${fieldClass} w-32`}
               />
-              <p className="mt-1 text-xs text-gray-400">Default 30. After that they see expired — contact you — instead of Approve.</p>
+              <p className="mt-1 text-xs text-gray-400">Default 30. After that they see expired — contact you — instead of the quote actions.</p>
             </label>
             <div>
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">Pay after they approve</p>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">Pay Now on the quote</p>
               <p className="mt-1 text-xs text-gray-500">Your Zelle / Cash App / Venmo / PayPal. We never take the payment.</p>
               <div className="mt-3 grid grid-cols-3 gap-2">
                 {([

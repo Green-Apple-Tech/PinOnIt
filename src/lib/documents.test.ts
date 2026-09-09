@@ -32,6 +32,11 @@ describe('Sign-by-Text scope copy', () => {
     expect(requiresSignByTextScopeCheckbox({ isUpload: true, scopeAlreadyAccepted: false })).toBe(true);
     expect(requiresSignByTextScopeCheckbox({ isUpload: false, scopeAlreadyAccepted: false })).toBe(true);
     expect(requiresSignByTextScopeCheckbox({ isUpload: false, scopeAlreadyAccepted: true })).toBe(false);
+    expect(requiresSignByTextScopeCheckbox({
+      isUpload: false,
+      scopeAlreadyAccepted: false,
+      verificationRequired: false,
+    })).toBe(false);
   });
 });
 

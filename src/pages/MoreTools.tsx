@@ -24,7 +24,7 @@ const MAIN_TOOLS: ToolItem[] = [
     icon: ClipboardSignature,
     title: 'Send Docs + Sign-by-Text',
     description:
-      'Quotes, invoices, NDAs, waivers, and PDF uploads. Turn on SMS verification & signature when you need it — no app for the recipient.',
+      'Quotes, invoices, NDAs, waivers, and PDF uploads. Turn on signature & SMS verify when you need Sign-by-Text — no app for the recipient.',
     buttonLabel: 'Open Docs',
     to: '/dashboard/documents',
     accent: 'violet',

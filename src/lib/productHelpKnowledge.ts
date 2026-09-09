@@ -3,8 +3,8 @@ import type { PageHelpGuide } from './pageHelp';
 /** Product-wide limits — always shown and always injected into Ask. */
 export const PRODUCT_CAN = [
   'Book clients with one shareable link and calendar sync (Google, Outlook, Apple).',
-  'Send quotes, invoices, receipts, NDAs, waivers, addendums, and PDF uploads from Send Docs. New Quote on the dashboard opens that same composer with quote selected: they approve by Sign-by-Text, then Pay Now on your Zelle/Cash App/Venmo/PayPal.',
-  'Every Send Docs item is signed with ESIGN consent. Optionally require a 6-digit SMS code first (on for waivers, NDAs, and contracts; off for quotes and invoices).',
+  'Send quotes, invoices, receipts, NDAs, waivers, addendums, and PDF uploads from Send Docs. New Quote on the dashboard opens that same composer with quote selected: they view the quote (Pay Now on your Zelle/Cash App/Venmo/PayPal if you added a link). Turn on signature & SMS verify only when you need Sign-by-Text.',
+  'Every Send Docs item can be a view-only link, or Sign-by-Text (6-digit SMS code + signature + ESIGN). Quotes and invoices default to view-only; waivers, NDAs, and contracts default to Sign-by-Text.',
   'Send NeverMiss reminders by email, SMS, WhatsApp, or voice for bookings and events.',
   'Use QR codes, email signatures, paid booking pages, and group scheduling / SMS coordinate.',
 ];
@@ -50,7 +50,7 @@ export const HELP_FAQS: HelpFaq[] = [
       'how do i send an invoice',
     ],
     answer:
-      'Open Send Docs + Sign-by-Text → New document → pick Document Type → add a recipient (Find in contacts fills name, phone, and email) → turn on “Require SMS verification before they sign” if you need the extra 6-digit code → Send. Recipients always sign and check ESIGN; the checkbox is only the extra code. Quotes, waivers, and NDAs all use this same screen.',
+      'Open Send Docs + Sign-by-Text → New document → pick Document Type → add a recipient (Find in contacts fills name, phone, and email) → turn on “Require a signature & SMS verify” for Sign-by-Text, or leave it off to just send the link → Send. Recipients open a link on their phone; no app required. Quotes, waivers, and NDAs all use this same screen.',
   },
   {
     id: 'how-send-quote',
@@ -62,7 +62,7 @@ export const HELP_FAQS: HelpFaq[] = [
       'send quote',
     ],
     answer:
-      'Quotes are a dashboard section and a document type inside Send Docs — there is no extra sidebar item. Tap Quote-by-Text on the dashboard, or open Send Docs → New document → Document Type: Estimate / Quote (or Send Quote on the list). Add a phone (required so we can text it), line items, tax, and optional Pay Now link. They approve with Sign-by-Text. Quotes show in the same documents list as Sent, Viewed, Approved, Declined, Paid, or Expired.',
+      'Quotes are a dashboard section and a document type inside Send Docs — there is no extra sidebar item. Tap Quote-by-Text on the dashboard, or open Send Docs → New document → Document Type: Estimate / Quote (or Send Quote on the list). Add a phone (required so we can text it), line items, tax, and optional Pay Now link. They view the quote; they only sign if you turned on signature & SMS verify. Quotes show in the same documents list as Sent, Viewed, Approved, Declined, Paid, or Expired.',
   },
   {
     id: 'how-they-pay',
@@ -73,7 +73,7 @@ export const HELP_FAQS: HelpFaq[] = [
       'does pinonit take the money',
     ],
     answer:
-      'PinOnIt never takes the money. After they approve a quote, they tap Pay Now on your Zelle, Cash App, Venmo, or PayPal link. Set Off / Full / Deposit on the quote, and paste your own pay link. Mark paid on the documents list when the money lands — that texts them a receipt.',
+      'PinOnIt never takes the money. After they view (or approve, if you required a signature), they tap Pay Now on your Zelle, Cash App, Venmo, or PayPal link. Set Off / Full / Deposit on the quote, and paste your own pay link. Mark paid on the documents list when the money lands — that texts them a receipt. You can mark paid from Sent, Viewed, or Approved; they do not have to sign first.',
   },
   {
     id: 'quote-status',
@@ -85,7 +85,7 @@ export const HELP_FAQS: HelpFaq[] = [
       'approved vs paid',
     ],
     answer:
-      'Sent means the text went out and they have not opened it yet. Viewed means they opened the link. Approved means they signed. Declined means they said no. Paid is after you tap Mark paid. Expired replaces Approve with contact-you copy once the valid-for days run out.',
+      'Sent means the text went out and they have not opened it yet. Viewed means they opened the link. Approved means they signed (only if you required a signature). Declined means they said no. Paid is after you tap Mark paid. Expired replaces the quote actions with contact-you copy once the valid-for days run out.',
   },
   {
     id: 'find-contacts',

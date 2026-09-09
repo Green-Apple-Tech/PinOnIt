@@ -72,7 +72,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: doc, error } = await supabase
     .from('documents')
-    .select('id, recipient_name, recipient_phone, topic, document_type, document_type_custom, token, status, pay_elsewhere_url, line_items, tax_percent')
+    .select('id, recipient_name, recipient_phone, topic, document_type, document_type_custom, token, status, pay_elsewhere_url, line_items, tax_percent, verification_required')
     .eq('token', token)
     .eq('sender_id', hostId)
     .maybeSingle();
@@ -132,7 +132,13 @@ Deno.serve(async (req: Request) => {
     body = receiptLinkSms({ businessName, shortDescription, total, link: signingUrl });
     subject = 'Receipt';
   } else if (quoteLike && doc.document_type === 'quote') {
-    body = quoteLinkSms({ businessName, shortDescription, total, link: signingUrl });
+    body = quoteLinkSms({
+      businessName,
+      shortDescription,
+      total,
+      link: signingUrl,
+      requireSignature: doc.verification_required === true,
+    });
     subject = 'Quote';
   } else {
     body = `Hi ${doc.recipient_name}, you have a ${kind}${topicBit} to review: ${signingUrl}${payBit}`;

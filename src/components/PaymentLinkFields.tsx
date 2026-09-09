@@ -16,7 +16,7 @@ export function PaymentLinkFields({
     <div className="rounded-2xl border-2 border-emerald-200 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-950/20 p-4 md:p-5">
       <p className="text-sm font-bold text-emerald-900 dark:text-emerald-200">Payment link</p>
       <p className="mt-1 text-xs text-emerald-800/80 dark:text-emerald-300/80 leading-relaxed">
-        How they send you money — Zelle, Cash App, Venmo, PayPal, or any pay page you already have. Shows as Pay Now after they approve. PinOnIt never handles the money.
+        How they send you money — Zelle, Cash App, Venmo, PayPal, or any pay page you already have. Shows as Pay Now on the document. PinOnIt never handles the money.
       </p>
       <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_140px]">
         <label className="block">

@@ -9,10 +9,12 @@ export function quoteLinkSms(opts: {
   shortDescription: string;
   total: number;
   link: string;
+  requireSignature?: boolean;
 }) {
   const biz = opts.businessName.trim() || 'PinOnIt';
   const desc = opts.shortDescription.trim() || 'your job';
-  return `${biz}: Here's your quote for ${desc} — ${formatMoneyUsd(opts.total)}. View and approve: ${opts.link}`;
+  const cta = opts.requireSignature ? 'View and approve' : 'View';
+  return `${biz}: Here's your quote for ${desc} — ${formatMoneyUsd(opts.total)}. ${cta}: ${opts.link}`;
 }
 
 export function receiptLinkSms(opts: {

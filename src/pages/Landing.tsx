@@ -27,7 +27,7 @@ const HOME_META = {
 };
 
 const QUOTE_THREAD = [
-  { role: 'business' as const, text: "Green Lawn: Here's your quote for front yard cleanup — $450. View and approve: pinonit.com/d/…" },
+  { role: 'business' as const, text: "Green Lawn: Here's your quote for front yard cleanup — $450. View: pinonit.com/d/…" },
   { role: 'system' as const, text: 'Opened · they tapped the text' },
   { role: 'customer' as const, text: 'Approved ✅' },
   { role: 'system' as const, text: 'Approved · 2:14 PM' },

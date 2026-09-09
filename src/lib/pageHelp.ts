@@ -135,16 +135,16 @@ const GUIDES: Record<string, PageHelpGuide> = {
   documents: {
     title: 'Send Docs + Sign-by-Text',
     purpose:
-      'One place for quotes, invoices, receipts, NDAs, waivers, addendums, and PDF uploads. Recipients always sign. Optionally require a 6-digit SMS code first — they use a phone link, no app.',
+      'One place for quotes, invoices, receipts, NDAs, waivers, addendums, and PDF uploads. Leave signature & SMS verify off to just send a link. Turn it on for Sign-by-Text — they use a phone link, no app.',
     steps: [
       'Tap New document and pick Document Type (or a Saved PDF from Settings → Docs).',
       'Add recipient name. Find in contacts fills name, phone, and email — or type them. Phone is required to text the link, and when SMS verification is on.',
       'For quotes and invoices, paste your PayPal / Venmo / pay-anywhere link so they get a Pay button.',
-      'SMS verification is off by default for quotes and invoices, on for waivers, NDAs, and contracts. Change it per template in Settings → Docs, or with the checkbox on this screen. ESIGN consent and a signature stay on every document.',
+      'SMS verification + signature is off by default for quotes and invoices, on for waivers, NDAs, and contracts. Change it per template in Settings → Docs, or with “Require a signature & SMS verify” on this screen. Off means they only view (and can Pay Now). On means they enter a code, then sign and check ESIGN.',
       'Copy the link from the list if you need to resend another way.',
     ],
     canDo: [
-      'Send single-signature business docs — signature always, optional SMS 2FA first',
+      'Send single-signature business docs with Sign-by-Text, or send a view-only link',
       'Send quotes/invoices/receipts with line items and a payment link',
       'Upload clear PDFs up to 5MB',
     ],
@@ -162,17 +162,17 @@ const GUIDES: Record<string, PageHelpGuide> = {
   quotes: {
     title: 'Quote-by-Text',
     purpose:
-      'Text a price from the driveway. They open, approve with Sign-by-Text, then tap your Zelle / Cash App / Venmo / PayPal link. PinOnIt never handles money.',
+      'Text a price from the driveway. They open the quote; Pay Now uses your Zelle / Cash App / Venmo / PayPal link. Turn on signature & SMS verify only if you need Sign-by-Text. PinOnIt never handles money.',
     steps: [
       'From the dashboard, tap the Quote-by-Text tile (or Send Docs → Send Quote / Document Type: Estimate / Quote). That opens the same compose screen as waivers and NDAs.',
       'Browse contacts or type a phone; name is optional. Add line items, tax, optional note, and how many days the quote is good for (default 30).',
-      'Choose Off, Full, or Deposit and paste your own pay link if they should see Pay Now after they approve.',
-      'Send texts them the total and link. They approve with a finger sign and ESIGN checkbox. SMS verification is off unless you turn it on for the quote template in Settings → Docs.',
-      'Quotes show in the documents list as Sent, Viewed, Approved, Declined, Paid, or Expired. After they approve, tap Mark paid — that texts the receipt automatically.',
+      'Choose Off, Full, or Deposit and paste your own pay link if they should see Pay Now on the quote.',
+      'Send texts them the total and link. They view it — no signature unless you checked Require a signature & SMS verify (then they get a code and sign).',
+      'Quotes show in the documents list as Sent, Viewed, Approved, Declined, Paid, or Expired. Tap Mark paid when the money lands — that texts the receipt automatically. They do not have to sign first.',
     ],
     canDo: [
       'Tell opened-and-thinking from a text that never landed',
-      'Expire quotes so Approve is replaced with contact-the-business copy',
+      'Expire quotes so Pay Now / Sign-by-Text is replaced with contact-the-business copy',
       'Mark paid in one tap and send a receipt text',
     ],
     cannotDo: [

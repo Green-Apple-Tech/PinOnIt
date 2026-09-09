@@ -1629,7 +1629,7 @@ export function SettingsPage() {
               className="w-32 px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
             />
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-              Quote-by-Text stores an expiry when you send. Default 30 days. Expired quotes show contact-you copy instead of Approve.
+              Quote-by-Text stores an expiry when you send. Default 30 days. Expired quotes show contact-you copy instead of Pay Now or Sign-by-Text.
             </p>
           </div>
 

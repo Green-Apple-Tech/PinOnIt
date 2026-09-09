@@ -2,14 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { defaultRequireOtp, defaultVerificationRequired, resolveRequireOtp } from './documentTypes';
 
 describe('defaultRequireOtp', () => {
-  it('defaults SMS OTP off for quotes and invoices', () => {
+  it('defaults Sign-by-Text off for quotes and invoices', () => {
     expect(defaultRequireOtp('quote')).toBe(false);
     expect(defaultRequireOtp('invoice')).toBe(false);
     expect(defaultVerificationRequired('quote')).toBe(false);
     expect(defaultVerificationRequired('invoice')).toBe(false);
   });
 
-  it('defaults SMS OTP on for waivers, NDAs, contracts, and similar', () => {
+  it('defaults Sign-by-Text on for waivers, NDAs, contracts, and similar', () => {
     expect(defaultRequireOtp('nda')).toBe(true);
     expect(defaultRequireOtp('waiver')).toBe(true);
     expect(defaultRequireOtp('contract')).toBe(true);

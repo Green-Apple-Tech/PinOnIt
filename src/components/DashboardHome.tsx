@@ -187,7 +187,10 @@ export function DashboardHome({ hostId, bookings, onOpenWizard, showWizardButton
   );
 
   const waitingSignature = useMemo(
-    () => docs.filter((d) => d.status === 'pending' || d.status === 'viewed').slice(0, 5),
+    () =>
+      docs
+        .filter((d) => d.verification_required !== false && (d.status === 'pending' || d.status === 'viewed'))
+        .slice(0, 5),
     [docs],
   );
   const recentlySigned = useMemo(
@@ -202,7 +205,7 @@ export function DashboardHome({ hostId, bookings, onOpenWizard, showWizardButton
 
   const summary = {
     upcoming: upcomingBookings.length,
-    waiting: docs.filter((d) => d.status === 'pending' || d.status === 'viewed').length,
+    waiting: docs.filter((d) => d.verification_required !== false && (d.status === 'pending' || d.status === 'viewed')).length,
     signed: docs.filter((d) => d.status === 'signed').length,
     sent: docs.length,
   };

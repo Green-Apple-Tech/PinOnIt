@@ -56,7 +56,10 @@ export function signByTextAckLabel(maxLabel = '5MB') {
 export function requiresSignByTextScopeCheckbox(opts: {
   isUpload: boolean;
   scopeAlreadyAccepted: boolean;
+  /** Off = send-only (no signature). Scope ack is only for Sign-by-Text. */
+  verificationRequired?: boolean;
 }): boolean {
   void opts.isUpload;
+  if (opts.verificationRequired === false) return false;
   return !opts.scopeAlreadyAccepted;
 }
