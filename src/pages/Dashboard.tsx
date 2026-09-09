@@ -36,7 +36,6 @@ type NavItem = {
   badge?: string;
   children?: NavItem[];
   docsCombined?: boolean;
-  quoteByText?: boolean;
 };
 
 // ── Quick-create booking link modal ──────────────────────────────────────────
@@ -734,7 +733,6 @@ export function Dashboard() {
     label: item.label,
     badge: item.badge,
     docsCombined: item.docsCombined,
-    quoteByText: item.quoteByText,
     children: item.children?.map(mapNav),
   });
   const mainNavItems: NavItem[] = [
@@ -783,10 +781,6 @@ export function Dashboard() {
       ? active
         ? 'bg-violet-50 dark:bg-violet-500/10 text-violet-800 dark:text-violet-300 font-semibold border-l-[3px] border-violet-500 rounded-l-none'
         : 'text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-500/10'
-      : item.quoteByText
-        ? active
-          ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 font-semibold border-l-[3px] border-emerald-600 rounded-l-none'
-          : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-900'
       : active
         ? 'bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400 font-semibold border-l-[3px] border-brand-600 dark:border-brand-500 rounded-l-none'
         : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-900';

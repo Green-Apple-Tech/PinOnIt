@@ -50,10 +50,10 @@ const GUIDES: Record<string, PageHelpGuide> = {
   home: {
     title: 'Dashboard',
     purpose:
-      'Your home base — big tiles for Bookings, Send Docs + Sign-by-Text, and NeverMiss, plus smaller shortcuts to the rest. Glance cards show what needs attention.',
+      'Your home base — big tiles for Quote-by-Text, Send Docs + Sign-by-Text, Bookings, and NeverMiss, plus smaller shortcuts to the rest. Glance cards show what needs attention.',
     steps: [
       'Set your booking URL in Settings if you have not already (pinonit.com/yourname).',
-      'Use the large tiles for everyday work — Quote-by-Text is under Send Docs. Smaller tiles open extra tools.',
+      'Use the large tiles for everyday work — Quote-by-Text is its own dashboard section and also a document type inside Send Docs. Smaller tiles open extra tools.',
       'When someone books or signs, it shows in the glance cards below.',
       'Tap How to anytime — or Ask if you have a specific question.',
     ],
@@ -151,7 +151,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
     purpose:
       'Text a price from the driveway. They open, approve with Sign-by-Text, then tap your Zelle / Cash App / Venmo / PayPal link. PinOnIt never handles money.',
     steps: [
-      'From the dashboard, tap New Quote (or Send Docs → Quote). That opens the same compose screen as waivers and NDAs.',
+      'From the dashboard, tap the Quote-by-Text tile (or Send Docs → Send Quote / Document Type: Estimate / Quote). That opens the same compose screen as waivers and NDAs.',
       'Browse contacts or type a phone; name is optional. Add line items, tax, optional note, and how many days the quote is good for (default 30).',
       'Choose Off, Full, or Deposit and paste your own pay link if they should see Pay Now after they approve.',
       'Send texts them the total and link. They approve with a finger sign and ESIGN checkbox. SMS verification is off unless you turn it on for the quote template in Settings → Docs.',

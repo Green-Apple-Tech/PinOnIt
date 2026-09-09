@@ -62,7 +62,7 @@ export const HELP_FAQS: HelpFaq[] = [
       'send quote',
     ],
     answer:
-      'Quotes live in Send Docs — there is no separate Quote-by-Text tab. On a phone, tap New Quote on the dashboard. On desktop, open Send Docs → New document → Document Type: Estimate / Quote (or Send Quote on the list). Add a phone (required so we can text it), line items, tax, and optional Pay Now link. They approve with Sign-by-Text. Quotes show in the same documents list as Sent, Viewed, Approved, Declined, Paid, or Expired.',
+      'Quotes are a dashboard section and a document type inside Send Docs — there is no extra sidebar item. Tap Quote-by-Text on the dashboard, or open Send Docs → New document → Document Type: Estimate / Quote (or Send Quote on the list). Add a phone (required so we can text it), line items, tax, and optional Pay Now link. They approve with Sign-by-Text. Quotes show in the same documents list as Sent, Viewed, Approved, Declined, Paid, or Expired.',
   },
   {
     id: 'how-they-pay',

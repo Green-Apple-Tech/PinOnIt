@@ -72,8 +72,8 @@ describe('buildSidebarNav', () => {
       'NeverMiss Reminders',
     ]);
     expect(primary.some((i) => i.docsCombined)).toBe(true);
-    expect(primary.find((i) => i.docsCombined)?.children?.map((c) => c.label)).toEqual(['Quote-by-Text']);
-    expect(primary.find((i) => i.docsCombined)?.children?.[0]?.to).toBe('/dashboard/documents/new?type=quote');
+    expect(primary.find((i) => i.docsCombined)?.children).toBeUndefined();
+    expect(primary.some((i) => i.label === 'Quote-by-Text')).toBe(false);
     expect(moreTools.map((i) => i.label)).toEqual([
       'Group Scheduling',
       'Paid Booking',
@@ -136,14 +136,12 @@ describe('navPathMatches', () => {
 
 describe('isDashboardNavActive', () => {
   const sendDocs = { to: '/dashboard/documents', label: 'Send Docs + Sign-by-Text', docsCombined: true };
-  const quote = { to: '/dashboard/documents/new?type=quote', label: 'Quote-by-Text', quoteByText: true };
 
-  it('treats Quote-by-Text as a child of Send Docs, not a sibling tab', () => {
-    expect(isDashboardNavActive(quote, '/dashboard/documents/new', '?type=quote')).toBe(true);
-    expect(isDashboardNavActive(sendDocs, '/dashboard/documents/new', '?type=quote')).toBe(false);
+  it('keeps Send Docs active for quotes and other document types — Quote-by-Text is not a sidebar item', () => {
     expect(isDashboardNavActive(sendDocs, '/dashboard/documents')).toBe(true);
-    expect(isDashboardNavActive(quote, '/dashboard/documents')).toBe(false);
-    expect(isDashboardNavActive(quote, '/dashboard/documents/new', '?type=nda')).toBe(false);
+    expect(isDashboardNavActive(sendDocs, '/dashboard/documents/new', '?type=quote')).toBe(true);
+    expect(isDashboardNavActive(sendDocs, '/dashboard/documents/new', '?type=nda')).toBe(true);
+    expect(isDashboardNavActive(sendDocs, '/dashboard/appointments')).toBe(false);
   });
 });
 
