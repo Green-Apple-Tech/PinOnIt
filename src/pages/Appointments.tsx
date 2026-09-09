@@ -302,6 +302,15 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
 
+function BookedByYouBadge({ booking }: { booking: Booking }) {
+  if (!booking.created_by_host) return null;
+  return (
+    <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">
+      Booked by you
+    </span>
+  );
+}
+
 function groupByDate(bookings: Booking[]): Map<string, Booking[]> {
   const map = new Map<string, Booking[]>();
   for (const b of bookings) {
@@ -348,6 +357,7 @@ function MonthBookingCard({ booking, onOpen, onContext }: { booking: Booking; on
           <p className="font-semibold text-slate-800 dark:text-slate-100 leading-snug">{title}</p>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{formatTime(booking.start_time)}</p>
           {booking.guest_name && <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">{booking.guest_name}</p>}
+          <BookedByYouBadge booking={booking} />
         </div>
       </div>
     </div>
@@ -1225,6 +1235,7 @@ export function AppointmentsPage() {
                                       <p className="text-base font-semibold text-slate-800 dark:text-slate-100">{svc?.name ?? 'Appointment'}</p>
                                     </div>
                                     <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">{b.guest_name}</p>
+                                    <BookedByYouBadge booking={b} />
                                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{formatTime(b.start_time)} – {formatTime(b.end_time)}</p>
                                     {svc?.location && (
                                       <div className="flex items-center gap-1 mt-1 text-sm text-slate-500 dark:text-slate-400">
@@ -1364,6 +1375,7 @@ export function AppointmentsPage() {
                                 {isCompleted && <span className="text-xs px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-full">Completed</span>}
                                 {isTentative && <span className="text-xs px-1.5 py-0.5 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-full">Tentative</span>}
                                 {isPendingApproval && <span className="text-xs px-1.5 py-0.5 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 rounded-full">Pending Approval</span>}
+                                <BookedByYouBadge booking={b} />
                               </div>
                               <p className="text-xs text-slate-500 dark:text-slate-400">{b.guest_name} · {b.guest_email}</p>
                               {svc?.location && (
@@ -1690,7 +1702,8 @@ export function AppointmentsPage() {
               <button onClick={() => setDetailBooking(null)} className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded"><X className="h-5 w-5" /></button>
             </div>
             <div className="text-sm text-slate-600 dark:text-slate-300 space-y-1">
-              <p><strong>{detailBooking.guest_name}</strong> · {detailBooking.guest_email}</p>
+              <p><strong>{detailBooking.guest_name}</strong> · {detailBooking.guest_email || detailBooking.guest_phone || 'No contact'}</p>
+              <BookedByYouBadge booking={detailBooking} />
               <p>{new Date(detailBooking.start_time).toLocaleString('en-US', { weekday: 'long', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</p>
               {detailBooking.guest_address && (
                 <p className="flex items-start gap-1.5 pt-1">

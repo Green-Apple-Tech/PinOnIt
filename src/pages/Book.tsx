@@ -29,6 +29,13 @@ import { stripePromise } from '../lib/stripe';
 import { StripeBookingCheckout } from '../components/StripeBookingCheckout';
 import { publicBusyWindow } from '../lib/queryWindow';
 import { mapCreateGuestBookingError } from '../lib/createGuestBooking';
+import {
+  buildSlots,
+  busyPeriodsFromEvents,
+  formatSlotTime12,
+  type BusyPeriod,
+  type PublicBusyPayload,
+} from '../lib/bookingSlots';
 import type { RescheduleSession } from '../lib/reschedule';
 import { usePageMeta } from '../lib/pageMeta';
 import {
@@ -231,27 +238,12 @@ function formatTimezoneDisplay(tz: string): string {
   }
 }
 
-function formatTime12(time: string): string {
-  const match = String(time ?? '').trim().match(/(\d{1,2}):(\d{2})/);
-  if (!match) return String(time ?? '').trim() || '—';
-  const hour = parseInt(match[1], 10);
-  const mins = match[2];
-  if (Number.isNaN(hour)) return String(time);
-  const ampm = hour >= 12 ? 'PM' : 'AM';
-  const display = hour % 12 || 12;
-  return `${display}:${mins} ${ampm}`;
-}
-
 function formatSelectedDateHeading(dateKey: string): string {
   return new Date(dateKey + 'T12:00:00').toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
   }).toUpperCase();
-}
-
-function toDateKey(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
 function getLocationIcon(type: Service['location_type']) {
@@ -261,204 +253,6 @@ function getLocationIcon(type: Service['location_type']) {
     case 'in_person': return MapPin;
     default: return Globe;
   }
-}
-
-interface BusyPeriod { start: Date; end: Date }
-
-interface CalendarEvent {
-  start_at: string;
-  end_at: string;
-  all_day: boolean;
-  show_status: string | null;
-  transparency: string | null;
-  attendee_self_status: string | null;
-  is_birthday_cal: boolean;
-  is_holiday_cal: boolean;
-  title: string;
-}
-
-const BLOCKING_TITLE_KEYWORDS = [
-  "vacation", "pto", "out of office", "ooo", "leave", "sick day", "sick leave",
-  "annual leave", "personal day", "time off", "parental leave",
-];
-
-function titleIndicatesBlocking(title: string): boolean {
-  const t = (title ?? "").toLowerCase();
-  return BLOCKING_TITLE_KEYWORDS.some((kw) => t.includes(kw));
-}
-
-function busyPeriodsFromEvents(
-  rawEvents: CalendarEvent[],
-  settings: CalendarConflictSettings,
-): BusyPeriod[] {
-  const busyPeriods: BusyPeriod[] = [];
-  for (const e of rawEvents) {
-    if (!shouldBlockCalendarEvent(e, settings)) continue;
-    if (e.all_day) {
-      const startDay = new Date(e.start_at);
-      startDay.setUTCHours(0, 0, 0, 0);
-      const endDay = new Date(e.end_at);
-      endDay.setUTCHours(23, 59, 59, 999);
-      busyPeriods.push({ start: startDay, end: endDay });
-    } else {
-      busyPeriods.push({ start: new Date(e.start_at), end: new Date(e.end_at) });
-    }
-  }
-  return busyPeriods;
-}
-
-type PublicBusyPayload = {
-  bookings?: Pick<Booking, 'id' | 'start_time' | 'end_time' | 'status'>[];
-  events?: CalendarEvent[];
-};
-
-/**
- * Decides whether a synced calendar event should block a booking slot.
- * Returns true = block this time, false = ignore it.
- */
-function shouldBlockCalendarEvent(
-  e: CalendarEvent,
-  settings: CalendarConflictSettings,
-): boolean {
-  // Always ignore cancelled events (shouldn't be synced, but defensive)
-  if (e.show_status === "cancelled") return false;
-
-  // iCal TRANSP:TRANSPARENT / Google transparency=transparent → explicitly free
-  // UNLESS it's an OOF or the title says vacation/PTO
-  const isExplicitlyFree = e.transparency === "transparent" || e.show_status === "free";
-  const isOOF = e.show_status === "oof";
-  const isTentative = e.show_status === "tentative";
-  const isDeclined = e.attendee_self_status === "declined";
-  const isBirthdayOrHoliday = e.is_birthday_cal || e.is_holiday_cal;
-
-  // Declined events
-  if (isDeclined) {
-    return settings.block_declined;
-  }
-
-  // Tentative events
-  if (isTentative) {
-    return settings.block_tentative;
-  }
-
-  // All-day events
-  if (e.all_day) {
-    // OOF all-day always blocks (regardless of settings) — it's always truly unavailable
-    if (isOOF) return true;
-
-    // Title-keyed blocking (Vacation, PTO, etc.) always blocks
-    if (titleIndicatesBlocking(e.title)) return true;
-
-    // Birthday/holiday calendar events
-    if (isBirthdayOrHoliday) {
-      return settings.block_free_all_day;
-    }
-
-    // Free all-day (e.g. public holidays not in a holidays cal, reminders)
-    if (isExplicitlyFree) {
-      return settings.block_free_all_day;
-    }
-
-    // Busy all-day (vacation, PTO, generic blocked day)
-    return settings.block_all_day_busy;
-  }
-
-  // Timed (non-all-day) events: explicitly free = never block
-  if (isExplicitlyFree && !isOOF) return false;
-
-  // All other timed events are busy — block
-  return true;
-}
-
-function buildSlots(
-  availability: AvailabilitySlot[],
-  existingBookings: Booking[],
-  service: Service,
-  dateOverrides: DateOverride[],
-  busyTimes: BusyPeriod[] = [],
-): Map<string, string[]> {
-  const result = new Map<string, string[]>();
-  const now = new Date();
-  const minNotice = new Date(now.getTime() + service.min_notice_hours * 3600000);
-  const windowEnd = new Date(now);
-  windowEnd.setDate(windowEnd.getDate() + service.booking_window_days);
-
-  const availByDay = new Map<number, AvailabilitySlot[]>();
-  for (const a of availability) {
-    if (!a.is_active) continue;
-    const list = availByDay.get(a.day_of_week) ?? [];
-    list.push(a);
-    availByDay.set(a.day_of_week, list);
-  }
-
-  const overrideMap = new Map<string, DateOverride>();
-  for (const ov of dateOverrides) overrideMap.set(ov.override_date, ov);
-
-  const cursor = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const lastDay = new Date(windowEnd.getFullYear(), windowEnd.getMonth(), windowEnd.getDate());
-  while (cursor <= lastDay) {
-    const year = cursor.getFullYear();
-    const month = cursor.getMonth();
-    const d = cursor.getDate();
-    const date = new Date(year, month, d);
-    const dk = toDateKey(date);
-
-    const override = overrideMap.get(dk);
-    if (override?.is_blocked) {
-      cursor.setDate(cursor.getDate() + 1);
-      continue;
-    }
-
-    let windows: { start: string; end: string }[] = [];
-    if (override && !override.is_blocked && override.start_time && override.end_time) {
-      windows = [{ start: override.start_time, end: override.end_time }];
-    } else {
-      const daySlots = availByDay.get(date.getDay()) ?? [];
-      windows = daySlots.map((s) => ({ start: s.start_time, end: s.end_time }));
-    }
-    if (!windows.length) {
-      cursor.setDate(cursor.getDate() + 1);
-      continue;
-    }
-
-    const bookingsOnDay = existingBookings.filter((b) => toDateKey(new Date(b.start_time)) === dk);
-    if (service.max_bookings_per_day !== null && bookingsOnDay.length >= service.max_bookings_per_day) {
-      cursor.setDate(cursor.getDate() + 1);
-      continue;
-    }
-
-    const slots: string[] = [];
-    for (const win of windows) {
-      const [sh, sm] = win.start.split(':').map(Number);
-      const [eh, em] = win.end.split(':').map(Number);
-      const endMinutes = eh * 60 + em;
-      const increment = service.slot_increment_minutes || 30;
-      let cur = sh * 60 + sm;
-      while (cur + service.duration_minutes + service.buffer_after_minutes <= endMinutes) {
-        const slotH = Math.floor(cur / 60);
-        const slotM = cur % 60;
-        const slotKey = `${String(slotH).padStart(2, '0')}:${String(slotM).padStart(2, '0')}`;
-        const slotStart = new Date(year, month, d, slotH, slotM);
-        const slotEnd = new Date(slotStart.getTime() + (service.duration_minutes + service.buffer_after_minutes) * 60000);
-        const blockStart = new Date(slotStart.getTime() - service.buffer_before_minutes * 60000);
-        if (slotStart < minNotice) {
-          cur += increment;
-          continue;
-        }
-        const bookingConflict = existingBookings.some((b) => {
-          const bStart = new Date(b.start_time);
-          const bEnd = new Date(b.end_time);
-          return blockStart < bEnd && slotEnd > bStart;
-        });
-        const calendarConflict = busyTimes.some((b) => blockStart < b.end && slotEnd > b.start);
-        if (!bookingConflict && !calendarConflict) slots.push(slotKey);
-        cur += increment;
-      }
-    }
-    if (slots.length) result.set(dk, slots);
-    cursor.setDate(cursor.getDate() + 1);
-  }
-  return result;
 }
 
 function dateStripParts(dateKey: string): { weekday: string; day: string; month: string } {
@@ -1561,7 +1355,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                     {new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                   </div>
                 )}
-                {selectedSlot && <div className={`flex items-center gap-1.5 ${calendlyStyle ? 'text-slate-800' : ''}`} style={calendlyStyle ? undefined : { color: pageTextColor }}><Clock className="h-4 w-4" />{formatTime12(selectedSlot)}</div>}
+                {selectedSlot && <div className={`flex items-center gap-1.5 ${calendlyStyle ? 'text-slate-800' : ''}`} style={calendlyStyle ? undefined : { color: pageTextColor }}><Clock className="h-4 w-4" />{formatSlotTime12(selectedSlot)}</div>}
               </div>
             )}
           </aside>
@@ -1770,7 +1564,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                       >
                         {(displaySlotMap.get(selectedDate) ?? []).map((slot) => {
                           const active = slot === selectedSlot;
-                          const label = formatTime12(slot);
+                          const label = formatSlotTime12(slot);
                           return (
                             <button
                               key={slot}

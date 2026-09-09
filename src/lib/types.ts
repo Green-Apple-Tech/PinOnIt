@@ -321,6 +321,7 @@ export interface Booking {
   parent_booking_id: string | null;
   sent_on_my_way_at?: string | null;
   on_my_way_eta_minutes?: number | null;
+  created_by_host?: boolean;
   created_at: string;
   updated_at: string;
   services?: Service;

@@ -16,6 +16,7 @@ export type CreateGuestBookingPayload = {
   reminder_channels: string[];
   reminder_times: string[];
   stripe_payment_id: string | null;
+  created_by_host?: boolean;
   sms_consent?: boolean;
   whatsapp_consent?: boolean;
   sms_consent_source?: string | null;

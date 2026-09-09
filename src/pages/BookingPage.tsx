@@ -15,14 +15,17 @@ import {
   ArrowRight,
   Loader2,
   Repeat,
+  Phone,
 } from 'lucide-react';
 import { formatRecurrenceBadge } from '../lib/recurring';
+import { HostProxyBookingModal } from '../components/HostProxyBookingModal';
 
 export function BookingPage() {
   const { profile } = useAuth();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [showProxyBook, setShowProxyBook] = useState(false);
 
   useEffect(() => {
     if (!profile) return;
@@ -99,6 +102,22 @@ export function BookingPage() {
           </div>
         </div>
       </div>
+
+      <button
+        type="button"
+        onClick={() => setShowProxyBook(true)}
+        className="w-full text-left flex items-start gap-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 md:p-6 mb-6 hover:border-brand-300 dark:hover:border-brand-500/40 hover:shadow-sm transition-all"
+      >
+        <div className="h-12 w-12 rounded-xl bg-emerald-50 dark:bg-emerald-500/15 flex items-center justify-center shrink-0">
+          <Phone className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Book for someone</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Someone called and wants a time now. Pick a free slot — same hours and buffers as your public page — and we text them the confirmation.
+          </p>
+        </div>
+      </button>
 
       {/* Quick actions */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
@@ -239,6 +258,12 @@ export function BookingPage() {
           </div>
         </div>
       </div>
+      {showProxyBook && (
+        <HostProxyBookingModal
+          onClose={() => setShowProxyBook(false)}
+          onSaved={() => setShowProxyBook(false)}
+        />
+      )}
     </main>
   );
 }
