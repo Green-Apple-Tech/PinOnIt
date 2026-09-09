@@ -87,13 +87,6 @@ const PRIMARY_TOOLS: DashTool[] = [
     docsCombined: true,
   },
   {
-    to: '/dashboard/appointments',
-    title: 'Calendar',
-    blurb: 'Your schedule, upcoming meetings, and availability.',
-    icon: CalendarDays,
-    accent: 'bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300',
-  },
-  {
     to: '/dashboard/booking',
     title: 'Booking',
     blurb: 'Your booking page, services, and sharing tools.',
@@ -110,6 +103,13 @@ const PRIMARY_TOOLS: DashTool[] = [
 ];
 
 const OTHER_TOOLS: DashTool[] = [
+  {
+    to: '/dashboard/appointments',
+    title: 'Calendar',
+    blurb: 'Your schedule, upcoming meetings, and availability.',
+    icon: CalendarDays,
+    accent: 'bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300',
+  },
   {
     to: '/dashboard/group-scheduling',
     title: 'Group Scheduling',
@@ -262,26 +262,24 @@ export function DashboardHome({ hostId, bookings, onOpenWizard, showWizardButton
             );
           })}
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {OTHER_TOOLS.map((tile) => {
             const Icon = tile.icon;
             return (
               <Link
                 key={tile.to}
                 to={tile.to}
-                className="group flex items-center gap-2.5 rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2.5 hover:border-brand-300 dark:hover:border-brand-500/40 hover:shadow-sm transition-all"
+                className="group rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 min-h-[6rem] shadow-sm hover:border-brand-300 dark:hover:border-brand-500/40 hover:shadow-md transition-all flex flex-col"
               >
-                <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${tile.accent}`}>
-                  <Icon className="h-3.5 w-3.5" />
+                <div className={`h-9 w-9 rounded-lg flex items-center justify-center mb-2.5 ${tile.accent}`}>
+                  <Icon className="h-4 w-4" />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold text-gray-900 dark:text-white truncate leading-snug">
-                    {tile.title}
-                  </p>
-                  <p className="text-[11px] text-gray-500 dark:text-slate-400 truncate leading-snug">
-                    {tile.blurb}
-                  </p>
-                </div>
+                <p className="text-sm font-bold text-gray-900 dark:text-white leading-snug">
+                  {tile.title}
+                </p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-slate-400 leading-snug line-clamp-2">
+                  {tile.blurb}
+                </p>
               </Link>
             );
           })}
