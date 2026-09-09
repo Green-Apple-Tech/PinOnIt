@@ -222,19 +222,45 @@ export function DashboardHome({ hostId, bookings, onOpenWizard, showWizardButton
         )}
       </div>
 
-      <Link
-        to={documentsNewPath(null, 'quote')}
-        className="md:hidden mb-4 flex items-center justify-center gap-2 min-h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold"
-      >
-        <FileText className="h-4 w-4" />
-        New Quote
-      </Link>
-
-      {/* All tools: 3 primary large, others compact */}
       <div className="mb-6 md:mb-8 space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           {PRIMARY_TOOLS.map((tile) => {
             const Icon = tile.icon;
+            if (tile.docsCombined) {
+              return (
+                <div
+                  key={tile.to}
+                  className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-5 min-h-[7.5rem] shadow-sm flex flex-col"
+                >
+                  <Link
+                    to={tile.to}
+                    className="group flex flex-col flex-1 min-w-0 hover:opacity-95"
+                  >
+                    <div className={`h-10 w-10 rounded-xl flex items-center justify-center mb-3 ${tile.accent}`}>
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white">
+                      Send Docs +{' '}
+                      <span className="font-sign-by-text text-xl text-violet-700 dark:text-violet-300">
+                        Sign-by-Text
+                      </span>
+                    </p>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-slate-400 flex-1">{tile.blurb}</p>
+                    <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-brand-600 dark:text-brand-400 group-hover:gap-1.5 transition-all">
+                      Open <ArrowRight className="h-3.5 w-3.5" />
+                    </span>
+                  </Link>
+                  <Link
+                    to={documentsNewPath(null, 'quote')}
+                    className="mt-3 pt-3 border-t border-gray-100 dark:border-slate-800 flex items-center gap-2 min-h-11 text-sm font-semibold text-emerald-800 dark:text-emerald-300 hover:text-emerald-950 dark:hover:text-emerald-200"
+                  >
+                    <FileText className="h-4 w-4 shrink-0" />
+                    Quote-by-Text
+                    <ArrowRight className="h-3.5 w-3.5 ml-auto shrink-0" />
+                  </Link>
+                </div>
+              );
+            }
             return (
               <Link
                 key={tile.to}
@@ -245,16 +271,7 @@ export function DashboardHome({ hostId, bookings, onOpenWizard, showWizardButton
                   <Icon className="h-5 w-5" />
                 </div>
                 <p className="text-lg font-bold text-gray-900 dark:text-white">
-                  {tile.docsCombined ? (
-                    <>
-                      Send Docs +{' '}
-                      <span className="font-sign-by-text text-xl text-violet-700 dark:text-violet-300">
-                        Sign-by-Text
-                      </span>
-                    </>
-                  ) : (
-                    tile.title
-                  )}
+                  {tile.title}
                 </p>
                 <p className="mt-1 text-sm text-gray-500 dark:text-slate-400 flex-1">{tile.blurb}</p>
                 <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-brand-600 dark:text-brand-400 group-hover:gap-1.5 transition-all">

@@ -53,7 +53,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
       'Your home base — big tiles for Bookings, Send Docs + Sign-by-Text, and NeverMiss, plus smaller shortcuts to the rest. Glance cards show what needs attention.',
     steps: [
       'Set your booking URL in Settings if you have not already (pinonit.com/yourname).',
-      'Use the three large tiles for everyday work; smaller tiles open extra tools.',
+      'Use the large tiles for everyday work — Quote-by-Text is under Send Docs. Smaller tiles open extra tools.',
       'When someone books or signs, it shows in the glance cards below.',
       'Tap How to anytime — or Ask if you have a specific question.',
     ],
