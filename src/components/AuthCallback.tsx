@@ -93,11 +93,17 @@ export function AuthCallback() {
       }, 15000);
       void (async () => {
         try {
+          // A prior load (or a cache-bust reload) may already have exchanged this code.
+          const { data: existing } = await supabase.auth.getSession();
+          if (existing.session?.user) {
+            await handleSession(existing.session.user.id);
+            return;
+          }
           const { data, error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) {
-            const { data: existing } = await supabase.auth.getSession();
-            if (existing.session?.user) {
-              await handleSession(existing.session.user.id);
+            const { data: retry } = await supabase.auth.getSession();
+            if (retry.session?.user) {
+              await handleSession(retry.session.user.id);
               return;
             }
             fail(error.message);

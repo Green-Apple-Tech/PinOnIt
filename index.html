@@ -53,24 +53,13 @@
     </div>
     <script>
       (function () {
-        var WATCHDOG_MS = 5000;
+        var path = location.pathname || '';
+        var WATCHDOG_MS = path.indexOf('/auth/callback') === 0 ? 20000 : 5000;
         var CB = '_cb';
 
-        // Google/Microsoft OAuth returns to /auth/callback with a one-time code.
-        // iPhone Safari often reuses a stale cached HTML shell that points at deleted
-        // /assets/*.js hashes — force one network document load before the app boots.
-        try {
-          var path = location.pathname || '';
-          if (
-            (path === '/auth/callback' || path.indexOf('/auth/callback') === 0) &&
-            location.search.indexOf(CB + '=') === -1
-          ) {
-            var fresh = new URL(location.href);
-            fresh.searchParams.set(CB, String(Date.now()));
-            location.replace(fresh.href);
-            return;
-          }
-        } catch (e) { /* continue boot */ }
+        // Do not location.replace() on /auth/callback. The module script below still
+        // runs after this IIFE returns, so a reload burns Google's one-time `code`
+        // and iPhone users have to sign in twice. Stale-JS recovery stays below.
 
         function isAppScript(src) {
           if (!src) return false;
@@ -142,16 +131,25 @@
           }
         });
 
-        // bfcache restore after Google redirect — force a real reload
+        // bfcache restore after Google redirect — force a real reload, but never on
+        // the OAuth callback (that would reuse or drop the one-time `code`).
         window.addEventListener('pageshow', function (e) {
-          if (e.persisted) {
-            try {
-              var url = new URL(window.location.href);
-              url.searchParams.set(CB, String(Date.now()));
-              window.location.replace(url.href);
-            } catch (err) {
-              window.location.reload();
-            }
+          if (!e.persisted) return;
+          var path = location.pathname || '';
+          var q = location.search || '';
+          if (
+            path.indexOf('/auth/callback') === 0 ||
+            /[?&]code=/.test(q) ||
+            /[?&]error=/.test(q)
+          ) {
+            return;
+          }
+          try {
+            var url = new URL(location.href);
+            url.searchParams.set(CB, String(Date.now()));
+            window.location.replace(url.href);
+          } catch (err) {
+            window.location.reload();
           }
         });
 

@@ -148,7 +148,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const base = import.meta.env.VITE_APP_URL ?? window.location.origin;
     return startOAuthRedirect('google', {
       redirectTo: `${base}/auth/callback`,
-      queryParams: { prompt: 'select_account' },
     });
   };
 
