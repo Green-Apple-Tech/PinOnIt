@@ -132,7 +132,7 @@ export function Landing() {
         </div>
         <div className="relative max-w-6xl mx-auto grid lg:grid-cols-2 gap-10 lg:gap-12 items-center">
           <div className="text-center lg:text-left">
-            <h1 className="text-[clamp(1.7rem,5.8vw,2.75rem)] font-black tracking-tight text-slate-900 dark:text-white leading-[1.12] mb-5">
+            <h1 className="text-[clamp(1.15rem,3.2vw,1.6rem)] font-bold tracking-tight text-slate-900 dark:text-white leading-[1.3] mb-4">
               <span className="block">Book a Meeting by Text</span>
               <span className="block">Sign a Document by Text</span>
               <span className="block">Run your business by text</span>
