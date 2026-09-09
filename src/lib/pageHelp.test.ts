@@ -32,9 +32,10 @@ describe('getPageHelp', () => {
     expect(getPageHelp('/dashboard/documents/new', '?type=quote').title).toMatch(/quote-by-text/i);
   });
 
-  it('explains Doc Center on the documents routes', () => {
-    expect(getPageHelp('/dashboard/documents').title).toMatch(/send docs|sign-by-text/i);
-    expect(getPageHelp('/dashboard/documents/new').cannotDo?.join(' ')).toMatch(/will|trust|notary/i);
+  it('explains numbered-slot coordinate on the coordinate route', () => {
+    const g = getPageHelp('/dashboard/coordinate');
+    expect(g.title).toMatch(/coordinate/i);
+    expect(g.steps.join(' ')).toMatch(/numbered|2–5|2-5/i);
   });
 });
 

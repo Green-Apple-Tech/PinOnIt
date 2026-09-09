@@ -43,7 +43,7 @@ deploy summarize-document-template
 deploy booking-og --no-verify-jwt
 deploy send-reminder
 deploy send-on-my-way
-deploy coordinate-sms
+deploy coordinate-sms --no-verify-jwt
 deploy booking-reply
 deploy complete-reschedule
 deploy write-calendar-event

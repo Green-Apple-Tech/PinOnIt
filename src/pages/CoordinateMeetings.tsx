@@ -9,22 +9,23 @@ import {
   type CoordPreferredTimesPayload,
   type CoordParsedSlot,
   type CoordSelectedSlotsMap,
-  type CoordSimpleTimeframe,
-  type CoordTimeOfDayKey,
-  COORD_SIMPLE_TIMEFRAME_LABELS,
-  COORD_TIME_OF_DAY_LABELS,
-  buildCoordInviteSmsBody,
-  buildSimpleCoordSummary,
   fmtCoordDate,
   fmtCoordDuration,
-  getDatesForSimpleTimeframe,
   getWindowFromCoordDates,
-  parseCoordAvailability,
   toLocalDateInput,
 } from '../lib/coordinateScheduling';
-import { Plus, X, ChevronRight, ChevronLeft, ChevronDown, Users, Clock, MapPin, MessageSquare, Check, Loader2, Trash2, AlertCircle, ArrowRight, Phone, Calendar, RefreshCw, CheckCircle2, Sparkles } from 'lucide-react';
+import { Plus, X, ChevronRight, ChevronLeft, Users, Clock, MapPin, MessageSquare, Check, Loader2, Trash2, AlertCircle, ArrowRight, Phone, Calendar, RefreshCw, CheckCircle2, Sparkles } from 'lucide-react';
 import { SmsBookingConsent } from '../components/SmsConsentText';
 import { ContactAutocomplete } from '../components/ContactAutocomplete';
+import {
+  buildNumberedInviteSmsBody,
+  coordinationContextLabel,
+  flattenSelectedSlotsToProposed,
+  formatCoordinationSlot,
+  type CoordinationContextType,
+  type CoordinationResponseStatus,
+  type CoordinationSchedulingMode,
+} from '../lib/coordination';
 
 const BRAND = '#5864C6';
 
@@ -44,6 +45,9 @@ interface CoordParticipant {
   opted_out: boolean;
   confirmed: boolean;
   created_at: string;
+  token?: string;
+  response_status?: CoordinationResponseStatus;
+  last_nudged_at?: string | null;
 }
 
 interface CoordMeeting {
@@ -63,6 +67,9 @@ interface CoordMeeting {
   allow_off_hours?: boolean;
   created_at: string;
   updated_at: string;
+  scheduling_mode?: CoordinationSchedulingMode;
+  context_type?: CoordinationContextType | string;
+  booking_id?: string | null;
 }
 
 interface ParticipantDraft {
@@ -994,11 +1001,8 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
   const [selectedSlots, setSelectedSlots] = useState<SelectedSlotsMap>({});
   const [offHoursByDate, setOffHoursByDate] = useState<Record<string, boolean>>({});
-  const [coordSimpleTimeframe, setCoordSimpleTimeframe] = useState<CoordSimpleTimeframe>('this_week');
-  const [customRangeStart, setCustomRangeStart] = useState('');
-  const [customRangeEnd, setCustomRangeEnd] = useState('');
-  const [timeOfDayPrefs, setTimeOfDayPrefs] = useState<Set<CoordTimeOfDayKey>>(() => new Set(['any']));
-  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+  const showAdvancedOptions = true;
+  const [contextType, setContextType] = useState<CoordinationContextType>('meeting');
 
   const [checkHostCalendar, setCheckHostCalendar] = useState(false);
   const [allowOffHoursGlobal, setAllowOffHoursGlobal] = useState(false);
@@ -1271,46 +1275,28 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
 
   const hasAnySlots = Object.values(selectedSlots).some(times => times.length > 0);
 
-  const useAdvancedSlots = showAdvancedOptions && selectedDates.length > 0 && hasAnySlots;
+  const useAdvancedSlots = selectedDates.length > 0 && hasAnySlots;
 
   const approachLine = useAdvancedSlots
-    ? 'Specific dates and times (advanced)'
-    : buildSimpleCoordSummary(coordSimpleTimeframe, Array.from(timeOfDayPrefs), customRangeStart, customRangeEnd);
+    ? 'Numbered time slots'
+    : 'Pick at least one date and time';
 
-  /** Step 1 → 2: only require a meeting title. */
-  const step1Valid = !!title.trim();
+  /** Step 1 → 2: title plus at least one proposed slot. */
+  const step1Valid = !!title.trim() && useAdvancedSlots;
 
   const sendFormValid = useMemo(() => {
-    if (!title.trim() || durationMinutes <= 0 || timeOfDayPrefs.size === 0) return false;
-    if (useAdvancedSlots) {
-      return selectedDates.length > 0 && hasAnySlots;
-    }
-    if (coordSimpleTimeframe === 'custom') {
-      return !!customRangeStart && !!customRangeEnd && customRangeStart <= customRangeEnd;
-    }
-    return true;
-  }, [title, durationMinutes, timeOfDayPrefs, useAdvancedSlots, selectedDates, hasAnySlots, coordSimpleTimeframe, customRangeStart, customRangeEnd]);
+    if (!title.trim() || durationMinutes <= 0) return false;
+    return selectedDates.length > 0 && hasAnySlots;
+  }, [title, durationMinutes, selectedDates, hasAnySlots]);
 
   const hostSettingsLines = useAdvancedSlots
     ? formatHostSettingsLines(hasConnectedCalendar, checkHostCalendar, allowOffHoursGlobal, offHoursByDate)
     : [];
 
-  const toggleTimeOfDay = (key: CoordTimeOfDayKey) => {
-    setTimeOfDayPrefs(prev => {
-      if (key === 'any') return new Set(['any']);
-      const next = new Set(prev);
-      next.delete('any');
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      if (next.size === 0) next.add('any');
-      return next;
-    });
-  };
-
   const validParticipants = participants.filter(p => p.name.trim() && p.phone.trim());
 
   const addParticipant = () => {
-    if (participants.length >= 6) return;
+    if (participants.length >= 5) return;
     setParticipants(p => [...p, { name: '', phone: '', role: '', knownAvailability: '', showKnownAvailability: false }]);
     setPhoneMasked(m => [...m, false]);
   };
@@ -1324,8 +1310,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
     setParticipants(p => p.map((pt, idx) => idx === i ? { ...pt, [field]: value } : pt));
   };
 
-  const smsParticipants = validParticipants.filter(p => !p.knownAvailability.trim());
-  const preEnteredParticipants = validParticipants.filter(p => p.knownAvailability.trim());
+  const smsParticipants = validParticipants;
 
   const handlePhoneBlur = (i: number) => {
     const phone = participants[i].phone.trim();
@@ -1341,18 +1326,15 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
 
   const smsPreview = () => {
     const p = smsParticipants[0] || validParticipants[0] || { name: '[Name]' };
-    const body = buildCoordInviteSmsBody({
+    const proposed = flattenSelectedSlotsToProposed(selectedSlots, durationMinutes);
+    const body = buildNumberedInviteSmsBody({
       participantName: p.name,
       hostName,
       title: title.trim(),
-      durationMinutes,
-      useAdvancedSlots,
-      selectedSlots,
-      selectedDates,
-      simpleTimeframe: coordSimpleTimeframe,
-      timeOfDayPrefs: Array.from(timeOfDayPrefs),
-      customRangeStart,
-      customRangeEnd,
+      contextType,
+      location: location.trim() || null,
+      slots: proposed,
+      token: 'preview',
     });
     return appendSmsOptOut(body);
   };
@@ -1360,35 +1342,31 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
   const handleSend = async () => {
     if (!profile) return;
     if (!sendFormValid) {
-      setSendError('Please complete all required fields before sending.');
+      setSendError('Pick a title and at least one proposed time before sending.');
+      return;
+    }
+    if (validParticipants.length < 2 || validParticipants.length > 5) {
+      setSendError('Add 2 to 5 participants.');
       return;
     }
     setSending(true);
     setSendError('');
 
-    let datesForMeeting: string[];
-    let slotsForMeeting: SelectedSlotsMap = {};
-    let windowStart: string;
-    let windowEnd: string;
-
-    if (useAdvancedSlots) {
-      datesForMeeting = selectedDates;
-      slotsForMeeting = selectedSlots;
-      ({ start: windowStart, end: windowEnd } = getWindowFromCoordDates(selectedDates));
-    } else {
-      datesForMeeting = getDatesForSimpleTimeframe(coordSimpleTimeframe, customRangeStart, customRangeEnd);
-      ({ start: windowStart, end: windowEnd } = getWindowFromCoordDates(datesForMeeting));
+    const datesForMeeting = selectedDates;
+    const slotsForMeeting = selectedSlots;
+    const { start: windowStart, end: windowEnd } = getWindowFromCoordDates(selectedDates);
+    const proposedRows = flattenSelectedSlotsToProposed(slotsForMeeting, durationMinutes);
+    if (proposedRows.length === 0) {
+      setSendError('Pick at least one date and time slot.');
+      setSending(false);
+      return;
     }
 
     const preferredTimesPayload: CoordPreferredTimesPayload = {
-      schedulingIntent: useAdvancedSlots ? 'specific_times' : 'general_timeframe',
-      simpleTimeframe: useAdvancedSlots ? undefined : coordSimpleTimeframe,
-      timeOfDayPreferences: useAdvancedSlots ? undefined : Array.from(timeOfDayPrefs),
-      customRangeStart: coordSimpleTimeframe === 'custom' ? customRangeStart : undefined,
-      customRangeEnd: coordSimpleTimeframe === 'custom' ? customRangeEnd : undefined,
+      schedulingIntent: 'specific_times',
       selectedSlots: slotsForMeeting,
-      offHoursByDate: useAdvancedSlots ? offHoursByDate : {},
-      allowOffHoursGlobal: useAdvancedSlots ? allowOffHoursGlobal : false,
+      offHoursByDate,
+      allowOffHoursGlobal,
     };
 
     const { data: meeting, error: meetingErr } = await supabase
@@ -1404,8 +1382,10 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
         proposed_window_end: windowEnd,
         selected_dates: datesForMeeting,
         preferred_times: preferredTimesPayload,
-        check_host_calendar: useAdvancedSlots && checkHostCalendar,
-        allow_off_hours: useAdvancedSlots && (allowOffHoursGlobal || Object.values(offHoursByDate).some(Boolean)),
+        check_host_calendar: checkHostCalendar,
+        allow_off_hours: allowOffHoursGlobal || Object.values(offHoursByDate).some(Boolean),
+        scheduling_mode: 'proposed_slots',
+        context_type: contextType,
       })
       .select()
       .maybeSingle();
@@ -1416,39 +1396,39 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
       return;
     }
 
-    const rows = validParticipants.map(p => {
-      const known = p.knownAvailability.trim();
-      return {
-        meeting_id: meeting.id,
-        name: p.name.trim(),
-        phone: normalizePhoneE164(p.phone.trim()),
-        role: p.role.trim(),
-        availability_response: known || null,
-        availability_pre_entered: !!known,
-      };
-    });
+    const rows = validParticipants.map(p => ({
+      meeting_id: meeting.id,
+      name: p.name.trim(),
+      phone: normalizePhoneE164(p.phone.trim()),
+      role: p.role.trim(),
+    }));
 
-    const { data: insertedParticipants, error: partErr } = await supabase
+    const { error: partErr } = await supabase
       .from('coordinated_meeting_participants')
-      .insert(rows)
-      .select('id, availability_pre_entered, availability_response');
+      .insert(rows);
 
-    if (partErr || !insertedParticipants) {
-      setSendError(partErr?.message || 'Failed to add participants.');
+    if (partErr) {
+      setSendError(partErr.message || 'Failed to add participants.');
       setSending(false);
       return;
     }
 
-    const timeframe = { start: windowStart, end: windowEnd };
-    for (let i = 0; i < insertedParticipants.length; i++) {
-      const part = insertedParticipants[i];
-      const draft = validParticipants[i];
-      if (!part.availability_pre_entered || !draft.knownAvailability.trim()) continue;
-      const slots = await parseCoordAvailability(draft.knownAvailability.trim(), timeframe);
-      await supabase
-        .from('coordinated_meeting_participants')
-        .update({ parsed_slots: slots })
-        .eq('id', part.id);
+    const { error: countErr } = await supabase.rpc('coordination_assert_participant_count', {
+      p_meeting_id: meeting.id,
+    });
+    if (countErr) {
+      setSendError(countErr.message || 'Need 2 to 5 participants.');
+      setSending(false);
+      return;
+    }
+
+    const { error: slotErr } = await supabase
+      .from('coordinated_meeting_slots')
+      .insert(proposedRows.map(s => ({ ...s, meeting_id: meeting.id })));
+    if (slotErr) {
+      setSendError(slotErr.message || 'Failed to save proposed times.');
+      setSending(false);
+      return;
     }
 
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
@@ -1481,12 +1461,35 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
       {step === 1 && (
         <div className="space-y-6">
           <div>
-            <SectionLabel>Meeting title <span className="text-red-500 normal-case">*</span></SectionLabel>
+            <SectionLabel>What is this? <span className="text-red-500 normal-case">*</span></SectionLabel>
+            <div className="flex flex-wrap gap-2.5">
+              {(['meeting', 'showing', 'consultation', 'other'] as CoordinationContextType[]).map(t => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setContextType(t)}
+                  className={pillBase(contextType === t)}
+                  style={contextType === t ? { background: BRAND, borderColor: BRAND } : {}}
+                >
+                  {coordinationContextLabel(t)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <SectionLabel>Title <span className="text-red-500 normal-case">*</span></SectionLabel>
             <input
               type="text"
               value={title}
               onChange={e => setTitle(e.target.value)}
-              placeholder="e.g. Property Showing — 123 Main St"
+              placeholder={
+                contextType === 'showing'
+                  ? 'e.g. 123 Main St showing'
+                  : contextType === 'consultation'
+                    ? 'e.g. Vendor consultation'
+                    : 'e.g. Thursday check-in'
+              }
               className={INP}
             />
           </div>
@@ -1560,134 +1563,64 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
           </div>
 
           <div>
-            <SectionLabel>When should this meeting happen?</SectionLabel>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-2">
-              {(Object.keys(COORD_SIMPLE_TIMEFRAME_LABELS) as CoordSimpleTimeframe[]).map(preset => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => setCoordSimpleTimeframe(preset)}
-                  className={[
-                    'min-h-[52px] px-4 py-3 rounded-xl text-[15px] font-semibold border-2 transition-all text-center',
-                    coordSimpleTimeframe === preset
-                      ? 'text-white border-transparent'
-                      : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-slate-300',
-                  ].join(' ')}
-                  style={coordSimpleTimeframe === preset ? { background: BRAND, borderColor: BRAND } : {}}
-                >
-                  {COORD_SIMPLE_TIMEFRAME_LABELS[preset]}
-                </button>
-              ))}
-            </div>
-            {coordSimpleTimeframe === 'custom' && (
-              <div className="flex flex-col sm:flex-row gap-3 mt-3">
-                <div className="flex-1">
-                  <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">From</label>
-                  <input type="date" value={customRangeStart} onChange={e => setCustomRangeStart(e.target.value)} className={INP} />
-                </div>
-                <div className="flex-1">
-                  <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">To</label>
-                  <input type="date" value={customRangeEnd} onChange={e => setCustomRangeEnd(e.target.value)} min={customRangeStart || undefined} className={INP} />
-                </div>
-              </div>
-            )}
-            {coordSimpleTimeframe === 'custom' && customRangeStart && customRangeEnd && customRangeStart > customRangeEnd && (
-              <p className="text-sm text-amber-600 dark:text-amber-400 font-medium mt-3">
-                End date must be on or after the start date.
+            <SectionLabel>Proposed times <span className="text-red-500 normal-case">*</span></SectionLabel>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-3 leading-relaxed">
+              Pick the dates and times to offer. Participants reply with a number or tap a link — they will not type freeform times.
+            </p>
+            {!hostDataLoaded && (
+              <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2 mb-3">
+                <Loader2 className="h-4 w-4 animate-spin shrink-0" /> Loading calendar data…
               </p>
             )}
-          </div>
-
-          <div>
-            <SectionLabel>What time of day works?</SectionLabel>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 mb-2">Select all that apply</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {(Object.keys(COORD_TIME_OF_DAY_LABELS) as CoordTimeOfDayKey[]).map(key => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => toggleTimeOfDay(key)}
-                  className={[
-                    'min-h-[52px] px-4 py-3 rounded-xl text-[15px] font-semibold border-2 transition-all text-center',
-                    timeOfDayPrefs.has(key)
-                      ? 'text-white border-transparent'
-                      : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-slate-300',
-                  ].join(' ')}
-                  style={timeOfDayPrefs.has(key) ? { background: BRAND, borderColor: BRAND } : {}}
-                >
-                  {COORD_TIME_OF_DAY_LABELS[key]}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setShowAdvancedOptions(v => !v)}
-              className="w-full flex items-center justify-between gap-3 px-4 py-3.5 bg-slate-50 dark:bg-slate-800/60 text-left hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            >
-              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Advanced options</span>
-              <span className="text-xs text-slate-500 dark:text-slate-400">Pick specific dates &amp; times</span>
-              <ChevronDown className={`h-5 w-5 text-slate-400 shrink-0 transition-transform ${showAdvancedOptions ? 'rotate-180' : ''}`} />
-            </button>
-            {showAdvancedOptions && (
-              <div className="p-4 border-t border-slate-200 dark:border-slate-700 space-y-4">
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Power users only: propose exact dates and time slots instead of a general timeframe. Participants will be asked to confirm within these windows.
-                </p>
-                {!hostDataLoaded && (
-                  <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin shrink-0" /> Loading calendar data…
-                  </p>
-                )}
-                <MultiSelectCalendar
-                  viewMonth={calendarMonth}
-                  onViewMonthChange={setCalendarMonth}
-                  selectedDates={selectedDates}
-                  onToggleDate={toggleDate}
-                />
-                {selectedDates.length > 0 && (
-                  <HostAvailabilitySection
-                    hasConnectedCalendar={hasConnectedCalendar}
-                    checkHostCalendar={checkHostCalendar}
-                    onCheckHostCalendarChange={handleCheckHostCalendarChange}
-                    allowOffHoursGlobal={allowOffHoursGlobal}
-                    onAllowOffHoursGlobalChange={handleAllowOffHoursGlobalChange}
-                    offHoursByDate={offHoursByDate}
-                  />
-                )}
-                <PerDayTimeSlotPicker
-                  selectedDates={selectedDates}
-                  selectedSlots={selectedSlots}
-                  offHoursByDate={offHoursByDate}
-                  allowOffHoursGlobal={allowOffHoursGlobal}
-                  onToggleSlot={toggleSlot}
-                  onRemoveDate={removeDate}
-                  onToggleOffHours={toggleOffHoursForDate}
-                  onApplyPreset={applyDayPreset}
-                  onAddCustomTime={addCustomTime}
-                  onClearDay={clearDaySlots}
+            <MultiSelectCalendar
+              viewMonth={calendarMonth}
+              onViewMonthChange={setCalendarMonth}
+              selectedDates={selectedDates}
+              onToggleDate={toggleDate}
+            />
+            {selectedDates.length > 0 && (
+              <div className="mt-4">
+                <HostAvailabilitySection
                   hasConnectedCalendar={hasConnectedCalendar}
                   checkHostCalendar={checkHostCalendar}
-                  calendarBusyReady={calendarBusyReady}
-                  hostAvailability={hostAvailability}
-                  calendarBusyPeriods={calendarBusyPeriods}
-                  hostBookings={hostBookings}
-                  durationMinutes={durationMinutes}
+                  onCheckHostCalendarChange={handleCheckHostCalendarChange}
+                  allowOffHoursGlobal={allowOffHoursGlobal}
+                  onAllowOffHoursGlobalChange={handleAllowOffHoursGlobalChange}
+                  offHoursByDate={offHoursByDate}
                 />
-                {useAdvancedSlots && (
-                  <p className="text-xs text-indigo-600 dark:text-indigo-500 font-medium">
-                    Using specific times — SMS will list your selected slots.
-                  </p>
-                )}
               </div>
+            )}
+            <div className="mt-4">
+              <PerDayTimeSlotPicker
+                selectedDates={selectedDates}
+                selectedSlots={selectedSlots}
+                offHoursByDate={offHoursByDate}
+                allowOffHoursGlobal={allowOffHoursGlobal}
+                onToggleSlot={toggleSlot}
+                onRemoveDate={removeDate}
+                onToggleOffHours={toggleOffHoursForDate}
+                onApplyPreset={applyDayPreset}
+                onAddCustomTime={addCustomTime}
+                onClearDay={clearDaySlots}
+                hasConnectedCalendar={hasConnectedCalendar}
+                checkHostCalendar={checkHostCalendar}
+                calendarBusyReady={calendarBusyReady}
+                hostAvailability={hostAvailability}
+                calendarBusyPeriods={calendarBusyPeriods}
+                hostBookings={hostBookings}
+                durationMinutes={durationMinutes}
+              />
+            </div>
+            {title.trim() && !useAdvancedSlots && (
+              <p className="text-sm text-amber-600 dark:text-amber-400 font-medium mt-3">
+                Select at least one date and time slot to continue.
+              </p>
             )}
           </div>
 
           <div className="hidden md:block">
             <SelectionSummary
-              selectedSlots={useAdvancedSlots ? selectedSlots : {}}
+              selectedSlots={selectedSlots}
               durationMinutes={durationMinutes}
               hostSettingsLines={hostSettingsLines}
               approachLine={approachLine}
@@ -1715,9 +1648,9 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
             style={{ background: '#eef0fb', color: BRAND, border: `1px solid ${BRAND}30` }}>
             <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
             <div className="space-y-2">
-              <p>Phone numbers are never shared between participants. Each person communicates through a private masked number via SMS or WhatsApp.</p>
+              <p>Phone numbers are never shared between participants. Each person gets a private link and can reply with a slot number.</p>
               <p className="text-[13px] opacity-90">
-                Already know when someone is free? Enter their times below — they won&apos;t get a text. Everyone else will reply with what works for them.
+                Add 2–5 people. They do not need an app or email — just a phone that can receive texts.
               </p>
             </div>
           </div>
@@ -1795,53 +1728,11 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
                     {ROLE_SUGGESTIONS.map(r => <option key={r} value={r} />)}
                   </datalist>
                 </div>
-
-                {/* Optional known availability */}
-                <div>
-                  {!p.showKnownAvailability ? (
-                    <button
-                      type="button"
-                      onClick={() => updateParticipant(i, 'showKnownAvailability', true)}
-                      className="w-full text-left p-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 hover:border-[#5864C6]/50 hover:bg-[#5864C6]/5 dark:hover:bg-[#5864C6]/10 transition-colors"
-                    >
-                      <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                        + I already have this person&apos;s available times
-                      </p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-                        e.g. listing agent said Sat 2–4pm, or specialist is free Tue mornings
-                      </p>
-                    </button>
-                  ) : (
-                    <div className="space-y-2 pt-1 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          updateParticipant(i, 'showKnownAvailability', false);
-                          updateParticipant(i, 'knownAvailability', '');
-                        }}
-                        className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors font-medium"
-                      >
-                        − Remove pre-entered times
-                      </button>
-                      <SectionLabel>Their available times</SectionLabel>
-                      <textarea
-                        value={p.knownAvailability}
-                        onChange={e => updateParticipant(i, 'knownAvailability', e.target.value)}
-                        placeholder="e.g. Saturday 2–4pm, Sunday morning anytime, Tue or Wed after 3pm"
-                        rows={2}
-                        className={INP.replace('h-[52px]', '') + ' py-3 resize-none min-h-[80px]'}
-                      />
-                      <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
-                        This person won&apos;t receive a text — we&apos;ll use what you enter and only message the others for their availability.
-                      </p>
-                    </div>
-                  )}
-                </div>
               </div>
             ))}
           </div>
 
-          {participants.length < 6 && (
+          {participants.length < 5 && (
             <button onClick={addParticipant}
               className="w-full min-h-[52px] flex items-center justify-center gap-2 px-4 text-[15px] font-semibold rounded-xl border border-dashed border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-brand-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
               <Plus className="h-5 w-5" /> Add another person
@@ -1912,8 +1803,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{p.name}</p>
                   <p className="text-xs text-slate-400">
-                    {p.role || 'No role'} · {maskPhone(p.phone)}
-                    {p.knownAvailability.trim() ? ' · Availability pre-entered ✓' : ' · SMS request will be sent'}
+                    {p.role || 'No role'} · {maskPhone(p.phone)} · SMS request will be sent
                   </p>
                 </div>
               </div>
@@ -1937,22 +1827,11 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
                 )}
               </div>
             </div>
-          ) : (
-            <div className="p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-600 dark:text-slate-300">
-              All participants have pre-entered availability — no SMS messages will be sent.
-            </div>
-          )}
-
-          {preEnteredParticipants.length > 0 && smsParticipants.length > 0 && (
-            <p className="text-xs text-slate-400">
-              {preEnteredParticipants.map(p => p.name).join(', ')} will not receive a text — availability already provided.
-            </p>
-          )}
+          ) : null}
 
           <div className="p-4 bg-[#eef0fb] dark:bg-[#5864C6]/10 border border-[#5864C6]/20 rounded-xl">
             <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-              After participants reply, you&apos;ll receive an SMS with the best available time.
-              You confirm before anything is booked.
+              After everyone replies with a number, we lock a time everyone picked — or text you the vote counts so you can pick.
             </p>
           </div>
 
@@ -1982,7 +1861,7 @@ function NewCoordForm({ onCreated, onCancel, hostName }: {
         {step === 1 && (
           <div className="space-y-3">
             <SelectionSummary
-              selectedSlots={useAdvancedSlots ? selectedSlots : {}}
+              selectedSlots={selectedSlots}
               durationMinutes={durationMinutes}
               hostSettingsLines={hostSettingsLines}
               approachLine={approachLine}
@@ -2041,13 +1920,18 @@ function MeetingDetail({ meeting: initialMeeting, onBack, onStatusChange }: {
 }) {
   const [meeting, setMeeting] = useState(initialMeeting);
   const [participants, setParticipants] = useState<CoordParticipant[]>([]);
+  const [slots, setSlots] = useState<{ id: string; start_time: string; end_time: string; sort_order: number }[]>([]);
+  const [votes, setVotes] = useState<{ slot_id: string; participant_id: string; availability: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [nudgingId, setNudgingId] = useState<string | null>(null);
+  const [lockingId, setLockingId] = useState<string | null>(null);
   const refreshTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isProposed = meeting.scheduling_mode === 'proposed_slots';
 
   const load = async () => {
     const { data } = await supabase
       .from('coordinated_meeting_participants')
-      .select('id, meeting_id, name, role, masked_twilio_number, availability_response, availability_pre_entered, parsed_slots, opted_out, confirmed, created_at')
+      .select('id, meeting_id, name, role, masked_twilio_number, availability_response, availability_pre_entered, parsed_slots, opted_out, confirmed, created_at, token, response_status, last_nudged_at')
       .eq('meeting_id', meeting.id)
       .order('created_at', { ascending: true });
     setParticipants((data ?? []) as CoordParticipant[]);
@@ -2059,6 +1943,23 @@ function MeetingDetail({ meeting: initialMeeting, onBack, onStatusChange }: {
     if (m) {
       setMeeting(m as CoordMeeting);
       onStatusChange(m.id, m.status as CoordStatus);
+    }
+    const { data: slotRows } = await supabase
+      .from('coordinated_meeting_slots')
+      .select('id, start_time, end_time, sort_order')
+      .eq('meeting_id', meeting.id)
+      .order('sort_order', { ascending: true })
+      .order('start_time', { ascending: true });
+    const nextSlots = slotRows ?? [];
+    setSlots(nextSlots);
+    if (nextSlots.length) {
+      const { data: voteRows } = await supabase
+        .from('coordinated_meeting_slot_votes')
+        .select('slot_id, participant_id, availability')
+        .in('slot_id', nextSlots.map(s => s.id));
+      setVotes(voteRows ?? []);
+    } else {
+      setVotes([]);
     }
     setLoading(false);
   };
@@ -2072,10 +1973,24 @@ function MeetingDetail({ meeting: initialMeeting, onBack, onStatusChange }: {
 
   const responded = participants.filter(p => p.availability_response && !p.availability_pre_entered);
   const preEntered = participants.filter(p => p.availability_pre_entered);
-  const respondedOrPreEntered = participants.filter(p => p.availability_response);
+  const respondedOrPreEntered = participants.filter(p =>
+    p.response_status === 'responded' || p.response_status === 'confirmed' || !!p.availability_response,
+  );
   const optedOut = participants.filter(p => p.opted_out);
   const active = participants.filter(p => !p.opted_out);
   const meta = STATUS_META[meeting.status];
+  const kind = coordinationContextLabel(meeting.context_type);
+
+  const coordSms = async (body: Record<string, unknown>) => {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+    await fetch(`${supabaseUrl}/functions/v1/coordinate-sms`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify(body),
+    });
+  };
 
   const handleCancel = async () => {
     await supabase.from('coordinated_meetings').update({ status: 'cancelled' }).eq('id', meeting.id);
@@ -2086,16 +2001,24 @@ function MeetingDetail({ meeting: initialMeeting, onBack, onStatusChange }: {
   const handleConfirm = async (slotIso: string) => {
     await supabase.from('coordinated_meetings').update({ status: 'confirmed', confirmed_time: slotIso }).eq('id', meeting.id);
     await supabase.from('coordinated_meeting_participants').update({ confirmed: true }).eq('meeting_id', meeting.id).eq('opted_out', false);
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.access_token) {
-      fetch(`${supabaseUrl}/functions/v1/coordinate-sms`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ type: 'confirm', meeting_id: meeting.id, confirmed_time: slotIso }),
-      }).catch(() => {});
-    }
+    await coordSms({ type: 'confirm', meeting_id: meeting.id, confirmed_time: slotIso });
     load();
+  };
+
+  const handleLockSlot = async (slotId: string) => {
+    if (lockingId) return;
+    setLockingId(slotId);
+    await coordSms({ type: 'lock_slot', meeting_id: meeting.id, slot_id: slotId });
+    await load();
+    setLockingId(null);
+  };
+
+  const handleNudge = async (p: CoordParticipant) => {
+    if (nudgingId) return;
+    setNudgingId(p.id);
+    await coordSms({ type: 'nudge', meeting_id: meeting.id, participant_id: p.id });
+    await load();
+    setNudgingId(null);
   };
 
   const getCandidateSlots = (): string[] => {
@@ -2121,7 +2044,11 @@ function MeetingDetail({ meeting: initialMeeting, onBack, onStatusChange }: {
         </button>
         <div className="flex-1 min-w-0">
           <h2 className="text-xl font-bold text-slate-900 dark:text-white truncate">{meeting.title}</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Created {fmtCoordDate(meeting.created_at)}</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            {kind}
+            {isProposed ? ' · Numbered slots' : ' · Text replies'}
+            {' · '}Created {fmtCoordDate(meeting.created_at)}
+          </p>
         </div>
         <span className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full"
           style={{ color: meta.color, background: meta.bg }}>
@@ -2148,7 +2075,36 @@ function MeetingDetail({ meeting: initialMeeting, onBack, onStatusChange }: {
         )}
       </div>
 
-      {meeting.status === 'match_found' && overlapSlots.length > 0 && (
+      {isProposed && slots.length > 0 && meeting.status !== 'cancelled' && (
+        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl space-y-3">
+          <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+            <Sparkles className="h-4 w-4" style={{ color: BRAND }} />
+            {meeting.status === 'confirmed' ? 'Locked time' : 'Proposed times'}
+          </p>
+          {slots.map((slot, i) => {
+            const yes = votes.filter(v => v.slot_id === slot.id && v.availability === 'yes').length;
+            const canLock = meeting.status !== 'confirmed' && meeting.status !== 'cancelled';
+            return (
+              <div key={slot.id} className="flex items-center gap-3">
+                <button
+                  type="button"
+                  disabled={!canLock || lockingId === slot.id}
+                  onClick={() => void handleLockSlot(slot.id)}
+                  className="flex-1 min-h-[52px] flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:border-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/30 transition-all text-sm font-medium text-slate-700 dark:text-slate-300 disabled:opacity-60"
+                >
+                  <span>{i + 1}) {formatCoordinationSlot(slot.start_time, slot.end_time)}</span>
+                  <span className="text-xs text-slate-500">{yes} yes</span>
+                </button>
+              </div>
+            );
+          })}
+          {meeting.status !== 'confirmed' && (
+            <p className="text-xs text-slate-500">Tap a slot to lock it for everyone. Auto-locks when every active participant votes yes on the same time.</p>
+          )}
+        </div>
+      )}
+
+      {!isProposed && meeting.status === 'match_found' && overlapSlots.length > 0 && (
         <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl space-y-3">
           <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
             <Sparkles className="h-4 w-4" style={{ color: BRAND }} /> Best match found — confirm via SMS (reply YES) or tap a time below:
@@ -2187,8 +2143,18 @@ function MeetingDetail({ meeting: initialMeeting, onBack, onStatusChange }: {
         {loading ? (
           <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-slate-400" /></div>
         ) : participants.map(p => {
-          const hasResponse = !!p.availability_response;
+          const hasResponse = !!p.availability_response || p.response_status === 'responded' || p.response_status === 'confirmed';
           const isPreEntered = p.availability_pre_entered;
+          const isWaiting = !p.opted_out && !p.confirmed && p.response_status !== 'responded' && p.response_status !== 'confirmed' && !hasResponse;
+          const statusLabel = p.opted_out
+            ? 'Opted out'
+            : (p.confirmed || p.response_status === 'confirmed')
+              ? 'Confirmed'
+              : isPreEntered
+                ? 'Pre-entered'
+                : (p.response_status === 'responded' || hasResponse)
+                  ? 'Responded'
+                  : 'Waiting';
           return (
             <div key={p.id} className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl">
               <div className="flex items-start gap-3">
@@ -2199,17 +2165,32 @@ function MeetingDetail({ meeting: initialMeeting, onBack, onStatusChange }: {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 justify-between flex-wrap">
                     <p className="font-semibold text-slate-800 dark:text-slate-200 truncate">{p.name}</p>
-                    <span className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full ${
-                      p.opted_out ? 'bg-slate-100 dark:bg-slate-800 text-slate-500' :
-                      p.confirmed ? 'text-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 dark:text-indigo-500' :
-                      isPreEntered ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300' :
-                      hasResponse ? 'text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400' :
-                      'text-amber-700 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400'
-                    }`}>
-                      {p.opted_out ? 'Opted out' : p.confirmed ? 'Confirmed ✓' : isPreEntered ? 'Pre-entered ✓' : hasResponse ? 'Responded ✓' : 'Waiting'}
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {isWaiting && meeting.status !== 'cancelled' && meeting.status !== 'confirmed' && (
+                        <button
+                          type="button"
+                          onClick={() => void handleNudge(p)}
+                          disabled={nudgingId === p.id}
+                          className="min-h-[36px] px-3 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-brand-400 hover:text-brand-600 disabled:opacity-50"
+                        >
+                          {nudgingId === p.id ? 'Sending…' : 'Nudge'}
+                        </button>
+                      )}
+                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                        p.opted_out ? 'bg-slate-100 dark:bg-slate-800 text-slate-500' :
+                        (p.confirmed || p.response_status === 'confirmed') ? 'text-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 dark:text-indigo-500' :
+                        isPreEntered ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300' :
+                        (p.response_status === 'responded' || hasResponse) ? 'text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400' :
+                        'text-amber-700 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400'
+                      }`}>
+                        {statusLabel}
+                      </span>
+                    </div>
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5">{p.role || 'No role'}</p>
+                  {p.last_nudged_at && isWaiting && (
+                    <p className="text-xs text-slate-400 mt-1">Last nudged {fmtDateTime(p.last_nudged_at)}</p>
+                  )}
                   {isPreEntered && hasResponse && (
                     <div className="mt-2.5 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
                       <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-0.5 uppercase tracking-wide">Availability pre-entered:</p>
@@ -2369,10 +2350,10 @@ export function CoordinateMeetingsPage() {
         <ChevronLeft className="h-4 w-4" /> Back to Group Scheduling
       </button>
       <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-1">
-        <Users className="h-6 w-6" style={{ color: BRAND }} /> Coordinate Unknown Availability
+        <Users className="h-6 w-6" style={{ color: BRAND }} /> Coordinate by text
       </h1>
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 max-w-xl leading-relaxed">
-        Find a meeting time between multiple people via SMS — no app or link needed, phone numbers stay private.
+        Propose numbered times, text 2–5 people, and lock a slot when everyone replies — or pick one yourself.
       </p>
       <NewCoordForm onCreated={handleCreated} onCancel={goHub} hostName={hostName} />
     </main>

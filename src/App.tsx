@@ -88,6 +88,9 @@ const BookingActionPage = lazy(() =>
 const PollVotePage = lazy(() =>
   import('./pages/PollVote').then((m) => ({ default: m.PollVotePage })),
 );
+const CoordinationVotePage = lazy(() =>
+  import('./pages/CoordinationVote').then((m) => ({ default: m.CoordinationVotePage })),
+);
 const AIChat = lazy(() =>
   import('./components/AIChat').then((m) => ({ default: m.AIChat })),
 );
@@ -258,6 +261,15 @@ function App() {
               element={
                 <Suspense fallback={<DashboardFallback />}>
                   <PollVotePage />
+                </Suspense>
+              }
+            />
+            {/* Multi-party scheduling guest vote */}
+            <Route
+              path="/c/:token"
+              element={
+                <Suspense fallback={<DashboardFallback />}>
+                  <CoordinationVotePage />
                 </Suspense>
               }
             />

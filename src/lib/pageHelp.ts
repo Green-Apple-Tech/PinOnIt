@@ -210,12 +210,12 @@ const GUIDES: Record<string, PageHelpGuide> = {
     ],
   },
   coordinate: {
-    title: 'Coordinate by SMS',
-    purpose: 'Text people who do not have a calendar. PinOnIt collects when they are free and you confirm a time.',
+    title: 'Coordinate by text',
+    purpose: 'Propose numbered times and text people who do not have a calendar. They reply with a number or tap a private link.',
     steps: [
-      'Set the date range you are trying to fill.',
-      'Add phone numbers (Browse contacts or type them) and send the texts.',
-      'Review replies, then confirm the meeting.',
+      'Pick Meeting, Showing, or Consultation, then choose the dates and times to offer.',
+      'Add 2–5 phone numbers and send. Everyone gets a numbered list plus a /c/ link.',
+      'When everyone answers, PinOnIt locks a shared time — or you pick one and nudge anyone still waiting.',
     ],
   },
   contacts: {

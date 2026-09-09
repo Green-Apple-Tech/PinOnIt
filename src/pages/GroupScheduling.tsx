@@ -22,6 +22,8 @@ interface CoordMeeting {
   status: CoordStatus;
   confirmed_time: string | null;
   created_at: string;
+  scheduling_mode?: 'open_availability' | 'proposed_slots';
+  context_type?: string;
 }
 
 const STATUS_META: Record<CoordStatus, { label: string; color: string; bg: string }> = {
@@ -149,7 +151,7 @@ export function GroupSchedulingPage() {
     setMeetingsLoading(true);
     const { data } = await supabase
       .from('coordinated_meetings')
-      .select('id, title, location, duration_minutes, status, confirmed_time, created_at')
+      .select('id, title, location, duration_minutes, status, confirmed_time, created_at, scheduling_mode, context_type')
       .eq('host_id', profile.id)
       .order('created_at', { ascending: false });
     setMeetings((data ?? []) as CoordMeeting[]);
@@ -209,11 +211,11 @@ export function GroupSchedulingPage() {
         />
         <PathCard
           icon="💬"
-          title="Coordinate Unknown Availability"
-          subtitle="When you need to find a time between two or more people and nobody knows each other's schedule — just phone numbers required."
-          steps={['Set timeframe', 'SMS sent', 'You confirm']}
+          title="Coordinate by text"
+          subtitle="Propose numbered times and text 2–5 people. They reply with a number or tap a link. No email required."
+          steps={['Propose times', 'They reply 1, 2, 3…', 'Lock when everyone answers']}
           hint="💡 Best for external parties with unknown schedules — real estate, referrals, interviews"
-          buttonLabel="Coordinate Unknown Availability →"
+          buttonLabel="Coordinate by text →"
           onClick={() => navigate(COORDINATE_NEW_PATH)}
           accent="#4338CA"
         />
@@ -296,6 +298,9 @@ export function GroupSchedulingPage() {
                           style={{ color: meta.color, background: meta.bg }}
                         >
                           {meta.label}
+                        </span>
+                        <span className="shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500">
+                          {m.scheduling_mode === 'proposed_slots' ? 'Numbered slots' : 'Text replies'}
                         </span>
                       </div>
                       <div className="flex flex-wrap gap-3 mt-1 text-xs text-slate-400">

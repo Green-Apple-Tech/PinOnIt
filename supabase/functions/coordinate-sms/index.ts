@@ -5,6 +5,7 @@ import { smsIsOptedOut } from "../_shared/sms-send-gate.ts";
 import { normalizePhoneE164 } from "../_shared/phone.ts";
 import { hostIdFromJwt, jsonAuthError } from "../_shared/callerAuth.ts";
 import { expireStaleTrials, hostPlanIsActive } from "../_shared/hostPlan.ts";
+import { buildCoordinationIcs } from "../_shared/ics.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,6 +28,7 @@ async function sendTwilioMessage(
   to: string,
   from: string,
   body: string,
+  mediaUrl?: string,
 ): Promise<boolean> {
   const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
   const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
@@ -38,6 +40,7 @@ async function sendTwilioMessage(
 
   const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
   const params = new URLSearchParams({ To: to, From: from, Body: body });
+  if (mediaUrl) params.set("MediaUrl", mediaUrl);
 
   const res = await fetch(url, {
     method: "POST",
@@ -56,7 +59,7 @@ async function sendTwilioMessage(
 }
 
 /** Sends via WhatsApp when configured, otherwise SMS. */
-async function sendMessage(to: string, body: string): Promise<void> {
+async function sendMessage(to: string, body: string, mediaUrl?: string): Promise<void> {
   if (await smsIsOptedOut(supabase, to)) {
     console.warn("Skipping coordinate SMS — recipient opted out (STOP):", to);
     return;
@@ -70,8 +73,12 @@ async function sendMessage(to: string, body: string): Promise<void> {
     const waFrom = whatsappFrom.startsWith("whatsapp:")
       ? whatsappFrom
       : `whatsapp:${whatsappFrom}`;
-    const sent = await sendTwilioMessage(`whatsapp:${e164}`, waFrom, body);
+    const sent = await sendTwilioMessage(`whatsapp:${e164}`, waFrom, body, mediaUrl);
     if (sent) return;
+    if (mediaUrl) {
+      const retry = await sendTwilioMessage(`whatsapp:${e164}`, waFrom, body);
+      if (retry) return;
+    }
   }
 
   if (!smsFrom) {
@@ -79,11 +86,82 @@ async function sendMessage(to: string, body: string): Promise<void> {
     return;
   }
 
+  const smsOk = await sendTwilioMessage(e164, smsFrom, body, mediaUrl);
+  if (smsOk || !mediaUrl) return;
   await sendTwilioMessage(e164, smsFrom, body);
 }
 
-async function sendSms(to: string, body: string): Promise<void> {
-  await sendMessage(to, appendSmsOptOut(body));
+async function sendSms(to: string, body: string, mediaUrl?: string): Promise<void> {
+  await sendMessage(to, appendSmsOptOut(body), mediaUrl);
+}
+
+function publicSiteUrl() {
+  return (Deno.env.get("PUBLIC_SITE_URL") || Deno.env.get("SITE_URL") || "https://pinonit.com").replace(/\/$/, "");
+}
+
+function coordinationContextLabel(type: unknown): string {
+  if (type === "showing") return "Showing";
+  if (type === "consultation") return "Consultation";
+  return "Meeting";
+}
+
+function formatSlotLabel(startIso: string, endIso?: string | null): string {
+  const start = new Date(startIso);
+  const end = endIso ? new Date(endIso) : null;
+  const day = start.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  const startT = start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  const endT = end ? end.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : null;
+  return endT ? `${day} ${startT}–${endT}` : `${day} ${startT}`;
+}
+
+function parseBareSlotNumber(body: string): number | null {
+  const m = body.trim().match(/^([1-9]\d?)$/);
+  if (!m) return null;
+  return parseInt(m[1], 10);
+}
+
+function slotFromNumber<T extends { sort_order: number }>(slots: T[], n: number | null): T | null {
+  if (n == null || n < 1) return null;
+  return slots.find((s) => s.sort_order + 1 === n) ?? slots[n - 1] ?? null;
+}
+
+function icsPublicUrl(token: string) {
+  const fn = `${Deno.env.get("SUPABASE_URL")}/functions/v1/coordinate-sms?ics=1&token=${encodeURIComponent(token)}`;
+  return fn;
+}
+
+async function loadProposedSlots(meetingId: string) {
+  const { data } = await supabase
+    .from("coordinated_meeting_slots")
+    .select("id, start_time, end_time, sort_order")
+    .eq("meeting_id", meetingId)
+    .order("sort_order", { ascending: true })
+    .order("start_time", { ascending: true });
+  return data ?? [];
+}
+
+function buildNumberedInviteSms(opts: {
+  participantName: string;
+  hostName: string;
+  title: string;
+  contextType: string;
+  location: string | null;
+  slots: { start_time: string; end_time: string }[];
+  token: string;
+}): string {
+  const kind = coordinationContextLabel(opts.contextType).toLowerCase();
+  const title = opts.title.trim() || coordinationContextLabel(opts.contextType);
+  const loc = opts.location?.trim() ? `\nWhere: ${opts.location.trim()}` : "";
+  const lines = opts.slots.map((s, i) => `${i + 1}) ${formatSlotLabel(s.start_time, s.end_time)}`);
+  const nHint = opts.slots.length <= 1 ? "1" : `1–${opts.slots.length}`;
+  const link = `${publicSiteUrl()}/c/${opts.token}`;
+  return `Hi ${opts.participantName}! ${opts.hostName} wants to set a ${kind}: ${title}.${loc}\nPick a time (reply with just the number, or tap the link):\n${lines.join("\n")}\nReply ${nHint}: ${link}`;
+}
+
+function numberedClarifySms(token: string, slotCount: number) {
+  const nHint = slotCount <= 1 ? "1" : Array.from({ length: slotCount }, (_, i) => String(i + 1)).join(", ");
+  const link = `${publicSiteUrl()}/c/${token}`;
+  return `Reply with just the number (${nHint}) — or tap the link: ${link}`;
 }
 
 async function parseAvailability(
@@ -602,6 +680,30 @@ async function processHostInbound(
 
   const totalParticipants = (participants ?? []).length;
 
+  if (meeting.scheduling_mode === "proposed_slots") {
+    const slots = await loadProposedSlots(meetingId);
+    const n = parseBareSlotNumber(trimmedBody);
+    const slot = slotFromNumber(slots, n);
+    if (!slot) {
+      const hint = slots.length <= 1
+        ? "1"
+        : Array.from({ length: slots.length }, (_, i) => String(i + 1)).join(", ");
+      await sendSms(
+        hostPhone,
+        `Reply with the slot number (${hint}) to lock it, or pick in the dashboard.`,
+      );
+      return new Response("OK", { status: 200 });
+    }
+    const locked = await finalizeProposedSlotLock(meetingId, slot.id);
+    await sendSms(
+      hostPhone,
+      locked.ok
+        ? `Locked option ${n} for "${title}". Confirmations are on the way.`
+        : `Could not lock that time. Try the dashboard.`,
+    );
+    return new Response("OK", { status: 200 });
+  }
+
   if (/^EXTEND$/i.test(trimmedBody) && pt.noOverlap === true) {
     await extendMeetingWindow(meetingId);
     await sendSms(
@@ -755,6 +857,243 @@ async function checkAndRunOverlap(meetingId: string): Promise<void> {
   await notifyHostBestMatch(meeting, overlaps, active.length, hostProfile.phone);
 }
 
+async function ensureCoordinationService(hostId: string): Promise<string | null> {
+  const { data: existing } = await supabase
+    .from("services")
+    .select("id")
+    .eq("host_id", hostId)
+    .eq("name", "Multi-Party Scheduling")
+    .maybeSingle();
+  if (existing?.id) return existing.id as string;
+
+  const { data: anySvc } = await supabase
+    .from("services")
+    .select("id")
+    .eq("host_id", hostId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (anySvc?.id) return anySvc.id as string;
+
+  const { data: created, error } = await supabase
+    .from("services")
+    .insert({
+      host_id: hostId,
+      name: "Multi-Party Scheduling",
+      duration_minutes: 60,
+      is_active: false,
+      location_type: "in_person",
+    })
+    .select("id")
+    .maybeSingle();
+  if (error || !created?.id) {
+    console.error("Could not create coordination service", error);
+    return null;
+  }
+  return created.id as string;
+}
+
+async function createBookingForLockedMeeting(
+  meeting: {
+    id: string;
+    host_id: string;
+    title: string;
+    location: string | null;
+    duration_minutes: number;
+    booking_id?: string | null;
+  },
+  startIso: string,
+  endIso: string,
+  participants: { name: string; phone: string }[],
+): Promise<string | null> {
+  if (meeting.booking_id) return meeting.booking_id;
+  const serviceId = await ensureCoordinationService(meeting.host_id);
+  if (!serviceId) return null;
+  const first = participants[0];
+  const names = participants.map((p) => p.name).filter(Boolean).join(", ");
+  const { data, error } = await supabase
+    .from("bookings")
+    .insert({
+      host_id: meeting.host_id,
+      service_id: serviceId,
+      guest_name: first?.name || meeting.title || "Guest",
+      guest_phone: first?.phone || null,
+      guest_email: null,
+      guest_address: meeting.location,
+      start_time: startIso,
+      end_time: endIso,
+      status: "confirmed",
+      notes: names ? `Multi-party: ${names}` : meeting.title,
+      notify_via: ["sms"],
+      reminder_channels: ["sms"],
+      reminder_times: ["24hour", "1hour"],
+    })
+    .select("id")
+    .maybeSingle();
+  if (error || !data?.id) {
+    console.error("coordination booking insert failed", error);
+    return null;
+  }
+  await supabase.from("coordinated_meetings").update({ booking_id: data.id }).eq("id", meeting.id);
+  return data.id as string;
+}
+
+async function sendProposedSlotConfirmations(
+  meeting: { id: string; title: string; location: string | null; duration_minutes: number; context_type?: string },
+  startIso: string,
+  endIso: string,
+  participants: { name: string; phone: string; token: string }[],
+): Promise<void> {
+  const timeLabel = formatSlotLabel(startIso, endIso);
+  const loc = meeting.location?.trim() ? ` at ${meeting.location.trim()}` : "";
+  const kind = coordinationContextLabel(meeting.context_type).toLowerCase();
+  await Promise.all(
+    participants.map((p) => {
+      const ics = icsPublicUrl(p.token);
+      return sendSms(
+        p.phone,
+        `Confirmed: "${meeting.title || kind}" ${timeLabel}${loc}. Calendar: ${ics}`,
+        ics,
+      );
+    }),
+  );
+}
+
+async function finalizeProposedSlotLock(meetingId: string, slotId: string): Promise<{ ok: boolean; error?: string }> {
+  const { data: existing } = await supabase
+    .from("coordinated_meetings")
+    .select("status")
+    .eq("id", meetingId)
+    .maybeSingle();
+  if (existing?.status === "confirmed") return { ok: true };
+
+  const { data: lockRaw, error: lockErr } = await supabase.rpc("lock_coordination_slot", {
+    p_meeting_id: meetingId,
+    p_slot_id: slotId,
+  });
+  const lock = typeof lockRaw === "string" ? JSON.parse(lockRaw) : lockRaw;
+  if (lockErr || !lock?.ok) {
+    return { ok: false, error: lockErr?.message ?? lock?.error ?? "lock failed" };
+  }
+  const startIso = lock.confirmed_time as string;
+  const endIso = lock.end_time as string;
+
+  const { data: meeting } = await supabase
+    .from("coordinated_meetings")
+    .select("id, host_id, title, location, duration_minutes, context_type, booking_id")
+    .eq("id", meetingId)
+    .maybeSingle();
+  if (!meeting) return { ok: false, error: "meeting missing after lock" };
+
+  const { data: participants } = await supabase
+    .from("coordinated_meeting_participants")
+    .select("name, phone, token")
+    .eq("meeting_id", meetingId)
+    .eq("opted_out", false);
+
+  const people = (participants ?? []) as { name: string; phone: string; token: string }[];
+  await createBookingForLockedMeeting(meeting, startIso, endIso, people);
+  await sendProposedSlotConfirmations(meeting, startIso, endIso, people);
+  await addCoordinatedEventToHostCalendar(
+    meeting.host_id,
+    meetingId,
+    meeting.title,
+    startIso,
+    endIso,
+  );
+  return { ok: true };
+}
+
+async function notifyOrganizerNoOverlap(meetingId: string): Promise<void> {
+  const { data: meeting } = await supabase
+    .from("coordinated_meetings")
+    .select("id, host_id, title, context_type, preferred_times, status")
+    .eq("id", meetingId)
+    .maybeSingle();
+  if (!meeting) return;
+  if (meeting.status === "match_found") {
+    const ptExisting = getPreferredTimesExtras(meeting.preferred_times);
+    if (ptExisting.noOverlap === true) return;
+  }
+  const slots = await loadProposedSlots(meetingId);
+  const slotIds = slots.map((s) => s.id);
+  const { data: votes } = slotIds.length
+    ? await supabase
+      .from("coordinated_meeting_slot_votes")
+      .select("slot_id, availability, participant_id")
+      .in("slot_id", slotIds)
+    : { data: [] as { slot_id: string; availability: string; participant_id: string }[] };
+  const { data: active } = await supabase
+    .from("coordinated_meeting_participants")
+    .select("id")
+    .eq("meeting_id", meetingId)
+    .eq("opted_out", false);
+  const activeIds = new Set((active ?? []).map((p) => p.id));
+  const lines = slots.map((s, i) => {
+    const yes = (votes ?? []).filter((v) =>
+      v.slot_id === s.id && v.availability === "yes" && activeIds.has(v.participant_id)
+    ).length;
+    return `${i + 1}) ${formatSlotLabel(s.start_time, s.end_time)} — ${yes} yes`;
+  });
+  const pt = getPreferredTimesExtras(meeting.preferred_times);
+  await supabase
+    .from("coordinated_meetings")
+    .update({
+      status: "match_found",
+      preferred_times: { ...pt, awaitingHostConfirmation: true, noOverlap: true },
+    })
+    .eq("id", meetingId);
+
+  const { data: host } = await supabase
+    .from("profiles")
+    .select("phone")
+    .eq("id", meeting.host_id)
+    .maybeSingle();
+  if (!host?.phone) return;
+  await sendSms(
+    host.phone,
+    `No time worked for everyone on "${meeting.title}". Reply with a slot number to lock it, or pick in the dashboard:\n${lines.join("\n")}`,
+  );
+}
+
+async function afterProposedSlotVote(token: string): Promise<Response> {
+  const { data: participant } = await supabase
+    .from("coordinated_meeting_participants")
+    .select("id, meeting_id")
+    .eq("token", token)
+    .maybeSingle();
+  if (!participant) {
+    return new Response(JSON.stringify({ ok: false, error: "not found" }), {
+      status: 404,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  const { data: allDone } = await supabase.rpc("coordination_all_active_responded", {
+    p_meeting_id: participant.meeting_id,
+  });
+  if (!allDone) {
+    return new Response(JSON.stringify({ ok: true, pending: true }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  const { data: overlapId } = await supabase.rpc("coordination_unanimous_slot_id", {
+    p_meeting_id: participant.meeting_id,
+  });
+  if (overlapId) {
+    const locked = await finalizeProposedSlotLock(participant.meeting_id, overlapId as string);
+    return new Response(JSON.stringify({ ok: locked.ok, locked: locked.ok, error: locked.error }), {
+      status: locked.ok ? 200 : 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  await notifyOrganizerNoOverlap(participant.meeting_id);
+  return new Response(JSON.stringify({ ok: true, needs_host: true }), {
+    status: 200,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 async function sendCoordinationInvites(meetingId: string): Promise<{ sent: number; skipped: number }> {
   const { data: meeting, error: mErr } = await supabase
     .from("coordinated_meetings")
@@ -768,7 +1107,7 @@ async function sendCoordinationInvites(meetingId: string): Promise<{ sent: numbe
 
   const { data: participants, error: pErr } = await supabase
     .from("coordinated_meeting_participants")
-    .select("id, name, phone, role, availability_pre_entered")
+    .select("id, name, phone, role, availability_pre_entered, token, opted_out")
     .eq("meeting_id", meetingId);
 
   if (pErr || !participants) {
@@ -785,7 +1124,29 @@ async function sendCoordinationInvites(meetingId: string): Promise<{ sent: numbe
     (hostProfile?.full_name as string | undefined)?.trim() || "Someone";
   const pt = meeting.preferred_times as Record<string, unknown> | null;
 
-  const toSms = participants.filter((p) => !p.availability_pre_entered);
+  if (meeting.scheduling_mode === "proposed_slots") {
+    const slots = await loadProposedSlots(meetingId);
+    const toSms = participants.filter((p) => !p.opted_out);
+    await Promise.all(
+      toSms.map((p) =>
+        sendSms(
+          p.phone,
+          buildNumberedInviteSms({
+            participantName: p.name,
+            hostName,
+            title: meeting.title,
+            contextType: meeting.context_type ?? "meeting",
+            location: meeting.location,
+            slots,
+            token: p.token,
+          }),
+        )
+      ),
+    );
+    return { sent: toSms.length, skipped: participants.length - toSms.length };
+  }
+
+  const toSms = participants.filter((p) => !p.availability_pre_entered && !p.opted_out);
 
   await Promise.all(
     toSms.map(async (p) => {
@@ -852,7 +1213,7 @@ async function handleInboundSms(from: string, body: string): Promise<Response> {
   // Find participant by phone
   const { data: participant, error: pErr } = await supabase
     .from("coordinated_meeting_participants")
-    .select("id, meeting_id, name, opted_out")
+    .select("id, meeting_id, name, opted_out, phone, token")
     .eq("phone", normalizedFrom)
     .maybeSingle();
 
@@ -861,7 +1222,7 @@ async function handleInboundSms(from: string, body: string): Promise<Response> {
     const digits = normalizedFrom.replace(/\D/g, "");
     const { data: fallback } = await supabase
       .from("coordinated_meeting_participants")
-      .select("id, meeting_id, name, opted_out, phone")
+      .select("id, meeting_id, name, opted_out, phone, token")
       .ilike("phone", `%${digits.slice(-10)}%`)
       .maybeSingle();
 
@@ -877,7 +1238,7 @@ async function handleInboundSms(from: string, body: string): Promise<Response> {
 }
 
 async function processInboundReply(
-  participant: { id: string; meeting_id: string; name: string; opted_out: boolean },
+  participant: { id: string; meeting_id: string; name: string; opted_out: boolean; phone: string; token: string },
   trimmedBody: string,
 ): Promise<Response> {
   // Handle opt-out
@@ -893,20 +1254,47 @@ async function processInboundReply(
     return new Response("OK", { status: 200 });
   }
 
-  // Store raw availability response
+  const { data: meeting } = await supabase
+    .from("coordinated_meetings")
+    .select("id, duration_minutes, proposed_window_start, proposed_window_end, status, scheduling_mode")
+    .eq("id", participant.meeting_id)
+    .maybeSingle();
+
+  if (!meeting) {
+    return new Response("OK", { status: 200 });
+  }
+
+  if (meeting.scheduling_mode === "proposed_slots") {
+    if (meeting.status !== "collecting_availability") {
+      return new Response("OK", { status: 200 });
+    }
+    const slots = await loadProposedSlots(participant.meeting_id);
+    const n = parseBareSlotNumber(trimmedBody);
+    const slot = slotFromNumber(slots, n);
+    if (!slot || !participant.token) {
+      await sendSms(participant.phone, numberedClarifySms(participant.token, slots.length));
+      return new Response("OK", { status: 200 });
+    }
+    const { data: voteRaw } = await supabase.rpc("submit_coordination_slot_votes", {
+      p_token: participant.token,
+      p_slot_ids: [slot.id],
+    });
+    const voteRes = typeof voteRaw === "string" ? JSON.parse(voteRaw) : voteRaw;
+    if (!voteRes?.ok) {
+      await sendSms(participant.phone, numberedClarifySms(participant.token, slots.length));
+      return new Response("OK", { status: 200 });
+    }
+    await afterProposedSlotVote(participant.token);
+    return new Response("OK", { status: 200 });
+  }
+
+  // Store raw availability response (open_availability / NL only)
   await supabase
     .from("coordinated_meeting_participants")
     .update({ availability_response: trimmedBody })
     .eq("id", participant.id);
 
-  // Load meeting for timeframe
-  const { data: meeting } = await supabase
-    .from("coordinated_meetings")
-    .select("id, duration_minutes, proposed_window_start, proposed_window_end, status")
-    .eq("id", participant.meeting_id)
-    .maybeSingle();
-
-  if (!meeting || meeting.status !== "collecting_availability") {
+  if (meeting.status !== "collecting_availability") {
     return new Response("OK", { status: 200 });
   }
 
@@ -962,12 +1350,160 @@ async function handleConfirm(meetingId: string, confirmedTime: string, callerHos
   });
 }
 
+async function serveCoordinationIcs(token: string | null): Promise<Response> {
+  if (!token) {
+    return new Response("missing token", { status: 400, headers: corsHeaders });
+  }
+  const { data: participant } = await supabase
+    .from("coordinated_meeting_participants")
+    .select("token, meeting_id, name")
+    .eq("token", token)
+    .maybeSingle();
+  if (!participant) {
+    return new Response("not found", { status: 404, headers: corsHeaders });
+  }
+  const { data: meeting } = await supabase
+    .from("coordinated_meetings")
+    .select("id, title, location, duration_minutes, status, confirmed_time, context_type")
+    .eq("id", participant.meeting_id)
+    .maybeSingle();
+  if (!meeting || meeting.status !== "confirmed" || !meeting.confirmed_time) {
+    return new Response("not confirmed", { status: 404, headers: corsHeaders });
+  }
+  const slots = await loadProposedSlots(meeting.id);
+  const startMs = new Date(meeting.confirmed_time).getTime();
+  const locked = slots.find((s) => new Date(s.start_time).getTime() === startMs);
+  const startIso = meeting.confirmed_time as string;
+  const endIso = locked?.end_time
+    ?? new Date(startMs + (meeting.duration_minutes || 60) * 60_000).toISOString();
+  const kind = coordinationContextLabel(meeting.context_type);
+  const ics = buildCoordinationIcs({
+    uid: `coord-${meeting.id}-${participant.token}@pinonit.com`,
+    title: (meeting.title as string) || kind,
+    location: meeting.location as string | null,
+    startIso,
+    endIso,
+  });
+  return new Response(ics, {
+    status: 200,
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "text/calendar; charset=utf-8",
+      "Content-Disposition": `attachment; filename="pinonit-${kind.toLowerCase()}.ics"`,
+    },
+  });
+}
+
+async function requireActiveHostMeeting(meetingId: string, callerHostId: string) {
+  const { data: meeting } = await supabase
+    .from("coordinated_meetings")
+    .select("*")
+    .eq("id", meetingId)
+    .maybeSingle();
+  if (!meeting) {
+    return { error: new Response(JSON.stringify({ error: "Meeting not found" }), {
+      status: 404,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    }) };
+  }
+  if (meeting.host_id !== callerHostId) {
+    return { error: jsonAuthError(corsHeaders, "Not allowed for this meeting", 403) };
+  }
+  await expireStaleTrials(supabase);
+  if (!(await hostPlanIsActive(supabase, callerHostId))) {
+    return { error: new Response(JSON.stringify({ error: "Reactivate Pro to coordinate meetings." }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    }) };
+  }
+  return { meeting };
+}
+
+async function handleNudge(
+  meetingId: string,
+  participantId: string,
+  callerHostId: string,
+): Promise<Response> {
+  const checked = await requireActiveHostMeeting(meetingId, callerHostId);
+  if ("error" in checked) return checked.error;
+  const meeting = checked.meeting;
+  const { data: p } = await supabase
+    .from("coordinated_meeting_participants")
+    .select("id, name, phone, token, opted_out, availability_pre_entered")
+    .eq("id", participantId)
+    .eq("meeting_id", meetingId)
+    .maybeSingle();
+  if (!p || p.opted_out) {
+    return new Response(JSON.stringify({ error: "Participant not found" }), {
+      status: 404,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  const { data: hostProfile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", meeting.host_id)
+    .maybeSingle();
+  const hostName = (hostProfile?.full_name as string | undefined)?.trim() || "Someone";
+  if (meeting.scheduling_mode === "proposed_slots") {
+    const slots = await loadProposedSlots(meetingId);
+    await sendSms(
+      p.phone,
+      buildNumberedInviteSms({
+        participantName: p.name,
+        hostName,
+        title: meeting.title,
+        contextType: meeting.context_type ?? "meeting",
+        location: meeting.location,
+        slots,
+        token: p.token,
+      }),
+    );
+  } else {
+    const pt = meeting.preferred_times as Record<string, unknown> | null;
+    await sendSms(p.phone, buildCoordInviteSms(p.name, hostName, meeting, pt, meeting.selected_dates));
+  }
+  await supabase
+    .from("coordinated_meeting_participants")
+    .update({ last_nudged_at: new Date().toISOString() })
+    .eq("id", p.id);
+  return new Response(JSON.stringify({ ok: true }), {
+    status: 200,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+async function handleHostLockSlot(
+  meetingId: string,
+  slotId: string,
+  callerHostId: string,
+): Promise<Response> {
+  const checked = await requireActiveHostMeeting(meetingId, callerHostId);
+  if ("error" in checked) return checked.error;
+  const locked = await finalizeProposedSlotLock(meetingId, slotId);
+  return new Response(JSON.stringify({ ok: locked.ok, error: locked.error }), {
+    status: locked.ok ? 200 : 400,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   try {
+    if (req.method === "GET") {
+      const url = new URL(req.url);
+      if (url.searchParams.get("ics") === "1") {
+        return await serveCoordinationIcs(url.searchParams.get("token"));
+      }
+      return new Response(JSON.stringify({ error: "Not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Twilio sends webhook as form-urlencoded
     const contentType = req.headers.get("content-type") ?? "";
     if (contentType.includes("application/x-www-form-urlencoded")) {
@@ -978,6 +1514,10 @@ Deno.serve(async (req: Request) => {
     }
 
     const payload = await req.json();
+
+    if (payload.type === "after_vote" && typeof payload.token === "string") {
+      return await afterProposedSlotVote(payload.token);
+    }
 
     const callerHostId = await hostIdFromJwt(req, supabase);
     if (!callerHostId) {
@@ -990,6 +1530,14 @@ Deno.serve(async (req: Request) => {
 
     if (payload.type === "confirm") {
       return await handleConfirm(payload.meeting_id, payload.confirmed_time, callerHostId);
+    }
+
+    if (payload.type === "nudge") {
+      return await handleNudge(payload.meeting_id, payload.participant_id, callerHostId);
+    }
+
+    if (payload.type === "lock_slot") {
+      return await handleHostLockSlot(payload.meeting_id, payload.slot_id, callerHostId);
     }
 
     if (payload.meeting_id) {
