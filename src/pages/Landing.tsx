@@ -132,8 +132,10 @@ export function Landing() {
         </div>
         <div className="relative max-w-6xl mx-auto grid lg:grid-cols-2 gap-10 lg:gap-12 items-center">
           <div className="text-center lg:text-left">
-            <h1 className="text-[clamp(1.85rem,6.5vw,2.85rem)] font-black tracking-tight text-slate-900 dark:text-white leading-[1.08] mb-4">
-              Run your business by text.
+            <h1 className="text-[clamp(1.7rem,5.8vw,2.75rem)] font-black tracking-tight text-slate-900 dark:text-white leading-[1.12] mb-5">
+              <span className="block">Book a Meeting by Text</span>
+              <span className="block">Sign a Document by Text</span>
+              <span className="block">Run your business by text</span>
             </h1>
             <p className="text-lg md:text-xl font-medium text-slate-600 dark:text-slate-300 leading-snug mb-8 max-w-xl mx-auto lg:mx-0">
               Quote a job in the driveway. Get it approved, signed, and paid before you drive away.
