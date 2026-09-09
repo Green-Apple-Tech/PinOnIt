@@ -96,7 +96,7 @@ async function sendSms(to: string, body: string, mediaUrl?: string): Promise<voi
 }
 
 function publicSiteUrl() {
-  return (Deno.env.get("PUBLIC_SITE_URL") || Deno.env.get("SITE_URL") || "https://pinonit.com").replace(/\/$/, "");
+  return (Deno.env.get("APP_URL") || "https://pinonit.com").replace(/\/$/, "");
 }
 
 function coordinationContextLabel(type: unknown): string {
