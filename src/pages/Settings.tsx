@@ -17,7 +17,7 @@ import {
   Save, Loader2, Copy, Check, Code, Palette, ExternalLink, Upload, X,
   ImagePlus, CheckCircle2, AlertCircle, Link2, QrCode, Users, Gift,
   TrendingUp, DollarSign, Calendar, Video, Wifi, WifiOff, BellRing, Plus, Trash2, Phone, PhoneCall,
-  Mail, Smartphone, MessageSquare,
+  Mail, Smartphone, MessageSquare, Shield,
 } from 'lucide-react';
 import { QRModal } from '../components/QRModal';
 import { ColorSwatchRow } from '../components/ColorSwatchRow';
@@ -505,6 +505,8 @@ export function SettingsPage() {
   const [updatingEmail, setUpdatingEmail] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [showQR, setShowQR] = useState(false);
+  const websiteConnectedKey = user?.id ? `pinonit-website-connected:${user.id}` : null;
+  const [websiteConnected, setWebsiteConnected] = useState(false);
   const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle');
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoDragOver, setLogoDragOver] = useState(false);
@@ -512,6 +514,14 @@ export function SettingsPage() {
   const bookingFieldsHydrated = useRef(false);
 
   const bookingUrl = slug ? `${window.location.origin}/${slug}` : '';
+  const widgetCode = slug
+    ? `<div id="pinonit-booking"></div>\n<script src="${window.location.origin}/embed.js" data-slug="${slug}" defer></script>`
+    : '';
+
+  useEffect(() => {
+    if (!websiteConnectedKey) return;
+    setWebsiteConnected(window.localStorage.getItem(websiteConnectedKey) === '1');
+  }, [websiteConnectedKey]);
 
   useEffect(() => {
     if (user) void refreshProfile();
@@ -951,7 +961,7 @@ export function SettingsPage() {
     : '';
 
   const popupCode = slug
-    ? `<!-- Add to your <head> -->\n<script src="https://pinonit.com/embed.js" data-slug="${slug}" defer></script>\n<!-- Add anywhere in your page -->\n<button data-pinonit="${slug}">Book a meeting</button>`
+    ? `<!-- Add to your <head> -->\n<script src="${window.location.origin}/embed.js" data-slug="${slug}" defer></script>\n<!-- Add anywhere in your page -->\n<button data-pinonit="${slug}">Book a meeting</button>`
     : '';
 
   const tabs: { key: SettingsTab; label: string }[] = [
@@ -1833,7 +1843,7 @@ export function SettingsPage() {
 
       {/* EMBED */}
       {section === 'general' && tab === 'embed' && (
-        <div className="space-y-6">
+        <div className="space-y-8 max-w-lg">
           {!slug && (
             <div className="p-5 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-center">
               <p className="text-sm font-semibold text-slate-900 dark:text-white mb-1">Set up your booking page first</p>
@@ -1851,64 +1861,136 @@ export function SettingsPage() {
           )}
           {slug && (
             <>
-              <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-3">
-                <div className="flex items-center gap-2">
-                  <Code className="h-4 w-4 text-indigo-600" />
-                  <h3 className="font-semibold">Inline embed</h3>
-                </div>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Embed your booking page directly in your website with an iframe.</p>
-                <pre className="p-3 bg-slate-50 dark:bg-slate-950 rounded-lg text-xs text-slate-700 dark:text-slate-300 overflow-x-auto whitespace-pre-wrap font-mono border border-slate-200 dark:border-slate-800">{iframeCode}</pre>
-                <button onClick={() => copyText(iframeCode, 'iframe')}
-                  className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-white text-sm rounded-lg transition-colors inline-flex items-center gap-1.5">
-                  {copied === 'iframe' ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-                  {copied === 'iframe' ? 'Copied!' : 'Copy iframe'}
-                </button>
-              </div>
-
-              <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-3">
-                <div className="flex items-center gap-2">
-                  <Code className="h-4 w-4 text-indigo-600" />
-                  <h3 className="font-semibold">Popup button</h3>
-                </div>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Add a "Book a meeting" button that opens your booking page in a popup overlay.</p>
-                <pre className="p-3 bg-slate-50 dark:bg-slate-950 rounded-lg text-xs text-slate-700 dark:text-slate-300 overflow-x-auto whitespace-pre-wrap font-mono border border-slate-200 dark:border-slate-800">{popupCode}</pre>
-                <button onClick={() => copyText(popupCode, 'popup')}
-                  className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-white text-sm rounded-lg transition-colors inline-flex items-center gap-1.5">
-                  {copied === 'popup' ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-                  {copied === 'popup' ? 'Copied!' : 'Copy popup code'}
-                </button>
-              </div>
-
-              <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-3">
-                <h3 className="font-semibold">Direct booking link</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Share this link in emails, social media, or anywhere you want guests to book.</p>
-                <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800">
-                  <span className="text-sm text-indigo-600 dark:text-indigo-400 font-mono flex-1 truncate">{bookingUrl}</span>
-                </div>
-                <button onClick={() => copyText(bookingUrl, 'direct')}
-                  className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-white text-sm rounded-lg transition-colors inline-flex items-center gap-1.5">
-                  {copied === 'direct' ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-                  {copied === 'direct' ? 'Copied!' : 'Copy link'}
-                </button>
-              </div>
-
-              <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-3">
-                <div className="flex items-center gap-2">
-                  <QrCode className="h-4 w-4 text-indigo-600" />
-                  <h3 className="font-semibold">Booking page QR code</h3>
-                </div>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Generate a scannable QR code for your booking page. Print it, put it in your email signature, slide deck, or business card.
+              <div>
+                <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Connect your website</h2>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Takes 2 minutes</p>
+                <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
+                  Add booking to any website with a simple code snippet.
                 </p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#5864C6] text-sm font-semibold text-white">1</span>
+                  <h3 className="font-semibold text-slate-900 dark:text-white">Copy HTML code</h3>
+                </div>
+                <pre className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl text-xs text-slate-700 dark:text-slate-300 overflow-x-auto whitespace-pre-wrap break-all font-mono border border-slate-200 dark:border-slate-800">{widgetCode}</pre>
                 <button
-                  onClick={() => setShowQR(true)}
-                  className="px-4 py-2 text-white text-sm font-semibold rounded-lg transition-colors inline-flex items-center gap-2 shadow-sm hover:opacity-90"
-                  style={{ backgroundColor: '#5864C6' }}
+                  type="button"
+                  onClick={() => copyText(widgetCode, 'widget')}
+                  className="w-full h-12 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-white text-sm font-semibold transition-colors inline-flex items-center justify-center gap-2"
                 >
-                  <QrCode className="h-4 w-4" />
-                  Generate QR code
+                  {copied === 'widget' ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                  {copied === 'widget' ? 'Copied!' : 'Copy code'}
                 </button>
               </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#5864C6] text-sm font-semibold text-white">2</span>
+                  <h3 className="font-semibold text-slate-900 dark:text-white">Paste code to website</h3>
+                </div>
+                <p className="pl-10 text-sm text-slate-500 dark:text-slate-400">
+                  Paste the code into your website where you want booking to appear. You can place it inside any page&apos;s HTML body section.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#5864C6] text-sm font-semibold text-white">3</span>
+                  <h3 className="font-semibold text-slate-900 dark:text-white">Activate booking widget</h3>
+                </div>
+                <p className="pl-10 text-sm text-slate-500 dark:text-slate-400">
+                  After adding the code, confirm below to activate your booking widget.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (websiteConnectedKey) window.localStorage.setItem(websiteConnectedKey, '1');
+                  setWebsiteConnected(true);
+                  toast.success(websiteConnected ? 'Booking widget is active' : 'Booking widget activated');
+                }}
+                className={`w-full h-12 rounded-full text-white text-sm font-semibold transition-colors inline-flex items-center justify-center gap-2 ${
+                  websiteConnected ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-[#5864C6] hover:opacity-90'
+                }`}
+              >
+                <Check className="h-4 w-4" />
+                {websiteConnected ? 'Booking widget connected' : "I've added the code"}
+              </button>
+              <p className="text-center text-xs text-slate-400 dark:text-slate-500 inline-flex items-center justify-center gap-1.5 w-full">
+                <Shield className="h-3.5 w-3.5" />
+                Secure connection
+              </p>
+
+              <details className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50">
+                <summary className="cursor-pointer list-none px-5 py-4 text-sm font-semibold text-slate-900 dark:text-white flex items-center justify-between [&::-webkit-details-marker]:hidden">
+                  More ways to share
+                  <span className="text-slate-400 font-normal">iframe, popup, link, QR</span>
+                </summary>
+                <div className="px-5 pb-5 space-y-5 border-t border-slate-200 dark:border-slate-800 pt-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Code className="h-4 w-4 text-indigo-600" />
+                      <h3 className="font-semibold text-sm">Inline iframe</h3>
+                    </div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Embed the booking page directly without the script widget.</p>
+                    <pre className="p-3 bg-slate-50 dark:bg-slate-950 rounded-lg text-xs text-slate-700 dark:text-slate-300 overflow-x-auto whitespace-pre-wrap font-mono border border-slate-200 dark:border-slate-800">{iframeCode}</pre>
+                    <button type="button" onClick={() => copyText(iframeCode, 'iframe')}
+                      className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-white text-sm rounded-lg transition-colors inline-flex items-center gap-1.5">
+                      {copied === 'iframe' ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                      {copied === 'iframe' ? 'Copied!' : 'Copy iframe'}
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Code className="h-4 w-4 text-indigo-600" />
+                      <h3 className="font-semibold text-sm">Popup button</h3>
+                    </div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Add a &quot;Book a meeting&quot; button that opens booking in a popup overlay.</p>
+                    <pre className="p-3 bg-slate-50 dark:bg-slate-950 rounded-lg text-xs text-slate-700 dark:text-slate-300 overflow-x-auto whitespace-pre-wrap font-mono border border-slate-200 dark:border-slate-800">{popupCode}</pre>
+                    <button type="button" onClick={() => copyText(popupCode, 'popup')}
+                      className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-white text-sm rounded-lg transition-colors inline-flex items-center gap-1.5">
+                      {copied === 'popup' ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                      {copied === 'popup' ? 'Copied!' : 'Copy popup code'}
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="font-semibold text-sm">Direct booking link</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Share this link in emails, social media, or anywhere guests can book.</p>
+                    <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800">
+                      <span className="text-sm text-indigo-600 dark:text-indigo-400 font-mono flex-1 truncate">{bookingUrl}</span>
+                    </div>
+                    <button type="button" onClick={() => copyText(bookingUrl, 'direct')}
+                      className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-white text-sm rounded-lg transition-colors inline-flex items-center gap-1.5">
+                      {copied === 'direct' ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                      {copied === 'direct' ? 'Copied!' : 'Copy link'}
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <QrCode className="h-4 w-4 text-indigo-600" />
+                      <h3 className="font-semibold text-sm">Booking page QR code</h3>
+                    </div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      Print it, put it in your email signature, slide deck, or business card.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setShowQR(true)}
+                      className="px-4 py-2 text-white text-sm font-semibold rounded-lg transition-colors inline-flex items-center gap-2 shadow-sm hover:opacity-90"
+                      style={{ backgroundColor: '#5864C6' }}
+                    >
+                      <QrCode className="h-4 w-4" />
+                      Generate QR code
+                    </button>
+                  </div>
+                </div>
+              </details>
             </>
           )}
         </div>

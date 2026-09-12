@@ -270,6 +270,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
     purpose: 'Your account, booking URL, docs defaults, branding, and other preferences.',
     steps: [
       'General → set your name and booking username.',
+      'Embed → copy the snippet, paste it on your site, then tap I\'ve added the code.',
       'Docs → templates and named PDF library.',
       'Branding, Integrations, and Referrals each have their own tab.',
       'Turn on Advanced mode if you want every tool listed in the sidebar.',
