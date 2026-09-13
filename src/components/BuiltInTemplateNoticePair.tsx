@@ -7,17 +7,26 @@ import type { SmbDocumentType } from '../lib/types';
 
 type Props = {
   type: SmbDocumentType;
-  /** Both lines show together or not at all — only unmodified built-ins. */
+  /** Both built-in lines show together or not at all — only unmodified built-ins. */
   show: boolean;
+  /** Muted extras after the scope line (state notice, state-specific link). */
+  footer?: ReactNode;
   children: ReactNode;
 };
 
 /**
- * Fixed pair around built-in template text: normal line above, muted line below.
- * The body scrolls inside so both lines stay on screen together.
+ * Fixed pair around built-in template text: one normal line above, muted stack below.
+ * The body scrolls inside so the pair stays on screen together.
  */
-export function BuiltInTemplateNoticePair({ type, show, children }: Props) {
-  if (!show) return <>{children}</>;
+export function BuiltInTemplateNoticePair({ type, show, footer, children }: Props) {
+  if (!show) {
+    return (
+      <div className="space-y-2">
+        {children}
+        {footer}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2">
@@ -28,6 +37,7 @@ export function BuiltInTemplateNoticePair({ type, show, children }: Props) {
       <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed">
         {builtInTemplateScopeLine()}
       </p>
+      {footer}
     </div>
   );
 }

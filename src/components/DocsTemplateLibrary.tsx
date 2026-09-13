@@ -413,6 +413,14 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
                     <BuiltInTemplateNoticePair
                       type={type}
                       show={isUnmodifiedBuiltInTemplate(type, draftFor(type), seedFor(type))}
+                      footer={
+                        isWaiverFamily(type) ? (
+                          <>
+                            <HostLegalStateNotice documentType={type} businessRegion={profile?.business_region} />
+                            <LegalTemplatesNeedLink className="inline-block" />
+                          </>
+                        ) : undefined
+                      }
                     >
                       <textarea
                         value={draftFor(type)}
@@ -425,9 +433,6 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
                         className="w-full max-h-52 overflow-y-auto px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm text-slate-900 dark:text-white"
                       />
                     </BuiltInTemplateNoticePair>
-                    {isWaiverFamily(type) && (
-                      <HostLegalStateNotice documentType={type} businessRegion={profile?.business_region} />
-                    )}
 
                     <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 p-3 space-y-2">
                       <div className="flex items-center justify-between gap-2">
@@ -540,7 +545,9 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
                         Restore built-in
                       </button>
                     </div>
-                    <LegalTemplatesNeedLink className="inline-block" />
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                      Placeholders like [Recipient Name] fill when you send.
+                    </p>
                   </div>
                 )}
               </div>

@@ -1,14 +1,14 @@
 {
   "waiver": {
-    "default": "Some states limit waivers signed by a parent on behalf of a minor — worth asking your attorney.",
-    "CA": "Some California rules limit liability waivers, including some signed by a parent on behalf of a minor — worth asking your attorney about this in California.",
-    "NY": "New York courts often will not give effect to a waiver signed by a parent on behalf of a minor — worth asking your attorney about this in New York.",
-    "LA": "Louisiana treats many liability waivers more narrowly than other states — worth asking your attorney about this in Louisiana."
+    "default": "Some states limit waivers signed by a parent on behalf of a minor.",
+    "CA": "Some California rules limit liability waivers, including some signed by a parent on behalf of a minor.",
+    "NY": "New York courts often will not give effect to a waiver signed by a parent on behalf of a minor.",
+    "LA": "Louisiana treats many liability waivers more narrowly than other states."
   },
   "parental_consent_waiver": {
-    "default": "Some states limit waivers signed by a parent on behalf of a minor — worth asking your attorney.",
-    "CA": "Some California rules limit waivers signed by a parent on behalf of a minor — worth asking your attorney about this in California.",
-    "NY": "New York courts often will not give effect to a waiver signed by a parent on behalf of a minor — worth asking your attorney about this in New York.",
-    "LA": "Louisiana treats many liability waivers more narrowly than other states — worth asking your attorney about this in Louisiana."
+    "default": "Some states limit waivers signed by a parent on behalf of a minor.",
+    "CA": "Some California rules limit waivers signed by a parent on behalf of a minor.",
+    "NY": "New York courts often will not give effect to a waiver signed by a parent on behalf of a minor.",
+    "LA": "Louisiana treats many liability waivers more narrowly than other states."
   }
 }

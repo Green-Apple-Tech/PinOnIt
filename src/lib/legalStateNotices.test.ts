@@ -21,6 +21,11 @@ describe('host legal state notices', () => {
     expect(hostLegalStateNotice('parental_consent_waiver', 'CA')).toMatch(/California/);
     expect(hostLegalStateNotice('parental_consent_waiver', 'NY')).toMatch(/New York/);
     expect(hostLegalStateNotice('waiver', 'CA')).not.toMatch(/tailored|generally acceptable|may hold up|enforceable/i);
+    expect(hostLegalStateNotice('waiver', null)).toBe(
+      'Some states limit waivers signed by a parent on behalf of a minor.',
+    );
+    expect(hostLegalStateNotice('waiver', null)).not.toMatch(/attorney/i);
+    expect(hostLegalStateNotice('waiver', 'CA')).not.toMatch(/attorney/i);
   });
 
   it('does not invent a notice from timezone-like values', () => {

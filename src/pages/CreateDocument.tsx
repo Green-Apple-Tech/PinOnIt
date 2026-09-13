@@ -25,7 +25,6 @@ import {
 } from '../lib/documentActions';
 import {
   CONTRACT_HOST_HINT,
-  WAIVER_HOST_HINT,
   SMB_DOCUMENT_TYPES,
   DOCUMENT_UPLOAD_BUCKET,
   DOCUMENT_UPLOAD_MAX_BYTES,
@@ -1208,34 +1207,14 @@ export function CreateDocumentPage() {
         {bodyEditable ? (
           <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-6">
             <label className="block">
-              <span className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-slate-400">
-                {isWaiver ? 'Waiver language' : 'Full document text'}
-              </span>
-              {isWaiver ? (
-                <p className="mt-2 mb-3 text-sm text-gray-600 dark:text-slate-300 leading-relaxed">
-                  {WAIVER_HOST_HINT} Recipient name, activity, and business name above fill the brackets. You can still edit this send, or save a default in{' '}
-                  <Link to="/dashboard/settings?tab=docs" className="font-semibold text-brand-600 hover:text-brand-700">
-                    Settings → Docs
-                  </Link>
-                  .
-                </p>
-              ) : documentType === 'contract' ? (
-                <>
-                  <div className="mt-2 mb-3 rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-950/30 px-3 py-2.5 text-sm text-amber-900 dark:text-amber-200 leading-relaxed">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-300">Warning</p>
-                    <p className="mt-1">{CONTRACT_HOST_HINT}</p>
-                  </div>
-                  <p className="mt-1 mb-3 text-sm text-gray-600 dark:text-slate-300 leading-relaxed">
-                    This is what they see and sign. Topic and recipient name fill in from the fields above.
-                  </p>
-                </>
-              ) : (
-                <p className="mt-2 mb-3 text-sm text-gray-600 dark:text-slate-300 leading-relaxed">
-                  This is what they see and sign. Topic and recipient name fill in from the fields above.
-                </p>
+              {documentType === 'contract' && (
+                <div className="mb-3 rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-950/30 px-3 py-2.5 text-sm text-amber-900 dark:text-amber-200 leading-relaxed">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-300">Warning</p>
+                  <p className="mt-1">{CONTRACT_HOST_HINT}</p>
+                </div>
               )}
 
-              <div className="mt-1 mb-3">
+              <div className="mb-3">
                 <BuiltInTemplateNoticePair
                   type={documentType}
                   show={isUnmodifiedBuiltInTemplate(
@@ -1243,13 +1222,35 @@ export function CreateDocumentPage() {
                     customText,
                     selectedTemplate?.full_text || defaultDocumentBody(documentType),
                   )}
+                  footer={
+                    isWaiver ? (
+                      <>
+                        <HostLegalStateNotice documentType={documentType} businessRegion={profile?.business_region} />
+                        <LegalTemplatesNeedLink className="inline-block" />
+                      </>
+                    ) : undefined
+                  }
                 >
                   <p className="text-sm text-gray-800 dark:text-slate-100 whitespace-pre-line leading-relaxed rounded-xl border border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-950 px-3 py-3">
                     {filledBody}
                   </p>
                 </BuiltInTemplateNoticePair>
               </div>
-              <span className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1 mt-3">Edit full text</span>
+              <span className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Edit full text</span>
+              <p className="mb-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                {isWaiver ? (
+                  <>
+                    Recipient name, activity, and business name fill the [brackets]. You can edit this send, or save a
+                    default in{' '}
+                    <Link to="/dashboard/settings?tab=docs" className="font-semibold text-brand-600 hover:text-brand-700">
+                      Settings → Docs
+                    </Link>
+                    .
+                  </>
+                ) : (
+                  'Topic and recipient name fill in from the fields above.'
+                )}
+              </p>
               <textarea
                 value={customText}
                 onChange={(e) => setCustomText(e.target.value)}
@@ -1257,12 +1258,6 @@ export function CreateDocumentPage() {
                 rows={8}
                 className={`${fieldClass} min-h-[10rem] font-mono text-sm leading-relaxed`}
               />
-              <div className="mt-3">
-                <HostLegalStateNotice documentType={documentType} businessRegion={profile?.business_region} />
-              </div>
-              {isWaiverFamily(documentType) && (
-                <LegalTemplatesNeedLink className="mt-2 inline-block" />
-              )}
             </label>
           </div>
         ) : !isUpload && selectedTemplate ? (
@@ -1277,6 +1272,14 @@ export function CreateDocumentPage() {
                 hostOverrideText || selectedTemplate.full_text || '',
                 selectedTemplate.full_text || defaultDocumentBody(documentType),
               )}
+              footer={
+                isWaiver ? (
+                  <>
+                    <HostLegalStateNotice documentType={documentType} businessRegion={profile?.business_region} />
+                    <LegalTemplatesNeedLink className="inline-block" />
+                  </>
+                ) : undefined
+              }
             >
               <p className="text-sm text-gray-700 dark:text-slate-200 whitespace-pre-line leading-relaxed">
                 {fillDocumentPlaceholders(
@@ -1290,12 +1293,6 @@ export function CreateDocumentPage() {
                 )}
               </p>
             </BuiltInTemplateNoticePair>
-            <div className="mt-3">
-              <HostLegalStateNotice documentType={documentType} businessRegion={profile?.business_region} />
-            </div>
-            {isWaiverFamily(documentType) && (
-              <LegalTemplatesNeedLink className="mt-3 inline-block" />
-            )}
           </div>
         ) : null}
 
