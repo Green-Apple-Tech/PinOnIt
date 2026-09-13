@@ -24,6 +24,8 @@ describe('getPageHelp', () => {
   it('explains the Docs settings tab', () => {
     expect(getPageHelp('/dashboard/settings', '?tab=docs').title).toMatch(/docs/i);
     expect(getPageHelp('/dashboard/settings', '?tab=docs').purpose).toMatch(/waiver|template|PDF/i);
+    expect(getPageHelp('/dashboard/settings', '?tab=docs').relatedLinks?.some((l) => l.to === '/legal-templates')).toBe(true);
+    expect(getPageHelp('/dashboard/documents').relatedLinks?.some((l) => l.to === '/legal-templates')).toBe(true);
   });
 
   it('explains Quote-by-Text on the quotes routes', () => {
@@ -61,6 +63,7 @@ describe('matchHelpFaq', () => {
     expect(matchHelpFaq('Find in contacts does nothing')?.id).toBe('find-contacts');
     expect(matchHelpFaq('On my way')?.id).toBe('on-my-way');
     expect(matchHelpFaq('Where are recurring bookings?')?.id).toBe('recurring-bookings');
+    expect(matchHelpFaq('Where do I get a state-specific waiver?')?.id).toBe('state-waiver-templates');
   });
 });
 

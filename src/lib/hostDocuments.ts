@@ -34,4 +34,15 @@ export type HostDocumentFile = {
   file_name: string;
   file_size_bytes: number;
   require_otp?: boolean | null;
+  archived_at?: string | null;
 };
+
+export const DOCS_TEMPLATE_UPLOAD_PATH = '/dashboard/settings?tab=docs&upload=1';
+
+export function activeHostDocumentFiles(files: HostDocumentFile[]) {
+  return files.filter((f) => !f.archived_at);
+}
+
+export function templateNameFromFile(file: File) {
+  return file.name.replace(/\.pdf$/i, '').trim().slice(0, 120) || 'Uploaded waiver';
+}

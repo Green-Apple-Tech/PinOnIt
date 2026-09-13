@@ -36,6 +36,7 @@ const RESERVED = new Set([
   'nda',
   'reminders',
   'why-pinonit',
+  'legal-templates',
   'terms',
   'privacy',
   'sms-consent',

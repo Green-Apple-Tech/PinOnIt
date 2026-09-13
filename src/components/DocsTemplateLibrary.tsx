@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, FileText, Loader2, Trash2, Upload } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Archive, ArchiveRestore, ChevronDown, ChevronUp, FileText, Loader2, Trash2, Upload } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { toast } from './Toast';
 import { formatErrorMessage } from '../lib/errors';
@@ -23,9 +24,17 @@ import {
 } from '../lib/plainLanguageSummary';
 import {
   HOST_EDITABLE_TEMPLATE_TYPES,
+  activeHostDocumentFiles,
+  templateNameFromFile,
   type HostDocumentFile,
   type HostDocumentTemplate,
 } from '../lib/hostDocuments';
+import {
+  archiveHostPdfTemplate,
+  renameHostPdfTemplate,
+  saveHostPdfTemplate,
+} from '../lib/hostDocumentFiles';
+import { LegalTemplatesNeedLink } from './LegalTemplatesNeedLink';
 import { defaultRequireOtp, resolveRequireOtp } from '../lib/documentTypes';
 import type { DocumentTemplate, SmbDocumentType } from '../lib/types';
 import { useAuth } from '../hooks/useAuth';
@@ -57,22 +66,26 @@ type Props = {
 
 export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateChange }: Props) {
   const { profile, refreshProfile } = useAuth();
+  const [searchParams] = useSearchParams();
   const [globalTemplates, setGlobalTemplates] = useState<DocumentTemplate[]>([]);
   const [overrides, setOverrides] = useState<HostDocumentTemplate[]>([]);
   const [files, setFiles] = useState<HostDocumentFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [openType, setOpenType] = useState<SmbDocumentType | null>('nda');
+  const [openPdfId, setOpenPdfId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Partial<Record<SmbDocumentType, string>>>({});
   const [summaryDrafts, setSummaryDrafts] = useState<Partial<Record<SmbDocumentType, SummaryDraft>>>({});
   const [summarizingType, setSummarizingType] = useState<SmbDocumentType | null>(null);
   const [savingType, setSavingType] = useState<SmbDocumentType | null>(null);
   const [pdfName, setPdfName] = useState('');
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [renameDrafts, setRenameDrafts] = useState<Record<string, string>>({});
   const [scopeAcked, setScopeAcked] = useState(false);
   const uploadMaxLabel = documentUploadMaxLabel();
   const scopeAlreadyAccepted = Boolean(profile?.sign_by_text_scope_accepted_at);
   const debounceTimers = useRef<Partial<Record<SmbDocumentType, number>>>({});
   const summarizeGen = useRef(0);
+  const uploadSectionRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -93,6 +106,13 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (searchParams.get('upload') !== '1') return;
+    uploadSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setOpenType(null);
+  }, [loading, searchParams]);
 
   useEffect(() => {
     return () => {
@@ -259,31 +279,12 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
     }
     setPdfBusy(true);
     try {
-      if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-        toast.error('We only accept PDF files right now. Save or export as PDF, then upload that file.');
-        return;
-      }
-      if (file.size > DOCUMENT_UPLOAD_MAX_BYTES) {
-        toast.error(`This file is a bit large (over ${formatBytes(DOCUMENT_UPLOAD_MAX_BYTES)}) — compress it or remove large images, then re-upload.`);
-        return;
-      }
-      const name = pdfName.trim() || file.name.replace(/\.pdf$/i, '').slice(0, 120);
-      const path = `${hostId}/library/${crypto.randomUUID()}.pdf`;
-      const { error: upErr } = await supabase.storage
-        .from(DOCUMENT_UPLOAD_BUCKET)
-        .upload(path, file, { contentType: 'application/pdf', upsert: false });
-      if (upErr) throw upErr;
-      const { error } = await supabase.from('host_document_files').insert({
-        host_id: hostId,
-        name,
-        file_path: path,
-        file_name: file.name.slice(0, 200),
-        file_size_bytes: file.size,
+      const { data, error } = await saveHostPdfTemplate({
+        hostId,
+        file,
+        name: pdfName.trim() || templateNameFromFile(file),
       });
-      if (error) {
-        await supabase.storage.from(DOCUMENT_UPLOAD_BUCKET).remove([path]);
-        throw error;
-      }
+      if (error || !data) throw error || new Error('Could not save that PDF template.');
       if (!scopeAlreadyAccepted && scopeAcked) {
         await supabase
           .from('profiles')
@@ -292,13 +293,38 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
         await refreshProfile();
       }
       setPdfName('');
-      toast.success('PDF saved — it will appear in Document Type when you send.');
+      setOpenPdfId(data.id);
+      toast.success('PDF saved — it sits with your templates and appears in Document Type when you send.');
       await load();
     } catch (err) {
       toast.error(formatErrorMessage(err));
     } finally {
       setPdfBusy(false);
     }
+  };
+
+  const savePdfName = async (row: HostDocumentFile) => {
+    const name = (renameDrafts[row.id] ?? row.name).trim();
+    const { error } = await renameHostPdfTemplate({ id: row.id, hostId, name });
+    if (error) {
+      toast.error(formatErrorMessage(error));
+      return;
+    }
+    setFiles((prev) => prev.map((f) => (f.id === row.id ? { ...f, name } : f)));
+    toast.success('Template name saved');
+  };
+
+  const setPdfArchived = async (row: HostDocumentFile, archived: boolean) => {
+    const { error } = await archiveHostPdfTemplate({ id: row.id, hostId, archived });
+    if (error) {
+      toast.error(formatErrorMessage(error));
+      return;
+    }
+    setFiles((prev) =>
+      prev.map((f) => (f.id === row.id ? { ...f, archived_at: archived ? new Date().toISOString() : null } : f)),
+    );
+    if (archived && openPdfId === row.id) setOpenPdfId(null);
+    toast.success(archived ? 'Template archived' : 'Template restored');
   };
 
   const deleteFile = async (row: HostDocumentFile) => {
@@ -325,7 +351,7 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
       <div className="space-y-2">
         <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Default document templates</h3>
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          Built-in wording is the starting point. Open a type, edit, and save your own version. A plain-language summary is generated when you edit and can be turned off per template. Uploaded PDFs are never summarized.
+          Built-in wording is the starting point. Open a type, edit, and save your own version. Uploaded PDFs sit in this same list — name them, reuse them, or archive them. A plain-language summary is generated when you edit a text template and can be turned off. Uploaded PDFs are never summarized.
         </p>
         <label className="block max-w-md">
           <span className="text-xs font-medium text-slate-500">Completed waiver retention</span>
@@ -516,6 +542,70 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
                         Restore built-in
                       </button>
                     </div>
+                    <LegalTemplatesNeedLink className="inline-block" />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {activeHostDocumentFiles(files).map((f) => {
+            const open = openPdfId === f.id;
+            return (
+              <div key={f.id} className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setOpenPdfId(open ? null : f.id)}
+                  className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-900/40"
+                >
+                  <span className="flex items-center gap-2 min-w-0">
+                    <FileText className="h-4 w-4 text-brand-600 shrink-0" />
+                    <span className="text-sm font-semibold text-slate-900 dark:text-white truncate">{f.name}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                      PDF
+                    </span>
+                  </span>
+                  {open ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+                </button>
+                {open && (
+                  <div className="px-4 pb-4 space-y-3 border-t border-slate-100 dark:border-slate-800 pt-3">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {f.file_name} · {formatBytes(f.file_size_bytes)} · pick this from Document Type when you send
+                    </p>
+                    <label className="block">
+                      <span className="text-xs font-medium text-slate-500">Template name</span>
+                      <input
+                        type="text"
+                        value={renameDrafts[f.id] ?? f.name}
+                        onChange={(e) => setRenameDrafts((prev) => ({ ...prev, [f.id]: e.target.value.slice(0, 120) }))}
+                        maxLength={120}
+                        className="mt-1 w-full px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm"
+                      />
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void savePdfName(f)}
+                        className="min-h-10 px-4 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold"
+                      >
+                        Save name
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void setPdfArchived(f, true)}
+                        className="min-h-10 px-4 rounded-lg border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-600 dark:text-slate-300 inline-flex items-center gap-1.5"
+                      >
+                        <Archive className="h-4 w-4" />
+                        Archive
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void deleteFile(f)}
+                        className="min-h-10 px-4 rounded-lg border border-slate-200 dark:border-slate-700 text-sm font-semibold text-red-600 dark:text-red-400 inline-flex items-center gap-1.5"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -524,10 +614,10 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
         </div>
       </div>
 
-      <div className="border-t border-slate-200 dark:border-slate-800 pt-4 space-y-3">
-        <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Saved PDFs</h3>
+      <div ref={uploadSectionRef} className="border-t border-slate-200 dark:border-slate-800 pt-4 space-y-3">
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Upload a PDF template</h3>
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          Upload a PDF once, name it, then pick it from Document Type when you send. PDF only, up to {formatBytes(DOCUMENT_UPLOAD_MAX_BYTES)}. Uploaded PDFs are shown as-is — no plain-language summary.
+          Upload once, name it, and it appears with the built-ins above. Pick it from Document Type whenever you send — including hundreds of times. PDF only, up to {formatBytes(DOCUMENT_UPLOAD_MAX_BYTES)}.
         </p>
         <p className="text-xs text-slate-500 dark:text-slate-400">{DOCUMENT_UPLOAD_READABILITY_HINT}</p>
         <div className="rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/60 dark:bg-amber-950/20 p-2.5">
@@ -560,6 +650,7 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
             value={pdfName}
             onChange={(e) => setPdfName(e.target.value.slice(0, 120))}
             placeholder="Name (e.g. Standard liability waiver)"
+            autoFocus={searchParams.get('upload') === '1'}
             className="flex-1 px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm"
           />
           <label className="inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold cursor-pointer">
@@ -577,27 +668,38 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
             />
           </label>
         </div>
-        {files.length === 0 ? (
-          <p className="text-sm text-slate-400">No saved PDFs yet.</p>
-        ) : (
-          <ul className="divide-y divide-slate-100 dark:divide-slate-800 rounded-xl border border-slate-200 dark:border-slate-800">
-            {files.map((f) => (
-              <li key={f.id} className="flex items-center justify-between gap-3 px-3 py-2.5">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{f.name}</p>
-                  <p className="text-xs text-slate-400 truncate">{f.file_name} · {formatBytes(f.file_size_bytes)}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => void deleteFile(f)}
-                  className="p-2 text-slate-400 hover:text-red-500"
-                  aria-label={`Delete ${f.name}`}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </li>
-            ))}
-          </ul>
+        {files.filter((f) => f.archived_at).length > 0 && (
+          <div className="space-y-2 pt-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Archived templates</p>
+            <ul className="divide-y divide-slate-100 dark:divide-slate-800 rounded-xl border border-slate-200 dark:border-slate-800">
+              {files.filter((f) => f.archived_at).map((f) => (
+                <li key={f.id} className="flex items-center justify-between gap-3 px-3 py-2.5">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 truncate">{f.name}</p>
+                    <p className="text-xs text-slate-400 truncate">{f.file_name} · {formatBytes(f.file_size_bytes)}</p>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => void setPdfArchived(f, false)}
+                      className="p-2 text-slate-400 hover:text-brand-600"
+                      aria-label={`Restore ${f.name}`}
+                    >
+                      <ArchiveRestore className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void deleteFile(f)}
+                      className="p-2 text-slate-400 hover:text-red-500"
+                      aria-label={`Delete ${f.name}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </div>
     </div>

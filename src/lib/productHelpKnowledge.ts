@@ -150,7 +150,20 @@ export const HELP_FAQS: HelpFaq[] = [
       'can i upload word',
     ],
     answer:
-      'Upload clear, complete PDFs only (export Word to PDF first), up to 5MB. Named PDFs can be saved in Settings → Docs for reuse.',
+      'Upload clear, complete PDFs only (export Word to PDF first), up to 5MB. Every upload is saved as a named template in Settings → Docs — rename or archive it, then pick it from Document Type when you send.',
+  },
+  {
+    id: 'state-waiver-templates',
+    questions: [
+      'state specific waiver',
+      'need a waiver for my state',
+      'legal templates',
+      'where do i get a state-specific waiver',
+      'lawdepot',
+      'upload my own waiver',
+    ],
+    answer:
+      'PinOnIt built-in waivers are general starting points. Requirements vary by state and activity. Download a form from a legal template site (examples on pinonit.com/legal-templates), then upload it once in Settings → Docs. PinOnIt does not provide legal documents or legal advice.',
   },
 ];
 

@@ -54,11 +54,18 @@ import {
   isUnmodifiedBuiltInTemplate,
 } from '../lib/builtInTemplateNotice';
 import { HostLegalStateNotice } from '../components/HostLegalStateNotice';
+import { LegalTemplatesNeedLink } from '../components/LegalTemplatesNeedLink';
 import { isParentalConsentWaiver, isWaiverFamily } from '../lib/waiverParticipants';
 import {
   normalizePlainLanguageBullets,
 } from '../lib/plainLanguageSummary';
-import type { HostDocumentFile, HostDocumentTemplate } from '../lib/hostDocuments';
+import {
+  activeHostDocumentFiles,
+  templateNameFromFile,
+  type HostDocumentFile,
+  type HostDocumentTemplate,
+} from '../lib/hostDocuments';
+import { saveHostPdfTemplate } from '../lib/hostDocumentFiles';
 import { resolveRequireOtp } from '../lib/documentTypes';
 import { QuoteLineItemRow } from '../components/QuoteLineItemRow';
 import type { DocumentTemplate, HostQuoteLineItem, SmbDocument, SmbDocumentType } from '../lib/types';
@@ -98,6 +105,7 @@ export function CreateDocumentPage() {
   const [libraryFileId, setLibraryFileId] = useState<string | null>(null);
   const [customTypeLabel, setCustomTypeLabel] = useState('');
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadTemplateName, setUploadTemplateName] = useState('');
   const [recipientFirstName, setRecipientFirstName] = useState('');
   const [recipientLastName, setRecipientLastName] = useState('');
   const [recipientEmail, setRecipientEmail] = useState('');
@@ -180,7 +188,7 @@ export function CreateDocumentPage() {
       supabase.from('host_document_files').select('*').eq('host_id', user.id).order('created_at', { ascending: false }),
     ]).then(([overridesRes, filesRes]) => {
       setHostOverrides((overridesRes.data as HostDocumentTemplate[]) ?? []);
-      setLibraryFiles((filesRes.data as HostDocumentFile[]) ?? []);
+      setLibraryFiles(activeHostDocumentFiles((filesRes.data as HostDocumentFile[]) ?? []));
     });
   }, [user?.id]);
 
@@ -439,6 +447,7 @@ export function CreateDocumentPage() {
       return;
     }
     setUploadFile(file);
+    setUploadTemplateName((prev) => prev.trim() || templateNameFromFile(file));
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -454,6 +463,10 @@ export function CreateDocumentPage() {
     }
     if (isUpload && !isLibraryPdf && !uploadFile) {
       setError('Choose a PDF to send for signature.');
+      return;
+    }
+    if (isUpload && !isLibraryPdf && uploadFile && !uploadTemplateName.trim()) {
+      setError('Give this PDF a template name so you can reuse it.');
       return;
     }
     if (!isQuote && !recipientFirstName.trim()) {
@@ -545,6 +558,17 @@ export function CreateDocumentPage() {
         return;
       }
     } else if (isUpload && uploadFile) {
+      const saved = await saveHostPdfTemplate({
+        hostId: user.id,
+        file: uploadFile,
+        name: uploadTemplateName,
+      });
+      if (saved.error || !saved.data) {
+        setError(saved.error?.message || 'Could not save this PDF to your templates.');
+        setSubmitting(false);
+        return;
+      }
+      setLibraryFiles((prev) => [saved.data!, ...prev.filter((f) => f.id !== saved.data!.id)]);
       filePath = `${user.id}/${token}.pdf`;
       fileName = uploadFile.name.slice(0, 200);
       fileSize = uploadFile.size;
@@ -555,7 +579,7 @@ export function CreateDocumentPage() {
           upsert: false,
         });
       if (upErr) {
-        setError(upErr.message || 'Could not upload the PDF. Try again.');
+        setError(upErr.message || 'Could not prepare the PDF for this send. The template was saved — try sending again.');
         setSubmitting(false);
         return;
       }
@@ -744,7 +768,7 @@ export function CreateDocumentPage() {
                 </option>
               ))}
               {libraryFiles.length > 0 && (
-                <optgroup label="Saved PDFs">
+                <optgroup label="Your templates">
                   {libraryFiles.map((f) => (
                     <option key={f.id} value={`${LIBRARY_FILE_PREFIX}${f.id}`}>
                       {f.name}
@@ -798,14 +822,16 @@ export function CreateDocumentPage() {
             </div>
           )}
           {isUpload && !isLibraryPdf && (
-            <label className="block">
-              <span className="text-xs font-medium text-gray-600 dark:text-slate-400">PDF to sign</span>
-              <input
-                type="file"
-                accept="application/pdf,.pdf"
-                onChange={(e) => handleUploadPick(e.target.files?.[0] ?? null)}
-                className={`${fieldClass} file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-brand-700`}
-              />
+            <div>
+              <label className="block">
+                <span className="text-xs font-medium text-gray-600 dark:text-slate-400">PDF to sign</span>
+                <input
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  onChange={(e) => handleUploadPick(e.target.files?.[0] ?? null)}
+                  className={`${fieldClass} file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-brand-700`}
+                />
+              </label>
               <p className="mt-1 text-xs text-gray-400">
                 PDF only, up to {formatBytes(DOCUMENT_UPLOAD_MAX_BYTES)}. Word docs: export as PDF first.
                 {uploadFile ? ` Selected: ${uploadFile.name} (${formatBytes(uploadFile.size)}).` : ''}
@@ -813,11 +839,24 @@ export function CreateDocumentPage() {
               <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
                 {DOCUMENT_UPLOAD_READABILITY_HINT}
               </p>
+              <label className="block mt-3">
+                <span className="text-xs font-medium text-gray-600 dark:text-slate-400">Template name</span>
+                <input
+                  type="text"
+                  value={uploadTemplateName}
+                  onChange={(e) => setUploadTemplateName(e.target.value.slice(0, 120))}
+                  required
+                  maxLength={120}
+                  className={fieldClass}
+                  placeholder="e.g. Standard zip-line waiver"
+                  autoComplete="off"
+                />
+              </label>
               <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
                 They get a text, enter a 2FA code, then sign with their finger — same simple flow as NDA/waiver.
-                Save reusable PDFs under Settings → Docs.
+                This PDF is saved as a reusable template so you can send it again.
               </p>
-            </label>
+            </div>
           )}
           {needsScopeCheckbox && (
             <div className="rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/60 dark:bg-amber-950/20 p-2.5">
@@ -1219,6 +1258,9 @@ export function CreateDocumentPage() {
                 rows={8}
                 className={`${fieldClass} min-h-[10rem] font-mono text-sm leading-relaxed`}
               />
+              {isWaiverFamily(documentType) && (
+                <LegalTemplatesNeedLink className="mt-2 inline-block" />
+              )}
             </label>
           </div>
         ) : !isUpload && selectedTemplate ? (
@@ -1249,6 +1291,9 @@ export function CreateDocumentPage() {
             <div className="mt-3">
               <HostLegalStateNotice documentType={documentType} businessRegion={profile?.business_region} />
             </div>
+            {isWaiverFamily(documentType) && (
+              <LegalTemplatesNeedLink className="mt-3 inline-block" />
+            )}
           </div>
         ) : null}
 

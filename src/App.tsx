@@ -9,6 +9,7 @@ import { ToastContainer } from './components/Toast';
 import { Landing } from './pages/Landing';
 import { CalendlyAlternative } from './pages/CalendlyAlternative';
 import { WhyPinOnItPage } from './pages/WhyPinOnIt';
+import { LegalTemplatesPage } from './pages/LegalTemplates';
 import { TermsPage } from './pages/Terms';
 import { PrivacyPage } from './pages/Privacy';
 import { SmsConsentPage } from './pages/SmsConsent';
@@ -164,6 +165,7 @@ function App() {
             <Route path="/nda" element={<CampaignLandingPage slug="nda" />} />
             <Route path="/reminders" element={<CampaignLandingPage slug="reminders" />} />
             <Route path="/why-pinonit" element={<WhyPinOnItPage />} />
+            <Route path="/legal-templates" element={<LegalTemplatesPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/sms-consent" element={<SmsConsentPage />} />

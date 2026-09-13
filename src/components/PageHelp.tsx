@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { HelpCircle, Loader2, MessageCircle, Send, X } from 'lucide-react';
 import { getPageHelp } from '../lib/pageHelp';
 import {
@@ -162,6 +162,23 @@ function HowToPanel({
           </ul>
         </div>
       </div>
+      {guide.relatedLinks && guide.relatedLinks.length > 0 && (
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Related</p>
+          <ul className="space-y-1.5">
+            {guide.relatedLinks.map((link) => (
+              <li key={link.to}>
+                <Link
+                  to={link.to}
+                  className="text-sm font-semibold text-brand-700 dark:text-brand-300 hover:underline"
+                >
+                  {link.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <button
         type="button"
         onClick={onAsk}

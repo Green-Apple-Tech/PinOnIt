@@ -1611,7 +1611,7 @@ export function SettingsPage() {
           <div>
             <h2 className="text-lg font-semibold">Docs</h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Defaults for Doc Center — editable templates, named PDFs, tax, and quote lines. You can still edit each send.
+              Defaults for Doc Center — editable templates, uploaded PDF templates, tax, and quote lines. You can still edit each send.
             </p>
           </div>
 

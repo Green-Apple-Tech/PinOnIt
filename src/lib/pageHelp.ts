@@ -7,6 +7,8 @@ export type PageHelpGuide = {
   cannotDo?: string[];
   /** Short prompts shown in Ask. */
   suggestedQuestions?: string[];
+  /** Optional links shown at the bottom of How to (e.g. /legal-templates). */
+  relatedLinks?: { label: string; to: string }[];
 };
 
 function keyFromLocation(pathname: string, search: string, hash: string): string {
@@ -138,7 +140,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
     purpose:
       'One place for quotes, invoices, receipts, NDAs, waivers, addendums, and PDF uploads. Leave signature & SMS verify off to just send a link. Turn it on for Sign-by-Text — they use a phone link, no app.',
     steps: [
-      'Tap New document and pick Document Type (or a Saved PDF from Settings → Docs).',
+      'Tap New document and pick Document Type, a saved PDF template, or upload a PDF — uploads are saved to your library so you can reuse them.',
       'Add recipient name. Find in contacts fills name, phone, and email — or type them. Phone is required to text the link, and when SMS verification is on.',
       'For quotes and invoices, paste your PayPal / Venmo / pay-anywhere link so they get a Pay button.',
       'SMS verification + signature is off by default for quotes and invoices, on for waivers, NDAs, and contracts. Change it per template in Settings → Docs, or with “Require a signature & SMS verify” on this screen. Off means they only view (and can Pay Now). On means they enter a code, then sign and check ESIGN.',
@@ -158,7 +160,9 @@ const GUIDES: Record<string, PageHelpGuide> = {
       'How do I send a quote?',
       'How do I get a signature by text?',
       'What is in the audit record?',
+      'Where do I get a state-specific waiver?',
     ],
+    relatedLinks: [{ label: 'State-specific waiver templates', to: '/legal-templates' }],
   },
   quotes: {
     title: 'Quote-by-Text',
@@ -281,10 +285,11 @@ const GUIDES: Record<string, PageHelpGuide> = {
     purpose: 'Save waiver language, templates, named PDFs, and your default payment link that new sends can reuse.',
     steps: [
       'Edit host templates and keep placeholders like [Recipient Name] so they fill when you send.',
-      'Upload named PDFs (clear, complete, up to 5MB) for reuse in Document Type.',
+      'Upload a named PDF (clear, complete, up to 5MB). It sits with your built-in templates — rename or archive it anytime, then pick it from Document Type when you send.',
       'Add your PayPal, Venmo, or any pay link — it pre-fills on quotes and invoices.',
       'Save. New documents pick these up; you can still change any one send.',
     ],
+    relatedLinks: [{ label: 'State-specific waiver templates', to: '/legal-templates' }],
   },
   'settings-branding': {
     title: 'Branding',
