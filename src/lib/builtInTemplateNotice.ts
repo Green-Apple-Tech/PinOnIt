@@ -8,9 +8,10 @@ const KNOWN_JARGON = [
   /This is a general-purpose starting template\. It is not legal advice\.?/gi,
 ];
 
+/** Lowercase type names in the host notice, except acronyms (NDA). */
 const KIND_LABEL: Partial<Record<SmbDocumentType, string>> = {
   waiver: 'waiver',
-  parental_consent_waiver: 'waiver with parental consent',
+  parental_consent_waiver: 'parental consent waiver',
   nda: 'NDA',
   contract: 'contract',
   quick_addendum: 'addendum',
@@ -52,12 +53,20 @@ export function normalizeTemplateText(text: string) {
 }
 
 export function builtInTemplateKindLabel(type: SmbDocumentType) {
-  return KIND_LABEL[type] || type.replace(/_/g, ' ');
+  return KIND_LABEL[type] || type.replace(/_/g, ' ').toLowerCase();
 }
 
-/** One consistent host-only line. Never predicts a legal outcome. */
-export function builtInTemplateAttorneyLine(type: SmbDocumentType) {
-  return `(Standard ${builtInTemplateKindLabel(type)} language — attorney review recommended.)`;
+/** Host-only, above built-in template text. Never predicts a legal outcome. */
+export function builtInTemplateStandardLine(type: SmbDocumentType) {
+  return `This is standard ${builtInTemplateKindLabel(type)} language.`;
+}
+
+/** Host-only, below built-in template text. Never predicts a legal outcome. */
+export const BUILT_IN_TEMPLATE_SCOPE_LINE =
+  'Requirements vary by state and activity — have your attorney confirm this document fits your business.';
+
+export function builtInTemplateScopeLine() {
+  return BUILT_IN_TEMPLATE_SCOPE_LINE;
 }
 
 export function showsBuiltInAttorneyLine(type: SmbDocumentType) {

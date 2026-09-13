@@ -38,10 +38,8 @@ import { LegalTemplatesNeedLink } from './LegalTemplatesNeedLink';
 import { defaultRequireOtp, resolveRequireOtp } from '../lib/documentTypes';
 import type { DocumentTemplate, SmbDocumentType } from '../lib/types';
 import { useAuth } from '../hooks/useAuth';
-import {
-  builtInTemplateAttorneyLine,
-  isUnmodifiedBuiltInTemplate,
-} from '../lib/builtInTemplateNotice';
+import { isUnmodifiedBuiltInTemplate } from '../lib/builtInTemplateNotice';
+import { BuiltInTemplateNoticePair } from './BuiltInTemplateNoticePair';
 import { HostLegalStateNotice } from './HostLegalStateNotice';
 import { WAIVER_RETENTION_OPTIONS, isWaiverFamily, type WaiverRetentionValue } from '../lib/waiverParticipants';
 
@@ -412,21 +410,21 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
                 </button>
                 {open && (
                   <div className="px-4 pb-4 space-y-3 border-t border-slate-100 dark:border-slate-800 pt-3">
-                    <textarea
-                      value={draftFor(type)}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setDrafts((prev) => ({ ...prev, [type]: value }));
-                        scheduleSummary(type, value);
-                      }}
-                      rows={10}
-                      className="w-full px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm text-slate-900 dark:text-white"
-                    />
-                    {isUnmodifiedBuiltInTemplate(type, draftFor(type), seedFor(type)) && (
-                      <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                        {builtInTemplateAttorneyLine(type)}
-                      </p>
-                    )}
+                    <BuiltInTemplateNoticePair
+                      type={type}
+                      show={isUnmodifiedBuiltInTemplate(type, draftFor(type), seedFor(type))}
+                    >
+                      <textarea
+                        value={draftFor(type)}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setDrafts((prev) => ({ ...prev, [type]: value }));
+                          scheduleSummary(type, value);
+                        }}
+                        rows={10}
+                        className="w-full max-h-52 overflow-y-auto px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm text-slate-900 dark:text-white"
+                      />
+                    </BuiltInTemplateNoticePair>
                     {isWaiverFamily(type) && (
                       <HostLegalStateNotice documentType={type} businessRegion={profile?.business_region} />
                     )}

@@ -49,10 +49,8 @@ import {
   requiresSignByTextScopeCheckbox,
   summarizeDocumentTemplate,
 } from '../lib/documents';
-import {
-  builtInTemplateAttorneyLine,
-  isUnmodifiedBuiltInTemplate,
-} from '../lib/builtInTemplateNotice';
+import { isUnmodifiedBuiltInTemplate } from '../lib/builtInTemplateNotice';
+import { BuiltInTemplateNoticePair } from '../components/BuiltInTemplateNoticePair';
 import { HostLegalStateNotice } from '../components/HostLegalStateNotice';
 import { LegalTemplatesNeedLink } from '../components/LegalTemplatesNeedLink';
 import { isParentalConsentWaiver, isWaiverFamily } from '../lib/waiverParticipants';
@@ -1237,19 +1235,20 @@ export function CreateDocumentPage() {
                 </p>
               )}
 
-              <p className="mt-1 mb-3 text-sm text-gray-800 dark:text-slate-100 whitespace-pre-line leading-relaxed rounded-xl border border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-950 px-3 py-3">
-                {filledBody}
-              </p>
-              {isUnmodifiedBuiltInTemplate(
-                documentType,
-                customText,
-                selectedTemplate?.full_text || defaultDocumentBody(documentType),
-              ) && (
-                <p className="mb-3 text-[11px] text-slate-400 dark:text-slate-500">
-                  {builtInTemplateAttorneyLine(documentType)}
-                </p>
-              )}
-              <HostLegalStateNotice documentType={documentType} businessRegion={profile?.business_region} />
+              <div className="mt-1 mb-3">
+                <BuiltInTemplateNoticePair
+                  type={documentType}
+                  show={isUnmodifiedBuiltInTemplate(
+                    documentType,
+                    customText,
+                    selectedTemplate?.full_text || defaultDocumentBody(documentType),
+                  )}
+                >
+                  <p className="text-sm text-gray-800 dark:text-slate-100 whitespace-pre-line leading-relaxed rounded-xl border border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-950 px-3 py-3">
+                    {filledBody}
+                  </p>
+                </BuiltInTemplateNoticePair>
+              </div>
               <span className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1 mt-3">Edit full text</span>
               <textarea
                 value={customText}
@@ -1258,6 +1257,9 @@ export function CreateDocumentPage() {
                 rows={8}
                 className={`${fieldClass} min-h-[10rem] font-mono text-sm leading-relaxed`}
               />
+              <div className="mt-3">
+                <HostLegalStateNotice documentType={documentType} businessRegion={profile?.business_region} />
+              </div>
               {isWaiverFamily(documentType) && (
                 <LegalTemplatesNeedLink className="mt-2 inline-block" />
               )}
@@ -1268,26 +1270,26 @@ export function CreateDocumentPage() {
             <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-slate-400 mb-2">
               Full text they will see
             </p>
-            <p className="text-sm text-gray-700 dark:text-slate-200 whitespace-pre-line leading-relaxed">
-              {fillDocumentPlaceholders(
-                hostOverrideText || selectedTemplate.full_text || defaultDocumentBody(documentType),
-                {
-                  topic,
-                  recipientName,
-                  businessName,
-                  activityDescription: topic,
-                },
+            <BuiltInTemplateNoticePair
+              type={documentType}
+              show={isUnmodifiedBuiltInTemplate(
+                documentType,
+                hostOverrideText || selectedTemplate.full_text || '',
+                selectedTemplate.full_text || defaultDocumentBody(documentType),
               )}
-            </p>
-            {isUnmodifiedBuiltInTemplate(
-              documentType,
-              hostOverrideText || selectedTemplate.full_text || '',
-              selectedTemplate.full_text || defaultDocumentBody(documentType),
-            ) && (
-              <p className="mt-3 text-[11px] text-slate-400 dark:text-slate-500">
-                {builtInTemplateAttorneyLine(documentType)}
+            >
+              <p className="text-sm text-gray-700 dark:text-slate-200 whitespace-pre-line leading-relaxed">
+                {fillDocumentPlaceholders(
+                  hostOverrideText || selectedTemplate.full_text || defaultDocumentBody(documentType),
+                  {
+                    topic,
+                    recipientName,
+                    businessName,
+                    activityDescription: topic,
+                  },
+                )}
               </p>
-            )}
+            </BuiltInTemplateNoticePair>
             <div className="mt-3">
               <HostLegalStateNotice documentType={documentType} businessRegion={profile?.business_region} />
             </div>

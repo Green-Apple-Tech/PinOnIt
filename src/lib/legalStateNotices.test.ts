@@ -3,7 +3,11 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('./supabase', () => ({ supabase: {} }));
 
 import { hostLegalStateNotice } from './legalStateNotices';
-import { builtInTemplateAttorneyLine, isUnmodifiedBuiltInTemplate } from './builtInTemplateNotice';
+import {
+  builtInTemplateScopeLine,
+  builtInTemplateStandardLine,
+  isUnmodifiedBuiltInTemplate,
+} from './builtInTemplateNotice';
 import { PARENTAL_CONSENT_WAIVER_STARTER_TEXT, WAIVER_STARTER_TEXT } from './documents';
 
 describe('host legal state notices', () => {
@@ -25,14 +29,22 @@ describe('host legal state notices', () => {
   });
 });
 
-describe('built-in attorney line', () => {
-  it('uses one consistent drafting line without outcome claims', () => {
-    expect(builtInTemplateAttorneyLine('waiver')).toBe('(Standard waiver language — attorney review recommended.)');
-    expect(builtInTemplateAttorneyLine('parental_consent_waiver')).toBe(
-      '(Standard waiver with parental consent language — attorney review recommended.)',
+describe('built-in template notice pair', () => {
+  it('uses a normal above-line with lowercase type names', () => {
+    expect(builtInTemplateStandardLine('waiver')).toBe('This is standard waiver language.');
+    expect(builtInTemplateStandardLine('nda')).toBe('This is standard NDA language.');
+    expect(builtInTemplateStandardLine('contract')).toBe('This is standard contract language.');
+    expect(builtInTemplateStandardLine('quick_addendum')).toBe('This is standard addendum language.');
+    expect(builtInTemplateStandardLine('service_agreement')).toBe('This is standard service agreement language.');
+    expect(builtInTemplateStandardLine('photo_video_release')).toBe('This is standard photo release language.');
+  });
+
+  it('uses a muted below-line without outcome claims', () => {
+    expect(builtInTemplateScopeLine()).toBe(
+      'Requirements vary by state and activity — have your attorney confirm this document fits your business.',
     );
-    expect(builtInTemplateAttorneyLine('nda')).toBe('(Standard NDA language — attorney review recommended.)');
-    expect(builtInTemplateAttorneyLine('waiver')).not.toMatch(/valid|enforceable|hold up|generally acceptable/i);
+    expect(builtInTemplateStandardLine('waiver')).not.toMatch(/valid|enforceable|hold up|generally acceptable/i);
+    expect(builtInTemplateScopeLine()).not.toMatch(/valid|enforceable|hold up|generally acceptable/i);
   });
 
   it('treats host-edited text as not built-in', () => {
@@ -41,5 +53,6 @@ describe('built-in attorney line', () => {
     expect(
       isUnmodifiedBuiltInTemplate('parental_consent_waiver', PARENTAL_CONSENT_WAIVER_STARTER_TEXT, PARENTAL_CONSENT_WAIVER_STARTER_TEXT),
     ).toBe(true);
+    expect(isUnmodifiedBuiltInTemplate('upload', 'x', 'x')).toBe(false);
   });
 });
