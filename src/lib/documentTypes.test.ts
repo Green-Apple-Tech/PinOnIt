@@ -12,6 +12,7 @@ describe('defaultRequireOtp', () => {
   it('defaults Sign-by-Text on for waivers, NDAs, contracts, and similar', () => {
     expect(defaultRequireOtp('nda')).toBe(true);
     expect(defaultRequireOtp('waiver')).toBe(true);
+    expect(defaultRequireOtp('parental_consent_waiver')).toBe(true);
     expect(defaultRequireOtp('contract')).toBe(true);
     expect(defaultRequireOtp('upload')).toBe(true);
     expect(defaultRequireOtp('credit_card_authorization')).toBe(true);

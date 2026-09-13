@@ -110,6 +110,8 @@ export interface Profile {
   platform_terms_version?: string | null;
   /** When the host acknowledged Sign-by-Text single-signature / excluded-doc scope. */
   sign_by_text_scope_accepted_at?: string | null;
+  /** Completed-waiver retention: `keep` or a day count (`365`, `1095`, `2555`). */
+  waiver_retention?: string | null;
   /** Company / DBA name for Doc Center “[Business Name]” and public branding. */
   business_name?: string | null;
   on_my_way_template?: string | null;
@@ -478,6 +480,7 @@ export type SmbDocumentType =
   | 'contract'
   | 'receipt'
   | 'waiver'
+  | 'parental_consent_waiver'
   | 'quote'
   | 'work_order'
   | 'change_order'
@@ -576,6 +579,8 @@ export interface PublicSmbDocument {
   id: string;
   token: string;
   recipient_name: string;
+  recipient_phone?: string | null;
+  recipient_email?: string | null;
   document_type: SmbDocumentType;
   document_type_custom?: string | null;
   template_id: string;

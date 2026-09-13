@@ -29,6 +29,12 @@ import {
 import { defaultRequireOtp, resolveRequireOtp } from '../lib/documentTypes';
 import type { DocumentTemplate, SmbDocumentType } from '../lib/types';
 import { useAuth } from '../hooks/useAuth';
+import {
+  builtInTemplateAttorneyLine,
+  isUnmodifiedBuiltInTemplate,
+} from '../lib/builtInTemplateNotice';
+import { HostLegalStateNotice } from './HostLegalStateNotice';
+import { WAIVER_RETENTION_OPTIONS, isWaiverFamily, type WaiverRetentionValue } from '../lib/waiverParticipants';
 
 function formatBytes(n: number) {
   if (n < 1024) return `${n} B`;
@@ -321,6 +327,32 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
         <p className="text-xs text-slate-500 dark:text-slate-400">
           Built-in wording is the starting point. Open a type, edit, and save your own version. A plain-language summary is generated when you edit and can be turned off per template. Uploaded PDFs are never summarized.
         </p>
+        <label className="block max-w-md">
+          <span className="text-xs font-medium text-slate-500">Completed waiver retention</span>
+          <select
+            value={(profile?.waiver_retention as WaiverRetentionValue | null) || 'keep'}
+            onChange={(e) => {
+              const waiver_retention = e.target.value;
+              if (!profile?.id) return;
+              void supabase.from('profiles').update({ waiver_retention }).eq('id', profile.id).then(({ error }) => {
+                if (error) {
+                  toast.error('Could not save retention setting.');
+                  return;
+                }
+                toast.success('Waiver retention saved');
+                void refreshProfile();
+              });
+            }}
+            className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm"
+          >
+            {WAIVER_RETENTION_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          <span className="mt-1 block text-[11px] text-slate-400">
+            Default is keep. If you pick a period, children&apos;s names and birthdates on completed waivers are removed after that time. The signed record stays.
+          </span>
+        </label>
         <div className="space-y-2">
           {HOST_EDITABLE_TEMPLATE_TYPES.map((type) => {
             const open = openType === type;
@@ -364,6 +396,14 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
                       rows={10}
                       className="w-full px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm text-slate-900 dark:text-white"
                     />
+                    {isUnmodifiedBuiltInTemplate(type, draftFor(type), seedFor(type)) && (
+                      <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                        {builtInTemplateAttorneyLine(type)}
+                      </p>
+                    )}
+                    {isWaiverFamily(type) && (
+                      <HostLegalStateNotice documentType={type} businessRegion={profile?.business_region} />
+                    )}
 
                     <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 p-3 space-y-2">
                       <div className="flex items-center justify-between gap-2">

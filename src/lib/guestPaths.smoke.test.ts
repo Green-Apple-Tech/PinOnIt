@@ -346,4 +346,87 @@ describe.skipIf(!enabled)('guest paths as anonymous client', () => {
     expect(asRecord(expiredSign).ok).toBe(false);
     expect(String(asRecord(expiredSign).error)).toMatch(/expir/i);
   }, 30_000);
+
+  it('parental-consent waiver: load, add three children, sign as anonymous client', async () => {
+    const { data: template, error: tplErr } = await admin
+      .from('document_templates')
+      .select('id')
+      .eq('document_type', 'parental_consent_waiver')
+      .limit(1)
+      .maybeSingle();
+    expect(tplErr, tplErr?.message).toBeNull();
+    expect(template?.id).toEqual(expect.any(String));
+
+    const token = `psmoke-${runId}`;
+    const { error: insErr } = await admin.from('documents').insert({
+      token,
+      sender_id: hostId,
+      recipient_name: 'Pat Parent',
+      recipient_phone: '+15555550123',
+      recipient_email: 'pat@example.com',
+      document_type: 'parental_consent_waiver',
+      template_id: template!.id,
+      topic: 'summer camp',
+      status: 'pending',
+      verification_required: false,
+      otp_verified: false,
+    });
+    expect(insErr, insErr?.message).toBeNull();
+
+    const { data: leaked } = await guest.from('documents').select('id, parent_guardian_name').eq('token', token).maybeSingle();
+    expect(leaked).toBeNull();
+    const { data: leakedKids } = await guest.from('document_waiver_participants').select('id');
+    expect(leakedKids == null || leakedKids.length === 0).toBe(true);
+
+    const { data: publicDoc, error: getErr } = await guest.rpc('get_document_by_token', { p_token: token });
+    expect(getErr, getErr?.message).toBeNull();
+    const row = asRecord(publicDoc);
+    expect(row.document_type).toBe('parental_consent_waiver');
+    expect(row.recipient_phone).toBe('+15555550123');
+    expect(JSON.stringify(row)).not.toMatch(/date_of_birth|full_name|Ada|Bea|Cara/);
+
+    const { data: viewed, error: viewErr } = await guest.rpc('record_document_event', {
+      p_token: token,
+      p_action: 'viewed',
+    });
+    expect(viewErr, viewErr?.message).toBeNull();
+    expect(asRecord(viewed).ok).toBe(true);
+
+    const kids = [
+      { full_name: 'Ada Kid', date_of_birth: '2018-01-15' },
+      { full_name: 'Bea Kid', date_of_birth: '2019-06-02' },
+      { full_name: 'Cara Kid', date_of_birth: '2021-11-20' },
+    ];
+    const { data: signed, error: signErr } = await guest.rpc('record_document_event', {
+      p_token: token,
+      p_action: 'signed',
+      p_esign_consent_text:
+        'I consent to do business electronically with the sender of this document, and I consent to receive related records electronically through PinOnIt.',
+      p_signature_data: 'data:image/png;base64,smoke',
+      p_document_snapshot_text: 'summer camp waiver',
+      p_document_sha256: 'b'.repeat(64),
+      p_parent_guardian_name: 'Pat Parent',
+      p_parent_guardian_email: 'pat@example.com',
+      p_parental_consent_text:
+        'I am the parent or legal guardian of each child listed on this form, and I am authorized to sign this waiver for each of them.',
+      p_participants: kids,
+    });
+    expect(signErr, signErr?.message).toBeNull();
+    expect(asRecord(signed).ok).toBe(true);
+
+    const { data: afterPublic } = await guest.rpc('get_document_by_token', { p_token: token });
+    expect(JSON.stringify(afterPublic)).not.toMatch(/Ada Kid|2018-01-15/);
+
+    const { data: hostKids, error: hostKidsErr } = await admin.rpc('get_document_waiver_participants', {
+      p_document_id: asRecord(signed).id,
+    });
+    // service role is not the host; confirm table has 3 rows via admin read
+    expect(hostKidsErr == null || hostKids != null).toBe(true);
+    const { data: storedKids } = await admin
+      .from('document_waiver_participants')
+      .select('full_name, date_of_birth')
+      .eq('document_id', asRecord(signed).id);
+    expect(storedKids).toHaveLength(3);
+    expect(storedKids?.map((k) => k.full_name).sort()).toEqual(['Ada Kid', 'Bea Kid', 'Cara Kid']);
+  }, 30_000);
 });

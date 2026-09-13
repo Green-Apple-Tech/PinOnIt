@@ -14,6 +14,8 @@ import {
 import { HOLD_UP_COPY } from '../lib/documentCopy';
 import { quoteHostStatus } from '../lib/quoteSms';
 import type { SmbDocument, SmbDocumentStatus } from '../lib/types';
+import { HostWaiverParticipants } from '../components/HostWaiverParticipants';
+import { isParentalConsentWaiver } from '../lib/waiverParticipants';
 
 const STATUS: Record<SmbDocumentStatus, { label: string; className: string; icon: typeof Clock }> = {
   pending: { label: 'Pending', className: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300', icon: Clock },
@@ -210,6 +212,9 @@ export function DocumentsPage() {
                       {doc.recipient_phone ? ` · ${doc.recipient_phone}` : ''}
                       {doc.recipient_email ? ` · ${doc.recipient_email}` : ''}
                     </p>
+                    {isParentalConsentWaiver(doc.document_type) && (
+                      <HostWaiverParticipants documentId={doc.id} status={doc.status} />
+                    )}
                   </div>
                   <div className="flex flex-wrap gap-2 shrink-0">
                     {doc.document_type === 'quote' && ['pending', 'viewed', 'signed'].includes(doc.status) && (

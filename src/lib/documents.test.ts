@@ -10,6 +10,7 @@ import {
   QUOTE_STARTER_TEXT,
   RECEIPT_STARTER_TEXT,
   WAIVER_STARTER_TEXT,
+  PARENTAL_CONSENT_WAIVER_STARTER_TEXT,
   fillDocumentPlaceholders,
   injectWaiverRecipientPlaceholder,
   resolveHostBusinessName,
@@ -22,6 +23,10 @@ describe('Sign-by-Text scope copy', () => {
     expect(SIGN_BY_TEXT_SCOPE_SUMMARY).toMatch(/powers of attorney/i);
     expect(signByTextScopeDetail('5MB')).toMatch(/5MB/);
     expect(signByTextScopeDetail('5MB')).toMatch(/audit record/i);
+    expect(signByTextScopeDetail('5MB')).toMatch(/vary by state/i);
+    expect(signByTextScopeDetail('5MB')).toMatch(/minors/i);
+    expect(signByTextScopeDetail('5MB')).toMatch(/gross negligence/i);
+    expect(signByTextScopeDetail('5MB')).not.toMatch(/generally acceptable|may hold up|valid in most states|enforceable/i);
     expect(signByTextAckLabel('5MB')).toMatch(/I understand/i);
     expect(SIGN_BY_TEXT_SCOPE_SUMMARY).toMatch(/ESIGN/i);
     expect(SIGN_BY_TEXT_SCOPE_SUMMARY).toMatch(/codicils/i);
@@ -65,6 +70,7 @@ describe('live document placeholders', () => {
     ['nda', NDA_STARTER_TEXT],
     ['contract', CONTRACT_STARTER_TEXT],
     ['waiver', WAIVER_STARTER_TEXT],
+    ['parental_consent_waiver', PARENTAL_CONSENT_WAIVER_STARTER_TEXT],
     ['quote', QUOTE_STARTER_TEXT],
     ['invoice', INVOICE_STARTER_TEXT],
     ['receipt', RECEIPT_STARTER_TEXT],
@@ -77,6 +83,7 @@ describe('live document placeholders', () => {
   it('keeps the waiver host hint out of the signed body', () => {
     expect(WAIVER_STARTER_TEXT).not.toContain(WAIVER_HOST_HINT);
     expect(WAIVER_STARTER_TEXT).toMatch(/^I, \[Recipient Name\], in consideration/m);
+    expect(WAIVER_STARTER_TEXT).not.toMatch(/Enforceability of liability/);
   });
 
   it('fills recipient and business together without mixing them', () => {

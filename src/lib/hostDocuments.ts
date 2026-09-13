@@ -5,6 +5,7 @@ export const HOST_EDITABLE_TEMPLATE_TYPES: SmbDocumentType[] = [
   'nda',
   'contract',
   'waiver',
+  'parental_consent_waiver',
   'quote',
   'invoice',
   'receipt',

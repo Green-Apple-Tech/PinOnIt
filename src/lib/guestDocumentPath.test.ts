@@ -11,6 +11,7 @@ describe('anonymous guest document page', () => {
     expect(src).toMatch(/getDocumentByToken/);
     expect(src).toMatch(/recordDocumentEvent/);
     expect(src).toMatch(/verifyDocumentOtp/);
+    expect(src).not.toMatch(/getDocumentWaiverParticipants/);
   });
 
   it('records viewed, then approve/sign, and blocks expired quotes', () => {

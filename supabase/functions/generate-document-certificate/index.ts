@@ -17,6 +17,13 @@ function json(body: unknown, status = 200) {
   });
 }
 
+/** Children's names/DOBs stay in the host audit table — never in certificates or email. */
+function redactMinorSnapshot(text: string) {
+  return text
+    .replace(/Participants:[\s\S]*$/m, 'Participants: [held in host record]')
+    .replace(/\(DOB \d{4}-\d{2}-\d{2}\)/g, '(DOB [redacted])');
+}
+
 function fmt(iso: string | null | undefined, tz: string | null | undefined) {
   if (!iso) return '—';
   try {
@@ -166,7 +173,7 @@ Deno.serve(async (req: Request) => {
     doc.esign_consent_text || '—',
     '',
     'Document snapshot (exact text / version signed):',
-    (doc.document_snapshot_text || '(see attached PDF file if uploaded)').slice(0, 3500),
+    redactMinorSnapshot(doc.document_snapshot_text || '(see attached PDF file if uploaded)').slice(0, 3500),
     '',
     `Signature image captured: ${doc.signature_data && doc.signature_data.startsWith('data:image') ? 'Yes (embedded below when available)' : doc.signature_data === 'confirmed' ? 'Confirmed without drawn mark' : '—'}`,
     '',

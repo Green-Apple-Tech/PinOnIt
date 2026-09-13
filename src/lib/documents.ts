@@ -27,15 +27,42 @@ the above activity/service.
 remaining provisions will remain in full effect.
 
 5. Acknowledgment. I confirm that I have read this waiver, understand its
-terms, and am signing it voluntarily.
+terms, and am signing it voluntarily.`;
 
-This is a general-purpose starting template. Enforceability of liability
-waivers varies by state and by activity — some states restrict or void
-waivers for certain activities (such as gyms, amusement venues, or
-services involving minors), and waivers generally cannot limit liability
-for gross negligence or intentional harm. Consult an attorney to confirm
-this waiver is appropriate and enforceable for your business, activity,
-and state before relying on it.`;
+export const PARENTAL_CONSENT_WAIVER_STARTER_TEXT = `WAIVER WITH PARENTAL CONSENT
+
+I, [Recipient Name], am the parent or legal guardian of each child listed
+on this form. In consideration for each listed child participating in or
+receiving services related to [Activity/Service Description] provided by
+[Business Name], I acknowledge and agree to the following:
+
+1. Authority. I affirm that I am the parent or legal guardian of each child
+listed on this form, and that I am authorized to sign this waiver on behalf
+of each of them.
+
+2. Assumption of Risk. I understand that the activity/service described
+above carries inherent risks, which may include property damage, personal
+injury, or other loss. On behalf of each listed child, I voluntarily
+assume all such risks.
+
+3. Release of Liability. To the fullest extent permitted by law, I release,
+waive, and discharge [Business Name], its owners, employees, and agents
+from any and all claims, liabilities, or causes of action arising from
+ordinary negligence in connection with the activity/service described
+above, including claims I could bring on behalf of each listed child.
+This release does not apply to claims arising from gross negligence,
+recklessness, or intentional misconduct.
+
+4. Indemnification. I agree to indemnify and hold harmless [Business Name]
+from any claims brought by third parties arising from each listed child's
+participation in the above activity/service.
+
+5. Severability. If any portion of this waiver is found unenforceable, the
+remaining provisions will remain in full effect.
+
+6. Acknowledgment. I confirm that I have read this waiver, understand its
+terms, and am signing it voluntarily on behalf of myself and each child
+listed on this form.`;
 
 const OLD_WAIVER_OPENING =
   /In consideration for participating in or receiving services related to\s*\[Activity\/Service Description\] provided by \[Business Name\], I acknowledge\s*and agree to the following:/;
@@ -141,9 +168,7 @@ Prepared for: [Recipient Name]
 
 This addendum from [Business Name] regards: [Activity/Service Description].
 
-By signing, you confirm you have reviewed this addendum and agree to the terms described. This addendum is intended to supplement any related agreement between the parties. Keep a copy for your records.
-
-This is a general-purpose starting template. It is not legal advice. Consult an attorney for high-risk or regulated transactions.`;
+By signing, you confirm you have reviewed this addendum and agree to the terms described. This addendum is intended to supplement any related agreement between the parties. Keep a copy for your records.`;
 
 export function injectSenderPlaceholders(text: string) {
   return text
@@ -157,6 +182,9 @@ export function injectSenderPlaceholders(text: string) {
 export function defaultDocumentBody(type: SmbDocumentType, saved?: string | null) {
   const trimmed = saved?.trim();
   if (type === 'waiver') return injectSenderPlaceholders(injectWaiverRecipientPlaceholder(trimmed || WAIVER_STARTER_TEXT));
+  if (type === 'parental_consent_waiver') {
+    return injectSenderPlaceholders(trimmed || PARENTAL_CONSENT_WAIVER_STARTER_TEXT);
+  }
   if (trimmed) return injectSenderPlaceholders(trimmed);
   if (type === 'nda') return NDA_STARTER_TEXT;
   if (type === 'contract') return CONTRACT_STARTER_TEXT;
@@ -248,6 +276,7 @@ export {
   WAIVER_HOST_HINT,
   CONTRACT_HOST_HINT,
   SIGN_BY_TEXT_SCOPE_SUMMARY,
+  BUILT_IN_TEMPLATE_SCOPE_DETAIL,
   DOCUMENT_UPLOAD_READABILITY_HINT,
   signByTextScopeDetail,
   signByTextAckLabel,
@@ -303,6 +332,10 @@ export async function recordDocumentEvent(params: {
   documentSnapshotText?: string | null;
   documentSha256?: string | null;
   timezone?: string | null;
+  parentGuardianName?: string | null;
+  parentGuardianEmail?: string | null;
+  parentalConsentText?: string | null;
+  participants?: Array<{ full_name: string; date_of_birth: string }> | null;
 }) {
   const { data, error } = await supabase.rpc('record_document_event', {
     p_token: params.token,
@@ -314,9 +347,24 @@ export async function recordDocumentEvent(params: {
     p_document_snapshot_text: params.documentSnapshotText ?? null,
     p_document_sha256: params.documentSha256 ?? null,
     p_timezone: params.timezone ?? null,
+    p_parent_guardian_name: params.parentGuardianName ?? null,
+    p_parent_guardian_email: params.parentGuardianEmail ?? null,
+    p_parental_consent_text: params.parentalConsentText ?? null,
+    p_participants: params.participants ?? null,
   });
   const result = (data ?? null) as { ok?: boolean; error?: string; status?: string; id?: string } | null;
   return { data: result, error };
+}
+
+/** Host-only. Guest pages must never call this. */
+export async function getDocumentWaiverParticipants(documentId: string) {
+  const { data, error } = await supabase.rpc('get_document_waiver_participants', {
+    p_document_id: documentId,
+  });
+  return {
+    data: (data ?? []) as Array<{ full_name: string; date_of_birth: string; sort_order: number }>,
+    error,
+  };
 }
 
 /** Generate / retrieve certificate of completion after signing (or later from Doc Center). */

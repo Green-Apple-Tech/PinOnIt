@@ -23,6 +23,7 @@ export const SMB_DOCUMENT_TYPES: DocumentTypeOption[] = [
   { id: 'scope_of_work', label: 'Scope of Work', hint: 'Confirm what is included', confirmationType: 'approve' },
   { id: 'nda', label: 'NDA', hint: 'Keep talks confidential', confirmationType: 'sign' },
   { id: 'waiver', label: 'Waiver / Liability Release', hint: 'Sign a liability waiver', confirmationType: 'sign' },
+  { id: 'parental_consent_waiver', label: 'Waiver with Parental Consent', hint: 'Parent signs for listed children', confirmationType: 'sign' },
   { id: 'quick_addendum', label: 'Quick Addendum', hint: 'Short add-on to sign by text', confirmationType: 'sign' },
   { id: 'consent_form', label: 'Consent Form', hint: 'Record consent', confirmationType: 'sign' },
   { id: 'cancellation_policy', label: 'Cancellation Policy', hint: 'Acknowledge cancel terms', confirmationType: 'approve' },
@@ -85,6 +86,7 @@ export function documentTypeLabel(type: SmbDocumentType, custom?: string | null)
 const REQUIRE_OTP_TYPES = new Set<SmbDocumentType>([
   'nda',
   'waiver',
+  'parental_consent_waiver',
   'contract',
   'quick_addendum',
   'consent_form',
@@ -118,7 +120,7 @@ export function resolveRequireOtp(
 }
 
 export function documentBodyIsEditable(type: SmbDocumentType) {
-  return type === 'nda' || type === 'contract' || type === 'waiver' || type === 'quick_addendum';
+  return type === 'nda' || type === 'contract' || type === 'waiver' || type === 'parental_consent_waiver' || type === 'quick_addendum';
 }
 
 /** Kept for callers that always show a recipient page. Signature itself is `verification_required`. */
@@ -139,6 +141,4 @@ Prepared for: [Recipient Name]
 
 This document is provided by [Business Name] regarding: [Activity/Service Description].
 
-By confirming or signing, you acknowledge that you have reviewed this document and the information described above. Keep a copy for your records.
-
-This is a general-purpose starting template. It is not legal advice. Consult an attorney for documents that must meet specific legal or regulatory requirements.`;
+By confirming or signing, you acknowledge that you have reviewed this document and the information described above. Keep a copy for your records.`;

@@ -63,7 +63,7 @@ export function resolveDocumentAction(
   if (typeParam === 'quote') return documentActionById('quote');
   if (typeParam === 'invoice') return documentActionById('invoice');
   if (typeParam === 'receipt') return documentActionById('receipt');
-  if (typeParam === 'waiver') return documentActionById('waiver');
+  if (typeParam === 'waiver' || typeParam === 'parental_consent_waiver') return documentActionById('waiver');
   if (typeParam === 'nda') return documentActionById('nda');
   if (typeParam === 'quick_addendum') return documentActionById('addendum');
   if (typeParam === 'contract' || typeParam === 'service_agreement') return documentActionById('agreement');

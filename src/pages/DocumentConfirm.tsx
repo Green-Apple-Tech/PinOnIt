@@ -30,6 +30,15 @@ import {
   plainLanguageBulletsFromStored,
 } from '../lib/plainLanguageSummary';
 import type { HostQuoteLineItem, PublicSmbDocument } from '../lib/types';
+import { WaiverParticipantsFields } from '../components/WaiverParticipantsFields';
+import {
+  PARENTAL_CONSENT_STATEMENT,
+  emptyWaiverParticipants,
+  isParentalConsentWaiver,
+  isWaiverFamily,
+  validWaiverParticipants,
+} from '../lib/waiverParticipants';
+import { blurFormatPhone } from '../lib/phone';
 
 function money(amount: number, currency = 'USD') {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount || 0);
@@ -64,6 +73,9 @@ export function DocumentConfirmPage() {
   const [hasMarked, setHasMarked] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [parentName, setParentName] = useState('');
+  const [parentEmail, setParentEmail] = useState('');
+  const [participants, setParticipants] = useState(emptyWaiverParticipants());
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
@@ -85,6 +97,8 @@ export function DocumentConfirmPage() {
         return;
       }
       setDoc(data);
+      setParentName(data.recipient_name || '');
+      setParentEmail(data.recipient_email || '');
       setOtpVerified(Boolean(data.otp_verified));
       if (data.status === 'declined') {
         setDeclined(true);
@@ -217,6 +231,18 @@ export function DocumentConfirmPage() {
     if (needsMark && !hasMarked) return;
     if (!esignConsent) return;
     if (!agreed) return;
+    const parental = isParentalConsentWaiver(doc.document_type);
+    const listed = validWaiverParticipants(participants);
+    if (parental) {
+      if (!parentName.trim()) {
+        setError('Parent or guardian name is required.');
+        return;
+      }
+      if (listed.length === 0) {
+        setError('Add each child\'s full name and date of birth.');
+        return;
+      }
+    }
     setError('');
     setSubmitting(true);
     const ip = await fetchClientIp();
@@ -229,17 +255,30 @@ export function DocumentConfirmPage() {
           doc.file_path ? `Storage path: ${doc.file_path}` : '',
           doc.file_size_bytes != null ? `Size bytes: ${doc.file_size_bytes}` : '',
           doc.topic ? `Topic: ${doc.topic}` : '',
-          `Recipient: ${doc.recipient_name}`,
+          `Recipient: ${parental ? parentName.trim() : doc.recipient_name}`,
         ]
           .filter(Boolean)
           .join('\n')
       : fillDocumentPlaceholders(doc.full_text || doc.summary_text || '', {
           topic: doc.topic,
-          recipientName: doc.recipient_name,
+          recipientName: parental ? parentName.trim() : doc.recipient_name,
           businessName: doc.sender_business_name,
           activityDescription: doc.topic,
         }) || doc.topic || '';
-    const hash = await sha256Hex(snapshot);
+    const parentalBlock = parental
+      ? [
+          '',
+          PARENTAL_CONSENT_STATEMENT,
+          `Parent/Guardian: ${parentName.trim()}`,
+          parentEmail.trim() ? `Parent email: ${parentEmail.trim()}` : '',
+          'Participants:',
+          ...listed.map((row) => `- ${row.fullName.trim()} (DOB ${row.dateOfBirth})`),
+        ]
+          .filter(Boolean)
+          .join('\n')
+      : '';
+    const snapshotWithParticipants = parental ? `${snapshot}\n${parentalBlock}` : snapshot;
+    const hash = await sha256Hex(snapshotWithParticipants);
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
     const { data, error: err } = await recordDocumentEvent({
@@ -249,9 +288,15 @@ export function DocumentConfirmPage() {
       ip,
       userAgent: navigator.userAgent,
       esignConsentText: ESIGN_CONSENT_STATEMENT,
-      documentSnapshotText: snapshot,
+      documentSnapshotText: snapshotWithParticipants,
       documentSha256: hash,
       timezone,
+      parentGuardianName: parental ? parentName.trim() : null,
+      parentGuardianEmail: parental ? parentEmail.trim() || null : null,
+      parentalConsentText: parental ? PARENTAL_CONSENT_STATEMENT : null,
+      participants: parental
+        ? listed.map((row) => ({ full_name: row.fullName.trim(), date_of_birth: row.dateOfBirth }))
+        : null,
     });
     if (err || !data?.ok) {
       setError(err?.message ?? data?.error ?? 'Could not submit');
@@ -375,10 +420,12 @@ export function DocumentConfirmPage() {
   const taxPercent = Number(doc?.tax_percent) || 0;
   const moneyTotals = quoteTotals(lineItems, taxPercent);
   const showMoney = Boolean(doc && (isMoneyDocumentType(doc.document_type) || lineItems.length > 0));
+  const parental = Boolean(doc && isParentalConsentWaiver(doc.document_type));
+  const listedChildren = validWaiverParticipants(participants);
   const fullBody = doc
     ? fillDocumentPlaceholders(doc.full_text, {
         topic: doc.topic,
-        recipientName: doc.recipient_name,
+        recipientName: parental ? parentName.trim() || doc.recipient_name : doc.recipient_name,
         businessName: doc.sender_business_name,
         activityDescription: doc.topic,
       })
@@ -476,12 +523,45 @@ export function DocumentConfirmPage() {
               {doc.document_type === 'nda' && topicCoverLine(doc.topic) ? (
                 <p className="mt-3 text-sm text-slate-600 whitespace-pre-line">{topicCoverLine(doc.topic)}</p>
               ) : null}
-              {doc.topic && doc.document_type !== 'nda' && doc.document_type !== 'waiver' ? (
+              {doc.topic && doc.document_type !== 'nda' && !isWaiverFamily(doc.document_type) ? (
                 <p className="mt-3 text-sm text-slate-600">{doc.topic}</p>
               ) : null}
-              {doc.document_type === 'waiver' && doc.topic ? (
+              {isWaiverFamily(doc.document_type) && doc.topic ? (
                 <p className="mt-3 text-sm text-slate-600">This waiver covers: {doc.topic}</p>
               ) : null}
+              {parental && (
+                <div className="mt-4 space-y-4">
+                  <label className="block">
+                    <span className="text-xs font-medium text-slate-500">Parent / guardian full name</span>
+                    <input
+                      type="text"
+                      value={parentName}
+                      onChange={(e) => setParentName(e.target.value)}
+                      required
+                      className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-xs font-medium text-slate-500">Phone</span>
+                    <input
+                      type="tel"
+                      value={blurFormatPhone(doc.recipient_phone || '')}
+                      readOnly
+                      className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-600"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-xs font-medium text-slate-500">Email (optional)</span>
+                    <input
+                      type="email"
+                      value={parentEmail}
+                      onChange={(e) => setParentEmail(e.target.value)}
+                      className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
+                    />
+                  </label>
+                  <WaiverParticipantsFields participants={participants} onChange={setParticipants} />
+                </div>
+              )}
               <div className="mt-3 max-h-[28rem] overflow-y-auto text-sm text-slate-700 whitespace-pre-line leading-relaxed bg-slate-50 rounded-xl p-4 border border-slate-100">
                 {fullBody}
               </div>
@@ -578,6 +658,33 @@ export function DocumentConfirmPage() {
 
         {requireSign && otpReady && !quoteExpired && (
           <>
+            {parental && (
+              <label className="flex items-start gap-3 bg-white rounded-2xl border border-slate-200 p-5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={agreed}
+                  onChange={(e) => setAgreed(e.target.checked)}
+                  className="mt-1"
+                />
+                <span className="text-sm text-slate-600">
+                  I have reviewed this document and I confirm the action above.
+                </span>
+              </label>
+            )}
+            {parental && (
+              <label className="flex items-start gap-3 bg-white rounded-2xl border border-slate-200 p-5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={esignConsent}
+                  onChange={(e) => setEsignConsent(e.target.checked)}
+                  className="mt-1"
+                />
+                <span className="text-sm text-slate-600">
+                  <span className="font-semibold text-slate-800 block mb-1">Electronic records consent</span>
+                  {ESIGN_CONSENT_STATEMENT}
+                </span>
+              </label>
+            )}
             {needsCanvas && (
               <div className="bg-white rounded-2xl border border-slate-200 p-5">
                 <div className="flex items-center justify-between mb-3">
@@ -612,29 +719,33 @@ export function DocumentConfirmPage() {
               </div>
             )}
 
-            <label className="flex items-start gap-3 bg-white rounded-2xl border border-slate-200 p-5 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={esignConsent}
-                onChange={(e) => setEsignConsent(e.target.checked)}
-                className="mt-1"
-              />
-              <span className="text-sm text-slate-600">
-                <span className="font-semibold text-slate-800 block mb-1">Electronic records consent</span>
-                {ESIGN_CONSENT_STATEMENT}
-              </span>
-            </label>
-            <label className="flex items-start gap-3 bg-white rounded-2xl border border-slate-200 p-5 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={agreed}
-                onChange={(e) => setAgreed(e.target.checked)}
-                className="mt-1"
-              />
-              <span className="text-sm text-slate-600">
-                I have reviewed this document and I confirm the action above.
-              </span>
-            </label>
+            {!parental && (
+              <label className="flex items-start gap-3 bg-white rounded-2xl border border-slate-200 p-5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={esignConsent}
+                  onChange={(e) => setEsignConsent(e.target.checked)}
+                  className="mt-1"
+                />
+                <span className="text-sm text-slate-600">
+                  <span className="font-semibold text-slate-800 block mb-1">Electronic records consent</span>
+                  {ESIGN_CONSENT_STATEMENT}
+                </span>
+              </label>
+            )}
+            {!parental && (
+              <label className="flex items-start gap-3 bg-white rounded-2xl border border-slate-200 p-5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={agreed}
+                  onChange={(e) => setAgreed(e.target.checked)}
+                  className="mt-1"
+                />
+                <span className="text-sm text-slate-600">
+                  I have reviewed this document and I confirm the action above.
+                </span>
+              </label>
+            )}
 
             {error && (
               <div className="flex gap-2 text-sm text-red-600">
@@ -650,7 +761,8 @@ export function DocumentConfirmPage() {
                 submitting ||
                 !esignConsent ||
                 !agreed ||
-                (needsCanvas && !hasMarked)
+                (needsCanvas && !hasMarked) ||
+                (parental && (!parentName.trim() || listedChildren.length === 0))
               }
               className="w-full min-h-12 rounded-xl bg-indigo-600 text-white font-semibold disabled:opacity-40"
             >

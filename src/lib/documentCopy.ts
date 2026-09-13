@@ -39,14 +39,17 @@ export const SIGN_BY_TEXT_SCOPE_SUMMARY =
 export const DOCUMENT_UPLOAD_READABILITY_HINT =
   'Use a clear, complete PDF — blurry scans, missing pages, or cut-off text may not help if there is a dispute.';
 
+export const BUILT_IN_TEMPLATE_SCOPE_DETAIL =
+  'Built-in templates are starting language only. Liability-waiver rules vary by state and by activity — some states restrict or void waivers for certain activities (such as gyms, amusement venues, or services involving minors), and waivers generally cannot limit liability for gross negligence or intentional harm. Have an attorney review built-in templates for your business, activity, and state. PinOnIt does not provide legal advice.';
+
 /** Full scope + upload limits. Pass maxLabel from DOCUMENT_UPLOAD_MAX_BYTES (e.g. "5MB"). */
 export function signByTextScopeDetail(maxLabel = '5MB') {
-  return `${SIGN_BY_TEXT_SCOPE_SUMMARY} Upload clear, complete PDFs only, up to ${maxLabel}. Every signature includes a complete audit record. PinOnIt does not provide legal advice.`;
+  return `${SIGN_BY_TEXT_SCOPE_SUMMARY} ${BUILT_IN_TEMPLATE_SCOPE_DETAIL} Upload clear, complete PDFs only, up to ${maxLabel}. Every signature includes a complete audit record.`;
 }
 
 /** Always-required checkbox label. */
 export function signByTextAckLabel(maxLabel = '5MB') {
-  return `I understand Sign-by-Text / Send Docs is only for lawful single-signature business documents. I will not use it for wills, codicils, testamentary trusts, certain family-law or court documents, powers of attorney (POA), deeds, notarized instruments, multi-signer closings, or illegal/fraudulent content. Uploaded PDFs must be clear and complete (PDF, up to ${maxLabel}). PinOnIt does not provide legal advice.`;
+  return `I understand Sign-by-Text / Send Docs is only for lawful single-signature business documents. I will not use it for wills, codicils, testamentary trusts, certain family-law or court documents, powers of attorney (POA), deeds, notarized instruments, multi-signer closings, or illegal/fraudulent content. Built-in templates are starting language only — I will have an attorney review them when needed. Uploaded PDFs must be clear and complete (PDF, up to ${maxLabel}). PinOnIt does not provide legal advice.`;
 }
 
 /**

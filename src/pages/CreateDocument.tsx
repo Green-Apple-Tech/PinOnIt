@@ -50,6 +50,12 @@ import {
   summarizeDocumentTemplate,
 } from '../lib/documents';
 import {
+  builtInTemplateAttorneyLine,
+  isUnmodifiedBuiltInTemplate,
+} from '../lib/builtInTemplateNotice';
+import { HostLegalStateNotice } from '../components/HostLegalStateNotice';
+import { isParentalConsentWaiver, isWaiverFamily } from '../lib/waiverParticipants';
+import {
   normalizePlainLanguageBullets,
 } from '../lib/plainLanguageSummary';
 import type { HostDocumentFile, HostDocumentTemplate } from '../lib/hostDocuments';
@@ -184,7 +190,7 @@ export function CreateDocumentPage() {
   const selectedTemplate = templates.find((t) => t.document_type === documentType) ?? null;
   const hostOverride = hostOverrides.find((o) => o.document_type === documentType) ?? null;
   const hostOverrideText = hostOverride?.full_text?.trim() || null;
-  const isWaiver = documentType === 'waiver';
+  const isWaiver = isWaiverFamily(documentType);
   const isUpload = isUploadDocumentType(documentType);
   const isLibraryPdf = Boolean(selectedLibraryFile);
   const isMoney = isMoneyDocumentType(documentType);
@@ -254,8 +260,12 @@ export function CreateDocumentPage() {
 
   useEffect(() => {
     if (isLibraryPdf) return;
-    if (isWaiver) {
+    if (documentType === 'waiver') {
       setCustomText(defaultWaiverText(hostOverrideText || profile?.waiver_template));
+      return;
+    }
+    if (isParentalConsentWaiver(documentType)) {
+      setCustomText(hostOverrideText || selectedTemplate?.full_text?.trim() || defaultDocumentBody(documentType));
       return;
     }
     if (bodyEditable) {
@@ -809,7 +819,7 @@ export function CreateDocumentPage() {
               </p>
             </label>
           )}
-          {isUpload && needsScopeCheckbox && (
+          {needsScopeCheckbox && (
             <div className="rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/60 dark:bg-amber-950/20 p-2.5">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300 mb-1.5">
                 Sign-by-Text scope
@@ -817,7 +827,7 @@ export function CreateDocumentPage() {
               <textarea
                 readOnly
                 value={signByTextScopeDetail(uploadMaxLabel)}
-                rows={4}
+                rows={7}
                 className="w-full resize-none rounded-lg border border-amber-200/70 dark:border-amber-700/60 bg-white/80 dark:bg-slate-900 px-2.5 py-2 text-xs text-slate-700 dark:text-slate-200 leading-relaxed"
               />
             </div>
@@ -1191,7 +1201,17 @@ export function CreateDocumentPage() {
               <p className="mt-1 mb-3 text-sm text-gray-800 dark:text-slate-100 whitespace-pre-line leading-relaxed rounded-xl border border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-950 px-3 py-3">
                 {filledBody}
               </p>
-              <span className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Edit full text</span>
+              {isUnmodifiedBuiltInTemplate(
+                documentType,
+                customText,
+                selectedTemplate?.full_text || defaultDocumentBody(documentType),
+              ) && (
+                <p className="mb-3 text-[11px] text-slate-400 dark:text-slate-500">
+                  {builtInTemplateAttorneyLine(documentType)}
+                </p>
+              )}
+              <HostLegalStateNotice documentType={documentType} businessRegion={profile?.business_region} />
+              <span className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1 mt-3">Edit full text</span>
               <textarea
                 value={customText}
                 onChange={(e) => setCustomText(e.target.value)}
@@ -1217,6 +1237,18 @@ export function CreateDocumentPage() {
                 },
               )}
             </p>
+            {isUnmodifiedBuiltInTemplate(
+              documentType,
+              hostOverrideText || selectedTemplate.full_text || '',
+              selectedTemplate.full_text || defaultDocumentBody(documentType),
+            ) && (
+              <p className="mt-3 text-[11px] text-slate-400 dark:text-slate-500">
+                {builtInTemplateAttorneyLine(documentType)}
+              </p>
+            )}
+            <div className="mt-3">
+              <HostLegalStateNotice documentType={documentType} businessRegion={profile?.business_region} />
+            </div>
           </div>
         ) : null}
 
