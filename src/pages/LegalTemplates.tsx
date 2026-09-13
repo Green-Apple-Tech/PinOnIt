@@ -61,7 +61,7 @@ export function LegalTemplatesPage() {
           </h1>
           <p className="mt-5 text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
             PinOnIt&apos;s built-in templates are general-purpose starting points — useful when you need
-            something quickly, not a substitute for language written for your venue, activity, or state.
+            something quickly, but we recommend you review them for your state and activity.
           </p>
           <p className="mt-4 text-slate-600 dark:text-slate-300 leading-relaxed">
             Waiver and liability requirements vary by state and by activity. A zip-line park in California
