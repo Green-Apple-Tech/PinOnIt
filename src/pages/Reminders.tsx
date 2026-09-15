@@ -642,12 +642,7 @@ export function RemindersPage({
             <BellRing className="h-6 w-6 md:h-7 md:w-7 text-brand-600 dark:text-brand-400" />
           </div>
           <div className="min-w-0">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">NeverMiss Reminders</h1>
-          <span className="text-[11px] font-semibold text-[#5864C6] dark:text-[#8891e8] bg-[#5864C6]/10 dark:bg-[#5864C6]/10 border border-[#5864C6]/20 dark:border-[#5864C6]/20 px-2.5 py-1 rounded-full">
-            Icon patch: 2026-09-03
-          </span>
-        </div>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">NeverMiss Reminders</h1>
             <div className="mt-3">
               <QuestionLead
                 lead="Tired of no-shows?"
