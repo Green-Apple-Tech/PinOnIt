@@ -44,6 +44,8 @@ export function usePageMeta(opts: {
   ogTitle?: string;
   /** twitter:card — use `summary` for a smaller thumbnail. */
   twitterCard?: 'summary' | 'summary_large_image';
+  /** Guest token pages should pass noindex, nofollow. */
+  robots?: string;
 }) {
   useEffect(() => {
     const prev = document.title;
@@ -67,6 +69,9 @@ export function usePageMeta(opts: {
     upsertMeta('meta[name="twitter:description"]', { name: 'twitter:description', content: opts.description });
     upsertMeta('meta[name="twitter:image"]', { name: 'twitter:image', content: opts.image });
     upsertLink('canonical', opts.url);
+    if (opts.robots) {
+      upsertMeta('meta[name="robots"]', { name: 'robots', content: opts.robots });
+    }
     return () => {
       document.title = prev || DEFAULTS.title;
       upsertMeta('meta[name="description"]', { name: 'description', content: DEFAULTS.description });
@@ -79,6 +84,9 @@ export function usePageMeta(opts: {
       upsertMeta('meta[name="twitter:description"]', { name: 'twitter:description', content: DEFAULTS.description });
       upsertMeta('meta[name="twitter:image"]', { name: 'twitter:image', content: DEFAULTS.image });
       upsertLink('canonical', DEFAULTS.url);
+      if (opts.robots) {
+        upsertMeta('meta[name="robots"]', { name: 'robots', content: 'index, follow' });
+      }
     };
-  }, [opts.title, opts.description, opts.url, opts.image, opts.ogTitle, opts.twitterCard]);
+  }, [opts.title, opts.description, opts.url, opts.image, opts.ogTitle, opts.twitterCard, opts.robots]);
 }

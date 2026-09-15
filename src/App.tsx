@@ -19,7 +19,7 @@ import { NotFoundPage } from './pages/NotFound';
 import { SessionManager } from './components/SessionManager';
 import { CampaignLandingPage } from './pages/CampaignLandingPage';
 import { captureCampaignParams } from './lib/campaignAttribution';
-import { logMarketingVisit } from './lib/marketingVisits';
+import { GuestNoIndex } from './components/GuestNoIndex';
 import { SeoIntentPage } from './pages/SeoIntentPage';
 import { INTENT_PAGES } from './lib/seoIntentPages';
 import { BlogIndexPage, BlogPostPage } from './pages/Blog';
@@ -168,6 +168,7 @@ function App() {
         <BrowserRouter>
           <SessionManager />
           <CampaignParamCapture />
+          <GuestNoIndex />
           <Routes>
             {/* Fixed paths must come before the /:slug wildcard */}
             <Route path="/" element={<Landing />} />

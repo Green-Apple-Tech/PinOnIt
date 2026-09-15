@@ -55,6 +55,8 @@
 /status  /index.html  200
 /poll  /index.html  200
 /poll/*  /index.html  200
+/c  /index.html  200
+/c/*  /index.html  200
 /book  /index.html  200
 /book/*  /index.html  200
 /s  /index.html  200

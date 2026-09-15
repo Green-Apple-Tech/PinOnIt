@@ -241,6 +241,14 @@
   from = "/d/*"
   to = "/index.html"
   status = 200
+[[redirects]]
+  from = "/c"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/c/*"
+  to = "/index.html"
+  status = 200
 
 # Host booking slugs — Netlify function forces text/html Content-Type
 [[redirects]]
@@ -290,3 +298,53 @@
   [headers.values]
     Cache-Control = "no-cache, no-store, must-revalidate"
     Content-Type = "text/html; charset=utf-8"
+
+# Guest token URLs share index.html (index, follow). Header noindex is the crawler-visible signal.
+[[headers]]
+  for = "/d"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+[[headers]]
+  for = "/d/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+[[headers]]
+  for = "/q"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+[[headers]]
+  for = "/q/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+[[headers]]
+  for = "/r"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+[[headers]]
+  for = "/r/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+[[headers]]
+  for = "/c"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+[[headers]]
+  for = "/c/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+[[headers]]
+  for = "/s"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+[[headers]]
+  for = "/s/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+[[headers]]
+  for = "/poll"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+[[headers]]
+  for = "/poll/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"

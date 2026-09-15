@@ -505,6 +505,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
     image: bookingShareImage(host),
     // Smaller side thumbnail in iMessage / social (vs large homepage banner)
     twitterCard: 'summary',
+    robots: token ? 'noindex, nofollow' : undefined,
   });
 
   const handleDateSelect = useCallback((dateKey: string) => {

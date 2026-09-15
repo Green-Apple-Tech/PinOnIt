@@ -9,3 +9,29 @@
 /embed.js
   Content-Type: application/javascript; charset=utf-8
   Cache-Control: public, max-age=300
+
+# Guest token URLs — header noindex (robots.txt Disallow is not enough).
+/d
+  X-Robots-Tag: noindex, nofollow
+/d/*
+  X-Robots-Tag: noindex, nofollow
+/q
+  X-Robots-Tag: noindex, nofollow
+/q/*
+  X-Robots-Tag: noindex, nofollow
+/r
+  X-Robots-Tag: noindex, nofollow
+/r/*
+  X-Robots-Tag: noindex, nofollow
+/c
+  X-Robots-Tag: noindex, nofollow
+/c/*
+  X-Robots-Tag: noindex, nofollow
+/s
+  X-Robots-Tag: noindex, nofollow
+/s/*
+  X-Robots-Tag: noindex, nofollow
+/poll
+  X-Robots-Tag: noindex, nofollow
+/poll/*
+  X-Robots-Tag: noindex, nofollow
