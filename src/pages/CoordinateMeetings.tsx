@@ -17,6 +17,7 @@ import {
 import { Plus, X, ChevronRight, ChevronLeft, Users, Clock, MapPin, MessageSquare, Check, Loader2, Trash2, AlertCircle, ArrowRight, Phone, Calendar, RefreshCw, CheckCircle2, Sparkles } from 'lucide-react';
 import { SmsBookingConsent } from '../components/SmsConsentText';
 import { ContactAutocomplete } from '../components/ContactAutocomplete';
+import { QuestionLead } from '../components/QuestionLead';
 import {
   buildNumberedInviteSmsBody,
   coordinationContextLabel,
@@ -2349,12 +2350,16 @@ export function CoordinateMeetingsPage() {
         className="min-h-[44px] flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors mb-6 -ml-1 px-1">
         <ChevronLeft className="h-4 w-4" /> Back to Group Scheduling
       </button>
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-1">
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4">
         <Users className="h-6 w-6" style={{ color: BRAND }} /> Coordinate by text
       </h1>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 max-w-xl leading-relaxed">
-        Propose numbered times, text 2–5 people, and lock a slot when everyone replies — or pick one yourself.
-      </p>
+      <div className="mb-8">
+        <QuestionLead
+          lead="Trying to find a time that works for a group?"
+          body="Send everyone a text with numbered time options. They reply with just a number — no app, no back-and-forth. Once everyone agrees, it locks in automatically."
+          secondary="Propose numbered times, text 2–5 people, and lock a slot when everyone replies — or pick one yourself."
+        />
+      </div>
       <NewCoordForm onCreated={handleCreated} onCancel={goHub} hostName={hostName} />
     </main>
   );

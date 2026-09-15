@@ -15,8 +15,14 @@ describe('getPageHelp', () => {
     expect(getPageHelp('/dashboard/settings', '?tab=contacts').title).toMatch(/contact/i);
   });
 
-  it('explains recurring jobs from the Booking hub default tab', () => {
+  it('explains the public booking page from the Booking hub default tab', () => {
     const g = getPageHelp('/dashboard/booking');
+    expect(g.title).toMatch(/booking/i);
+    expect(g.purpose).toMatch(/public booking page/i);
+  });
+
+  it('explains recurring jobs from the Recurring tab', () => {
+    const g = getPageHelp('/dashboard/booking', '?tab=recurring');
     expect(g.title).toMatch(/recurring job/i);
     expect(g.steps.join(' ')).toMatch(/90 days/i);
   });

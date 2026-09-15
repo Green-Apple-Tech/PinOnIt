@@ -15,6 +15,7 @@ import { HOLD_UP_COPY } from '../lib/documentCopy';
 import { quoteHostStatus } from '../lib/quoteSms';
 import type { SmbDocument, SmbDocumentStatus } from '../lib/types';
 import { HostWaiverParticipants } from '../components/HostWaiverParticipants';
+import { QuestionLead } from '../components/QuestionLead';
 import { isParentalConsentWaiver } from '../lib/waiverParticipants';
 
 const STATUS: Record<SmbDocumentStatus, { label: string; className: string; icon: typeof Clock }> = {
@@ -110,14 +111,18 @@ export function DocumentsPage() {
 
   return (
     <main className="p-4 md:p-8 max-w-5xl pb-28 md:pb-8">
-      <div className="mb-5 md:mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+      <div className="mb-5 md:mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
             Send Docs + <span className="font-sign-by-text text-2xl md:text-3xl text-brand-700 dark:text-brand-300">Sign-by-Text</span>
           </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-slate-400 max-w-2xl">
-            Quotes, invoices, NDAs, waivers — one place. No login for the recipient. {HOLD_UP_COPY}
-          </p>
+          <div className="mt-3">
+            <QuestionLead
+              lead="Need something signed or paid, without email or an app?"
+              body="Send a waiver, invoice, contract, quote, or receipt by text. Your customer taps the link, confirms or signs right from their phone, and you're done."
+              secondary={`Quotes, invoices, NDAs, waivers — one place. No login for the recipient. ${HOLD_UP_COPY}`}
+            />
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
@@ -172,7 +177,7 @@ export function DocumentsPage() {
         ) : docs.length === 0 ? (
           <div className="p-10 text-center">
             <FileText className="h-8 w-8 mx-auto text-gray-300 dark:text-slate-600" />
-            <p className="mt-3 text-sm text-gray-500 dark:text-slate-400">No documents yet. Send your first one.</p>
+            <p className="mt-3 text-sm text-gray-500 dark:text-slate-400">No documents sent yet. Send your first waiver, invoice, or contract by text — no email, no app, no printer.</p>
             <Link to={documentsNewPath()} className="mt-4 inline-block text-sm font-semibold text-brand-600">
               Send your first document
             </Link>

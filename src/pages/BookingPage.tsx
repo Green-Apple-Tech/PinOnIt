@@ -24,7 +24,7 @@ import { RecurringJobsPanel } from './StandingJobs';
 export function BookingPage() {
   const { profile } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const tab = searchParams.get('tab') === 'page' ? 'page' : 'recurring';
+  const tab = searchParams.get('tab') === 'recurring' ? 'recurring' : 'page';
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -56,7 +56,12 @@ export function BookingPage() {
   };
 
   const setTab = (next: 'recurring' | 'page') => {
-    setSearchParams(next === 'page' ? { tab: 'page' } : { tab: 'recurring' }, { replace: true });
+    setSearchParams((prev) => {
+      const nextParams = new URLSearchParams(prev);
+      if (next === 'recurring') nextParams.set('tab', 'recurring');
+      else nextParams.delete('tab');
+      return nextParams;
+    }, { replace: true });
   };
 
   return (
@@ -68,17 +73,6 @@ export function BookingPage() {
       <div className="flex gap-1 p-1 mb-6 rounded-xl bg-slate-100 dark:bg-slate-800">
         <button
           type="button"
-          onClick={() => setTab('recurring')}
-          className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold ${
-            tab === 'recurring'
-              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
-              : 'text-slate-500 dark:text-slate-400'
-          }`}
-        >
-          Recurring jobs
-        </button>
-        <button
-          type="button"
           onClick={() => setTab('page')}
           className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold ${
             tab === 'page'
@@ -87,6 +81,17 @@ export function BookingPage() {
           }`}
         >
           Booking page
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('recurring')}
+          className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold ${
+            tab === 'recurring'
+              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
+              : 'text-slate-500 dark:text-slate-400'
+          }`}
+        >
+          Recurring jobs
         </button>
       </div>
 

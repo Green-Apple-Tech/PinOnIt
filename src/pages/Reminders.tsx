@@ -21,6 +21,7 @@ import { AlsoRemindPeople } from '../components/AlsoRemindPeople';
 import { SmsIcon as SmsSvg, WhatsappIcon as WhatsappSvg, EmailIcon as EmailSvg, VoiceIcon as VoiceSvg } from '../components/ChannelBadges';
 import { SMS_OPT_OUT_FOOTER, SMS_REPLY_FOOTER } from '../lib/smsOptOut';
 import { SmsBookingConsent } from '../components/SmsConsentText';
+import { QuestionLead } from '../components/QuestionLead';
 import {
   normalizeCriticalAutoMatches,
   parseCriticalAutoInput,
@@ -647,12 +648,13 @@ export function RemindersPage({
             Icon patch: 2026-09-03
           </span>
         </div>
-            <p className="mt-1 text-base font-medium text-slate-700 dark:text-slate-200">
-              Never miss a reminder.
-            </p>
-            <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
-              Remind yourself, your guests, and teammates — set defaults below, then open Advanced for coworkers and voice.
-            </p>
+            <div className="mt-3">
+              <QuestionLead
+                lead="Tired of no-shows?"
+                body="NeverMiss automatically texts your customers before their appointment — no setup needed once it's turned on."
+                secondary="Remind yourself, your guests, and teammates — set defaults below, then open Advanced for coworkers and voice."
+              />
+            </div>
           </div>
         </div>
         <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">

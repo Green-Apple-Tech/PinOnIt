@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import type { MeetingPollSlot } from '../lib/types';
+import { QuestionLead } from '../components/QuestionLead';
 import { PollCard, type PollWithStats } from './MeetingPolls';
 import {
   ArrowRight, ChevronRight, Clock, Loader2, MapPin, Users, CheckCircle2,
@@ -192,11 +193,13 @@ export function GroupSchedulingPage() {
 
   return (
     <main className="flex-1 p-4 md:p-8 max-w-5xl w-full">
-      <div className="mb-8">
+      <div className="mb-8 space-y-4">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Group Scheduling</h1>
-        <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 max-w-2xl">
-          Schedule with a group — share a poll link for colleagues, or coordinate via SMS or WhatsApp when you only have phone numbers.
-        </p>
+        <QuestionLead
+          lead="Trying to find a time that works for a group?"
+          body="Send everyone a text with numbered time options. They reply with just a number — no app, no back-and-forth. Once everyone agrees, it locks in automatically."
+          secondary="Share a poll link for colleagues who can click and vote, or coordinate via SMS or WhatsApp when you only have phone numbers."
+        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10">
@@ -266,7 +269,7 @@ export function GroupSchedulingPage() {
           </div>
         ) : activeMeetings.length === 0 ? (
           <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 p-8 text-center">
-            <p className="text-sm text-slate-500 dark:text-slate-400">No active coordinations yet. Start one to text a time to people who only have a phone.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">No group meetings yet. Start one when you need to find a time that works for several people — everyone just replies with a number.</p>
             <button
               type="button"
               onClick={() => navigate(COORDINATE_NEW_PATH)}

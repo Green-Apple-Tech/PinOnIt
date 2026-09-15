@@ -32,9 +32,9 @@ function keyFromLocation(pathname: string, search: string, hash: string): string
   if (pathname.startsWith('/dashboard/appointments')) return 'calendar';
   if (pathname.startsWith('/dashboard/standing-jobs')) return 'standing-jobs';
   if (pathname.startsWith('/dashboard/booking')) {
-    const tab = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search).get('tab');
-    if (tab === 'page') return 'booking';
-    return 'standing-jobs';
+    const bookingTab = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search).get('tab');
+    if (bookingTab === 'recurring') return 'standing-jobs';
+    return 'booking';
   }
   if (pathname.startsWith('/dashboard/services')) return 'services';
   if (pathname.startsWith('/dashboard/quotes')) return 'quotes';

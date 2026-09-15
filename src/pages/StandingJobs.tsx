@@ -4,6 +4,7 @@ import { ArrowRight, Loader2, Plus, Repeat, Search, X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { ContactAutocomplete } from '../components/ContactAutocomplete';
 import { FrequencyPicker } from '../components/FrequencyPicker';
+import { QuestionLead } from '../components/QuestionLead';
 import { supabase } from '../lib/supabase';
 import { PHONE_HINT, PHONE_PLACEHOLDER, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import { SMS_BOOKING_CONSENT_CTA } from '../lib/smsCompliance';
@@ -162,12 +163,12 @@ export function RecurringJobsPanel() {
 
   return (
     <div>
-      <div className="mb-4 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          Set up a customer once and PinOnIt fills the next 90 days on your calendar. Skip a week, reschedule one visit,
-          or change the rest of the series from a date forward. If a guest opts in on your public page, confirm here
-          before more visits are added.
-        </p>
+      <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <QuestionLead
+          lead="Do you have customers who come back on a schedule?"
+          body="Recurring Jobs is for repeat visits — weekly lawn care, biweekly pool cleaning, monthly HVAC checkups. Set the customer up once, and PinOnIt automatically fills your calendar for the next 90 days. No need to book them again each time."
+          secondary="Skip a week, reschedule one visit, or change the rest of the series from a date forward. If a guest opts in on your public page, confirm here before more visits are added."
+        />
         <button
           type="button"
           onClick={() => { setShowForm(true); setError(''); }}
@@ -192,7 +193,7 @@ export function RecurringJobsPanel() {
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-slate-200 dark:border-slate-800 p-8 text-center text-sm text-slate-500">
           {jobs.length === 0
-            ? 'No recurring jobs yet. Add weekly lawn, biweekly pool, or a custom interval — or let a guest opt in when they book.'
+            ? 'No recurring jobs yet. Set one up for a repeat customer — weekly lawn, biweekly pool, monthly service — and we\'ll handle the rest.'
             : 'No customers match that search.'}
         </div>
       ) : (
