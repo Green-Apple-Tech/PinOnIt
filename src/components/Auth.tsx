@@ -199,8 +199,8 @@ export function AuthForm() {
 
         {isolatedOauth && view !== 'forgot' && (
           <div className="mb-6 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 rounded-xl text-sm text-amber-900 dark:text-amber-200 leading-relaxed">
-            {IOS_OAUTH_SAFARI_MESSAGE} If you opened this from a text or the home-screen icon, tap{' '}
-            <span className="font-semibold">···</span> then <span className="font-semibold">Open in Safari</span>.
+            {IOS_OAUTH_SAFARI_MESSAGE} If you opened this from a text, tap{' '}
+            <span className="font-semibold">···</span> then <span className="font-semibold">Open in Browser</span>.
           </div>
         )}
 

@@ -16,17 +16,16 @@ export function oauthCallbackRedirect(origin = typeof window !== 'undefined' ? w
 }
 
 export const IOS_OAUTH_SAFARI_MESSAGE =
-  'Google sign-in on iPhone needs Safari. The home-screen app, Chrome, and in-app browsers show Google’s “Something went wrong” error. Open pinonit.com/login in Safari, then tap Sign in with Google.';
+  'Google sign-in does not work from the home-screen app or inside Instagram / Messages / Gmail. Open pinonit.com/login in Safari or Chrome, then tap Sign in with Google.';
 
 /**
- * True when iPhone would finish Google OAuth in a different browser than this page,
- * or in a WKWebView Google blocks (home-screen app, Chrome, Instagram, etc.).
+ * True when iPhone would finish Google OAuth in a different browser than this page
+ * (home-screen app, Instagram, Gmail, etc.). Safari and Chrome stay in-place.
  */
 export function isIosIsolatedWebView(ua: string, standalone = false): boolean {
   const ios = /iPhone|iPad|iPod/i.test(ua);
   if (!ios) return false;
   if (standalone) return true;
-  if (/CriOS|FxiOS|EdgiOS|OPiOS/i.test(ua)) return true;
   if (
     /FBAN|FBAV|Instagram|Line\/|Twitter|LinkedInApp|Snapchat|TikTok|ByteLocale|GSA\/|DuckDuckGo|Pinterest|WhatsApp|Messenger/i.test(
       ua,
