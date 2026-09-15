@@ -19,6 +19,7 @@ import { NotFoundPage } from './pages/NotFound';
 import { SessionManager } from './components/SessionManager';
 import { CampaignLandingPage } from './pages/CampaignLandingPage';
 import { captureCampaignParams } from './lib/campaignAttribution';
+import { logMarketingVisit } from './lib/marketingVisits';
 import { GuestNoIndex } from './components/GuestNoIndex';
 import { SeoIntentPage } from './pages/SeoIntentPage';
 import { INTENT_PAGES } from './lib/seoIntentPages';
