@@ -1995,6 +1995,11 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                       {guestEmail.trim() || phone || 'you'}
                     </span>
                   </p>
+                  {requestRepeating && isRecurringService && (
+                    <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
+                      Your first visit is confirmed. The host will confirm before this repeats automatically.
+                    </p>
+                  )}
                 </div>
 
                 {/* Booking detail card */}

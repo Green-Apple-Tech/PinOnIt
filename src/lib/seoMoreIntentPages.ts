@@ -346,7 +346,7 @@ export const MORE_INTENT_PAGES: IntentPage[] = [
     opening: PINONIT_CORE_SENTENCE,
     body: [
       'A contractor booking app has to work in a driveway, not only on a desktop calendar. PinOnIt is a mobile-first booking page plus the office work around the visit: text the estimate, collect a signature, remind them the morning of the job.',
-      'Share a link. They pick a time against your real busy times. After the visit, send a quote or a sign-off by SMS. Standing jobs on the host side keep a rolling calendar for routes you already run.',
+      'Share a link. They pick a time against your real busy times. After the visit, send a quote or a sign-off by SMS. Recurring jobs on the host side keep a rolling calendar for routes you already run.',
       'This is not a full construction ERP, estimating CAD tool, or payroll system. It is the booking-and-paperwork layer a one-crew shop actually uses between jobs.',
     ],
     audience: 'Independent contractors and small crews who quote, book, and collect signatures from a phone.',

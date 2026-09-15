@@ -594,7 +594,7 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
   const handleSave = async () => {
     if (!profile) return;
     if (!form.name.trim()) { setNameError('Event name is required.'); return; }
-    if (form.is_recurring && !form.recurrence_frequency) { setNameError('Select a recurrence frequency for recurring bookings.'); return; }
+    if (form.is_recurring && !form.recurrence_frequency) { setNameError('Select a frequency for repeating visits.'); return; }
     if (form.is_recurring && form.recurrence_frequency === 'custom' && !(form.recurrence_interval_days && form.recurrence_interval_days >= 1)) {
       setNameError('Set how many days between visits for a custom cadence.');
       return;
@@ -773,7 +773,7 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Event types</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
-            Meeting types, scheduling links, and recurring bookings (weekly, every 2 weeks, or monthly).
+            Meeting types, scheduling links, and repeating visits (weekly, every 2 weeks, monthly, or custom).
           </p>
         </div>
         <button
@@ -796,9 +796,9 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
               <Repeat className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-gray-900 dark:text-white">Recurring bookings</p>
+              <p className="text-sm font-bold text-gray-900 dark:text-white">Let customers book repeating visits</p>
               <p className="mt-1 text-sm text-gray-600 dark:text-slate-300">
-                This is the switch. Add a service or edit one below, then turn on Recurring bookings and pick weekly, every 2 weeks, or monthly.
+                This is the switch. Add a service or edit one below, then turn it on and pick weekly, every 2 weeks, monthly, or custom. Guests opt in to that cadence — they don’t pick a different frequency.
               </p>
               <button
                 type="button"

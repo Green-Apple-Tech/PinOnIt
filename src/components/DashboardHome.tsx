@@ -10,6 +10,7 @@ import {
   FileText,
   Mail,
   QrCode,
+  Repeat,
   ShoppingBag,
   Sparkles,
   Users,
@@ -19,6 +20,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { documentsNewPath } from '../lib/documentActions';
 import { documentTypeLabel } from '../lib/documents';
+import { formatStandingFrequency, type StandingFrequency } from '../lib/standingJobs';
 import type { SmbDocument } from '../lib/types';
 
 type ReminderRow = {
@@ -96,7 +98,7 @@ const PRIMARY_TOOLS: DashTool[] = [
   {
     to: '/dashboard/booking',
     title: 'Booking',
-    blurb: 'Your booking page, services, recurring bookings, and sharing tools.',
+    blurb: 'Your booking page, Recurring jobs, and sharing tools.',
     icon: ExternalLink,
     accent: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300',
   },
@@ -143,6 +145,7 @@ const OTHER_TOOLS: DashTool[] = [
 export function DashboardHome({ hostId, bookings, onOpenWizard, showWizardButton }: Props) {
   const [docs, setDocs] = useState<SmbDocument[]>([]);
   const [reminders, setReminders] = useState<ReminderRow[]>([]);
+  const [pendingJobs, setPendingJobs] = useState<{ id: string; customer_name: string; frequency: StandingFrequency; interval_days: number | null }[]>([]);
   const [loadingExtras, setLoadingExtras] = useState(true);
 
   useEffect(() => {
@@ -150,7 +153,7 @@ export function DashboardHome({ hostId, bookings, onOpenWizard, showWizardButton
     (async () => {
       setLoadingExtras(true);
       const nowIso = new Date().toISOString();
-      const [docsRes, remRes] = await Promise.all([
+      const [docsRes, remRes, jobRes] = await Promise.all([
         supabase
           .from('documents')
           .select('*')
@@ -165,10 +168,18 @@ export function DashboardHome({ hostId, bookings, onOpenWizard, showWizardButton
           .gte('due_at', nowIso)
           .order('due_at', { ascending: true })
           .limit(5),
+        supabase
+          .from('standing_jobs')
+          .select('id, customer_name, frequency, interval_days')
+          .eq('host_id', hostId)
+          .eq('status', 'pending_host_confirmation')
+          .order('created_at', { ascending: false })
+          .limit(5),
       ]);
       if (cancelled) return;
       setDocs((docsRes.data as SmbDocument[]) ?? []);
       setReminders((remRes.data as ReminderRow[]) ?? []);
+      setPendingJobs((jobRes.data as typeof pendingJobs) ?? []);
       setLoadingExtras(false);
     })();
     return () => {
@@ -310,6 +321,20 @@ export function DashboardHome({ hostId, bookings, onOpenWizard, showWizardButton
       </div>
 
       <div className="grid md:grid-cols-2 gap-4 md:gap-5">
+        {pendingJobs.length > 0 && (
+          <GlanceCard
+            title="Recurring jobs to confirm"
+            icon={Repeat}
+            empty="None waiting."
+            linkTo="/dashboard/booking?tab=recurring"
+            linkLabel="Open Recurring jobs"
+            rows={pendingJobs.map((j) => ({
+              id: j.id,
+              primary: j.customer_name,
+              secondary: `Requested by customer · ${formatStandingFrequency(j.frequency, j.interval_days)}`,
+            }))}
+          />
+        )}
         <GlanceCard
           title="Upcoming bookings"
           icon={CalendarDays}

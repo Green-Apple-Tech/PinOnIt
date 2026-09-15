@@ -43,6 +43,7 @@ describe.skipIf(!enabled)('guest paths as anonymous client', () => {
   let guest: SupabaseClient;
   let hostId = '';
   let serviceId = '';
+  let recurringServiceId = '';
   let pollId = '';
   let slotId = '';
   let bookingId = '';
@@ -102,6 +103,22 @@ describe.skipIf(!enabled)('guest paths as anonymous client', () => {
       .single();
     if (svcErr || !service) throw new Error(`smoke service: ${svcErr?.message}`);
     serviceId = service.id;
+
+    const { data: recSvc, error: recErr } = await admin
+      .from('services')
+      .insert({
+        host_id: hostId,
+        name: 'Guest smoke weekly',
+        duration_minutes: 30,
+        is_active: true,
+        is_recurring: true,
+        recurrence_frequency: 'weekly',
+        price_cents: 0,
+      })
+      .select('id')
+      .single();
+    if (recErr || !recSvc) throw new Error(`smoke repeating service: ${recErr?.message}`);
+    recurringServiceId = recSvc.id;
 
     const { data: poll, error: pollErr } = await admin
       .from('meeting_polls')
@@ -194,6 +211,80 @@ describe.skipIf(!enabled)('guest paths as anonymous client', () => {
       duration_minutes: 60,
     });
     expect(error).toBeTruthy();
+  }, 30_000);
+
+  it('guest repeating opt-in creates a pending job via RPC, not a second visit', async () => {
+    const repeatStart = new Date(start.getTime() + 7 * 86400000);
+    const repeatEnd = new Date(repeatStart.getTime() + 30 * 60 * 1000);
+    const { data, error } = await guest.rpc('create_guest_booking', {
+      p_payload: {
+        service_id: recurringServiceId,
+        host_id: hostId,
+        guest_name: 'Repeating Guest',
+        guest_email: `repeat.${guestEmail}`,
+        guest_phone: null,
+        guest_address: null,
+        notify_via: null,
+        guest_timezone: 'America/New_York',
+        start_time: repeatStart.toISOString(),
+        end_time: repeatEnd.toISOString(),
+        notes: 'guest repeating smoke',
+        is_recurring: false,
+        recurrence_frequency: null,
+        request_repeating: true,
+        reminder_channels: ['email'],
+        reminder_times: [],
+        stripe_payment_id: null,
+      },
+    });
+    expect(error, error?.message).toBeNull();
+    const row = asRecord(data);
+    expect(row.id).toEqual(expect.any(String));
+    expect(row.standing_job_id).toEqual(expect.any(String));
+    expect(row.is_recurring).toBe(true);
+    const jobId = String(row.standing_job_id);
+
+    const { data: leakedJob } = await guest.from('standing_jobs').select('id').eq('id', jobId).maybeSingle();
+    expect(leakedJob).toBeNull();
+
+    const { data: guestConfirm, error: guestConfirmErr } = await guest.rpc('confirm_standing_job', { p_job_id: jobId });
+    expect(guestConfirmErr || !guestConfirm).toBeTruthy();
+
+    const { data: job } = await admin.from('standing_jobs').select('id, status, origin, first_booking_id, frequency').eq('id', jobId).maybeSingle();
+    expect(job?.status).toBe('pending_host_confirmation');
+    expect(job?.origin).toBe('guest');
+    expect(job?.first_booking_id).toBe(row.id);
+    expect(job?.frequency).toBe('weekly');
+
+    const { count: beforeConfirm } = await admin
+      .from('bookings')
+      .select('id', { count: 'exact', head: true })
+      .eq('standing_job_id', jobId)
+      .neq('status', 'canceled');
+    expect(beforeConfirm).toBe(1);
+
+    const host = createClient(url, anonKey, { auth: AUTH_OPTS });
+    const { error: signErr } = await host.auth.signInWithPassword({
+      email: hostEmail,
+      password: hostPassword,
+    });
+    expect(signErr, signErr?.message).toBeNull();
+    const { data: confirmed, error: confirmErr } = await host.rpc('confirm_standing_job', { p_job_id: jobId });
+    expect(confirmErr, confirmErr?.message).toBeNull();
+    const confirmedRow = asRecord(confirmed);
+    expect(asRecord(confirmedRow.job).status).toBe('active');
+    expect(Number(confirmedRow.visits_created)).toBeGreaterThan(0);
+
+    const { count: afterConfirm } = await admin
+      .from('bookings')
+      .select('id', { count: 'exact', head: true })
+      .eq('standing_job_id', jobId)
+      .neq('status', 'canceled');
+    expect(afterConfirm).toBeGreaterThan(1);
+
+    await host.auth.signOut();
+    const { data: stillGuest } = await guest.auth.getSession();
+    expect(stillGuest.session).toBeNull();
   }, 30_000);
 
   it('loads public busy times as anon and sees that booking', async () => {

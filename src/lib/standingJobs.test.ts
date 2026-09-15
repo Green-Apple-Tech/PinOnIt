@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { countRecurringSeriesOnSlot } from './recurring';
 import {
   STANDING_HORIZON_DAYS,
   addStandingOccurrence,
@@ -12,6 +13,28 @@ describe('guest recurring vs standing jobs', () => {
   it('labels custom cadence the same way host and guest opt-in share', () => {
     expect(formatStandingFrequency('weekly')).toBe('Weekly');
     expect(formatStandingFrequency('custom', 10)).toBe('Every 10 days');
+  });
+
+  it('counts a standing job series on a slot even when visits are not flagged is_recurring', () => {
+    const when = new Date(2026, 8, 16, 9, 0);
+    const dateKey = `${when.getFullYear()}-${String(when.getMonth() + 1).padStart(2, '0')}-${String(when.getDate()).padStart(2, '0')}`;
+    const slot = `${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')}`;
+    const n = countRecurringSeriesOnSlot(
+      [
+        {
+          id: 'a',
+          service_id: 'svc',
+          start_time: when.toISOString(),
+          status: 'confirmed',
+          is_recurring: false,
+          standing_job_id: 'job-1',
+        },
+      ],
+      'svc',
+      dateKey,
+      slot,
+    );
+    expect(n).toBe(1);
   });
 });
 

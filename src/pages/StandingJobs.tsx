@@ -220,6 +220,9 @@ export function RecurringJobsPanel() {
                     <td className="px-4 py-3">
                       <p className="font-semibold text-slate-900 dark:text-white">{job.customer_name}</p>
                       <p className="text-xs text-slate-400">{job.customer_phone || job.customer_email || ''}</p>
+                      {job.origin === 'guest' && (
+                        <p className="mt-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">Requested by customer</p>
+                      )}
                       {pending && (
                         <div className="mt-2 flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
                           <button
@@ -532,7 +535,7 @@ function StandingJobDetail({
             <h2 className="text-lg font-bold">{job.customer_name}</h2>
             <p className="text-sm text-slate-500">{job.services?.name || 'Recurring job'} · {formatStandingFrequency(job.frequency, job.interval_days)}</p>
             {job.origin === 'guest' && (
-              <p className="text-xs text-slate-400 mt-1">Guest opted in on your public page.</p>
+              <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 mt-1">Requested by customer</p>
             )}
           </div>
           <button type="button" onClick={onClose} className="p-1 text-slate-400"><X className="h-5 w-5" /></button>
