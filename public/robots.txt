@@ -1,18 +1,39 @@
+# Public marketing pages are crawlable. Auth, dashboard, and guest
+# document/booking URLs are not. Disallow is repeated on named bots
+# because those groups do not inherit the * group.
+
 User-agent: *
 Allow: /
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /login
+Disallow: /signup
+Disallow: /auth
+Disallow: /auth/
+Disallow: /onboarding
+Disallow: /booking/
+Disallow: /s/
+Disallow: /q/
+Disallow: /r/
+Disallow: /d/
+Disallow: /c/
+Disallow: /poll/
 
+User-agent: Googlebot
+User-agent: Bingbot
+User-agent: DuckDuckBot
+User-agent: Applebot
+User-agent: Google-Extended
+User-agent: Google-CloudVertexBot
 User-agent: OAI-SearchBot
-Allow: /
-
 User-agent: GPTBot
-Allow: /
-
+User-agent: ChatGPT-User
 User-agent: PerplexityBot
-Allow: /
-
 User-agent: ClaudeBot
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+User-agent: anthropic-ai
 Allow: /
-
 Disallow: /dashboard
 Disallow: /dashboard/
 Disallow: /login

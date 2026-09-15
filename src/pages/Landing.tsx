@@ -293,6 +293,7 @@ export function Landing() {
           <img src="/pinonit_logo.png" alt="Pin on It" className="h-7 w-auto" />
           <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-slate-500 dark:text-slate-400">
             <Link to="/why-pinonit" className="hover:text-slate-900 dark:hover:text-white transition-colors">Why PinOnIt</Link>
+            <Link to="/solutions" className="hover:text-slate-900 dark:hover:text-white transition-colors">Solutions</Link>
             <Link to="/calendly-alternative" className="hover:text-slate-900 dark:hover:text-white transition-colors">Calendly alternative</Link>
             <a href="#pricing" className="hover:text-slate-900 dark:hover:text-white transition-colors">Pricing</a>
             <a href="#faq" className="hover:text-slate-900 dark:hover:text-white transition-colors">FAQ</a>

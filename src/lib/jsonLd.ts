@@ -1,5 +1,11 @@
 import type { BlogPost } from './blogPosts';
-import { PINONIT_CORE_SENTENCE, PINONIT_ORG, PINONIT_SOFTWARE } from './seoIdentity';
+import {
+  PINONIT_CORE_SENTENCE,
+  PINONIT_ORG,
+  PINONIT_PRICE_LABEL,
+  PINONIT_SOFTWARE,
+  PINONIT_SOFTWARE_DESCRIPTION,
+} from './seoIdentity';
 import type { IntentFaq, IntentPage } from './seoIntentPages';
 
 export function organizationJsonLd() {
@@ -23,7 +29,7 @@ export function softwareApplicationJsonLd() {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
     name: PINONIT_SOFTWARE.name,
-    description: PINONIT_SOFTWARE.description,
+    description: PINONIT_SOFTWARE_DESCRIPTION,
     applicationCategory: PINONIT_SOFTWARE.applicationCategory,
     operatingSystem: PINONIT_SOFTWARE.operatingSystem,
     url: PINONIT_ORG.url,
@@ -86,6 +92,17 @@ export function blogIndexJsonLd() {
   };
 }
 
+export function websiteJsonLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: PINONIT_ORG.name,
+    url: PINONIT_ORG.url,
+    description: PINONIT_CORE_SENTENCE,
+    publisher: { '@type': 'Organization', name: PINONIT_ORG.name, url: PINONIT_ORG.url },
+  };
+}
+
 export function intentWebPageJsonLd(page: IntentPage) {
   return {
     '@context': 'https://schema.org',
@@ -125,7 +142,7 @@ export const HOMEPAGE_FAQ: IntentFaq[] = [
     a: 'Yes. Google and Outlook stay in sync (including new bookings). Apple Calendar connects with a private iCloud link so busy times are blocked. You can import from Calendly if you’re switching.',
   },
   {
-    q: 'Is it really $8.99 a month?',
+    q: `Is it really ${PINONIT_PRICE_LABEL} a month?`,
     a: 'Yes. One plan. Free trial first.',
   },
 ];

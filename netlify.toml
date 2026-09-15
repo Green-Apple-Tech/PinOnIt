@@ -106,8 +106,28 @@
   to = "/seo-static/docusign-alternative-simple-signatures.html"
   status = 200
 [[redirects]]
+  from = "/docusign-alternative"
+  to = "/seo-static/docusign-alternative.html"
+  status = 200
+[[redirects]]
+  from = "/sign-by-text"
+  to = "/seo-static/sign-by-text.html"
+  status = 200
+[[redirects]]
+  from = "/electronic-signature-by-text"
+  to = "/seo-static/electronic-signature-by-text.html"
+  status = 200
+[[redirects]]
+  from = "/booking-with-sms-reminders"
+  to = "/seo-static/booking-with-sms-reminders.html"
+  status = 200
+[[redirects]]
   from = "/send-quote-by-text"
   to = "/seo-static/send-quote-by-text.html"
+  status = 200
+[[redirects]]
+  from = "/send-estimate-by-text"
+  to = "/seo-static/send-estimate-by-text.html"
   status = 200
 [[redirects]]
   from = "/sms-appointment-reminders"
@@ -116,6 +136,30 @@
 [[redirects]]
   from = "/esignature-by-text"
   to = "/seo-static/esignature-by-text.html"
+  status = 200
+[[redirects]]
+  from = "/forms-and-waivers"
+  to = "/seo-static/forms-and-waivers.html"
+  status = 200
+[[redirects]]
+  from = "/contractor-booking-app"
+  to = "/seo-static/contractor-booking-app.html"
+  status = 200
+[[redirects]]
+  from = "/small-business-booking-app"
+  to = "/seo-static/small-business-booking-app.html"
+  status = 200
+[[redirects]]
+  from = "/service-business-software"
+  to = "/seo-static/service-business-software.html"
+  status = 200
+[[redirects]]
+  from = "/calendly-docusign-alternative"
+  to = "/seo-static/calendly-docusign-alternative.html"
+  status = 200
+[[redirects]]
+  from = "/solutions"
+  to = "/seo-static/solutions.html"
   status = 200
 [[redirects]]
   from = "/blog"

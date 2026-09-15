@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { INTENT_PAGES } from '../src/lib/seoIntentPages.ts';
 import { BLOG_INDEX, BLOG_POSTS, type BlogPost } from '../src/lib/blogPosts.ts';
-import { PINONIT_CORE_SENTENCE, PINONIT_ORG } from '../src/lib/seoIdentity.ts';
+import { PINONIT_CORE_SENTENCE, PINONIT_ORG, PINONIT_PRICE_MONTHLY } from '../src/lib/seoIdentity.ts';
 import {
   blogIndexJsonLd,
   blogPostingJsonLd,
@@ -11,6 +11,7 @@ import {
   intentWebPageJsonLd,
   organizationJsonLd,
   softwareApplicationJsonLd,
+  websiteJsonLd,
 } from '../src/lib/jsonLd.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -25,7 +26,13 @@ function esc(s: string) {
 }
 
 function pageHtml(page: (typeof INTENT_PAGES)[number]) {
-  const ld = [organizationJsonLd(), softwareApplicationJsonLd(), intentWebPageJsonLd(page), faqPageJsonLd(page.faq)];
+  const ld: object[] = [
+    organizationJsonLd(),
+    softwareApplicationJsonLd(),
+    websiteJsonLd(),
+    intentWebPageJsonLd(page),
+  ];
+  if (page.faq.length > 0) ld.push(faqPageJsonLd(page.faq));
   const rows = (page.compareRows || [])
     .map(
       (r) =>
@@ -38,9 +45,30 @@ function pageHtml(page: (typeof INTENT_PAGES)[number]) {
       <tbody>${rows}</tbody></table>
       <p class="note">${esc(page.compareNote || '')}</p>`
     : '';
-  const faq = page.faq
-    .map((f) => `<h3>${esc(f.q)}</h3><p>${esc(f.a)}</p>`)
+  const audience = page.audience
+    ? `<h2>Who this is for</h2><p>${esc(page.audience)}</p>`
+    : '';
+  const features = page.features?.length
+    ? `<h2>Relevant features</h2><ul>${page.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>`
+    : '';
+  const workflow = page.workflow
+    ? `<h2>Example workflow</h2><p>${esc(page.workflow)}</p>`
+    : '';
+  const sections = (page.sections || [])
+    .map((s) => `<h2>${esc(s.h2)}</h2><p>${esc(s.text)}</p>`)
     .join('');
+  const hub = (page.hubGroups || [])
+    .map(
+      (g) =>
+        `<h2>${esc(g.heading)}</h2><ul>${g.links.map((l) => `<li><a href="${esc(l.path)}">${esc(l.label)}</a></li>`).join('')}</ul>`,
+    )
+    .join('');
+  const related = page.related?.length
+    ? `<h2>Related</h2><ul>${page.related.map((l) => `<li><a href="${esc(l.path)}">${esc(l.label)}</a></li>`).join('')}</ul>`
+    : '';
+  const faq = page.faq.length
+    ? `<h2>FAQ</h2>${page.faq.map((f) => `<h3>${esc(f.q)}</h3><p>${esc(f.a)}</p>`).join('')}`
+    : '';
   const body = page.body.map((p) => `<p>${esc(p)}</p>`).join('');
 
   return `<!doctype html>
@@ -89,16 +117,22 @@ function pageHtml(page: (typeof INTENT_PAGES)[number]) {
     <h1>${esc(page.h1)}</h1>
     <p><strong>${esc(page.opening)}</strong></p>
     ${body}
+    ${audience}
+    ${features}
+    ${workflow}
+    ${sections}
     ${table}
-    <h2>FAQ</h2>
+    ${hub}
+    ${related}
     ${faq}
     <div class="cta">
+      <p>What does PinOnIt cost? Pro is ${esc(PINONIT_PRICE_MONTHLY)} after a 14-day trial.</p>
       <p>${esc(PINONIT_CORE_SENTENCE)}</p>
       <a class="btn" href="/signup">${esc(page.cta)}</a>
     </div>
   </main>
   <footer>
-    <div class="wrap">PinOnIt is a DBA of Miami Expeditions LLC. $8.99/month after trial.</div>
+    <div class="wrap">PinOnIt is a DBA of Miami Expeditions LLC. ${esc(PINONIT_PRICE_MONTHLY)} after trial. <a href="/solutions">Solutions</a></div>
   </footer>
 </body>
 </html>
@@ -159,7 +193,7 @@ function shell(title: string, description: string, canonical: string, ld: unknow
     ${body}
   </main>
   <footer>
-    <div class="wrap">PinOnIt is a DBA of Miami Expeditions LLC. $8.99/month after trial.</div>
+    <div class="wrap">PinOnIt is a DBA of Miami Expeditions LLC. ${esc(PINONIT_PRICE_MONTHLY)} after trial. <a href="/solutions">Solutions</a></div>
   </footer>
 </body>
 </html>
@@ -212,4 +246,34 @@ for (const post of BLOG_POSTS) {
   );
   console.log('wrote', file);
 }
+
+const extraSitemap: Array<{ loc: string; changefreq: string; priority: string }> = [
+  { loc: `${PINONIT_ORG.url}/`, changefreq: 'weekly', priority: '1.0' },
+  ...INTENT_PAGES.map((p) => ({
+    loc: p.canonical,
+    changefreq: 'monthly',
+    priority: p.path === '/solutions' ? '0.8' : '0.9',
+  })),
+  { loc: BLOG_INDEX.canonical, changefreq: 'weekly', priority: '0.5' },
+  ...BLOG_POSTS.map((p) => ({ loc: p.canonical, changefreq: 'monthly', priority: '0.5' })),
+  { loc: `${PINONIT_ORG.url}/why-pinonit`, changefreq: 'monthly', priority: '0.7' },
+  { loc: `${PINONIT_ORG.url}/legal-templates`, changefreq: 'monthly', priority: '0.6' },
+  { loc: `${PINONIT_ORG.url}/nda`, changefreq: 'monthly', priority: '0.6' },
+  { loc: `${PINONIT_ORG.url}/reminders`, changefreq: 'monthly', priority: '0.6' },
+  { loc: `${PINONIT_ORG.url}/terms`, changefreq: 'yearly', priority: '0.3' },
+  { loc: `${PINONIT_ORG.url}/privacy`, changefreq: 'yearly', priority: '0.3' },
+  { loc: `${PINONIT_ORG.url}/sms-consent`, changefreq: 'yearly', priority: '0.3' },
+  { loc: `${PINONIT_ORG.url}/acceptable-use`, changefreq: 'yearly', priority: '0.3' },
+  { loc: `${PINONIT_ORG.url}/status`, changefreq: 'weekly', priority: '0.2' },
+  { loc: `${PINONIT_ORG.url}/leaderboard`, changefreq: 'weekly', priority: '0.2' },
+];
+
+const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${extraSitemap.map((u) => `  <url><loc>${u.loc}</loc><changefreq>${u.changefreq}</changefreq><priority>${u.priority}</priority></url>`).join('\n')}
+</urlset>
+`;
+const sitemapPath = join(root, 'public', 'sitemap.xml');
+writeFileSync(sitemapPath, sitemap);
+console.log('wrote', sitemapPath);
 

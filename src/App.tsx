@@ -21,6 +21,7 @@ import { CampaignLandingPage } from './pages/CampaignLandingPage';
 import { captureCampaignParams } from './lib/campaignAttribution';
 import { logMarketingVisit } from './lib/marketingVisits';
 import { SeoIntentPage } from './pages/SeoIntentPage';
+import { INTENT_PAGES } from './lib/seoIntentPages';
 import { BlogIndexPage, BlogPostPage } from './pages/Blog';
 
 function CampaignParamCapture() {
@@ -170,16 +171,14 @@ function App() {
           <Routes>
             {/* Fixed paths must come before the /:slug wildcard */}
             <Route path="/" element={<Landing />} />
-            <Route path="/calendly-alternative" element={<SeoIntentPage />} />
+            {INTENT_PAGES.map((page) => (
+              <Route key={page.path} path={page.path} element={<SeoIntentPage />} />
+            ))}
             <Route path="/calendly-alternative-for-small-business" element={<Navigate to="/calendly-alternative" replace />} />
             <Route path="/nda" element={<CampaignLandingPage slug="nda" />} />
             <Route path="/reminders" element={<CampaignLandingPage slug="reminders" />} />
             <Route path="/why-pinonit" element={<WhyPinOnItPage />} />
             <Route path="/legal-templates" element={<LegalTemplatesPage />} />
-            <Route path="/docusign-alternative-simple-signatures" element={<SeoIntentPage />} />
-            <Route path="/send-quote-by-text" element={<SeoIntentPage />} />
-            <Route path="/sms-appointment-reminders" element={<SeoIntentPage />} />
-            <Route path="/esignature-by-text" element={<SeoIntentPage />} />
             <Route path="/blog" element={<BlogIndexPage />} />
             <Route path="/blog/:slug" element={<BlogPostPage />} />
             <Route path="/terms" element={<TermsPage />} />

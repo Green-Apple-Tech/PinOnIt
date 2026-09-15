@@ -6,8 +6,14 @@ import { useTheme } from '../hooks/useTheme';
 import { usePageMeta } from '../lib/pageMeta';
 import { signupHref } from '../lib/campaignAttribution';
 import { INTENT_OG_IMAGE, INTENT_PAGES } from '../lib/seoIntentPages';
-import { faqPageJsonLd, intentWebPageJsonLd, organizationJsonLd, softwareApplicationJsonLd } from '../lib/jsonLd';
-import { PINONIT_CORE_SENTENCE } from '../lib/seoIdentity';
+import {
+  faqPageJsonLd,
+  intentWebPageJsonLd,
+  organizationJsonLd,
+  softwareApplicationJsonLd,
+  websiteJsonLd,
+} from '../lib/jsonLd';
+import { PINONIT_CORE_SENTENCE, PINONIT_PRICE_MONTHLY } from '../lib/seoIdentity';
 
 export function SeoIntentPage() {
   const { pathname } = useLocation();
@@ -24,10 +30,17 @@ export function SeoIntentPage() {
   if (!page) return <Navigate to="/" replace />;
 
   const signup = signupHref();
+  const ld: Record<string, unknown>[] = [
+    organizationJsonLd(),
+    softwareApplicationJsonLd(),
+    websiteJsonLd(),
+    intentWebPageJsonLd(page),
+  ];
+  if (page.faq.length > 0) ld.push(faqPageJsonLd(page.faq));
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white flex flex-col">
-      <JsonLd data={[organizationJsonLd(), softwareApplicationJsonLd(), intentWebPageJsonLd(page), faqPageJsonLd(page.faq)]} />
+      <JsonLd data={ld} />
       <nav className="sticky top-0 z-50 bg-white/95 dark:bg-slate-950/95 backdrop-blur border-b border-slate-200 dark:border-slate-800">
         <div className="max-w-3xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
           <Link to="/" className="shrink-0">
@@ -61,9 +74,41 @@ export function SeoIntentPage() {
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight leading-tight">{page.h1}</h1>
           <p className="mt-5 text-lg text-slate-700 dark:text-slate-200 leading-relaxed">{page.opening}</p>
           {page.body.map((para) => (
-            <p key={para.slice(0, 40)} className="mt-4 text-slate-600 dark:text-slate-300 leading-relaxed">
+            <p key={para.slice(0, 48)} className="mt-4 text-slate-600 dark:text-slate-300 leading-relaxed">
               {para}
             </p>
+          ))}
+
+          {page.audience && (
+            <section className="mt-12">
+              <h2 className="text-lg font-bold">Who this is for</h2>
+              <p className="mt-3 text-slate-600 dark:text-slate-300 leading-relaxed">{page.audience}</p>
+            </section>
+          )}
+
+          {page.features && page.features.length > 0 && (
+            <section className="mt-12">
+              <h2 className="text-lg font-bold">Relevant features</h2>
+              <ul className="mt-3 list-disc pl-5 space-y-1 text-slate-600 dark:text-slate-300">
+                {page.features.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {page.workflow && (
+            <section className="mt-12">
+              <h2 className="text-lg font-bold">Example workflow</h2>
+              <p className="mt-3 text-slate-600 dark:text-slate-300 leading-relaxed">{page.workflow}</p>
+            </section>
+          )}
+
+          {page.sections?.map((section) => (
+            <section key={section.h2} className="mt-12">
+              <h2 className="text-lg font-bold">{section.h2}</h2>
+              <p className="mt-3 text-slate-600 dark:text-slate-300 leading-relaxed">{section.text}</p>
+            </section>
           ))}
 
           {page.compareRows && page.compareRows.length > 0 && (
@@ -95,20 +140,62 @@ export function SeoIntentPage() {
             </section>
           )}
 
-          <section className="mt-12">
-            <h2 className="text-lg font-bold">FAQ</h2>
-            <dl className="mt-4 space-y-4">
-              {page.faq.map((item) => (
-                <div key={item.q}>
-                  <dt className="font-semibold">{item.q}</dt>
-                  <dd className="mt-1 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{item.a}</dd>
-                </div>
+          {page.hubGroups && page.hubGroups.length > 0 && (
+            <div className="mt-12 space-y-10">
+              {page.hubGroups.map((group) => (
+                <section key={group.heading}>
+                  <h2 className="text-lg font-bold">{group.heading}</h2>
+                  <ul className="mt-3 space-y-2">
+                    {group.links.map((link) => (
+                      <li key={link.path}>
+                        <Link to={link.path} className="text-brand-600 dark:text-brand-400 font-medium hover:underline">
+                          {link.label}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
               ))}
-            </dl>
-          </section>
+            </div>
+          )}
+
+          {page.related && page.related.length > 0 && (
+            <section className="mt-12">
+              <h2 className="text-lg font-bold">Related</h2>
+              <ul className="mt-3 space-y-2">
+                {page.related.map((link) => (
+                  <li key={link.path}>
+                    <Link to={link.path} className="text-brand-600 dark:text-brand-400 font-medium hover:underline">
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {page.faq.length > 0 && (
+            <section className="mt-12">
+              <h2 className="text-lg font-bold">FAQ</h2>
+              <dl className="mt-4 space-y-4">
+                {page.faq.map((item) => (
+                  <div key={item.q}>
+                    <dt className="font-semibold">{item.q}</dt>
+                    <dd className="mt-1 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{item.a}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          )}
 
           <div className="mt-12 rounded-2xl bg-brand-500 px-6 py-8 text-center text-white">
-            <p className="text-sm text-brand-100 mb-3">{PINONIT_CORE_SENTENCE}</p>
+            <p className="text-sm text-brand-100 mb-1">What does PinOnIt cost?</p>
+            <p className="text-sm text-brand-100 mb-3">
+              Pro is {PINONIT_PRICE_MONTHLY} after a 14-day trial.{' '}
+              <Link to={signup} className="underline font-semibold text-white">
+                Start the trial
+              </Link>
+            </p>
             <Link
               to={page.ctaTo === '/signup' ? signup : page.ctaTo}
               className="inline-flex items-center gap-2 min-h-11 px-6 rounded-full bg-white text-brand-600 text-sm font-semibold"
