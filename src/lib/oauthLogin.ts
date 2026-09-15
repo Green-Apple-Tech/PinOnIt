@@ -15,14 +15,18 @@ export function oauthCallbackRedirect(origin = typeof window !== 'undefined' ? w
   return `${origin.replace(/\/$/, '')}/auth/callback`;
 }
 
+export const IOS_OAUTH_SAFARI_MESSAGE =
+  'Google sign-in on iPhone needs Safari. The home-screen app, Chrome, and in-app browsers show Google’s “Something went wrong” error. Open pinonit.com/login in Safari, then tap Sign in with Google.';
+
 /**
- * True when iPhone would finish Google OAuth in a different browser than this page.
- * PKCE lives in this page's storage; Safari then redeems the code without it, so Google asks again.
+ * True when iPhone would finish Google OAuth in a different browser than this page,
+ * or in a WKWebView Google blocks (home-screen app, Chrome, Instagram, etc.).
  */
 export function isIosIsolatedWebView(ua: string, standalone = false): boolean {
   const ios = /iPhone|iPad|iPod/i.test(ua);
   if (!ios) return false;
   if (standalone) return true;
+  if (/CriOS|FxiOS|EdgiOS|OPiOS/i.test(ua)) return true;
   if (
     /FBAN|FBAV|Instagram|Line\/|Twitter|LinkedInApp|Snapchat|TikTok|ByteLocale|GSA\/|DuckDuckGo|Pinterest|WhatsApp|Messenger/i.test(
       ua,
@@ -41,6 +45,14 @@ export function readIosStandalone(): boolean {
   } catch {
     return Boolean(nav.standalone);
   }
+}
+
+/** Message to show instead of starting Google OAuth, or null if this browser is fine. */
+export function iosOauthBlockMessage(
+  ua = typeof navigator === 'undefined' ? '' : navigator.userAgent,
+  standalone = typeof window === 'undefined' ? false : readIosStandalone(),
+): string | null {
+  return isIosIsolatedWebView(ua, standalone) ? IOS_OAUTH_SAFARI_MESSAGE : null;
 }
 
 export function isConsumedOauthCodeError(message: string): boolean {

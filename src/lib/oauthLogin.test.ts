@@ -36,9 +36,12 @@ describe('isIosIsolatedWebView', () => {
   const instagram =
     'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 300.0.0.0.0';
 
-  it('lets iPhone Safari and Chrome complete OAuth in-place', () => {
+  it('lets iPhone Safari complete OAuth in-place', () => {
     expect(isIosIsolatedWebView(safari)).toBe(false);
-    expect(isIosIsolatedWebView(chrome)).toBe(false);
+  });
+
+  it('flags iPhone Chrome — Google blocks OAuth in that WKWebView', () => {
+    expect(isIosIsolatedWebView(chrome)).toBe(true);
   });
 
   it('flags the home-screen app and in-app browsers that bounce to Safari', () => {

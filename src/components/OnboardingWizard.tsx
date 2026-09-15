@@ -30,6 +30,7 @@ import { WIZARD_STEPS as STEPS, type WizardStep as Step } from '../lib/wizardSte
 import { TrialTermsNotice } from './TrialTermsNotice';
 import { recordPlatformTermsAcceptance } from '../lib/platformLegal';
 import { STRIPE_PRO_PRICE_ID } from '../lib/pricing';
+import { iosOauthBlockMessage } from '../lib/oauthLogin';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -964,6 +965,11 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep, openCa
 
   // ── OAuth calendar connect — saves wizard position before redirect ────────────
   const handleConnectCalendar = async (provider: 'google' | 'outlook' | 'zoom') => {
+    const blocked = iosOauthBlockMessage();
+    if (blocked) {
+      setCalError(blocked);
+      return;
+    }
     setCalConnecting(provider);
     setCalError('');
     try {

@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { supabase } from '../lib/supabase';
 import { Loader2, Mail, Lock, User, ArrowLeft, Sun, Moon, Eye, EyeOff } from 'lucide-react';
-import { isIosIsolatedWebView, readIosStandalone } from '../lib/oauthLogin';
+import { IOS_OAUTH_SAFARI_MESSAGE, isIosIsolatedWebView, readIosStandalone } from '../lib/oauthLogin';
 
 type View = 'login' | 'signup' | 'forgot';
 
@@ -121,6 +121,10 @@ export function AuthForm() {
   };
 
   const startOauth = async (provider: 'google' | 'microsoft') => {
+    if (isolatedOauth) {
+      setError(IOS_OAUTH_SAFARI_MESSAGE);
+      return;
+    }
     if (oauthInFlight.current) return;
     oauthInFlight.current = true;
     setOauthLoading(provider);
@@ -138,6 +142,10 @@ export function AuthForm() {
   };
 
   const handleOauth = (provider: 'google' | 'microsoft') => {
+    if (isolatedOauth) {
+      setError(IOS_OAUTH_SAFARI_MESSAGE);
+      return;
+    }
     if (oauthInFlight.current || oauthLoading) return;
     if (loading) {
       pendingOauth.current = provider;
@@ -191,8 +199,8 @@ export function AuthForm() {
 
         {isolatedOauth && view !== 'forgot' && (
           <div className="mb-6 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 rounded-xl text-sm text-amber-900 dark:text-amber-200 leading-relaxed">
-            Google sign-in on iPhone needs Safari. Tap <span className="font-semibold">···</span> then{' '}
-            <span className="font-semibold">Open in Safari</span>, and sign in once there — otherwise Google asks twice.
+            {IOS_OAUTH_SAFARI_MESSAGE} If you opened this from a text or the home-screen icon, tap{' '}
+            <span className="font-semibold">···</span> then <span className="font-semibold">Open in Safari</span>.
           </div>
         )}
 
@@ -202,7 +210,7 @@ export function AuthForm() {
             <button
               type="button"
               onClick={() => handleOauth('google')}
-              disabled={!!oauthLoading}
+              disabled={!!oauthLoading || isolatedOauth}
               className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white font-semibold rounded-xl transition-all shadow-sm"
             >
               {oauthLoading === 'google' ? <Loader2 className="h-5 w-5 animate-spin" /> : <GoogleIcon />}
@@ -212,7 +220,7 @@ export function AuthForm() {
             <button
               type="button"
               onClick={() => handleOauth('microsoft')}
-              disabled={!!oauthLoading}
+              disabled={!!oauthLoading || isolatedOauth}
               className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[#1e3a5f] hover:bg-[#17304f] disabled:opacity-60 text-white font-semibold rounded-xl transition-all shadow-sm"
             >
               {oauthLoading === 'microsoft' ? <Loader2 className="h-5 w-5 animate-spin" /> : <MicrosoftIcon />}

@@ -28,6 +28,7 @@ import { NotificationTestPanel } from '../components/NotificationTestPanel';
 import { AlsoRemindPeople } from '../components/AlsoRemindPeople';
 import { BookingBlocksSettings } from '../components/BookingBlocksSettings';
 import { readProfileCache, writeProfileCache } from '../lib/profileCache';
+import { iosOauthBlockMessage } from '../lib/oauthLogin';
 import { injectWaiverRecipientPlaceholder } from '../lib/documents';
 import { DocsTemplateLibrary } from '../components/DocsTemplateLibrary';
 import { PaymentLinkFields } from '../components/PaymentLinkFields';
@@ -252,6 +253,11 @@ function IntegrationsTab({ userId }: { userId: string | undefined }) {
   const getConnected = (provider: string) => calendars.find((c) => c.provider === provider);
 
   const handleConnect = async (provider: 'google' | 'outlook' | 'zoom' | 'apple') => {
+    const blocked = provider !== 'apple' ? iosOauthBlockMessage() : null;
+    if (blocked) {
+      setError(blocked);
+      return;
+    }
     setConnecting(provider);
     setError('');
     try {

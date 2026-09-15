@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
+import { iosOauthBlockMessage } from '../lib/oauthLogin';
 import {
   RefreshCw,
   Trash2,
@@ -336,6 +337,11 @@ function ConnectWizard({ hostId, onClose, onConnected }: { hostId: string; onClo
   const [error, setError] = useState('');
 
   const handleOAuth = async (provider: 'google' | 'outlook' | 'zoom') => {
+    const blocked = iosOauthBlockMessage();
+    if (blocked) {
+      setError(blocked);
+      return;
+    }
     setConnecting(provider);
     setError('');
     try {
