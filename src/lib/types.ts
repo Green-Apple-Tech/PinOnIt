@@ -140,7 +140,7 @@ export interface PaidBookingSettings {
 }
 
 export type MeetingType = 'one_on_one' | 'group' | 'one_off';
-export type RecurrenceFrequency = 'weekly' | 'biweekly' | 'monthly';
+export type RecurrenceFrequency = 'weekly' | 'biweekly' | 'monthly' | 'custom';
 
 export interface Service {
   id: string;
@@ -198,6 +198,7 @@ export interface Service {
   booking_calendar_ids: string[];
   is_recurring: boolean;
   recurrence_frequency: RecurrenceFrequency | null;
+  recurrence_interval_days?: number | null;
   recurrence_end_date: string | null;
   recurrence_end_occurrences: number | null;
   max_recurring_clients: number | null;

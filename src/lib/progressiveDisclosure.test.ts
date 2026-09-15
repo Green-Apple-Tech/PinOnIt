@@ -68,7 +68,6 @@ describe('buildSidebarNav', () => {
       'Dashboard',
       'Send Docs + Sign-by-Text',
       'Calendar',
-      'Standing jobs',
       'Booking',
       'NeverMiss Reminders',
     ]);

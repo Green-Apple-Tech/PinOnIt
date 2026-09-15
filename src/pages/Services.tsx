@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import type { Service, BookingQuestion, MeetingType, RecurrenceFrequency } from '../lib/types';
+import { FrequencyPicker } from '../components/FrequencyPicker';
 import { getRecurrenceEndType, type RecurrenceEndType } from '../lib/recurring';
 import { resolveDefaultReminderChannel } from '../lib/reminderChannels';
 import { computeSingleUseExpiresAtForProfile, formatLinkExpiryHint, formatSingleUseExpiryLabel, isSingleUseLinksEnabled } from '../lib/singleUseLinks';
@@ -56,6 +57,7 @@ const DEFAULT_SERVICE = {
   show_description_on_booking_page: true, show_description_on_paid_booking: true,
   is_recurring: false,
   recurrence_frequency: null as RecurrenceFrequency | null,
+  recurrence_interval_days: null as number | null,
   recurrence_end_date: null as string | null,
   recurrence_end_occurrences: null as number | null,
   max_recurring_clients: 1,
@@ -561,6 +563,7 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
       show_description_on_paid_booking: (svc as any).show_description_on_paid_booking ?? true,
       is_recurring: svc.is_recurring ?? false,
       recurrence_frequency: svc.recurrence_frequency ?? null,
+      recurrence_interval_days: svc.recurrence_interval_days ?? null,
       recurrence_end_date: svc.recurrence_end_date ?? null,
       recurrence_end_occurrences: svc.recurrence_end_occurrences ?? null,
       max_recurring_clients: svc.max_recurring_clients ?? 1,
@@ -592,6 +595,10 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
     if (!profile) return;
     if (!form.name.trim()) { setNameError('Event name is required.'); return; }
     if (form.is_recurring && !form.recurrence_frequency) { setNameError('Select a recurrence frequency for recurring bookings.'); return; }
+    if (form.is_recurring && form.recurrence_frequency === 'custom' && !(form.recurrence_interval_days && form.recurrence_interval_days >= 1)) {
+      setNameError('Set how many days between visits for a custom cadence.');
+      return;
+    }
     setNameError('');
     setSaving(true);
     const priceCents = priceStr ? Math.round(parseFloat(priceStr) * 100) : 0;
@@ -611,6 +618,7 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
       booking_calendar_ids: selectedCalendarIds,
       is_recurring: form.is_recurring,
       recurrence_frequency: form.is_recurring ? form.recurrence_frequency : null,
+      recurrence_interval_days: form.is_recurring && form.recurrence_frequency === 'custom' ? Math.max(1, form.recurrence_interval_days ?? 1) : null,
       recurrence_end_date: form.is_recurring && recurrenceEndType === 'date' ? form.recurrence_end_date : null,
       recurrence_end_occurrences: form.is_recurring && recurrenceEndType === 'occurrences' ? form.recurrence_end_occurrences : null,
       max_recurring_clients: form.is_recurring ? (form.max_recurring_clients ?? 1) : null,
@@ -1196,43 +1204,35 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
                     </select>
                   </div>
 
-                  <div id="recurring-bookings" className="p-4 border border-gray-100 dark:border-slate-800 rounded-xl space-y-4 bg-gray-50/50 dark:bg-slate-900/30">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900 dark:text-white">Recurring bookings</p>
-                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">Weekly, every 2 weeks, or monthly — clients pick a repeating time</p>
-                      </div>
-                      <button type="button" onClick={() => {
-                        const next = !form.is_recurring;
-                        setField('is_recurring', next);
-                        if (next && !form.recurrence_frequency) setField('recurrence_frequency', 'weekly');
-                      }}
-                        className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors ${form.is_recurring ? 'bg-brand-600' : 'bg-gray-300 dark:bg-slate-600'}`}>
-                        <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${form.is_recurring ? 'translate-x-6' : 'translate-x-1'}`} />
-                      </button>
-                    </div>
-
-                    {form.is_recurring && (
-                      <div className="space-y-4 pt-2 border-t border-gray-100 dark:border-slate-800">
+                    <div id="recurring-bookings" className="p-4 border border-gray-100 dark:border-slate-800 rounded-xl space-y-4 bg-gray-50/50 dark:bg-slate-900/30">
+                      <div className="flex items-center justify-between gap-3">
                         <div>
-                          <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-2 uppercase tracking-wide">Frequency</label>
-                          <div className="flex flex-wrap gap-2">
-                            {([
-                              ['weekly', 'Weekly'],
-                              ['biweekly', 'Every 2 weeks'],
-                              ['monthly', 'Monthly'],
-                            ] as [RecurrenceFrequency, string][]).map(([key, label]) => (
-                              <button key={key} type="button" onClick={() => setField('recurrence_frequency', key)}
-                                className={`px-4 py-2 rounded-full text-sm font-semibold border transition-all min-h-[40px] ${
-                                  form.recurrence_frequency === key
-                                    ? 'bg-indigo-600 border-indigo-600 text-white'
-                                    : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300'
-                                }`}>
-                                {label}
-                              </button>
-                            ))}
-                          </div>
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white">Let customers book repeating visits</p>
+                          <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">You set the cadence. Guests opt in or don’t — they don’t pick a different frequency.</p>
                         </div>
+                        <button type="button" onClick={() => {
+                          const next = !form.is_recurring;
+                          setField('is_recurring', next);
+                          if (next && !form.recurrence_frequency) setField('recurrence_frequency', 'weekly');
+                        }}
+                          className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors ${form.is_recurring ? 'bg-brand-600' : 'bg-gray-300 dark:bg-slate-600'}`}>
+                          <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${form.is_recurring ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                      </div>
+
+                      {form.is_recurring && (
+                        <div className="space-y-4 pt-2 border-t border-gray-100 dark:border-slate-800">
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-2 uppercase tracking-wide">Frequency</label>
+                            <FrequencyPicker
+                              value={form.recurrence_frequency}
+                              intervalDays={form.recurrence_interval_days ?? 10}
+                              onChange={(freq, days) => {
+                                setField('recurrence_frequency', freq);
+                                setField('recurrence_interval_days', freq === 'custom' ? days : null);
+                              }}
+                            />
+                          </div>
 
                         <div>
                           <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-2 uppercase tracking-wide">Ends</label>

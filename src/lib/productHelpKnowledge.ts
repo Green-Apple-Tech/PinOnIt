@@ -107,18 +107,19 @@ export const HELP_FAQS: HelpFaq[] = [
       'repeating bookings',
     ],
     answer:
-      'Recurring bookings guests make themselves live on each service — Booking → Recurring bookings, or Settings → Event types. Guests get the first visit plus the next one. Standing jobs are the host-created series under Standing jobs — those visits roll 90 days on the calendar.',
+      'Turn on “Let customers book repeating visits” on a service under Settings → Event types (also linked from Booking → Booking page). Guests opt in to the cadence you set. You confirm in Booking → Recurring jobs before more visits are added. Recurring jobs you create yourself also live on that tab and roll 90 days on the calendar.',
   },
   {
     id: 'standing-jobs',
     questions: [
       'where are standing jobs',
       'standing job',
+      'where are recurring jobs',
       'how do i set up a standing job',
       'weekly lawn',
     ],
     answer:
-      'Open Standing jobs in the sidebar (also linked from Booking). Add the customer, service, frequency, and first time. Visits are normal calendar bookings for the next 90 days. Skip or reschedule one visit without changing the series. Change from this date forward rewrites unstarted future visits.',
+      'Open Booking — Recurring jobs is the default tab. Add the customer, service, frequency, and first time. Visits are normal calendar bookings for the next 90 days. Skip or reschedule one visit without changing the series. Change from this date forward rewrites unstarted future visits. Guest opt-ins wait here for Confirm or Decline.',
   },
   {
     id: 'booking-link',

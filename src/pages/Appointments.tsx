@@ -1376,7 +1376,7 @@ export function AppointmentsPage() {
                                 <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
                                   {svc?.name ?? 'Appointment'}
                                 </p>
-                                {b.standing_job_id && <Repeat className="h-3.5 w-3.5 text-indigo-400 shrink-0" aria-label="Standing job visit" />}
+                                {b.standing_job_id && <Repeat className="h-3.5 w-3.5 text-indigo-400 shrink-0" aria-label="Recurring job visit" />}
                                 {b.is_recurring && <Repeat className="h-3.5 w-3.5 text-slate-400 shrink-0" aria-label="Recurring booking" />}
                                 {b.is_critical && <span className="text-xs px-1.5 py-0.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-full font-semibold flex items-center gap-0.5"><BellRing className="h-3 w-3" />Critical</span>}
                                 {isCanceled && <span className="text-xs px-1.5 py-0.5 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-full">Canceled</span>}
@@ -1759,14 +1759,14 @@ export function AppointmentsPage() {
                       className="w-full py-2.5 text-sm font-semibold rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">
                       Skip this visit
                     </button>
-                    <Link to="/dashboard/standing-jobs" className="w-full py-2.5 text-sm font-semibold rounded-xl border text-center">
+                    <Link to="/dashboard/booking?tab=recurring" className="w-full py-2.5 text-sm font-semibold rounded-xl border text-center">
                       Change series from this date forward
                     </Link>
                   </>
                 )}
               </div>
             )}
-            {detailBooking.is_recurring && detailBooking.status !== 'canceled' && (
+            {detailBooking.is_recurring && !detailBooking.standing_job_id && detailBooking.status !== 'canceled' && (
               <div className="flex flex-col gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                 <button onClick={() => handleCancelRecurringOccurrence(detailBooking)}
                   className="w-full py-2.5 text-sm font-semibold rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">

@@ -4,7 +4,8 @@ import type { SmbDocumentType } from './types';
 export const STANDING_HORIZON_DAYS = 90;
 
 export type StandingFrequency = 'weekly' | 'biweekly' | 'monthly' | 'custom';
-export type StandingJobStatus = 'active' | 'paused' | 'ended';
+export type StandingJobStatus = 'active' | 'paused' | 'ended' | 'pending_host_confirmation' | 'declined';
+export type StandingJobOrigin = 'host' | 'guest';
 
 export type StandingJob = {
   id: string;
@@ -24,6 +25,8 @@ export type StandingJob = {
   price_cents: number;
   notes: string;
   status: StandingJobStatus;
+  origin?: StandingJobOrigin;
+  first_booking_id?: string | null;
   sms_consent: boolean;
   whatsapp_consent: boolean;
   notify_via: string[] | null;

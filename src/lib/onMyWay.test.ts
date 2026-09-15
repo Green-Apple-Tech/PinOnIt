@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { guestRecurringDatesToCreate } from './recurring';
 import {
   DEFAULT_ON_MY_WAY_TEMPLATE,
   ON_MY_WAY_SMS_ENABLED,
@@ -11,21 +10,6 @@ import {
   SMS_ON_MY_WAY_EXAMPLE,
 } from './onMyWay';
 import { SMS_EXAMPLES } from '../pages/smsExamples';
-
-describe('guest recurring preview', () => {
-  it('lists only the two visits the book flow actually inserts', () => {
-    const start = new Date(2026, 8, 9, 9, 0);
-    const dates = guestRecurringDatesToCreate(start, 'weekly', 'never', null, null);
-    expect(dates).toHaveLength(2);
-    expect(dates[1].getDate()).toBe(16);
-  });
-
-  it('lists one visit when the series ends after the first', () => {
-    const start = new Date(2026, 8, 9, 9, 0);
-    const dates = guestRecurringDatesToCreate(start, 'weekly', 'occurrences', null, 1);
-    expect(dates).toHaveLength(1);
-  });
-});
 
 describe('on my way', () => {
   it('keeps SMS gated until A2P samples are approved', () => {

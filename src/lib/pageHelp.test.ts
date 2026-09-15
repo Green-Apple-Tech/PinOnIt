@@ -11,20 +11,24 @@ describe('getPageHelp', () => {
 
   it('explains event types and contacts on the settings tabs', () => {
     expect(getPageHelp('/dashboard/settings', '?tab=event-types').title).toMatch(/event type/i);
-    expect(getPageHelp('/dashboard/settings', '?tab=event-types').steps.join(' ')).toMatch(/recurring bookings/i);
+    expect(getPageHelp('/dashboard/settings', '?tab=event-types').steps.join(' ')).toMatch(/repeating visits/i);
     expect(getPageHelp('/dashboard/settings', '?tab=contacts').title).toMatch(/contact/i);
   });
 
-  it('explains standing jobs from the Standing jobs page', () => {
-    const g = getPageHelp('/dashboard/standing-jobs');
-    expect(g.title).toMatch(/standing job/i);
+  it('explains recurring jobs from the Booking hub default tab', () => {
+    const g = getPageHelp('/dashboard/booking');
+    expect(g.title).toMatch(/recurring job/i);
     expect(g.steps.join(' ')).toMatch(/90 days/i);
   });
 
-  it('explains recurring bookings from the Booking hub', () => {
-    const g = getPageHelp('/dashboard/booking');
+  it('explains recurring jobs from the old standing-jobs URL', () => {
+    const g = getPageHelp('/dashboard/standing-jobs');
+    expect(g.title).toMatch(/recurring job/i);
+  });
+
+  it('explains the public booking page from the Booking page tab', () => {
+    const g = getPageHelp('/dashboard/booking', '?tab=page');
     expect(g.title).toMatch(/booking/i);
-    expect(g.steps.join(' ')).toMatch(/recurring bookings/i);
   });
 
   it('explains the Docs settings tab', () => {
@@ -70,6 +74,7 @@ describe('matchHelpFaq', () => {
     expect(matchHelpFaq('On my way')?.id).toBe('on-my-way');
     expect(matchHelpFaq('Where are recurring bookings?')?.id).toBe('recurring-bookings');
     expect(matchHelpFaq('Where are standing jobs?')?.id).toBe('standing-jobs');
+    expect(matchHelpFaq('Where are recurring jobs?')?.id).toBe('standing-jobs');
     expect(matchHelpFaq('Where do I get a state-specific waiver?')?.id).toBe('state-waiver-templates');
   });
 });

@@ -13,6 +13,7 @@ export type CreateGuestBookingPayload = {
   is_recurring: boolean;
   recurrence_frequency: string | null;
   parent_booking_id?: string | null;
+  request_repeating?: boolean;
   reminder_channels: string[];
   reminder_times: string[];
   stripe_payment_id: string | null;

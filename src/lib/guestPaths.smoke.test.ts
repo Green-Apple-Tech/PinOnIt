@@ -165,6 +165,7 @@ describe.skipIf(!enabled)('guest paths as anonymous client', () => {
     const row = asRecord(data);
     expect(row.id).toEqual(expect.any(String));
     expect(row.action_token).toEqual(expect.any(String));
+    expect(row.standing_job_id == null).toBe(true);
     bookingId = String(row.id);
     actionToken = String(row.action_token);
 
@@ -182,6 +183,17 @@ describe.skipIf(!enabled)('guest paths as anonymous client', () => {
     await host.auth.signOut();
     const { data: stillGuest } = await guest.auth.getSession();
     expect(stillGuest.session).toBeNull();
+  }, 30_000);
+
+  it('does not let anon insert standing_jobs', async () => {
+    const { error } = await guest.from('standing_jobs').insert({
+      host_id: hostId,
+      customer_name: 'Smoke Guest',
+      frequency: 'weekly',
+      starts_at: start.toISOString(),
+      duration_minutes: 60,
+    });
+    expect(error).toBeTruthy();
   }, 30_000);
 
   it('loads public busy times as anon and sees that booking', async () => {

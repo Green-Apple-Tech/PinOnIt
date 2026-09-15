@@ -7,13 +7,11 @@ import {
   standingComposePath,
   standingOccurrenceStarts,
 } from './standingJobs';
-import { GUEST_RECURRING_MATERIALIZED_MAX, guestRecurringDatesToCreate } from './recurring';
 
 describe('guest recurring vs standing jobs', () => {
-  it('guest self-serve still materializes at most two visits', () => {
-    const start = new Date(2026, 8, 16, 9, 0);
-    expect(GUEST_RECURRING_MATERIALIZED_MAX).toBe(2);
-    expect(guestRecurringDatesToCreate(start, 'weekly', 'never', null, null)).toHaveLength(2);
+  it('labels custom cadence the same way host and guest opt-in share', () => {
+    expect(formatStandingFrequency('weekly')).toBe('Weekly');
+    expect(formatStandingFrequency('custom', 10)).toBe('Every 10 days');
   });
 });
 

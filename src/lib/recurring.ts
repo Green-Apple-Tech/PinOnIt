@@ -1,69 +1,70 @@
-export type RecurrenceFrequency = 'weekly' | 'biweekly' | 'monthly';
+export type RecurrenceFrequency = 'weekly' | 'biweekly' | 'monthly' | 'custom';
 export type RecurrenceEndType = 'never' | 'occurrences' | 'date';
 
-export function addRecurrence(date: Date, frequency: RecurrenceFrequency): Date {
+export function addRecurrence(
+  date: Date,
+  frequency: RecurrenceFrequency,
+  intervalDays?: number | null,
+): Date {
   const next = new Date(date);
   if (frequency === 'weekly') {
     next.setDate(next.getDate() + 7);
   } else if (frequency === 'biweekly') {
     next.setDate(next.getDate() + 14);
-  } else {
+  } else if (frequency === 'monthly') {
     next.setMonth(next.getMonth() + 1);
+  } else {
+    next.setDate(next.getDate() + Math.max(1, intervalDays ?? 1));
   }
   return next;
-}
-
-/** Guest book flow only inserts this many visits (first + next). Preview must match. */
-export const GUEST_RECURRING_MATERIALIZED_MAX = 2;
-
-export function guestRecurringDatesToCreate(
-  start: Date,
-  frequency: RecurrenceFrequency,
-  endType: RecurrenceEndType,
-  endDate: string | null,
-  endOccurrences: number | null,
-): Date[] {
-  const dates: Date[] = [new Date(start)];
-  const next = addRecurrence(start, frequency);
-  if (
-    dates.length < GUEST_RECURRING_MATERIALIZED_MAX
-    && !shouldStopRecurrence(next, 2, endType, endDate, endOccurrences)
-  ) {
-    dates.push(next);
-  }
-  return dates;
 }
 
 export function getUpcomingRecurrenceDates(
   start: Date,
   frequency: RecurrenceFrequency,
   count: number,
+  intervalDays?: number | null,
 ): Date[] {
   const dates: Date[] = [new Date(start)];
   let cur = new Date(start);
   for (let i = 1; i < count; i++) {
-    cur = addRecurrence(cur, frequency);
+    cur = addRecurrence(cur, frequency, intervalDays);
     dates.push(new Date(cur));
   }
   return dates;
 }
 
-export function formatRecurrenceBadge(frequency: RecurrenceFrequency): string {
+export function formatRecurrenceBadge(
+  frequency: RecurrenceFrequency,
+  intervalDays?: number | null,
+): string {
   if (frequency === 'weekly') return 'Repeats weekly';
   if (frequency === 'biweekly') return 'Repeats every 2 weeks';
-  return 'Repeats monthly';
+  if (frequency === 'monthly') return 'Repeats monthly';
+  const n = Math.max(1, intervalDays ?? 1);
+  return n === 1 ? 'Repeats every day' : `Repeats every ${n} days`;
 }
 
-export function formatRecurrencePeriod(frequency: RecurrenceFrequency): string {
+export function formatRecurrencePeriod(
+  frequency: RecurrenceFrequency,
+  intervalDays?: number | null,
+): string {
   if (frequency === 'weekly') return 'week';
   if (frequency === 'biweekly') return '2 weeks';
-  return 'month';
+  if (frequency === 'monthly') return 'month';
+  const n = Math.max(1, intervalDays ?? 1);
+  return n === 1 ? 'day' : `${n} days`;
 }
 
-export function formatRecurrenceHostLabel(frequency: RecurrenceFrequency): string {
+export function formatRecurrenceHostLabel(
+  frequency: RecurrenceFrequency,
+  intervalDays?: number | null,
+): string {
   if (frequency === 'weekly') return 'every week';
   if (frequency === 'biweekly') return 'every 2 weeks';
-  return 'every month';
+  if (frequency === 'monthly') return 'every month';
+  const n = Math.max(1, intervalDays ?? 1);
+  return n === 1 ? 'every day' : `every ${n} days`;
 }
 
 export function getSeriesRootId(booking: { id: string; parent_booking_id?: string | null }): string {
@@ -71,7 +72,15 @@ export function getSeriesRootId(booking: { id: string; parent_booking_id?: strin
 }
 
 export function countRecurringSeriesOnSlot(
-  bookings: { id: string; service_id: string; start_time: string; status: string; is_recurring?: boolean; parent_booking_id?: string | null }[],
+  bookings: {
+    id: string;
+    service_id?: string | null;
+    start_time: string;
+    status: string;
+    is_recurring?: boolean;
+    parent_booking_id?: string | null;
+    standing_job_id?: string | null;
+  }[],
   serviceId: string,
   dateKey: string,
   slot: string,
@@ -81,11 +90,12 @@ export function countRecurringSeriesOnSlot(
   const series = new Set<string>();
 
   for (const b of bookings) {
-    if (b.service_id !== serviceId || b.status === 'canceled' || !b.is_recurring) continue;
+    if (b.service_id !== serviceId || b.status === 'canceled' || b.status === 'skipped') continue;
+    if (!b.is_recurring && !b.standing_job_id) continue;
     const start = new Date(b.start_time);
     if (start.getDay() !== targetDow) continue;
     if (start.getHours() !== sh || start.getMinutes() !== sm) continue;
-    series.add(getSeriesRootId(b));
+    series.add(b.standing_job_id || getSeriesRootId(b));
   }
 
   return series.size;

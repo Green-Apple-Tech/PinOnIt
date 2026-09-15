@@ -31,7 +31,11 @@ function keyFromLocation(pathname: string, search: string, hash: string): string
   }
   if (pathname.startsWith('/dashboard/appointments')) return 'calendar';
   if (pathname.startsWith('/dashboard/standing-jobs')) return 'standing-jobs';
-  if (pathname.startsWith('/dashboard/booking')) return 'booking';
+  if (pathname.startsWith('/dashboard/booking')) {
+    const tab = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search).get('tab');
+    if (tab === 'page') return 'booking';
+    return 'standing-jobs';
+  }
   if (pathname.startsWith('/dashboard/services')) return 'services';
   if (pathname.startsWith('/dashboard/quotes')) return 'quotes';
   if (pathname.startsWith('/dashboard/documents')) {
@@ -84,10 +88,9 @@ const GUIDES: Record<string, PageHelpGuide> = {
       'Copy your pinonit.com/yourname link and send it to clients.',
       'Or tap Book for someone to pick a free slot and enter their name and phone — same hours and buffers as the public page.',
       'Add or edit services with Manage (Settings → Event types).',
-      'For weekly or monthly jobs guests book themselves, tap Recurring bookings on this page — it is a toggle on each service. Guests get the first visit plus the next one on the calendar.',
-      'For jobs you set up (weekly lawn, custom interval), use Standing jobs — those visits roll 90 days ahead on the calendar.',
+      'Turn on “Let customers book repeating visits” on a service so guests can opt in to the cadence you set.',
     ],
-    suggestedQuestions: ['Where are recurring bookings?', 'How do clients book me?', 'Where are standing jobs?'],
+    suggestedQuestions: ['Where are recurring jobs?', 'How do clients book me?', 'Where are standing jobs?'],
   },
   calendar: {
     title: 'Bookings',
@@ -95,24 +98,25 @@ const GUIDES: Record<string, PageHelpGuide> = {
     steps: [
       'Connect Google, Outlook, or Apple in Settings → Availability so you do not double-book.',
       'Tap a meeting to see the client, location, and actions. On the agenda Today group, tap On my way to text that you are en route (or email if they did not opt in to SMS).',
-      'Standing job visits show a repeat mark. Skip one visit, or mark it complete and send a quote with the customer already filled in.',
+      'Recurring job visits show a repeat mark. Skip one visit, or mark it complete and send a quote with the customer already filled in.',
       'If the calendar looks empty, share your booking link from the Dashboard.',
     ],
     canDo: ['View and manage bookings', 'Open NeverMiss from an event bell'],
     cannotDo: ['Guests cannot see your private calendar details — only free slots on your booking page.'],
-    suggestedQuestions: ['How do clients book me?', 'Why is my calendar empty?', 'Where are standing jobs?'],
+    suggestedQuestions: ['How do clients book me?', 'Why is my calendar empty?', 'Where are recurring jobs?'],
   },
   'standing-jobs': {
-    title: 'Standing jobs',
-    purpose: 'Repeating visits you set up for a customer — weekly, every 2 weeks, monthly, or a custom interval. Not the guest recurring toggle on an event type.',
+    title: 'Recurring jobs',
+    purpose: 'Repeating visits you set up for a customer — weekly, every 2 weeks, monthly, or a custom interval. Guests can also opt in to this cadence from your public page; you confirm before more visits are added.',
     steps: [
-      'Tap New standing job. Pick the customer, service, frequency, first date and time, and optional price.',
+      'Tap New recurring job. Pick the customer, service, frequency, first date and time, and optional price.',
       'If they already agreed to SMS, check consent once. Later visits copy it and do not ask again.',
       'PinOnIt fills about 90 days of visits on the calendar. A daily job extends the window so reminders keep working.',
       'Skip one visit, reschedule one visit, or Change from this date forward to rewrite unstarted future rows.',
+      'If a guest opted in, Confirm to add the rest of the series, or Decline to keep only their first visit (they get a note that it will not repeat).',
       'After you mark a visit complete, Quote opens compose with that customer filled in.',
     ],
-    suggestedQuestions: ['Where are standing jobs?', 'Where are recurring bookings?'],
+    suggestedQuestions: ['Where are recurring jobs?', 'Where are standing jobs?'],
   },
   availability: {
     title: 'Availability',
@@ -144,11 +148,11 @@ const GUIDES: Record<string, PageHelpGuide> = {
     steps: [
       'Tap New event type (or edit an existing one).',
       'Set the name, duration, and in-person / video / phone.',
-      'For weekly lawn, biweekly pool, or monthly pest, turn on Recurring bookings on the service, then pick weekly / every 2 weeks / monthly.',
+      'For weekly lawn, biweekly pool, or monthly pest, turn on Let customers book repeating visits, then pick weekly / every 2 weeks / monthly / custom.',
       'Add a price if you want to get paid when they book, and paste your payment link on the Payment tab.',
       'Save, then share your booking link from Booking or the Dashboard.',
     ],
-    suggestedQuestions: ['Where are recurring bookings?', 'Where are standing jobs?'],
+    suggestedQuestions: ['Where are recurring bookings?', 'Where are recurring jobs?'],
   },
   documents: {
     title: 'Send Docs + Sign-by-Text',

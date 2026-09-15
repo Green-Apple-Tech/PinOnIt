@@ -1038,25 +1038,32 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json();
 
-    // ── Recurring cancellation notice ─────────────────────────────────────
-    if (body.notify_cancellation && body.booking_id && body.message) {
+    // ── Recurring cancellation / decline notice ─────────────────────────────
+    if ((body.notify_cancellation || body.notify_recurring_declined) && body.booking_id && body.message) {
       const actorId = await hostIdFromJwt(req, supabase);
       if (!actorId && !isServiceRoleRequest(req)) {
         return jsonAuthError(corsHeaders);
       }
       const { data: booking } = await supabase
         .from('bookings')
-        .select('guest_email, guest_name, host_id')
+        .select('guest_email, guest_name, guest_phone, host_id')
         .eq('id', body.booking_id)
         .maybeSingle();
-      if (!booking?.guest_email) {
-        return jsonResponse({ error: 'Booking or guest email not found' }, 404);
+      if (!booking) {
+        return jsonResponse({ error: 'Booking not found' }, 404);
       }
       if (actorId && actorId !== booking.host_id) {
         return jsonAuthError(corsHeaders, 'Not your booking');
       }
+      if (!booking.guest_email && !booking.guest_phone) {
+        return jsonResponse({ error: 'No guest email or phone on this booking' }, 404);
+      }
+      const declined = !!body.notify_recurring_declined;
+      const subject = declined
+        ? 'Your first visit is confirmed'
+        : 'Your recurring booking has been cancelled';
       const resendKey = Deno.env.get('RESEND_API_KEY');
-      if (resendKey) {
+      if (resendKey && booking.guest_email) {
         await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
@@ -1064,10 +1071,13 @@ Deno.serve(async (req: Request) => {
             from: NOREPLY_FROM,
             reply_to: SUPPORT_EMAIL,
             to: [booking.guest_email],
-            subject: 'Your recurring booking has been cancelled',
+            subject,
             text: body.message as string,
           }),
         });
+      }
+      if (booking.guest_phone) {
+        await sendTwilioSms(supabase, booking.guest_phone, body.message as string, 'guest');
       }
       return jsonResponse({ success: true });
     }
