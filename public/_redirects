@@ -20,12 +20,12 @@
 /dashboard/*  /index.html  200
 /documents  /index.html  200
 /documents/*  /index.html  200
-/calendly-alternative  /index.html  200
+/calendly-alternative-for-small-business  /calendly-alternative  301
+/calendly-alternative  /seo-static/calendly-alternative.html  200
 /nda  /index.html  200
 /reminders  /index.html  200
 /why-pinonit  /index.html  200
 /legal-templates  /index.html  200
-/calendly-alternative-for-small-business  /seo-static/calendly-alternative-for-small-business.html  200
 /docusign-alternative-simple-signatures  /seo-static/docusign-alternative-simple-signatures.html  200
 /send-quote-by-text  /seo-static/send-quote-by-text.html  200
 /sms-appointment-reminders  /seo-static/sms-appointment-reminders.html  200

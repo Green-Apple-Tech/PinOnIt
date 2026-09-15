@@ -86,8 +86,12 @@
   to = "/index.html"
   status = 200
 [[redirects]]
+  from = "/calendly-alternative-for-small-business"
+  to = "/calendly-alternative"
+  status = 301
+[[redirects]]
   from = "/calendly-alternative"
-  to = "/index.html"
+  to = "/seo-static/calendly-alternative.html"
   status = 200
 [[redirects]]
   from = "/why-pinonit"
@@ -96,10 +100,6 @@
 [[redirects]]
   from = "/legal-templates"
   to = "/index.html"
-  status = 200
-[[redirects]]
-  from = "/calendly-alternative-for-small-business"
-  to = "/seo-static/calendly-alternative-for-small-business.html"
   status = 200
 [[redirects]]
   from = "/docusign-alternative-simple-signatures"

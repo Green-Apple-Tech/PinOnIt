@@ -7,7 +7,6 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthCallback } from './components/AuthCallback';
 import { ToastContainer } from './components/Toast';
 import { Landing } from './pages/Landing';
-import { CalendlyAlternative } from './pages/CalendlyAlternative';
 import { WhyPinOnItPage } from './pages/WhyPinOnIt';
 import { LegalTemplatesPage } from './pages/LegalTemplates';
 import { TermsPage } from './pages/Terms';
@@ -167,12 +166,12 @@ function App() {
           <Routes>
             {/* Fixed paths must come before the /:slug wildcard */}
             <Route path="/" element={<Landing />} />
-            <Route path="/calendly-alternative" element={<CalendlyAlternative />} />
+            <Route path="/calendly-alternative" element={<SeoIntentPage />} />
+            <Route path="/calendly-alternative-for-small-business" element={<Navigate to="/calendly-alternative" replace />} />
             <Route path="/nda" element={<CampaignLandingPage slug="nda" />} />
             <Route path="/reminders" element={<CampaignLandingPage slug="reminders" />} />
             <Route path="/why-pinonit" element={<WhyPinOnItPage />} />
             <Route path="/legal-templates" element={<LegalTemplatesPage />} />
-            <Route path="/calendly-alternative-for-small-business" element={<SeoIntentPage />} />
             <Route path="/docusign-alternative-simple-signatures" element={<SeoIntentPage />} />
             <Route path="/send-quote-by-text" element={<SeoIntentPage />} />
             <Route path="/sms-appointment-reminders" element={<SeoIntentPage />} />

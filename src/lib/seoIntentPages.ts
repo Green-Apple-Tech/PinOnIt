@@ -34,8 +34,8 @@ const COMPARE_NOTE = `Prices checked ${COMPETITOR_PRICING_AS_OF}. Competitor lis
 
 export const INTENT_PAGES: IntentPage[] = [
   {
-    slug: 'calendly-alternative-for-small-business',
-    path: '/calendly-alternative-for-small-business',
+    slug: 'calendly-alternative',
+    path: '/calendly-alternative',
     eyebrow: 'For contractors, venues, and local services',
     h1: 'Calendly alternative for small business',
     opening: PINONIT_CORE_SENTENCE,
@@ -75,7 +75,7 @@ export const INTENT_PAGES: IntentPage[] = [
     metaTitle: 'Calendly alternative for small business | PinOnIt',
     metaDescription:
       'PinOnIt is a Calendly alternative for small business: quote, sign, book, and remind by SMS for $8.99/month. Built for contractors and venues, not just Zoom meetings.',
-    canonical: 'https://pinonit.com/calendly-alternative-for-small-business',
+    canonical: 'https://pinonit.com/calendly-alternative',
   },
   {
     slug: 'docusign-alternative-simple-signatures',
