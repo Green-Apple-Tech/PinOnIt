@@ -44,6 +44,52 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&display=swap" rel="stylesheet" />
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "name": "PinOnIt",
+          "legalName": "Miami Expeditions LLC",
+          "url": "https://pinonit.com",
+          "logo": "https://pinonit.com/pinonit_logo.png",
+          "contactPoint": { "@type": "ContactPoint", "email": "support@pinonit.com", "contactType": "customer support" }
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "PinOnIt",
+          "description": "PinOnIt is a text-first office for small businesses: quote a job, get a signature, book a time, and send reminders by SMS. $8.99/month after a 14-day trial.",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "url": "https://pinonit.com",
+          "offers": {
+            "@type": "Offer",
+            "price": "8.99",
+            "priceCurrency": "USD",
+            "priceSpecification": {
+              "@type": "UnitPriceSpecification",
+              "price": "8.99",
+              "priceCurrency": "USD",
+              "billingDuration": "P1M"
+            }
+          }
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            { "@type": "Question", "name": "What is PinOnIt?", "acceptedAnswer": { "@type": "Answer", "text": "You run the job by text. Quote it, get it signed, send a booking link, and remind them before they show up. They tap a normal SMS — no app, no account." } },
+            { "@type": "Question", "name": "Does my customer need an app?", "acceptedAnswer": { "@type": "Answer", "text": "No. They get a normal text and open a link in their phone’s browser. Nothing to install, no account to create, no email required." } },
+            { "@type": "Question", "name": "How do they sign?", "acceptedAnswer": { "@type": "Answer", "text": "Sign-by-Text: we text a code to their phone, they draw their signature with a finger. Meets federal ESIGN Act requirements. Every signature includes a complete audit record. PinOnIt does not provide legal advice." } },
+            { "@type": "Question", "name": "How do I get paid?", "acceptedAnswer": { "@type": "Answer", "text": "Paste your own Zelle, Cash App, Venmo, or PayPal link. After they approve, they see Pay Now. PinOnIt never takes the money. When you’ve got it, one tap on the quote texts a receipt." } },
+            { "@type": "Question", "name": "What about no-shows?", "acceptedAnswer": { "@type": "Answer", "text": "Reminders go out by text, WhatsApp, email, or a voice call. They reply 1 to cancel or 2 to reschedule. That’s the phone-tag loop, closed." } },
+            { "@type": "Question", "name": "Does it work with my calendar?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Google and Outlook stay in sync (including new bookings). Apple Calendar connects with a private iCloud link so busy times are blocked. You can import from Calendly if you’re switching." } },
+            { "@type": "Question", "name": "Is it really $8.99 a month?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. One plan. Free trial first." } }
+          ]
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root">

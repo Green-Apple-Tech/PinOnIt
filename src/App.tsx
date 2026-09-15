@@ -20,11 +20,14 @@ import { NotFoundPage } from './pages/NotFound';
 import { SessionManager } from './components/SessionManager';
 import { CampaignLandingPage } from './pages/CampaignLandingPage';
 import { captureCampaignParams } from './lib/campaignAttribution';
+import { logMarketingVisit } from './lib/marketingVisits';
+import { SeoIntentPage } from './pages/SeoIntentPage';
 
 function CampaignParamCapture() {
   const { search, pathname } = useLocation();
   useEffect(() => {
     captureCampaignParams(search, pathname);
+    void logMarketingVisit(pathname);
   }, [search, pathname]);
   return null;
 }
@@ -91,6 +94,9 @@ const PollVotePage = lazy(() =>
 );
 const CoordinationVotePage = lazy(() =>
   import('./pages/CoordinationVote').then((m) => ({ default: m.CoordinationVotePage })),
+);
+const MarketingTrafficPage = lazy(() =>
+  import('./pages/MarketingTraffic').then((m) => ({ default: m.MarketingTrafficPage })),
 );
 const AIChat = lazy(() =>
   import('./components/AIChat').then((m) => ({ default: m.AIChat })),
@@ -166,6 +172,11 @@ function App() {
             <Route path="/reminders" element={<CampaignLandingPage slug="reminders" />} />
             <Route path="/why-pinonit" element={<WhyPinOnItPage />} />
             <Route path="/legal-templates" element={<LegalTemplatesPage />} />
+            <Route path="/calendly-alternative-for-small-business" element={<SeoIntentPage />} />
+            <Route path="/docusign-alternative-simple-signatures" element={<SeoIntentPage />} />
+            <Route path="/send-quote-by-text" element={<SeoIntentPage />} />
+            <Route path="/sms-appointment-reminders" element={<SeoIntentPage />} />
+            <Route path="/esignature-by-text" element={<SeoIntentPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/sms-consent" element={<SmsConsentPage />} />
@@ -236,6 +247,7 @@ function App() {
               <Route path="quotes/new" element={<Navigate to="/dashboard/documents/new?type=quote" replace />} />
               <Route path="documents" element={<DocumentsPage />} />
               <Route path="documents/new" element={<CreateDocumentPage />} />
+              <Route path="marketing-traffic" element={<MarketingTrafficPage />} />
             </Route>
             <Route path="/documents" element={<PreserveSearchRedirect to="/dashboard/documents" />} />
             <Route path="/documents/new" element={<PreserveSearchRedirect to="/dashboard/documents/new" />} />

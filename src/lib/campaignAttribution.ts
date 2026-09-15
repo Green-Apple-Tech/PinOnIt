@@ -38,6 +38,10 @@ export function captureCampaignParams(search: string, landingPath?: string): Cam
     const value = sp.get(key)?.trim().slice(0, 200);
     if (value) next[key] = value;
   }
+  if (!next.utm_source) {
+    const fromRef = utmSourceFromReferrer();
+    if (fromRef) next.utm_source = fromRef;
+  }
   if (landingPath?.startsWith('/') && !landingPath.startsWith('//') && landingPath.length <= 80) {
     next.landing = landingPath;
   }
@@ -45,6 +49,20 @@ export function captureCampaignParams(search: string, landingPath?: string): Cam
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   }
   return next;
+}
+
+/** ChatGPT search and similar referrers often omit UTM; keep the host as utm_source. */
+export function utmSourceFromReferrer(referrer = typeof document !== 'undefined' ? document.referrer : '') {
+  if (!referrer) return null;
+  try {
+    const host = new URL(referrer).hostname.replace(/^www\./, '').toLowerCase();
+    if (host === 'chatgpt.com' || host.endsWith('.chatgpt.com')) return 'chatgpt.com';
+    if (host === 'chat.openai.com') return 'chatgpt.com';
+    if (host === 'perplexity.ai' || host.endsWith('.perplexity.ai')) return 'perplexity.ai';
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 export function campaignQueryString(params: CampaignParams = readCampaignParams()): string {

@@ -94,6 +94,30 @@
   to = "/index.html"
   status = 200
 [[redirects]]
+  from = "/legal-templates"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/calendly-alternative-for-small-business"
+  to = "/seo-static/calendly-alternative-for-small-business.html"
+  status = 200
+[[redirects]]
+  from = "/docusign-alternative-simple-signatures"
+  to = "/seo-static/docusign-alternative-simple-signatures.html"
+  status = 200
+[[redirects]]
+  from = "/send-quote-by-text"
+  to = "/seo-static/send-quote-by-text.html"
+  status = 200
+[[redirects]]
+  from = "/sms-appointment-reminders"
+  to = "/seo-static/sms-appointment-reminders.html"
+  status = 200
+[[redirects]]
+  from = "/esignature-by-text"
+  to = "/seo-static/esignature-by-text.html"
+  status = 200
+[[redirects]]
   from = "/nda"
   to = "/index.html"
   status = 200
@@ -163,7 +187,7 @@
   status = 200
 
 [build]
-  command = "npx vite build"
+  command = "npx vite build && npx vite-node scripts/prerender-seo.ts"
   publish = "dist"
   functions = "netlify/functions"
 

@@ -18,6 +18,14 @@ export function Footer() {
             Waiver templates
           </Link>
           <span className="hidden sm:inline">|</span>
+          <Link to="/send-quote-by-text" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+            Quote by text
+          </Link>
+          <span className="hidden sm:inline">|</span>
+          <Link to="/esignature-by-text" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+            eSignature by text
+          </Link>
+          <span className="hidden sm:inline">|</span>
           <Link to="/terms" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
             Terms of Service
           </Link>

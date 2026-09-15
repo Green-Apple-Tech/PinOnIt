@@ -1,0 +1,31 @@
+User-agent: *
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /login
+Disallow: /signup
+Disallow: /auth
+Disallow: /auth/
+Disallow: /onboarding
+Disallow: /booking/
+Disallow: /s/
+Disallow: /q/
+Disallow: /r/
+Disallow: /d/
+Disallow: /c/
+Disallow: /poll/
+
+Sitemap: https://pinonit.com/sitemap.xml

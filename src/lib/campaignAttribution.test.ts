@@ -4,6 +4,7 @@ import {
   campaignQueryString,
   readCampaignParams,
   signupHref,
+  utmSourceFromReferrer,
 } from './campaignAttribution';
 
 const store: Record<string, string> = {};
@@ -64,5 +65,10 @@ describe('campaignAttribution', () => {
     captureCampaignParams(`?utm_source=${long}`, '//evil.example');
     expect(readCampaignParams().utm_source).toHaveLength(200);
     expect(readCampaignParams().landing).toBeUndefined();
+  });
+
+  it('maps a ChatGPT search referrer to utm_source=chatgpt.com', () => {
+    expect(utmSourceFromReferrer('https://chatgpt.com/c/abc')).toBe('chatgpt.com');
+    expect(utmSourceFromReferrer('https://www.chatgpt.com/')).toBe('chatgpt.com');
   });
 });
