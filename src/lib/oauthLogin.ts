@@ -2,6 +2,19 @@
 
 export const OAUTH_INFLIGHT_KEY = 'pinonit_oauth_inflight';
 
+/** Same-tab lock so a remount or double-click cannot mint a second PKCE verifier. */
+let oauthStartClaimed = false;
+
+export function claimOauthStart(): boolean {
+  if (oauthStartClaimed) return false;
+  oauthStartClaimed = true;
+  return true;
+}
+
+export function clearOauthStart() {
+  oauthStartClaimed = false;
+}
+
 export function isOauthReturnUrl(href: string): boolean {
   try {
     const url = new URL(href, 'https://pinonit.com');

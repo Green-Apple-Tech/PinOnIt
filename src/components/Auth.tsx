@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { supabase } from '../lib/supabase';
 import { Loader2, Mail, Lock, User, ArrowLeft, Sun, Moon, Eye, EyeOff } from 'lucide-react';
-import { IOS_OAUTH_SAFARI_MESSAGE, isIosIsolatedWebView, readIosStandalone } from '../lib/oauthLogin';
+import { IOS_OAUTH_SAFARI_MESSAGE, clearOauthStart, isIosIsolatedWebView, readIosStandalone } from '../lib/oauthLogin';
 
 type View = 'login' | 'signup' | 'forgot';
 
@@ -116,6 +116,7 @@ export function AuthForm() {
   const resetOauthLoading = () => {
     oauthInFlight.current = false;
     pendingOauth.current = null;
+    clearOauthStart();
     setOauthLoading(null);
     if (oauthTimeoutRef.current) clearTimeout(oauthTimeoutRef.current);
   };
@@ -123,14 +124,13 @@ export function AuthForm() {
   const startOauth = async (provider: 'google' | 'microsoft') => {
     if (isolatedOauth) {
       setError(IOS_OAUTH_SAFARI_MESSAGE);
+      resetOauthLoading();
       return;
     }
-    if (oauthInFlight.current) return;
     oauthInFlight.current = true;
     setOauthLoading(provider);
     setError(null);
     if (oauthTimeoutRef.current) clearTimeout(oauthTimeoutRef.current);
-    oauthTimeoutRef.current = setTimeout(resetOauthLoading, 10000);
     const intended = redirectTo !== '/dashboard' ? redirectTo : undefined;
     const { error } = provider === 'google'
       ? await signInWithGoogle(intended)
@@ -139,6 +139,7 @@ export function AuthForm() {
       setError(error);
       resetOauthLoading();
     }
+    // Success navigates away. Do not unlock — a second start would overwrite PKCE and Google would ask again.
   };
 
   const handleOauth = (provider: 'google' | 'microsoft') => {
@@ -146,21 +147,34 @@ export function AuthForm() {
       setError(IOS_OAUTH_SAFARI_MESSAGE);
       return;
     }
+    if (user) {
+      navigate(redirectTo, { replace: true });
+      return;
+    }
     if (oauthInFlight.current || oauthLoading) return;
+    oauthInFlight.current = true;
+    setOauthLoading(provider);
     if (loading) {
       pendingOauth.current = provider;
-      setOauthLoading(provider);
       return;
     }
     void startOauth(provider);
   };
 
   useEffect(() => {
-    if (loading || !pendingOauth.current) return;
+    if (loading) return;
+    if (user) {
+      const hadPending = pendingOauth.current !== null;
+      pendingOauth.current = null;
+      if (hadPending) resetOauthLoading();
+      if (!oauthInFlight.current || hadPending) navigate(redirectTo, { replace: true });
+      return;
+    }
+    if (!pendingOauth.current) return;
     const pending = pendingOauth.current;
     pendingOauth.current = null;
     void startOauth(pending);
-  }, [loading]);
+  }, [loading, user, navigate, redirectTo]);
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 px-4">

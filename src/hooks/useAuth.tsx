@@ -8,7 +8,7 @@ import { pickBestSubscription } from '../lib/plan';
 import type { Profile, Subscription } from '../lib/types';
 import { persistSignupAttribution } from '../lib/campaignAttribution';
 import { storageSet } from '../lib/safeStorage';
-import { oauthCallbackRedirect } from '../lib/oauthLogin';
+import { clearOauthStart, claimOauthStart, oauthCallbackRedirect } from '../lib/oauthLogin';
 
 interface AuthContextType {
   user: User | null;
@@ -134,12 +134,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     provider: 'google' | 'azure',
     options: { redirectTo: string; scopes?: string; queryParams?: Record<string, string> },
   ) => {
+    // Claim before signInWithOAuth — a second call overwrites the PKCE verifier and Google asks again
+    if (!claimOauthStart()) return { error: null };
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
       options: { ...options, skipBrowserRedirect: true },
     });
-    if (error) return { error: error.message };
-    if (!data?.url) return { error: `Could not start ${provider === 'google' ? 'Google' : 'Microsoft'} sign-in. Try again.` };
+    if (error) {
+      clearOauthStart();
+      return { error: error.message };
+    }
+    if (!data?.url) {
+      clearOauthStart();
+      return { error: `Could not start ${provider === 'google' ? 'Google' : 'Microsoft'} sign-in. Try again.` };
+    }
     // replace() so Back from the dashboard does not reopen Google and prompt again
     window.location.replace(data.url);
     return { error: null };

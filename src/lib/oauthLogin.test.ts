@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  claimOauthStart,
+  clearOauthStart,
   isConsumedOauthCodeError,
   isIosIsolatedWebView,
   isOauthReturnUrl,
@@ -56,6 +58,17 @@ describe('isIosIsolatedWebView', () => {
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
       ),
     ).toBe(false);
+  });
+});
+
+describe('claimOauthStart', () => {
+  it('allows only one in-flight Google start in the same tab', () => {
+    clearOauthStart();
+    expect(claimOauthStart()).toBe(true);
+    expect(claimOauthStart()).toBe(false);
+    clearOauthStart();
+    expect(claimOauthStart()).toBe(true);
+    clearOauthStart();
   });
 });
 
