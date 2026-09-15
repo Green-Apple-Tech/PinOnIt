@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import type { Booking, Service } from '../lib/types';
 import { formatRecurrenceHostLabel, getSeriesRootId } from '../lib/recurring';
+import { standingComposePath } from '../lib/standingJobs';
 import { parseBlockInput } from '../lib/bookingBlocks';
 import { toast } from '../components/Toast';
 import { syncBookingToExternalCalendarsAsHost } from '../lib/writeCalendarEvent';
@@ -820,6 +821,11 @@ export function AppointmentsPage() {
     await supabase.from('bookings').update({ status: 'completed' }).eq('id', id);
     setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'completed' as const } : b));
   };
+  const handleSkipBooking = async (id: string) => {
+    await supabase.from('bookings').update({ status: 'skipped' }).eq('id', id);
+    setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'skipped' as const } : b));
+    if (detailBooking?.id === id) setDetailBooking(null);
+  };
   const handleApproveBooking = async (id: string) => {
     await supabase.from('bookings').update({ status: 'confirmed' }).eq('id', id);
     setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'confirmed' as const } : b));
@@ -1336,9 +1342,10 @@ export function AppointmentsPage() {
                         const LocIcon = getLocationIcon(svc?.location_type);
                         const isCanceled = b.status === 'canceled';
                         const isCompleted = b.status === 'completed';
+                        const isSkipped = b.status === 'skipped';
                         const isTentative = b.status === 'tentative';
                         const isPendingApproval = b.status === 'pending_approval';
-                        const isInactive = isCanceled || isCompleted;
+                        const isInactive = isCanceled || isCompleted || isSkipped;
                         return (
                           <div key={b.id}
                             onClick={() => { void openReminderPanel({ kind: 'booking', booking: b }); }}
@@ -1369,9 +1376,11 @@ export function AppointmentsPage() {
                                 <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
                                   {svc?.name ?? 'Appointment'}
                                 </p>
+                                {b.standing_job_id && <Repeat className="h-3.5 w-3.5 text-indigo-400 shrink-0" aria-label="Standing job visit" />}
                                 {b.is_recurring && <Repeat className="h-3.5 w-3.5 text-slate-400 shrink-0" aria-label="Recurring booking" />}
                                 {b.is_critical && <span className="text-xs px-1.5 py-0.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-full font-semibold flex items-center gap-0.5"><BellRing className="h-3 w-3" />Critical</span>}
                                 {isCanceled && <span className="text-xs px-1.5 py-0.5 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-full">Canceled</span>}
+                                {isSkipped && <span className="text-xs px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-full">Skipped</span>}
                                 {isCompleted && <span className="text-xs px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 rounded-full">Completed</span>}
                                 {isTentative && <span className="text-xs px-1.5 py-0.5 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-full">Tentative</span>}
                                 {isPendingApproval && <span className="text-xs px-1.5 py-0.5 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 rounded-full">Pending Approval</span>}
@@ -1417,6 +1426,15 @@ export function AppointmentsPage() {
                               <BellRing className="h-3.5 w-3.5" />
                             </button>
 
+                            {isCompleted && b.standing_job_id && (
+                              <Link
+                                to={standingComposePath('quote', { name: b.guest_name, phone: b.guest_phone, email: b.guest_email })}
+                                onClick={(e) => e.stopPropagation()}
+                                className="shrink-0 text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline"
+                              >
+                                Quote
+                              </Link>
+                            )}
                             {!isInactive && (
                               <div className="shrink-0 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                                 {(isTentative || isPendingApproval) && (
@@ -1432,6 +1450,11 @@ export function AppointmentsPage() {
                                 {!isTentative && !isPendingApproval && (
                                   <button onClick={() => handleCompleteBooking(b.id)} className="p-1.5 text-slate-300 dark:text-slate-600 hover:text-indigo-600 transition-colors rounded" title="Mark complete">
                                     <Check className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
+                                {b.standing_job_id && (
+                                  <button onClick={() => void handleSkipBooking(b.id)} className="p-1.5 text-slate-300 dark:text-slate-600 hover:text-slate-700 transition-colors rounded text-[10px] font-semibold" title="Skip this visit">
+                                    Skip
                                   </button>
                                 )}
                                 <button onClick={() => handleCancelBooking(b.id)} className="p-1.5 text-slate-300 dark:text-slate-600 hover:text-red-500 transition-colors rounded" title="Cancel">
@@ -1720,6 +1743,28 @@ export function AppointmentsPage() {
                   setDetailBooking((prev) => prev ? { ...prev, ...patch } : prev);
                 }}
               />
+            )}
+            {detailBooking.standing_job_id && detailBooking.status !== 'canceled' && detailBooking.status !== 'skipped' && (
+              <div className="flex flex-col gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                {detailBooking.status === 'completed' ? (
+                  <Link
+                    to={standingComposePath('quote', { name: detailBooking.guest_name, phone: detailBooking.guest_phone, email: detailBooking.guest_email })}
+                    className="w-full py-2.5 text-sm font-semibold rounded-xl bg-emerald-600 text-white text-center"
+                  >
+                    Send quote / receipt
+                  </Link>
+                ) : (
+                  <>
+                    <button onClick={() => void handleSkipBooking(detailBooking.id)}
+                      className="w-full py-2.5 text-sm font-semibold rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">
+                      Skip this visit
+                    </button>
+                    <Link to="/dashboard/standing-jobs" className="w-full py-2.5 text-sm font-semibold rounded-xl border text-center">
+                      Change series from this date forward
+                    </Link>
+                  </>
+                )}
+              </div>
             )}
             {detailBooking.is_recurring && detailBooking.status !== 'canceled' && (
               <div className="flex flex-col gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">

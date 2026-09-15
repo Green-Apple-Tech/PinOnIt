@@ -5,13 +5,11 @@ import { supabase } from '../lib/supabase';
 import type { Profile, Service, AvailabilitySlot, Booking, BookingQuestion, DateOverride, PaidBookingSettings, CalendarConflictSettings } from '../lib/types';
 import { LOCATION_TYPES, TIMEZONES, DEFAULT_CALENDAR_CONFLICT_SETTINGS } from '../lib/types';
 import {
-  addRecurrence,
   countRecurringSeriesOnSlot,
   formatRecurrenceBadge,
   formatRecurrencePeriod,
   getRecurrenceEndType,
   guestRecurringDatesToCreate,
-  shouldStopRecurrence,
 } from '../lib/recurring';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import { normalizeExternalUrl } from '../lib/paymentLink';
@@ -982,9 +980,15 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
       if (isRecurring && selectedService.recurrence_frequency) {
         const freq = selectedService.recurrence_frequency;
         const endType = getRecurrenceEndType(selectedService.recurrence_end_date, selectedService.recurrence_end_occurrences);
-        const nextStart = addRecurrence(startTime, freq);
-        if (!shouldStopRecurrence(nextStart, 2, endType, selectedService.recurrence_end_date, selectedService.recurrence_end_occurrences)) {
-          const nextEnd = new Date(nextStart.getTime() + selectedService.duration_minutes * 60000);
+        const visitStarts = guestRecurringDatesToCreate(
+          startTime,
+          freq,
+          endType,
+          selectedService.recurrence_end_date,
+          selectedService.recurrence_end_occurrences,
+        );
+        for (const visitStart of visitStarts.slice(1)) {
+          const visitEnd = new Date(visitStart.getTime() + selectedService.duration_minutes * 60000);
           await supabase.rpc('create_guest_booking', {
             p_payload: {
               service_id: selectedService.id,
@@ -995,8 +999,8 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
               guest_address: addressVal,
               notify_via: notifyViaPayload.length > 0 ? notifyViaPayload : null,
               guest_timezone: guestTimezone,
-              start_time: nextStart.toISOString(),
-              end_time: nextEnd.toISOString(),
+              start_time: visitStart.toISOString(),
+              end_time: visitEnd.toISOString(),
               notes: guestNotes,
               is_recurring: true,
               recurrence_frequency: freq,

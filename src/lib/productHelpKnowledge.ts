@@ -104,12 +104,21 @@ export const HELP_FAQS: HelpFaq[] = [
       'where are recurring bookings',
       'recurring service',
       'how do i set up recurring',
-      'weekly lawn',
-      'standing jobs',
       'repeating bookings',
     ],
     answer:
-      'Recurring bookings live on each service — there is no separate Recurring page. Open Booking → Recurring bookings, or Settings → Event types. Add or edit a service and turn on Recurring bookings (weekly, every 2 weeks, or monthly). Guests pick a time; PinOnIt books the first visit plus the next one. Manage those on Calendar.',
+      'Recurring bookings guests make themselves live on each service — Booking → Recurring bookings, or Settings → Event types. Guests get the first visit plus the next one. Standing jobs are the host-created series under Standing jobs — those visits roll 90 days on the calendar.',
+  },
+  {
+    id: 'standing-jobs',
+    questions: [
+      'where are standing jobs',
+      'standing job',
+      'how do i set up a standing job',
+      'weekly lawn',
+    ],
+    answer:
+      'Open Standing jobs in the sidebar (also linked from Booking). Add the customer, service, frequency, and first time. Visits are normal calendar bookings for the next 90 days. Skip or reschedule one visit without changing the series. Change from this date forward rewrites unstarted future visits.',
   },
   {
     id: 'booking-link',

@@ -6,6 +6,7 @@ import {
   LayoutGrid,
   Mail,
   QrCode,
+  Repeat,
   Settings,
   ShoppingBag,
   Users,
@@ -47,6 +48,7 @@ export const SIMPLE_PRIMARY_NAV: MoreToolsNavItem[] = [
     activePathPrefixes: ['/dashboard/documents'],
   },
   { label: 'Calendar', icon: CalendarCheck, path: '/dashboard/appointments' },
+  { label: 'Standing jobs', icon: Repeat, path: '/dashboard/standing-jobs' },
   {
     label: 'Booking',
     icon: ExternalLink,

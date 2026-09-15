@@ -1251,7 +1251,7 @@ Deno.serve(async (req: Request) => {
             .select('guest_name, guest_email, guest_phone, notify_via, start_time, status, meet_link, service_id, also_remind_ids, services(name), profiles(full_name, email, notification_email, phone, whatsapp_number, sms_opt_in, whatsapp_opt_in, default_reminder_channel, reminder_also, slack_webhook_url)')
             .eq('id', ov.booking_id)
             .maybeSingle();
-          if (!booking || booking.status === 'canceled' || booking.status === 'completed') continue;
+          if (!booking || booking.status === 'canceled' || booking.status === 'completed' || booking.status === 'skipped') continue;
           startIso = booking.start_time;
           const svc = booking.services as { name?: string } | null;
           title = svc?.name ?? 'Appointment';
@@ -1442,6 +1442,9 @@ Deno.serve(async (req: Request) => {
 
     if (!booking) {
       return jsonResponse({ error: 'Booking not found' }, 404);
+    }
+    if (booking.status === 'skipped' || booking.status === 'canceled' || booking.status === 'completed') {
+      return jsonResponse({ error: 'Booking is not remindable' }, 400);
     }
 
     if (!(await hostPlanIsActive(supabase, booking.host_id as string))) {

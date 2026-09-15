@@ -15,6 +15,12 @@ describe('getPageHelp', () => {
     expect(getPageHelp('/dashboard/settings', '?tab=contacts').title).toMatch(/contact/i);
   });
 
+  it('explains standing jobs from the Standing jobs page', () => {
+    const g = getPageHelp('/dashboard/standing-jobs');
+    expect(g.title).toMatch(/standing job/i);
+    expect(g.steps.join(' ')).toMatch(/90 days/i);
+  });
+
   it('explains recurring bookings from the Booking hub', () => {
     const g = getPageHelp('/dashboard/booking');
     expect(g.title).toMatch(/booking/i);
@@ -63,6 +69,7 @@ describe('matchHelpFaq', () => {
     expect(matchHelpFaq('Find in contacts does nothing')?.id).toBe('find-contacts');
     expect(matchHelpFaq('On my way')?.id).toBe('on-my-way');
     expect(matchHelpFaq('Where are recurring bookings?')?.id).toBe('recurring-bookings');
+    expect(matchHelpFaq('Where are standing jobs?')?.id).toBe('standing-jobs');
     expect(matchHelpFaq('Where do I get a state-specific waiver?')?.id).toBe('state-waiver-templates');
   });
 });

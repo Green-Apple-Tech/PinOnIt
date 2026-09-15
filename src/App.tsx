@@ -98,6 +98,9 @@ const CoordinationVotePage = lazy(() =>
 const MarketingTrafficPage = lazy(() =>
   import('./pages/MarketingTraffic').then((m) => ({ default: m.MarketingTrafficPage })),
 );
+const StandingJobsPage = lazy(() =>
+  import('./pages/StandingJobs').then((m) => ({ default: m.StandingJobsPage })),
+);
 const AIChat = lazy(() =>
   import('./components/AIChat').then((m) => ({ default: m.AIChat })),
 );
@@ -229,6 +232,7 @@ function App() {
               <Route path="reminders" element={<RemindersPage />} />
               <Route path="activity" element={<Navigate to="/dashboard/settings?tab=activity" replace />} />
               <Route path="appointments" element={<AppointmentsPage />} />
+              <Route path="standing-jobs" element={<StandingJobsPage />} />
               <Route path="booking" element={<BookingPage />} />
               <Route path="contacts" element={<SettingsTabRedirect tab="contacts" />} />
               <Route path="messaging" element={<Navigate to="/dashboard/reminders" replace />} />

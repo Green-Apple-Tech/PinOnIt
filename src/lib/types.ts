@@ -303,7 +303,7 @@ export interface Booking {
   guest_timezone: string;
   start_time: string;
   end_time: string;
-  status: 'tentative' | 'pending_approval' | 'confirmed' | 'canceled' | 'completed' | 'no_show';
+  status: 'tentative' | 'pending_approval' | 'confirmed' | 'canceled' | 'completed' | 'no_show' | 'skipped';
   stripe_payment_id: string | null;
   paypal_order_id: string | null;
   payment_provider: string | null;
@@ -321,6 +321,7 @@ export interface Booking {
   is_recurring: boolean;
   recurrence_frequency: RecurrenceFrequency | null;
   parent_booking_id: string | null;
+  standing_job_id?: string | null;
   sent_on_my_way_at?: string | null;
   on_my_way_eta_minutes?: number | null;
   created_by_host?: boolean;

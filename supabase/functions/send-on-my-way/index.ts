@@ -103,7 +103,7 @@ Deno.serve(async (req: Request) => {
     .maybeSingle();
 
   if (bErr || !booking) return json({ ok: false, error: 'Booking not found' }, 404);
-  if (booking.status === 'canceled' || booking.status === 'no_show') {
+  if (booking.status === 'canceled' || booking.status === 'no_show' || booking.status === 'skipped') {
     return json({ ok: false, error: 'This booking is not active.' }, 400);
   }
   if (booking.sent_on_my_way_at) {

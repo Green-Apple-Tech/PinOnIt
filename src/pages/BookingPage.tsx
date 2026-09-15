@@ -160,6 +160,24 @@ export function BookingPage() {
       </div>
 
       <Link
+        to="/dashboard/standing-jobs"
+        className="flex items-start gap-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 md:p-6 mb-6 hover:border-brand-300 dark:hover:border-brand-500/40 hover:shadow-sm transition-all"
+      >
+        <div className="h-12 w-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+          <Repeat className="h-6 w-6 text-slate-700 dark:text-slate-200" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Standing jobs</h2>
+          <p className="text-sm text-slate-600 dark:text-slate-300 mb-2">
+            You create these: weekly lawn, biweekly pool, a custom interval. Visits land on the calendar for 90 days and reminders run as usual.
+          </p>
+          <span className="inline-flex items-center gap-1 text-sm font-semibold text-brand-700 dark:text-brand-300">
+            Open standing jobs <ArrowRight className="h-4 w-4" />
+          </span>
+        </div>
+      </Link>
+
+      <Link
         to="/dashboard/settings?tab=event-types&highlight=recurring"
         className="flex items-start gap-4 rounded-2xl border border-indigo-200 dark:border-indigo-800/60 bg-indigo-50/70 dark:bg-indigo-950/20 p-5 md:p-6 mb-6 hover:border-indigo-300 dark:hover:border-indigo-600/60 hover:shadow-sm transition-all"
       >

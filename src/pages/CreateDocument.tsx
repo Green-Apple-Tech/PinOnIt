@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, Copy, Loader2, MessageSquare, Plus } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { ContactAutocomplete } from '../components/ContactAutocomplete';
-import type { ContactPickerSelection } from '../lib/contactPicker';
+import { splitContactName, type ContactPickerSelection } from '../lib/contactPicker';
 import { supabase } from '../lib/supabase';
 import { PHONE_HINT, PHONE_PLACEHOLDER, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import { revealTool } from '../lib/progressiveDisclosure';
@@ -91,6 +91,9 @@ export function CreateDocumentPage() {
   const typeParam = searchParams.get('type');
   const actionParam = searchParams.get('action');
   const modeParam = searchParams.get('mode');
+  const nameParam = searchParams.get('name');
+  const phoneParam = searchParams.get('phone');
+  const emailParam = searchParams.get('email');
   const entryMode: DocsEntryMode = resolveDocsEntryMode(modeParam, actionParam);
   const initialType: SmbDocumentType =
     typeParam && isSmbDocumentType(typeParam) ? typeParam : 'nda';
@@ -170,6 +173,16 @@ export function CreateDocumentPage() {
       setVerificationRequired(actionParam === 'sign');
     }
   }, [modeParam, actionParam]);
+
+  useEffect(() => {
+    if (nameParam) {
+      const { firstName, lastName } = splitContactName(nameParam);
+      setRecipientFirstName(firstName);
+      setRecipientLastName(lastName);
+    }
+    if (phoneParam) setRecipientPhone(phoneParam);
+    if (emailParam) setRecipientEmail(emailParam);
+  }, [nameParam, phoneParam, emailParam]);
 
   useEffect(() => {
     void supabase
