@@ -21,6 +21,7 @@ import { CampaignLandingPage } from './pages/CampaignLandingPage';
 import { captureCampaignParams } from './lib/campaignAttribution';
 import { logMarketingVisit } from './lib/marketingVisits';
 import { SeoIntentPage } from './pages/SeoIntentPage';
+import { BlogIndexPage, BlogPostPage } from './pages/Blog';
 
 function CampaignParamCapture() {
   const { search, pathname } = useLocation();
@@ -176,6 +177,8 @@ function App() {
             <Route path="/send-quote-by-text" element={<SeoIntentPage />} />
             <Route path="/sms-appointment-reminders" element={<SeoIntentPage />} />
             <Route path="/esignature-by-text" element={<SeoIntentPage />} />
+            <Route path="/blog" element={<BlogIndexPage />} />
+            <Route path="/blog/:slug" element={<BlogPostPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/sms-consent" element={<SmsConsentPage />} />

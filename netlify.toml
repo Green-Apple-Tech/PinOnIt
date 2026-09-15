@@ -118,6 +118,30 @@
   to = "/seo-static/esignature-by-text.html"
   status = 200
 [[redirects]]
+  from = "/blog"
+  to = "/seo-static/blog/index.html"
+  status = 200
+[[redirects]]
+  from = "/blog/how-to-share-a-booking-link-from-the-job-site"
+  to = "/seo-static/blog/how-to-share-a-booking-link-from-the-job-site.html"
+  status = 200
+[[redirects]]
+  from = "/blog/getting-a-signature-without-an-email-envelope"
+  to = "/seo-static/blog/getting-a-signature-without-an-email-envelope.html"
+  status = 200
+[[redirects]]
+  from = "/blog/pricing-the-job-before-you-leave-the-driveway"
+  to = "/seo-static/blog/pricing-the-job-before-you-leave-the-driveway.html"
+  status = 200
+[[redirects]]
+  from = "/blog/why-email-reminders-still-leave-empty-chairs"
+  to = "/seo-static/blog/why-email-reminders-still-leave-empty-chairs.html"
+  status = 200
+[[redirects]]
+  from = "/blog/collecting-a-waiver-on-a-phone-at-check-in"
+  to = "/seo-static/blog/collecting-a-waiver-on-a-phone-at-check-in.html"
+  status = 200
+[[redirects]]
   from = "/nda"
   to = "/index.html"
   status = 200

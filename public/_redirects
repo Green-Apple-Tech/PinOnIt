@@ -30,6 +30,12 @@
 /send-quote-by-text  /seo-static/send-quote-by-text.html  200
 /sms-appointment-reminders  /seo-static/sms-appointment-reminders.html  200
 /esignature-by-text  /seo-static/esignature-by-text.html  200
+/blog  /seo-static/blog/index.html  200
+/blog/how-to-share-a-booking-link-from-the-job-site  /seo-static/blog/how-to-share-a-booking-link-from-the-job-site.html  200
+/blog/getting-a-signature-without-an-email-envelope  /seo-static/blog/getting-a-signature-without-an-email-envelope.html  200
+/blog/pricing-the-job-before-you-leave-the-driveway  /seo-static/blog/pricing-the-job-before-you-leave-the-driveway.html  200
+/blog/why-email-reminders-still-leave-empty-chairs  /seo-static/blog/why-email-reminders-still-leave-empty-chairs.html  200
+/blog/collecting-a-waiver-on-a-phone-at-check-in  /seo-static/blog/collecting-a-waiver-on-a-phone-at-check-in.html  200
 /terms  /index.html  200
 /privacy  /index.html  200
 /sms-consent  /index.html  200

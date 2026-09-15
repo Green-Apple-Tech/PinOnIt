@@ -10,6 +10,10 @@ export function Footer() {
             Calendly alternative
           </Link>
           <span className="hidden sm:inline">|</span>
+          <Link to="/blog" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+            Field notes
+          </Link>
+          <span className="hidden sm:inline">|</span>
           <Link to="/why-pinonit" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
             Why PinOnIt
           </Link>

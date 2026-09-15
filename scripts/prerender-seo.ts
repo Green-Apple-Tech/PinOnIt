@@ -2,8 +2,16 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { INTENT_PAGES } from '../src/lib/seoIntentPages.ts';
-import { PINONIT_CORE_SENTENCE } from '../src/lib/seoIdentity.ts';
-import { faqPageJsonLd, intentWebPageJsonLd, organizationJsonLd, softwareApplicationJsonLd } from '../src/lib/jsonLd.ts';
+import { BLOG_INDEX, BLOG_POSTS, type BlogPost } from '../src/lib/blogPosts.ts';
+import { PINONIT_CORE_SENTENCE, PINONIT_ORG } from '../src/lib/seoIdentity.ts';
+import {
+  blogIndexJsonLd,
+  blogPostingJsonLd,
+  faqPageJsonLd,
+  intentWebPageJsonLd,
+  organizationJsonLd,
+  softwareApplicationJsonLd,
+} from '../src/lib/jsonLd.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = join(root, 'public', 'seo-static');
@@ -103,3 +111,105 @@ for (const page of INTENT_PAGES) {
   writeFileSync(file, pageHtml(page));
   console.log('wrote', file);
 }
+
+const blogDir = join(outDir, 'blog');
+mkdirSync(blogDir, { recursive: true });
+
+function shell(title: string, description: string, canonical: string, ld: unknown, body: string) {
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${esc(title)}</title>
+  <meta name="description" content="${esc(description)}" />
+  <link rel="canonical" href="${esc(canonical)}" />
+  <meta property="og:title" content="${esc(title)}" />
+  <meta property="og:description" content="${esc(description)}" />
+  <meta property="og:url" content="${esc(canonical)}" />
+  <meta property="og:image" content="https://pinonit.com/og-why-pinonit.png" />
+  <meta property="og:type" content="article" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="${esc(title)}" />
+  <meta name="twitter:description" content="${esc(description)}" />
+  <meta name="robots" content="index, follow" />
+  <link rel="icon" type="image/png" href="/pinonit_logo.png" />
+  <script type="application/ld+json">${JSON.stringify(ld)}</script>
+  <style>
+    body{font-family:system-ui,sans-serif;margin:0;color:#0f172a;background:#fff;line-height:1.6}
+    nav,footer,.wrap{max-width:46rem;margin:0 auto;padding:1.25rem 1.5rem}
+    nav{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e2e8f0}
+    nav img{height:2.5rem}
+    a.btn{background:#5865c6;color:#fff;text-decoration:none;padding:.55rem 1rem;border-radius:999px;font-weight:600;font-size:.875rem}
+    h1{font-size:2rem;line-height:1.15;margin:.4rem 0 1rem}
+    h2{font-size:1.15rem;margin:2rem 0 .6rem}
+    .eyebrow{font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#5865c6}
+    .muted{color:#64748b;font-size:.8rem}
+    footer{border-top:1px solid #e2e8f0;color:#94a3b8;font-size:.75rem}
+    ul{padding-left:0;list-style:none}
+    li{margin:1.25rem 0}
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/"><img src="/pinonit_logo.png" alt="PinOnIt" /></a>
+    <a class="btn" href="/signup">Start free</a>
+  </nav>
+  <main class="wrap">
+    ${body}
+  </main>
+  <footer>
+    <div class="wrap">PinOnIt is a DBA of Miami Expeditions LLC. $8.99/month after trial.</div>
+  </footer>
+</body>
+</html>
+`;
+}
+
+function displayTitle(title: string) {
+  return title.endsWith(' | PinOnIt') ? title.slice(0, -' | PinOnIt'.length) : title;
+}
+
+function renderBlocks(post: BlogPost) {
+  return post.blocks
+    .map((b) => {
+      if (b.type === 'h2') return `<h2>${esc(b.text)}</h2>`;
+      if ('link' in b) {
+        const href = `${PINONIT_ORG.url}${b.link.href}`;
+        return `<p>${esc(b.before)}<a href="${esc(href)}">${esc(b.link.text)}</a>${esc(b.after)}</p>`;
+      }
+      return `<p>${esc(b.text)}</p>`;
+    })
+    .join('\n    ');
+}
+
+writeFileSync(
+  join(blogDir, 'index.html'),
+  shell(BLOG_INDEX.title, BLOG_INDEX.description, BLOG_INDEX.canonical, [organizationJsonLd(), blogIndexJsonLd()], `
+    <p class="eyebrow">Blog</p>
+    <h1>${esc(BLOG_INDEX.h1)}</h1>
+    <p>${esc(BLOG_INDEX.description)}</p>
+    <ul>
+      ${BLOG_POSTS.map(
+        (p) =>
+          `<li><a href="${esc(p.canonical)}"><strong>${esc(displayTitle(p.title))}</strong></a><br /><span class="muted">${esc(p.description)}</span></li>`,
+      ).join('\n      ')}
+    </ul>
+  `),
+);
+console.log('wrote', join(blogDir, 'index.html'));
+
+for (const post of BLOG_POSTS) {
+  const file = join(blogDir, `${post.slug}.html`);
+  writeFileSync(
+    file,
+    shell(post.title, post.description, post.canonical, [organizationJsonLd(), blogPostingJsonLd(post)], `
+    <p class="eyebrow"><a href="${PINONIT_ORG.url}/blog">Field notes</a></p>
+    <h1>${esc(displayTitle(post.title))}</h1>
+    <p class="muted">${esc(post.datePublished)}</p>
+    ${renderBlocks(post)}
+  `),
+  );
+  console.log('wrote', file);
+}
+

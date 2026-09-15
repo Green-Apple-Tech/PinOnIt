@@ -14,6 +14,7 @@ const MARKETING_PREFIXES = [
 ];
 
 function isMarketingPath(pathname: string) {
+  if (pathname === '/blog' || pathname.startsWith('/blog/')) return true;
   if (MARKETING_PREFIXES.includes(pathname)) return true;
   return INTENT_PATHS.includes(pathname);
 }

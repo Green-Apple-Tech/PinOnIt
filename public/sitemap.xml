@@ -6,6 +6,12 @@
   <url><loc>https://pinonit.com/send-quote-by-text</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
   <url><loc>https://pinonit.com/sms-appointment-reminders</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
   <url><loc>https://pinonit.com/esignature-by-text</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://pinonit.com/blog</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://pinonit.com/blog/how-to-share-a-booking-link-from-the-job-site</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://pinonit.com/blog/getting-a-signature-without-an-email-envelope</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://pinonit.com/blog/pricing-the-job-before-you-leave-the-driveway</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://pinonit.com/blog/why-email-reminders-still-leave-empty-chairs</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://pinonit.com/blog/collecting-a-waiver-on-a-phone-at-check-in</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
   <url><loc>https://pinonit.com/why-pinonit</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://pinonit.com/legal-templates</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://pinonit.com/nda</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>

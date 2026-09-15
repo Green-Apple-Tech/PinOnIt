@@ -42,6 +42,7 @@ const RESERVED = new Set([
   'send-quote-by-text',
   'sms-appointment-reminders',
   'esignature-by-text',
+  'blog',
   'terms',
   'privacy',
   'sms-consent',

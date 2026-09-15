@@ -1,3 +1,4 @@
+import type { BlogPost } from './blogPosts';
 import { PINONIT_CORE_SENTENCE, PINONIT_ORG, PINONIT_SOFTWARE } from './seoIdentity';
 import type { IntentFaq, IntentPage } from './seoIntentPages';
 
@@ -49,6 +50,39 @@ export function faqPageJsonLd(faqs: IntentFaq[]) {
       name: item.q,
       acceptedAnswer: { '@type': 'Answer', text: item.a },
     })),
+  };
+}
+
+export function blogPostingJsonLd(post: BlogPost) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: post.title.replace(/ \| PinOnIt$/, ''),
+    description: post.description,
+    datePublished: post.datePublished,
+    dateModified: post.datePublished,
+    url: post.canonical,
+    mainEntityOfPage: post.canonical,
+    author: { '@type': 'Organization', name: PINONIT_ORG.name, url: PINONIT_ORG.url },
+    publisher: {
+      '@type': 'Organization',
+      name: PINONIT_ORG.name,
+      logo: { '@type': 'ImageObject', url: PINONIT_ORG.logo },
+    },
+    image: PINONIT_ORG.logo,
+    isPartOf: { '@type': 'Blog', name: 'PinOnIt field notes', url: `${PINONIT_ORG.url}/blog` },
+  };
+}
+
+export function blogIndexJsonLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Blog',
+    name: 'PinOnIt field notes',
+    url: `${PINONIT_ORG.url}/blog`,
+    description:
+      'How-to notes for quoting, signing, booking, and reminding from a phone. Product pages for those jobs live on their own URLs.',
+    publisher: { '@type': 'Organization', name: PINONIT_ORG.name, url: PINONIT_ORG.url },
   };
 }
 
