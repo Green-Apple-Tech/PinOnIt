@@ -148,7 +148,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
       'Tap New event type (or edit an existing one).',
       'Set the name, duration, and in-person / video / phone.',
       'For weekly lawn, biweekly pool, or monthly pest, turn on Let customers book repeating visits, then pick weekly / every 2 weeks / monthly / custom.',
-      'Add a price if you want to get paid when they book, and paste your payment link on the Payment tab.',
+      'On Questions, turn on Require guest agreement if they must check a waiver, NDA, contract, approval, or other document before they book.',
       'Save, then share your booking link from Booking or the Dashboard.',
     ],
     suggestedQuestions: ['Where are recurring bookings?', 'Where are recurring jobs?'],

@@ -18,6 +18,8 @@ import {
 } from '../lib/bookingSmsConsent';
 import { SMS_BOOKING_CONSENT_CTA } from '../lib/smsCompliance';
 import { resolveTermsText } from '../lib/terms';
+import { resolveBookingAgreement } from '../lib/bookingAgreement';
+import { fillDocumentPlaceholders } from '../lib/documents';
 import { bookableEventTypes, serviceMatchesTypeToken } from '../lib/eventTypes';
 import { isUnusedSingleUseExpired } from '../lib/singleUseLinks';
 import { syncBookingToExternalCalendars } from '../lib/writeCalendarEvent';
@@ -1158,7 +1160,16 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
     ? (selectedService?.cancellation_policy?.trim() || termsDisplayText)
     : '';
   const hasRequiredQuestions = questions.some((q) => q.required && !answers[q.id]?.trim());
-  const requiresNda = !!selectedService?.require_nda;
+  const bookingAgreement = selectedService ? resolveBookingAgreement(selectedService) : null;
+  const agreementBody = bookingAgreement
+    ? fillDocumentPlaceholders(bookingAgreement.body, {
+        topic: selectedService?.name,
+        recipientName: guestName,
+        businessName: host?.business_name || host?.full_name,
+        activityDescription: selectedService?.name,
+      })
+    : '';
+  const requiresAgreement = !!bookingAgreement;
   const requiresPayment = showPaidBookingPayment && !paymentConfirmed;
   const isValid =
     guestName.trim() !== '' &&
@@ -1167,7 +1178,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
   const canSubmitDetails =
     isValid &&
     !hasRequiredQuestions &&
-    (!requiresNda || ndaAgreed) &&
+    (!requiresAgreement || ndaAgreed) &&
     !requiresPayment;
 
   if (loading) return (
@@ -1946,12 +1957,17 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                       </label>
                     </div>
                   )}
-                  {(selectedService as any)?.require_nda && (
+                  {bookingAgreement && (
                     <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl space-y-3">
-                      <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">The parties agree to keep confidential all information shared during this session. Neither party shall disclose any proprietary, confidential, or sensitive information shared during or after this consultation to any third party without prior written consent.</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        {bookingAgreement.label}
+                      </p>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto">
+                        {agreementBody}
+                      </p>
                       <label className="flex items-start gap-2.5 cursor-pointer">
                         <input type="checkbox" checked={ndaAgreed} onChange={(e) => setNdaAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600 shrink-0" />
-                        <span className="text-sm text-slate-700 dark:text-slate-300">I agree to the Non-Disclosure Agreement above <span className="text-red-500">*</span></span>
+                        <span className="text-sm text-slate-700 dark:text-slate-300">I agree to the {bookingAgreement.label.toLowerCase()} above <span className="text-red-500">*</span></span>
                       </label>
                     </div>
                   )}
@@ -1964,7 +1980,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                           : !isReschedule && !guestEmail.trim() ? 'Email address is required.'
                           : requiresTerms && !termsAgreed ? 'Please agree to the terms above.'
                           : hasRequiredQuestions ? 'Please answer all required questions.'
-                          : requiresNda && !ndaAgreed ? 'Please agree to the NDA above.'
+                          : requiresAgreement && !ndaAgreed ? `Please agree to the ${bookingAgreement.label.toLowerCase()} above.`
                           : requiresPayment ? (paymentMethod === 'stripe' ? 'Please complete card payment above.' : 'Please confirm your payment above.')
                           : 'Please complete all required fields above.')}
                     </p>

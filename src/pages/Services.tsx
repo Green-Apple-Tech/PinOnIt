@@ -10,6 +10,13 @@ import { computeSingleUseExpiresAtForProfile, formatLinkExpiryHint, formatSingle
 import { eventTypeSlug } from '../lib/eventTypes';
 import { LOCATION_TYPES, MEETING_TYPE_META } from '../lib/types';
 import {
+  BOOKING_AGREEMENT_TYPES,
+  bookingAgreementLabel,
+  defaultBookingAgreementText,
+  isBookingAgreementType,
+  type BookingAgreementType,
+} from '../lib/bookingAgreement';
+import {
   Plus, Trash2, X, Check, Loader2, MapPin, Clock, Settings2, MessageSquare,
   Copy, Smartphone, Mail, Pencil, ExternalLink, Link2, AlertCircle,
   Search, CreditCard, QrCode, Zap, Bell, ChevronDown, Shield, HelpCircle, PhoneCall, Repeat,
@@ -54,6 +61,8 @@ const DEFAULT_SERVICE = {
   payment_link_label: null as string | null,
   payment_methods: [] as string[],
   require_terms: false, require_nda: false,
+  booking_agreement_type: 'waiver' as string,
+  booking_agreement_text: '',
   show_description_on_booking_page: true, show_description_on_paid_booking: true,
   is_recurring: false,
   recurrence_frequency: null as RecurrenceFrequency | null,
@@ -559,6 +568,8 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
       payment_methods: (svc as any).payment_methods ?? [],
       require_terms: (svc as any).require_terms ?? false,
       require_nda: (svc as any).require_nda ?? false,
+      booking_agreement_type: svc.booking_agreement_type || 'waiver',
+      booking_agreement_text: svc.booking_agreement_text ?? '',
       show_description_on_booking_page: (svc as any).show_description_on_booking_page ?? true,
       show_description_on_paid_booking: (svc as any).show_description_on_paid_booking ?? true,
       is_recurring: svc.is_recurring ?? false,
@@ -728,6 +739,20 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
   };
 
   const setField = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((prev) => ({ ...prev, [k]: v }));
+
+  const setAgreementType = (next: BookingAgreementType) => {
+    setForm((prev) => {
+      const prevType = isBookingAgreementType(prev.booking_agreement_type) ? prev.booking_agreement_type : 'waiver';
+      const prevDefault = defaultBookingAgreementText(prevType).trim();
+      const current = (prev.booking_agreement_text ?? '').trim();
+      const replace = !current || current === prevDefault;
+      return {
+        ...prev,
+        booking_agreement_type: next,
+        booking_agreement_text: replace ? defaultBookingAgreementText(next) : prev.booking_agreement_text,
+      };
+    });
+  };
 
   const applyMeetingType = (next: MeetingType) => {
     if (next === 'one_on_one' || next === 'group') lastRegularMeetingType.current = next;
@@ -1579,21 +1604,67 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
             {activeTab === 'questions' && (
               <>
                 <div className="space-y-2 mb-2">
-                  <p className="text-sm font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">Default Forms</p>
-                  {([
-                    { key: 'require_nda' as const, icon: Shield, label: 'Require NDA agreement', desc: 'Guests must agree to a non-disclosure agreement', accent: 'text-slate-600 dark:text-slate-400', bg: 'bg-slate-50 dark:bg-slate-800/40' },
-                  ] as const).map((item) => (
-                    <div key={item.key} className={`flex items-center gap-3 px-4 py-3.5 ${item.bg} border border-gray-200 dark:border-slate-700 rounded-xl min-h-[60px]`}>
-                      <item.icon className={`h-5 w-5 shrink-0 ${item.accent}`} />
+                  <p className="text-sm font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">Guest agreement</p>
+                  <div className="px-4 py-3.5 bg-slate-50 dark:bg-slate-800/40 border border-gray-200 dark:border-slate-700 rounded-xl space-y-3">
+                    <div className="flex items-center gap-3 min-h-[44px]">
+                      <Shield className="h-5 w-5 shrink-0 text-slate-600 dark:text-slate-400" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-base font-semibold text-gray-900 dark:text-white">{item.label}</p>
-                        <p className="text-sm text-gray-400 dark:text-slate-500">{item.desc}</p>
+                        <p className="text-base font-semibold text-gray-900 dark:text-white">Require guest agreement</p>
+                        <p className="text-sm text-gray-400 dark:text-slate-500">They must agree to a waiver, NDA, contract, approval, or other document before they book.</p>
                       </div>
-                      <button onClick={() => setField(item.key, !form[item.key])} className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors ${form[item.key] ? 'bg-brand-600' : 'bg-gray-300 dark:bg-slate-600'}`}>
-                        <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${form[item.key] ? 'translate-x-6' : 'translate-x-1'}`} />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const turningOn = !form.require_nda;
+                          setForm((prev) => {
+                            const type = isBookingAgreementType(prev.booking_agreement_type) ? prev.booking_agreement_type : 'waiver';
+                            const text = (prev.booking_agreement_text ?? '').trim();
+                            return {
+                              ...prev,
+                              require_nda: turningOn,
+                              booking_agreement_type: type,
+                              booking_agreement_text: turningOn && !text ? defaultBookingAgreementText(type) : prev.booking_agreement_text,
+                            };
+                          });
+                        }}
+                        className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors ${form.require_nda ? 'bg-brand-600' : 'bg-gray-300 dark:bg-slate-600'}`}
+                      >
+                        <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${form.require_nda ? 'translate-x-6' : 'translate-x-1'}`} />
                       </button>
                     </div>
-                  ))}
+                    {form.require_nda && (
+                      <>
+                        <div className="flex flex-wrap gap-2">
+                          {BOOKING_AGREEMENT_TYPES.map((t) => (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => setAgreementType(t.id)}
+                              className={`px-3 py-1.5 rounded-full text-sm font-semibold border min-h-[40px] ${
+                                (form.booking_agreement_type || 'waiver') === t.id
+                                  ? 'bg-brand-600 text-white border-brand-600'
+                                  : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700'
+                              }`}
+                            >
+                              {t.label}
+                            </button>
+                          ))}
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-500 dark:text-slate-400 mb-1.5">
+                            {bookingAgreementLabel(form.booking_agreement_type)} text (shown when they book)
+                          </label>
+                          <textarea
+                            value={form.booking_agreement_text}
+                            onChange={(e) => setField('booking_agreement_text', e.target.value)}
+                            rows={8}
+                            placeholder="Paste or edit the agreement they must check."
+                            className={`${inputCls} resize-y min-h-[8rem]`}
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
                 <div className="border-t border-gray-100 dark:border-slate-800 pt-4 mb-2">
                   <p className="text-sm font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">Custom Questions</p>
@@ -1724,7 +1795,7 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
           </div>
 
           {/* ── Save button — sticky at bottom on mobile, inline footer on md+ ── */}
-          {activeTab !== 'questions' && activeTab !== 'reminders' && (
+          {activeTab !== 'reminders' && (
             <>
               {/* Mobile: fixed full-width bar */}
               <div className="md:hidden fixed bottom-0 left-0 right-0 z-20 px-4 py-3 bg-white dark:bg-slate-950 border-t border-gray-100 dark:border-slate-800 safe-bottom">
