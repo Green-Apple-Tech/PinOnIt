@@ -11,6 +11,7 @@ import { SMS_BOOKING_CONSENT_CTA } from '../lib/smsCompliance';
 import {
   formatStandingFrequency,
   nextStandingVisit,
+  snapStartToStandingRule,
   standingComposePath,
   type StandingFrequency,
   type StandingJob,
@@ -251,7 +252,7 @@ export function RecurringJobsPanel() {
                     <td className="px-4 py-3">
                       <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300">
                         <Repeat className="h-3 w-3" />
-                        {formatStandingFrequency(job.frequency, job.interval_days)}
+                        {formatStandingFrequency(job.frequency, job.interval_days, job.weekdays, job.month_nth)}
                       </span>
                       {job.status !== 'active' && (
                         <span className="ml-1 text-[11px] text-slate-400">{statusLabel(job.status)}</span>
@@ -313,6 +314,8 @@ function StandingJobForm({
   const [serviceId, setServiceId] = useState(services[0]?.id ?? '');
   const [frequency, setFrequency] = useState<StandingFrequency>('weekly');
   const [intervalDays, setIntervalDays] = useState(10);
+  const [weekdays, setWeekdays] = useState<number[]>(() => [new Date().getDay()]);
+  const [monthNth, setMonthNth] = useState<number | null>(null);
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [time, setTime] = useState('09:00');
   const [price, setPrice] = useState('');
@@ -336,7 +339,17 @@ function StandingJobForm({
     }
     setSaving(true);
     setError('');
-    const starts = new Date(`${date}T${time}:00`);
+    const starts = snapStartToStandingRule(
+      new Date(`${date}T${time}:00`),
+      frequency,
+      frequency === 'custom' ? intervalDays : null,
+      weekdays,
+      frequency === 'monthly' ? monthNth : null,
+    );
+    const storedDays =
+      frequency === 'weekly' || frequency === 'biweekly' || (frequency === 'monthly' && monthNth != null)
+        ? weekdays
+        : null;
     const e164 = phone.trim() ? normalizePhoneE164(phone.trim()) : null;
     const notify: string[] = ['email'];
     if (smsConsent && e164) notify.push('sms');
@@ -349,6 +362,8 @@ function StandingJobForm({
       customer_address: address.trim() || null,
       frequency,
       interval_days: frequency === 'custom' ? Math.max(1, intervalDays) : null,
+      weekdays: storedDays,
+      month_nth: frequency === 'monthly' ? monthNth : null,
       starts_at: starts.toISOString(),
       duration_minutes: svc?.duration_minutes ?? 60,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York',
@@ -421,14 +436,24 @@ function StandingJobForm({
           <FrequencyPicker
             value={frequency}
             intervalDays={intervalDays}
+            advanced
+            weekdays={weekdays}
+            monthNth={monthNth}
+            onWeekdaysChange={setWeekdays}
+            onMonthNthChange={setMonthNth}
             onChange={(freq, days) => {
               setFrequency(freq);
               if (days != null) setIntervalDays(days);
+              if (freq !== 'monthly') setMonthNth(null);
             }}
             size="sm"
           />
           <div className="grid grid-cols-2 gap-2">
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+            <input type="date" value={date} onChange={(e) => {
+              setDate(e.target.value);
+              const dow = new Date(`${e.target.value}T12:00:00`).getDay();
+              if (weekdays.length <= 1) setWeekdays([dow]);
+            }}
               className="px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm" />
             <input type="time" value={time} onChange={(e) => setTime(e.target.value)}
               className="px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm" />
@@ -484,6 +509,8 @@ function StandingJobDetail({
   const [fromTime, setFromTime] = useState('09:00');
   const [frequency, setFrequency] = useState<StandingFrequency>(job.frequency);
   const [intervalDays, setIntervalDays] = useState(job.interval_days ?? 10);
+  const [weekdays, setWeekdays] = useState<number[]>(() => job.weekdays?.length ? job.weekdays : [new Date(job.starts_at).getDay()]);
+  const [monthNth, setMonthNth] = useState<number | null>(job.month_nth ?? null);
   const [localBusy, setLocalBusy] = useState(false);
   const [rescheduleId, setRescheduleId] = useState<string | null>(null);
   const [rescheduleWhen, setRescheduleWhen] = useState('');
@@ -512,6 +539,11 @@ function StandingJobDetail({
       p_starts_at: new Date(`${fromDate}T${fromTime}:00`).toISOString(),
       p_frequency: frequency,
       p_interval_days: frequency === 'custom' ? intervalDays : null,
+      p_weekdays:
+        frequency === 'weekly' || frequency === 'biweekly' || (frequency === 'monthly' && monthNth != null)
+          ? weekdays
+          : null,
+      p_month_nth: frequency === 'monthly' ? monthNth : null,
     });
     setLocalBusy(false);
     onChanged();
@@ -534,7 +566,7 @@ function StandingJobDetail({
         <div className="flex items-start justify-between mb-3">
           <div>
             <h2 className="text-lg font-bold">{job.customer_name}</h2>
-            <p className="text-sm text-slate-500">{job.services?.name || 'Recurring job'} · {formatStandingFrequency(job.frequency, job.interval_days)}</p>
+            <p className="text-sm text-slate-500">{job.services?.name || 'Recurring job'} · {formatStandingFrequency(job.frequency, job.interval_days, job.weekdays, job.month_nth)}</p>
             {job.origin === 'guest' && (
               <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 mt-1">Requested by customer</p>
             )}
@@ -611,9 +643,15 @@ function StandingJobDetail({
                 <FrequencyPicker
                   value={frequency}
                   intervalDays={intervalDays}
+                  advanced
+                  weekdays={weekdays}
+                  monthNth={monthNth}
+                  onWeekdaysChange={setWeekdays}
+                  onMonthNthChange={setMonthNth}
                   onChange={(freq, days) => {
                     setFrequency(freq);
                     if (days != null) setIntervalDays(days);
+                    if (freq !== 'monthly') setMonthNth(null);
                   }}
                   size="sm"
                 />

@@ -119,7 +119,7 @@ export const HELP_FAQS: HelpFaq[] = [
       'weekly lawn',
     ],
     answer:
-      'Open Booking → Recurring jobs. Add the customer, service, frequency, and first time. Visits are normal calendar bookings for the next 90 days. Skip or reschedule one visit without changing the series. Change from this date forward rewrites unstarted future visits. Guest opt-ins wait here for Confirm or Decline.',
+      'Open Booking → Recurring jobs. Add the customer, service, cadence (weekly on Tue & Fri, first Monday of the month, or every N days), and first time. Visits are normal calendar bookings for the next 90 days. Skip or reschedule one visit without changing the series. Change from this date forward rewrites unstarted future visits. Guest opt-ins wait here for Confirm or Decline.',
   },
   {
     id: 'booking-link',

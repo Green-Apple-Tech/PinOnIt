@@ -107,9 +107,9 @@ const GUIDES: Record<string, PageHelpGuide> = {
   },
   'standing-jobs': {
     title: 'Recurring jobs',
-    purpose: 'Repeating visits you set up for a customer — weekly, every 2 weeks, monthly, or a custom interval. Guests can also opt in to this cadence from your public page; you confirm before more visits are added.',
+    purpose: 'Repeating visits you set up for a customer — weekly (including Tue & Fri), every 2 weeks, monthly (including first Monday), or a custom interval. Guests can also opt in to this cadence from your public page; you confirm before more visits are added.',
     steps: [
-      'Tap New recurring job. Pick the customer, service, frequency, first date and time, and optional price.',
+      'Tap New recurring job. Pick the customer, service, cadence (days of the week or first/last weekday of the month), first date and time, and optional price.',
       'If they already agreed to SMS, check consent once. Later visits copy it and do not ask again.',
       'PinOnIt fills about 90 days of visits on the calendar. A daily job extends the window so reminders keep working.',
       'Skip one visit, reschedule one visit, or Change from this date forward to rewrite unstarted future rows.',

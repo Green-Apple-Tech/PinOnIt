@@ -80,6 +80,36 @@ describe('standing occurrence math', () => {
     ).toHaveLength(1);
   });
 
+  it('fills Tuesday and Friday and the first Monday of each month', () => {
+    const now = new Date(2026, 8, 16, 8, 0);
+    const horizonEnd = new Date(now.getTime() + STANDING_HORIZON_DAYS * 86400000);
+    const tueFri = standingOccurrenceStarts({
+      startsAt: new Date(2026, 8, 18, 9, 0),
+      frequency: 'weekly',
+      weekdays: [2, 5],
+      horizonEnd,
+      now,
+    });
+    expect(tueFri[0].getDay()).toBe(5);
+    expect(tueFri[1].getDay()).toBe(2);
+    expect(tueFri[2].getDay()).toBe(5);
+    expect(formatStandingFrequency('weekly', null, [2, 5])).toBe('Weekly on Tue & Fri');
+
+    const firstMonday = standingOccurrenceStarts({
+      startsAt: new Date(2026, 9, 5, 9, 0),
+      frequency: 'monthly',
+      weekdays: [1],
+      monthNth: 1,
+      horizonEnd: new Date(2026, 11, 31, 9, 0),
+      now: new Date(2026, 9, 1, 8, 0),
+    });
+    expect(firstMonday[0].getDate()).toBe(5);
+    expect(firstMonday[0].getMonth()).toBe(9);
+    expect(firstMonday[1].getDate()).toBe(2);
+    expect(firstMonday[1].getMonth()).toBe(10);
+    expect(formatStandingFrequency('monthly', null, [1], 1)).toBe('First Monday');
+  });
+
   it('labels frequency and builds a quote deep-link with the customer filled in', () => {
     expect(formatStandingFrequency('biweekly')).toBe('Every 2 weeks');
     expect(formatStandingFrequency('custom', 10)).toBe('Every 10 days');
