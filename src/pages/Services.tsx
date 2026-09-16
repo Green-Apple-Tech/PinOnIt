@@ -495,20 +495,18 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
   };
 
   useEffect(() => {
-    const newType = searchParams.get('new') as MeetingType | null;
+    const newType = searchParams.get('new');
     const editId = searchParams.get('edit');
     if (!loading) {
       if (newType) {
         const valid: MeetingType[] = ['one_on_one', 'group', 'one_off'];
-        if (valid.includes(newType)) {
-          openNew(newType);
-          setSearchParams((prev) => {
-            const next = new URLSearchParams(prev);
-            next.delete('new');
-            next.delete('edit');
-            return next;
-          }, { replace: true });
-        }
+        openNew(valid.includes(newType as MeetingType) ? (newType as MeetingType) : undefined);
+        setSearchParams((prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete('new');
+          next.delete('edit');
+          return next;
+        }, { replace: true });
       } else if (editId) {
         const svc = services.find((s) => s.id === editId);
         if (svc) {

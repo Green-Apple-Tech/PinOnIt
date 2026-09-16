@@ -134,6 +134,12 @@ export function BookingPage() {
                     </a>
                   </div>
                 </div>
+                <Link
+                  to="/dashboard/settings?tab=event-types&new=one_on_one"
+                  className="mt-3 inline-flex items-center gap-1.5 px-3 py-2.5 text-sm font-semibold text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-500/40 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-500/10 transition-colors"
+                >
+                  <Plus className="h-4 w-4" /> Add new Booking Type
+                </Link>
                 {!profile.slug && (
                   <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
                     Set up your custom link in{' '}
@@ -160,16 +166,7 @@ export function BookingPage() {
             </div>
           </button>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-            <Link
-              to="/dashboard/settings?tab=event-types"
-              className="group flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-brand-300 dark:hover:border-brand-500/40 hover:shadow-sm transition-all"
-            >
-              <div className="h-10 w-10 rounded-xl bg-brand-50 dark:bg-brand-500/10 flex items-center justify-center">
-                <Plus className="h-5 w-5 text-brand-600 dark:text-brand-400" />
-              </div>
-              <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 text-center">Add Service</span>
-            </Link>
+          <div className="grid grid-cols-3 gap-3 mb-6">
             <Link
               to="/dashboard/settings?tab=availability"
               className="group flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-brand-300 dark:hover:border-brand-500/40 hover:shadow-sm transition-all"
@@ -235,13 +232,13 @@ export function BookingPage() {
             ) : services.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                  No services yet. Add one so clients can book you.
+                  No booking types yet. Add one so clients can book you.
                 </p>
                 <Link
-                  to="/dashboard/settings?tab=event-types"
+                  to="/dashboard/settings?tab=event-types&new=one_on_one"
                   className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-brand-500 hover:bg-brand-600 rounded-xl transition-colors"
                 >
-                  <Plus className="h-4 w-4" /> Add your first service
+                  <Plus className="h-4 w-4" /> Add new Booking Type
                 </Link>
               </div>
             ) : (
