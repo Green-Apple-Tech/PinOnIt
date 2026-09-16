@@ -479,6 +479,13 @@ const GUEST_REMINDER_TIME_OFFSETS: Record<string, number> = {
   '24hour': -1440,
 };
 
+function reminderDedupe(channel: string, offsetMinutes: number, fallback: string): string {
+  if ((channel === 'email' || channel === 'sms') && offsetMinutes === -60) {
+    return `default:1hour:${channel}`;
+  }
+  return fallback;
+}
+
 type SupabaseClient = ReturnType<typeof createClient>;
 
 async function insertMessageLog(
@@ -871,7 +878,7 @@ async function dispatchScheduledReminders(supabase: SupabaseClient): Promise<num
       } | null;
       if (!tpl) continue;
       const channel = tpl.channel === 'both' ? 'email' : tpl.channel;
-      const dedupe = `rule:${rule.id}`;
+      const dedupe = reminderDedupe(channel, offset, `rule:${rule.id}`);
       if (await alreadyLogged(supabase, booking.id, channel, dedupe)) continue;
 
       const templateData: TemplateData = {
@@ -961,7 +968,7 @@ async function dispatchScheduledReminders(supabase: SupabaseClient): Promise<num
       const fireAt = startMs + offset * 60 * 1000;
       if (fireAt > now || now - fireAt > lateWindowMs) continue;
       for (const channel of channels.filter((c) => c === 'sms' || c === 'whatsapp' || c === 'email')) {
-        const dedupe = `guest:${timeId}:${channel}`;
+        const dedupe = reminderDedupe(channel, offset, `guest:${timeId}:${channel}`);
         if (await alreadyLogged(supabase, booking.id, channel, dedupe)) continue;
         const msgBody = withChangeThisLink(
           `Hi ${booking.guest_name}, reminder: you have a ${duration} ${serviceName} with ${hostName} on ${dateStr} at ${timeStr}.${meetLink ? ` Join: ${meetLink}` : ''} — PinOnIt`,
@@ -1006,6 +1013,50 @@ async function dispatchScheduledReminders(supabase: SupabaseClient): Promise<num
           time: timeStr,
           meetLink,
         });
+      }
+    }
+
+    // Always send a 1-hour reminder: email if we have an address, SMS if they
+    // opted in with a phone on the booking. Shared dedupe with NeverMiss / guest prefs.
+    const oneHourFireAt = startMs - 60 * 60 * 1000;
+    if (oneHourFireAt <= now && now - oneHourFireAt <= lateWindowMs) {
+      const defaultBody = withChangeThisLink(
+        `Hi ${booking.guest_name}, reminder: you have a ${duration} ${serviceName} with ${hostName} on ${dateStr} at ${timeStr}.${meetLink ? ` Join: ${meetLink}` : ''} — PinOnIt`,
+        rescheduleLink,
+      );
+      const defaultChannels: string[] = [];
+      if ((booking.guest_email as string | null)?.trim()) defaultChannels.push('email');
+      if (bookingAllowsGuestSms({
+        guest_phone: booking.guest_phone as string | null,
+        notify_via: booking.notify_via,
+      })) defaultChannels.push('sms');
+      for (const channel of defaultChannels) {
+        const dedupe = reminderDedupe(channel, -60, `default:1hour:${channel}`);
+        if (await alreadyLogged(supabase, booking.id, channel, dedupe)) continue;
+        const delivered = await deliverChannel({
+          supabase,
+          channel,
+          booking,
+          hostProfile,
+          hostPhone,
+          hostWhatsapp,
+          msgBody: defaultBody,
+          emailSubject: `Reminder: ${serviceName} in 1 hour`,
+          meetLink,
+        });
+        if (delivered.ok) sent++;
+        await insertMessageLog(supabase, {
+          booking_id: booking.id,
+          host_id: booking.host_id,
+          channel,
+          status: delivered.ok ? 'sent' : 'failed',
+          recipient: delivered.to || '(none)',
+          subject: dedupe,
+          body: delivered.error ? `${defaultBody}\n\n${delivered.error}` : defaultBody,
+        });
+        if (channel === 'email' || channel === 'sms') {
+          await notifySlackWebhook(hostProfile?.slack_webhook_url, defaultBody);
+        }
       }
     }
   }

@@ -1466,7 +1466,7 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
             {activeTab === 'reminders' && (
               <div className="space-y-4">
                 <p className="text-base text-gray-600 dark:text-slate-400 leading-relaxed">
-                  Add automatic reminders sent to guests before their meeting. Each reminder is specific to this event type.
+                  Every event type includes a 1 hour reminder by email, and by text if they opted in with a phone. Add more below if you want.
                 </p>
 
                 {editingId === 'new' ? (
@@ -1489,6 +1489,7 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
                       )}
                       {reminders.map((r) => {
                         const ch = CHANNELS.find(c => c.key === r.channel);
+                        const isDefaultOneHour = r.timing_offset_minutes === -60 && (r.channel === 'email' || r.channel === 'sms');
                         return (
                           <div key={r.id} className={`flex items-center gap-3 p-3 rounded-xl border transition-colors min-h-[60px] ${r.is_active ? 'bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700' : 'bg-gray-50 dark:bg-slate-800/50 border-gray-200 dark:border-slate-700 opacity-60'}`}>
                             <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${r.is_active ? 'bg-brand-50 dark:bg-brand-950/30' : 'bg-gray-100 dark:bg-slate-800'}`}>
@@ -1496,8 +1497,14 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-base font-semibold text-gray-900 dark:text-white">{r.label}</p>
-                              <p className="text-sm text-gray-500 dark:text-slate-400 capitalize">{r.channel}</p>
+                              <p className="text-sm text-gray-500 dark:text-slate-400 capitalize">
+                                {r.channel}{isDefaultOneHour ? (r.channel === 'sms' ? ' · if they opted in with a phone' : ' · always on') : ''}
+                              </p>
                             </div>
+                            {isDefaultOneHour ? (
+                              <span className="text-xs font-semibold text-slate-400 shrink-0">Default</span>
+                            ) : (
+                              <>
                             <button onClick={() => handleToggleReminder(r)}
                               className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0 ${r.is_active ? 'bg-brand-600' : 'bg-gray-300 dark:bg-slate-600'}`}>
                               <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${r.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
@@ -1505,6 +1512,8 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
                             <button onClick={() => handleDeleteReminder(r.id)} className="p-2 text-gray-300 dark:text-slate-600 hover:text-red-500 transition-colors shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center">
                               <Trash2 className="h-4 w-4" />
                             </button>
+                              </>
+                            )}
                           </div>
                         );
                       })}

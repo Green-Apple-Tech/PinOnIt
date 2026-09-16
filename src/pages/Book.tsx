@@ -851,11 +851,17 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
     const { guestPhone: phoneVal, smsConsentGranted, whatsappConsentGranted } =
       resolveBookingSmsConsent(phone, smsOptIn, whatsappOptIn);
     const notifyViaPayload = buildNotifyViaPayload(email, phone, smsOptIn, whatsappOptIn);
-    const effectiveReminderChannels = selectedChannels.filter((ch) => {
-      if (ch === 'sms') return smsConsentGranted;
-      if (ch === 'whatsapp') return whatsappConsentGranted;
-      return true;
-    });
+    const reminderChannels = new Set(
+      selectedChannels.filter((ch) => {
+        if (ch === 'sms') return smsConsentGranted;
+        if (ch === 'whatsapp') return whatsappConsentGranted;
+        return true;
+      }),
+    );
+    if (email.trim()) reminderChannels.add('email');
+    if (smsConsentGranted) reminderChannels.add('sms');
+    const reminderTimes = selectedTimes.includes('1hour') ? selectedTimes : [...selectedTimes, '1hour'];
+    const effectiveReminderChannels = [...reminderChannels];
     const addressVal = guestAddress.trim() || null;
     const { data, error: insertError } = await supabase.rpc('create_guest_booking', {
       p_payload: {
@@ -874,7 +880,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
         recurrence_frequency: null,
         request_repeating: isRecurringService && requestRepeating,
         reminder_channels: effectiveReminderChannels.length > 0 ? effectiveReminderChannels : ['email'],
-        reminder_times: selectedTimes,
+        reminder_times: reminderTimes,
         stripe_payment_id: stripePaymentId,
         sms_consent: smsConsentGranted,
         whatsapp_consent: whatsappConsentGranted,
@@ -1038,11 +1044,16 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
       smsOptIn,
       whatsappOptIn,
     );
-    const effectiveChannels = selectedChannels.filter((ch) => {
-      if (ch === 'sms') return smsConsentGranted;
-      if (ch === 'whatsapp') return whatsappConsentGranted;
-      return true;
-    });
+    const reminderChannels = new Set(
+      selectedChannels.filter((ch) => {
+        if (ch === 'sms') return smsConsentGranted;
+        if (ch === 'whatsapp') return whatsappConsentGranted;
+        return true;
+      }),
+    );
+    if ((confirmedBooking.guest_email ?? '').trim()) reminderChannels.add('email');
+    if (smsConsentGranted) reminderChannels.add('sms');
+    const reminderTimes = selectedTimes.includes('1hour') ? selectedTimes : [...selectedTimes, '1hour'];
     const notifyViaUpdate = buildNotifyViaPayload(
       confirmedBooking.guest_email ?? '',
       phoneRaw,
@@ -1053,8 +1064,8 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
       await supabase.rpc('save_guest_reminder_prefs', {
         p_booking_id: confirmedBooking.id,
         p_action_token: confirmedBooking.action_token,
-        p_reminder_channels: effectiveChannels.length > 0 ? effectiveChannels : ['email'],
-        p_reminder_times: selectedTimes,
+        p_reminder_channels: reminderChannels.size > 0 ? [...reminderChannels] : ['email'],
+        p_reminder_times: reminderTimes,
         p_notify_via: notifyViaUpdate.length > 0 ? notifyViaUpdate : null,
       });
       setConfirmedBooking({
