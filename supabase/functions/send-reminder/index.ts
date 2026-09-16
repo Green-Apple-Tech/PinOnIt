@@ -72,6 +72,39 @@ async function ensureRescheduleLink(
   }
 }
 
+function formatBookingWhen(iso: string, tz: string): { date: string; time: string } {
+  const d = new Date(iso);
+  const dateOpts: Intl.DateTimeFormatOptions = { weekday: 'long', month: 'long', day: 'numeric' };
+  const timeOpts: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit' };
+  try {
+    return {
+      date: d.toLocaleDateString('en-US', { ...dateOpts, timeZone: tz }),
+      time: d.toLocaleTimeString('en-US', { ...timeOpts, timeZone: tz }),
+    };
+  } catch {
+    return {
+      date: d.toLocaleDateString('en-US', dateOpts),
+      time: d.toLocaleTimeString('en-US', timeOpts),
+    };
+  }
+}
+
+function defaultGuestConfirmationSms(opts: {
+  guestName: string;
+  hostName: string;
+  serviceName: string;
+  date: string;
+  time: string;
+  meetLink?: string | null;
+  rescheduleLink?: string;
+}): string {
+  return [
+    `Hi ${opts.guestName || 'there'}, you're booked with ${opts.hostName} for ${opts.serviceName} on ${opts.date} at ${opts.time}.`,
+    opts.meetLink ? `Join: ${opts.meetLink}` : '',
+    opts.rescheduleLink ? `Need to change this? ${opts.rescheduleLink}` : '',
+  ].filter(Boolean).join(' ');
+}
+
 const TRANSLATION_SYSTEM_PROMPT = `You are a professional translator for appointment scheduling messages. Preserve all formatting, URLs, and template placeholders exactly as they are (e.g. {{guest_name}}, {{cancel_link}}). Only return the translated text, nothing else.`;
 
 async function translateText(text: string, targetLang: string, sourceLang: string): Promise<string> {
@@ -1038,6 +1071,59 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json();
 
+    // ── Immediate confirmation SMS (Book for someone, and similar) ───────────
+    if (body.immediate_sms && body.booking_id) {
+      const actorId = await hostIdFromJwt(req, supabase);
+      const { data: booking } = await supabase
+        .from('bookings')
+        .select('id, host_id, guest_name, guest_phone, notify_via, created_by_host, start_time, guest_timezone, action_token, meet_link, status, services(name), profiles(full_name, slug, timezone)')
+        .eq('id', body.booking_id)
+        .maybeSingle();
+      if (!booking) {
+        return jsonResponse({ error: 'Booking not found' }, 404);
+      }
+      const tokenOk = typeof body.action_token === 'string'
+        && body.action_token.length > 0
+        && body.action_token === booking.action_token;
+      if (!isServiceRoleRequest(req) && actorId !== booking.host_id && !tokenOk) {
+        return jsonAuthError(corsHeaders, 'Not your booking');
+      }
+      if (booking.status === 'skipped' || booking.status === 'canceled') {
+        return jsonResponse({ error: 'Booking is not confirmable' }, 400);
+      }
+      if (!(await hostPlanIsActive(supabase, booking.host_id as string))) {
+        return jsonResponse({ error: 'Host account inactive' }, 403);
+      }
+      const phone = (booking.guest_phone as string | null)?.trim();
+      if (!phone) {
+        return jsonResponse({ error: 'No guest phone on this booking' }, 400);
+      }
+      if (!bookingAllowsGuestSms(booking) && !booking.created_by_host) {
+        return jsonResponse({ error: 'Guest did not opt in to SMS' }, 400);
+      }
+      const hostProfile = booking.profiles as Record<string, unknown> | null;
+      const service = booking.services as Record<string, unknown> | null;
+      const tz = (booking.guest_timezone as string | null)
+        || (hostProfile?.timezone as string | undefined)
+        || 'UTC';
+      const { date, time } = formatBookingWhen(booking.start_time as string, tz);
+      const rescheduleLink = await ensureRescheduleLink(supabase, booking.id);
+      const msg = defaultGuestConfirmationSms({
+        guestName: (booking.guest_name as string) || 'there',
+        hostName: (hostProfile?.full_name as string) || 'your host',
+        serviceName: (service?.name as string) || 'an appointment',
+        date,
+        time,
+        meetLink: booking.meet_link as string | null,
+        rescheduleLink,
+      });
+      const result = await sendTwilioSms(supabase, phone, msg, 'guest');
+      if (!result.ok) {
+        return jsonResponse({ error: result.error || 'SMS failed' }, 502);
+      }
+      return jsonResponse({ success: true });
+    }
+
     // ── Recurring cancellation / decline notice ─────────────────────────────
     if ((body.notify_cancellation || body.notify_recurring_declined) && body.booking_id && body.message) {
       const actorId = await hostIdFromJwt(req, supabase);
@@ -1483,14 +1569,18 @@ Deno.serve(async (req: Request) => {
     const service = booking.services as Record<string, unknown>;
     const baseUrl = APP_PUBLIC_URL;
     const rescheduleLink = await ensureRescheduleLink(supabase, booking.id);
+    const whenTz = (booking.guest_timezone as string | null)
+      || (hostProfile?.timezone as string | undefined)
+      || 'UTC';
+    const { date: whenDate, time: whenTime } = formatBookingWhen(booking.start_time as string, whenTz);
 
     const templateData: TemplateData = {
       guest_name: booking.guest_name,
       guest_address: (booking.guest_address as string) || '',
       host_name: (hostProfile?.full_name as string) ?? 'Your host',
       service_name: (service?.name as string) ?? 'Appointment',
-      date: new Date(booking.start_time).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }),
-      time: new Date(booking.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+      date: whenDate,
+      time: whenTime,
       timezone: booking.guest_timezone ?? (hostProfile?.timezone as string) ?? 'UTC',
       duration: `${service?.duration_minutes ?? 30} min`,
       location: (booking.guest_address as string) || (service?.location as string) || '',
@@ -1569,6 +1659,28 @@ Deno.serve(async (req: Request) => {
           }
         }
       }
+    }
+
+    // Host-booked guests often have a phone and no email. The confirmation
+    // template is usually email-only, so also text them when we have consent.
+    if (
+      sendChannel === 'email' &&
+      template.type === 'confirmation' &&
+      booking.created_by_host === true &&
+      bookingAllowsGuestSms(booking)
+    ) {
+      const smsBody = defaultGuestConfirmationSms({
+        guestName: templateData.guest_name,
+        hostName: templateData.host_name,
+        serviceName: templateData.service_name,
+        date: templateData.date,
+        time: templateData.time,
+        meetLink: booking.meet_link as string | null,
+        rescheduleLink,
+      });
+      const result = await sendTwilioSms(supabase, booking.guest_phone as string, smsBody, 'guest');
+      if (result.ok) deliveryStatus = 'sent';
+      else console.warn('Host-proxy confirmation SMS failed:', result.error);
     }
 
     // ── SMS via Twilio ───────────────────────────────────────────────────────

@@ -17,6 +17,7 @@ import { SMS_BOOKING_CONSENT_CTA } from '../lib/smsCompliance';
 import { syncBookingToExternalCalendarsAsHost } from '../lib/writeCalendarEvent';
 import { ContactAutocomplete } from './ContactAutocomplete';
 import { HScrollHint } from './HScrollHint';
+import { toast } from './Toast';
 
 const BRAND = '#5864C6';
 
@@ -113,13 +114,17 @@ export function HostProxyBookingModal({
       setError('Name, phone, and a free time slot are required.');
       return;
     }
+    const e164 = normalizePhoneE164(phone.trim());
+    if (e164.replace(/\D/g, '').length < 10) {
+      setError('Enter a valid mobile number so we can text the confirmation.');
+      return;
+    }
     setError('');
     setSaving(true);
     const [y, m, d] = selectedDate.split('-').map(Number);
     const [sh, sm] = selectedSlot.split(':').map(Number);
     const startTime = new Date(y, m - 1, d, sh, sm);
     const endTime = new Date(startTime.getTime() + selectedService.duration_minutes * 60000);
-    const e164 = normalizePhoneE164(phone.trim());
     const { data, error: insertError } = await supabase.rpc('create_guest_booking', {
       p_payload: {
         service_id: selectedService.id,
@@ -153,29 +158,42 @@ export function HostProxyBookingModal({
     }
     const booking = data as Booking;
     void syncBookingToExternalCalendarsAsHost({ bookingId: booking.id, hostId: profile.id });
+    const { data: { session } } = await supabase.auth.getSession();
+    let smsOk = false;
+    let smsDetail = '';
     try {
-      const { data: rules } = await supabase
-        .from('reminder_rules')
-        .select('template_id, timing_offset_minutes')
-        .eq('host_id', profile.id)
-        .eq('is_active', true);
-      for (const rule of rules ?? []) {
-        if ((rule.timing_offset_minutes ?? 0) !== 0) continue;
-        fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-reminder`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            booking_id: booking.id,
-            template_id: rule.template_id,
-            action_token: booking.action_token,
-          }),
-        }).catch(() => {});
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-reminder`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token ?? import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          Apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
+          immediate_sms: true,
+          booking_id: booking.id,
+          action_token: booking.action_token,
+        }),
+      });
+      if (res.ok) {
+        smsOk = true;
+      } else {
+        const j = await res.json().catch(() => ({})) as { error?: string };
+        smsDetail = typeof j.error === 'string' ? j.error : `HTTP ${res.status}`;
       }
-    } catch { /* non-blocking */ }
+    } catch (e) {
+      smsDetail = e instanceof Error ? e.message : 'network error';
+    }
     setSaving(false);
+    if (smsOk) {
+      toast.success('Booked. Confirmation text sent.');
+    } else {
+      toast.error(
+        smsDetail
+          ? `Booked, but the confirmation text didn't send. ${smsDetail}`
+          : "Booked, but the confirmation text didn't send.",
+      );
+    }
     onSaved();
     onClose();
   }, [profile, selectedService, selectedDate, selectedSlot, guestName, phone, onSaved, onClose]);
