@@ -74,13 +74,6 @@ type DashTool = {
 
 const PRIMARY_TOOLS: DashTool[] = [
   {
-    to: documentsNewPath(null, 'quote'),
-    title: 'Quote-by-Text',
-    blurb: 'Price it, text it, they approve. Pay Now is their Zelle / Cash App / Venmo / PayPal.',
-    icon: FileText,
-    accent: 'bg-emerald-50 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300',
-  },
-  {
     to: '/dashboard/documents',
     title: 'Send Docs + Sign-by-Text',
     blurb: 'Quotes, NDAs, waivers, invoices — verify & sign by SMS when you need it.',

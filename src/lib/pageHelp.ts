@@ -57,10 +57,10 @@ const GUIDES: Record<string, PageHelpGuide> = {
   home: {
     title: 'Dashboard',
     purpose:
-      'Your home base — big tiles for Quote-by-Text, Send Docs + Sign-by-Text, Calendar, Booking, and NeverMiss, plus smaller shortcuts to the rest. Glance cards show what needs attention.',
+      'Your home base — big tiles for Send Docs + Sign-by-Text, Calendar, Booking, and NeverMiss, plus smaller shortcuts to the rest. Glance cards show what needs attention.',
     steps: [
       'Set your booking URL in Settings if you have not already (pinonit.com/yourname).',
-      'Use the large tiles for everyday work — Quote-by-Text is its own dashboard section and also a document type inside Send Docs. Calendar and Booking are both key tiles. Smaller tiles open extra tools.',
+      'Use the large tiles for everyday work. Quotes live inside Send Docs. Calendar and Booking are both key tiles. Smaller tiles open extra tools.',
       'When someone books or signs, it shows in the glance cards below.',
       'Tap How to anytime — or Ask if you have a specific question.',
     ],
@@ -187,7 +187,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
     purpose:
       'Text a price from the driveway. They open the quote; Pay Now uses your Zelle / Cash App / Venmo / PayPal link. Turn on signature & SMS verify only if you need Sign-by-Text. PinOnIt never handles money.',
     steps: [
-      'From the dashboard, tap the Quote-by-Text tile (or Send Docs → Send Quote / Document Type: Estimate / Quote). That opens the same compose screen as waivers and NDAs.',
+      'From Send Docs, tap Send Quote (or New document → Document Type: Estimate / Quote). That opens the same compose screen as waivers and NDAs.',
       'Browse contacts or type a phone; name is optional. Add line items, tax, optional note, and how many days the quote is good for (default 30).',
       'Choose Off, Full, or Deposit and paste your own pay link if they should see Pay Now on the quote.',
       'Send texts them the total and link. They view it — no signature unless you checked Require a signature & SMS verify (then they get a code and sign).',
