@@ -155,7 +155,7 @@ export function BookingPage() {
             <div className="min-w-0 flex-1">
               <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Book for someone</h2>
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                Someone called and wants a time now. Pick a free slot — same hours and buffers as your public page — and we text them the confirmation.
+                Someone called and wants a time now. Pick a free slot, and we text them the confirmation.
               </p>
             </div>
           </button>
