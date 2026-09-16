@@ -774,7 +774,7 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
   const tabs: { key: ServiceTab; label: string; icon: typeof Clock | null }[] = [
     { key: 'basic', label: 'Basic', icon: Settings2 },
     { key: 'scheduling', label: 'Schedule Buffer', icon: Clock },
-    { key: 'location', label: 'Location', icon: MapPin },
+    { key: 'location', label: 'Meeting Location', icon: MapPin },
     { key: 'reminders', label: 'Reminders', icon: Bell },
     { key: 'questions', label: 'Questions', icon: MessageSquare },
     { key: 'policy', label: 'Policy', icon: null },
