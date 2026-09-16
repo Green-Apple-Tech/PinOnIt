@@ -172,7 +172,7 @@ export function BookingPage() {
             <div className="min-w-0 flex-1">
               <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Book for someone</h2>
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                Use this when you already know the time they want. Book it here and we send it to them — they&apos;re on the calendar and they get reminders.
+                Use this when you already know the time they want. Book one visit, or check This repeats for weekly or Tue and Thu. We send it to them.
               </p>
             </div>
           </button>
@@ -197,7 +197,7 @@ export function BookingPage() {
             <div className="min-w-0 flex-1">
               <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Let customers book repeating visits</h2>
               <p className="text-sm text-slate-600 dark:text-slate-300 mb-2">
-                On Recurring jobs, turn this on for a booking type and pick weekly, every 2 weeks, monthly, or custom. They opt in when they book — you confirm the series.
+                On your public booking link they can check Want this to repeat? and pick weekly, every 2 weeks, or Tue and Thu. You confirm those requests here.
               </p>
               <span className="inline-flex items-center gap-1 text-sm font-semibold text-indigo-700 dark:text-indigo-300">
                 Set up repeating visits <ArrowRight className="h-4 w-4" />

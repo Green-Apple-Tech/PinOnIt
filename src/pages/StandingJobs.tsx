@@ -2,17 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { ArrowRight, Loader2, Plus, Repeat, Search, X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { ContactAutocomplete } from '../components/ContactAutocomplete';
 import { FrequencyPicker } from '../components/FrequencyPicker';
-import { GuestRepeatSetup } from '../components/GuestRepeatSetup';
+import { HostProxyBookingModal } from '../components/HostProxyBookingModal';
 import { QuestionLead } from '../components/QuestionLead';
 import { supabase } from '../lib/supabase';
-import { PHONE_HINT, PHONE_PLACEHOLDER, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
-import { SMS_BOOKING_CONSENT_CTA } from '../lib/smsCompliance';
 import {
   formatStandingFrequency,
   nextStandingVisit,
-  snapStartToStandingRule,
   standingComposePath,
   type StandingFrequency,
   type StandingJob,
@@ -165,24 +161,18 @@ export function RecurringJobsPanel() {
 
   return (
     <div>
-      {profile?.id && (
-        <div className="mb-6">
-          <GuestRepeatSetup hostId={profile.id} />
-        </div>
-      )}
-
       <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <QuestionLead
-          lead="Need to add a repeating customer yourself?"
-          body="New recurring job is for people you already see on a schedule — weekly lawn care, biweekly pool, monthly checkup. Set them up once and we fill the next 90 days on your calendar."
-          secondary="Customer requests from your booking page also show up here. Confirm to keep repeating, or Decline to keep only the first visit."
+          lead="Book someone once, or make it repeat"
+          body="Book for someone is the same form as on your Booking page. Add their first visit, then check This repeats if they come weekly or on Tuesday and Thursday."
+          secondary="When a customer asks to repeat from your public link, confirm or decline the extra visits here."
         />
         <button
           type="button"
           onClick={() => { setShowForm(true); setError(''); }}
           className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-brand-500 hover:bg-brand-600 rounded-xl shrink-0"
         >
-          <Plus className="h-4 w-4" /> New recurring job
+          <Plus className="h-4 w-4" /> Book someone
         </button>
       </div>
 
@@ -201,7 +191,7 @@ export function RecurringJobsPanel() {
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-slate-200 dark:border-slate-800 p-8 text-center text-sm text-slate-500">
           {jobs.length === 0
-            ? 'No recurring jobs yet. Set one up for a repeat customer — weekly lawn, biweekly pool, monthly service — and we\'ll handle the rest.'
+            ? 'No recurring jobs yet. Book someone and check This repeats, or wait for a customer to ask from your booking link.'
             : 'No customers match that search.'}
         </div>
       ) : (
@@ -277,10 +267,8 @@ export function RecurringJobsPanel() {
         </div>
       )}
 
-      {showForm && profile?.id && (
-        <StandingJobForm
-          hostId={profile.id}
-          services={services}
+      {showForm && (
+        <HostProxyBookingModal
           onClose={() => setShowForm(false)}
           onSaved={() => { setShowForm(false); void load(); }}
         />
@@ -303,194 +291,6 @@ export function RecurringJobsPanel() {
   );
 }
 
-function StandingJobForm({
-  hostId,
-  services,
-  onClose,
-  onSaved,
-}: {
-  hostId: string;
-  services: Service[];
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [address, setAddress] = useState('');
-  const [serviceId, setServiceId] = useState(services[0]?.id ?? '');
-  const [frequency, setFrequency] = useState<StandingFrequency>('weekly');
-  const [intervalDays, setIntervalDays] = useState(10);
-  const [weekdays, setWeekdays] = useState<number[]>(() => [new Date().getDay()]);
-  const [monthNth, setMonthNth] = useState<number | null>(null);
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [time, setTime] = useState('09:00');
-  const [price, setPrice] = useState('');
-  const [endType, setEndType] = useState<'never' | 'date' | 'count'>('never');
-  const [endDate, setEndDate] = useState('');
-  const [endCount, setEndCount] = useState(12);
-  const [smsConsent, setSmsConsent] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-
-  const svc = services.find((s) => s.id === serviceId);
-
-  const save = async () => {
-    if (!name.trim() || !date || !time) {
-      setError('Customer name, date, and time are required.');
-      return;
-    }
-    if (smsConsent && !phone.trim()) {
-      setError('A phone number is required to carry SMS consent across visits.');
-      return;
-    }
-    setSaving(true);
-    setError('');
-    const starts = snapStartToStandingRule(
-      new Date(`${date}T${time}:00`),
-      frequency,
-      frequency === 'custom' ? intervalDays : null,
-      weekdays,
-      frequency === 'monthly' ? monthNth : null,
-    );
-    const storedDays =
-      frequency === 'weekly' || frequency === 'biweekly' || (frequency === 'monthly' && monthNth != null)
-        ? weekdays
-        : null;
-    const e164 = phone.trim() ? normalizePhoneE164(phone.trim()) : null;
-    const notify: string[] = ['email'];
-    if (smsConsent && e164) notify.push('sms');
-    const { data, error: err } = await supabase.from('standing_jobs').insert({
-      host_id: hostId,
-      service_id: serviceId || null,
-      customer_name: name.trim(),
-      customer_email: email.trim() || null,
-      customer_phone: e164,
-      customer_address: address.trim() || null,
-      frequency,
-      interval_days: frequency === 'custom' ? Math.max(1, intervalDays) : null,
-      weekdays: storedDays,
-      month_nth: frequency === 'monthly' ? monthNth : null,
-      starts_at: starts.toISOString(),
-      duration_minutes: svc?.duration_minutes ?? 60,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York',
-      ends_at: endType === 'date' && endDate ? new Date(`${endDate}T23:59:59`).toISOString() : null,
-      occurrence_count: endType === 'count' ? Math.max(1, endCount) : null,
-      price_cents: Math.round((Number(price) || 0) * 100),
-      sms_consent: smsConsent,
-      notify_via: notify,
-      reminder_channels: smsConsent ? ['sms', 'email'] : ['email'],
-      origin: 'host',
-      status: 'active',
-    }).select('id').maybeSingle();
-    if (err || !data) {
-      setSaving(false);
-      setError(err?.message || 'Could not save this recurring job.');
-      return;
-    }
-    if (smsConsent && e164) {
-      await supabase.from('sms_optins').insert({
-        name: name.trim(),
-        phone: e164,
-        consent: true,
-        source: 'standing_job',
-        disclosure_text: SMS_BOOKING_CONSENT_CTA,
-        page_url: typeof window !== 'undefined' ? window.location.href : null,
-      });
-    }
-    const { error: extErr } = await supabase.rpc('extend_standing_jobs', { p_job_id: data.id });
-    setSaving(false);
-    if (extErr) {
-      setError(extErr.message || 'Saved the job, but could not create the visits yet.');
-      return;
-    }
-    onSaved();
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4" onClick={onClose}>
-      <div
-        className="bg-white dark:bg-slate-900 w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl p-5 max-h-[92vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between mb-4">
-          <h2 className="text-lg font-bold">New recurring job</h2>
-          <button type="button" onClick={onClose} className="p-1 text-slate-400"><X className="h-5 w-5" /></button>
-        </div>
-        <div className="space-y-3">
-          <ContactAutocomplete
-            hostId={hostId}
-            onSelect={(c) => {
-              setName(c.fullName || `${c.firstName} ${c.lastName}`.trim());
-              if (c.phone) setPhone(c.phone);
-              if (c.email) setEmail(c.email);
-            }}
-          />
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Customer name"
-            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm" />
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} onBlur={() => setPhone(blurFormatPhone(phone))}
-            placeholder={PHONE_PLACEHOLDER} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm" />
-          <p className="text-[11px] text-slate-400">{PHONE_HINT}</p>
-          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email (optional)"
-            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm" />
-          <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Service address (optional)"
-            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm" />
-          <select value={serviceId} onChange={(e) => setServiceId(e.target.value)}
-            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm">
-            <option value="">No service linked</option>
-            {services.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-          <FrequencyPicker
-            value={frequency}
-            intervalDays={intervalDays}
-            advanced
-            weekdays={weekdays}
-            monthNth={monthNth}
-            onWeekdaysChange={setWeekdays}
-            onMonthNthChange={setMonthNth}
-            onChange={(freq, days) => {
-              setFrequency(freq);
-              if (days != null) setIntervalDays(days);
-              if (freq !== 'monthly') setMonthNth(null);
-            }}
-            size="sm"
-          />
-          <div className="grid grid-cols-2 gap-2">
-            <input type="date" value={date} onChange={(e) => {
-              setDate(e.target.value);
-              const dow = new Date(`${e.target.value}T12:00:00`).getDay();
-              if (weekdays.length <= 1) setWeekdays([dow]);
-            }}
-              className="px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm" />
-            <input type="time" value={time} onChange={(e) => setTime(e.target.value)}
-              className="px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm" />
-          </div>
-          <input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Price per visit (optional)"
-            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm" />
-          <div className="flex gap-2 text-xs">
-            {(['never', 'date', 'count'] as const).map((k) => (
-              <button key={k} type="button" onClick={() => setEndType(k)}
-                className={`px-3 py-1.5 rounded-full font-semibold border ${endType === k ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'border-slate-200 dark:border-slate-700'}`}>
-                {k === 'never' ? 'No end' : k === 'date' ? 'End date' : 'Visit count'}
-              </button>
-            ))}
-          </div>
-          {endType === 'date' && <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm" />}
-          {endType === 'count' && <input type="number" min={1} value={endCount} onChange={(e) => setEndCount(Number(e.target.value) || 1)} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm" />}
-          <label className="flex items-start gap-2 text-sm">
-            <input type="checkbox" checked={smsConsent} onChange={(e) => setSmsConsent(e.target.checked)} className="mt-0.5" />
-            <span className="text-slate-600 dark:text-slate-300">{SMS_BOOKING_CONSENT_CTA} Consent is stored on this job and copied onto each visit — not asked again.</span>
-          </label>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <button type="button" onClick={() => void save()} disabled={saving}
-            className="w-full py-3 rounded-xl bg-brand-500 text-white font-semibold disabled:opacity-50">
-            {saving ? 'Saving…' : 'Create and fill the next 90 days'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function StandingJobDetail({
   job,

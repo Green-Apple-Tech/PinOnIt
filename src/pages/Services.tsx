@@ -22,7 +22,6 @@ import {
   Search, CreditCard, QrCode, Zap, Bell, ChevronDown, Shield, HelpCircle, PhoneCall, Repeat,
 } from 'lucide-react';
 import { QRModal } from '../components/QRModal';
-import { GuestRepeatSetup } from '../components/GuestRepeatSetup';
 import { ColorSwatchRow } from '../components/ColorSwatchRow';
 import { PaymentLinkFields } from '../components/PaymentLinkFields';
 import { revealTool } from '../lib/progressiveDisclosure';
@@ -810,11 +809,12 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
 
       {/* Pro upgrade banner removed — trial includes unlimited event types */}
 
-      {profile?.id && (
-        <div className="mb-6">
-          <GuestRepeatSetup hostId={profile.id} />
-        </div>
-      )}
+      <div className="mb-6 rounded-2xl border border-indigo-200 dark:border-indigo-800/60 bg-indigo-50/80 dark:bg-indigo-950/20 p-4">
+        <p className="text-sm font-bold text-gray-900 dark:text-white">Repeating visits</p>
+        <p className="mt-1 text-sm text-gray-600 dark:text-slate-300">
+          Customers can check Want this to repeat? on your public booking page and pick weekly, every 2 weeks, or specific days. You confirm those on Recurring jobs. To add a repeat customer yourself, use Book for someone.
+        </p>
+      </div>
 
       {/* Search bar */}
       {!loading && services.length > 0 && (

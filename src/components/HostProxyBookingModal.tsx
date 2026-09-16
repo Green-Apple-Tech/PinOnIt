@@ -10,13 +10,15 @@ import {
   formatSlotTime12,
   type PublicBusyPayload,
 } from '../lib/bookingSlots';
-import { mapCreateGuestBookingError } from '../lib/createGuestBooking';
+import { mapCreateGuestBookingError, repeatRequestPayload } from '../lib/createGuestBooking';
+import type { RecurrenceFrequency } from '../lib/types';
 import { isValidEmail } from '../lib/normalizeImportedContacts';
 import { PHONE_HINT, PHONE_PLACEHOLDER, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import { publicBusyWindow } from '../lib/queryWindow';
 import { SMS_BOOKING_CONSENT_CTA } from '../lib/smsCompliance';
 import { syncBookingToExternalCalendarsAsHost } from '../lib/writeCalendarEvent';
 import { ContactAutocomplete } from './ContactAutocomplete';
+import { FrequencyPicker } from './FrequencyPicker';
 import { HScrollHint } from './HScrollHint';
 import { toast } from './Toast';
 
@@ -54,6 +56,11 @@ export function HostProxyBookingModal({
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [repeats, setRepeats] = useState(false);
+  const [repeatFrequency, setRepeatFrequency] = useState<RecurrenceFrequency>('weekly');
+  const [repeatIntervalDays, setRepeatIntervalDays] = useState(10);
+  const [repeatWeekdays, setRepeatWeekdays] = useState<number[]>(() => [new Date().getDay()]);
+  const [repeatMonthNth, setRepeatMonthNth] = useState<number | null>(null);
 
   const selectedService = services.find((s) => s.id === serviceId) ?? null;
 
@@ -147,6 +154,13 @@ export function HostProxyBookingModal({
         notes: '',
         is_recurring: false,
         recurrence_frequency: null,
+        ...repeatRequestPayload({
+          requestRepeating: repeats,
+          frequency: repeatFrequency,
+          intervalDays: repeatIntervalDays,
+          weekdays: repeatWeekdays,
+          monthNth: repeatMonthNth,
+        }),
         reminder_channels: email ? ['sms', 'email'] : ['sms'],
         reminder_times: ['24hour', '1hour'],
         stripe_payment_id: null,
@@ -214,7 +228,7 @@ export function HostProxyBookingModal({
     }
     onSaved();
     onClose();
-  }, [profile, selectedService, selectedDate, selectedSlot, guestName, phone, guestEmail, onSaved, onClose]);
+  }, [profile, selectedService, selectedDate, selectedSlot, guestName, phone, guestEmail, repeats, repeatFrequency, repeatIntervalDays, repeatWeekdays, repeatMonthNth, onSaved, onClose]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
@@ -325,7 +339,12 @@ export function HostProxyBookingModal({
                       <button
                         key={dk}
                         type="button"
-                        onClick={() => { setSelectedDate(dk); setSelectedSlot(null); }}
+                        onClick={() => {
+                          setSelectedDate(dk);
+                          setSelectedSlot(null);
+                          const dow = new Date(`${dk}T12:00:00`).getDay();
+                          if (repeatWeekdays.length <= 1) setRepeatWeekdays([dow]);
+                        }}
                         className={`shrink-0 min-w-[4.5rem] px-2 py-2 rounded-xl border text-xs font-semibold ${
                           selectedDate === dk
                             ? 'text-white border-transparent'
@@ -359,6 +378,39 @@ export function HostProxyBookingModal({
                   </div>
                 )}
               </div>
+              <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-3 space-y-3">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={repeats}
+                    onChange={(e) => setRepeats(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600"
+                  />
+                  <span>
+                    <span className="block text-sm font-semibold text-slate-800 dark:text-slate-200">This repeats</span>
+                    <span className="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Same person, more visits. Pick weekly, every 2 weeks, or Tuesday and Thursday.
+                    </span>
+                  </span>
+                </label>
+                {repeats && (
+                  <FrequencyPicker
+                    value={repeatFrequency}
+                    intervalDays={repeatIntervalDays}
+                    advanced
+                    weekdays={repeatWeekdays}
+                    monthNth={repeatMonthNth}
+                    onWeekdaysChange={setRepeatWeekdays}
+                    onMonthNthChange={setRepeatMonthNth}
+                    onChange={(freq, days) => {
+                      setRepeatFrequency(freq);
+                      if (days != null) setRepeatIntervalDays(days);
+                      if (freq !== 'monthly') setRepeatMonthNth(null);
+                    }}
+                    size="sm"
+                  />
+                )}
+              </div>
               <button
                 type="button"
                 onClick={() => void handleSave()}
@@ -367,7 +419,7 @@ export function HostProxyBookingModal({
                 style={{ background: BRAND }}
               >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                {saving ? 'Booking…' : 'Confirm booking'}
+                {saving ? 'Booking…' : repeats ? 'Book and repeat' : 'Confirm booking'}
               </button>
             </>
           )}

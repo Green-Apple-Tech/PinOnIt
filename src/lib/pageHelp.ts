@@ -85,9 +85,9 @@ const GUIDES: Record<string, PageHelpGuide> = {
     purpose: 'Your public booking page, the services on it, and how clients find a time.',
     steps: [
       'Copy your pinonit.com/yourname link and send it to clients.',
-      'Or tap Book for someone when you already know the time — we send them the confirmation and reminders.',
+      'Or tap Book for someone when you already know the time — check This repeats if they come back on a schedule.',
       'Add or edit services with Manage (Settings → Event types).',
-      'Open Recurring jobs to turn on repeating for a booking type, or to add a customer you already see on a schedule.',
+      'Customers can check Want this to repeat? on your public link. Confirm those requests on Recurring jobs.',
     ],
     suggestedQuestions: ['Where are recurring jobs?', 'How do clients book me?', 'Where are standing jobs?'],
   },
@@ -106,10 +106,10 @@ const GUIDES: Record<string, PageHelpGuide> = {
   },
   'standing-jobs': {
     title: 'Recurring jobs',
-    purpose: 'Repeating visits you set up for a customer — weekly (including Tue & Fri), every 2 weeks, monthly (including first Monday), or a custom interval. Guests can also opt in to this cadence from your public page; you confirm before more visits are added.',
+    purpose: 'Repeating visits you book for a customer, or that they request from your public page. Weekly (including Tue & Thu), every 2 weeks, monthly, or a custom interval.',
     steps: [
-      'At the top, turn on repeating for a booking type and pick weekly, every 2 weeks, monthly, or custom. Guests can then opt in when they book.',
-      'Tap New recurring job. Pick the customer, service, cadence (days of the week or first/last weekday of the month), first date and time, and optional price.',
+      'Tap Book someone. Add the first visit, then check This repeats and pick the days. We fill about 90 days on the calendar.',
+      'On your public booking link, customers can check Want this to repeat? and pick weekly, every 2 weeks, or specific days.',
       'If they already agreed to SMS, check consent once. Later visits copy it and do not ask again.',
       'PinOnIt fills about 90 days of visits on the calendar. A daily job extends the window so reminders keep working.',
       'Skip one visit, reschedule one visit, or Change from this date forward to rewrite unstarted future rows.',
@@ -148,7 +148,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
     steps: [
       'Tap New event type (or edit an existing one).',
       'Set the name, duration, and in-person / video / phone.',
-      'At the top, turn on repeating visits for a booking type and pick weekly / every 2 weeks / monthly / custom. Guests opt in when they book.',
+      'Customers can request repeating visits on your public booking page. Confirm those on Recurring jobs.',
       'On Questions, turn on Require guest agreement if they must check a waiver, NDA, contract, approval, or other document before they book.',
       'Save, then share your booking link from Booking or the Dashboard.',
     ],

@@ -14,6 +14,10 @@ export type CreateGuestBookingPayload = {
   recurrence_frequency: string | null;
   parent_booking_id?: string | null;
   request_repeating?: boolean;
+  repeat_frequency?: 'weekly' | 'biweekly' | 'monthly' | 'custom' | null;
+  repeat_interval_days?: number | null;
+  repeat_weekdays?: number[] | null;
+  repeat_month_nth?: number | null;
   reminder_channels: string[];
   reminder_times: string[];
   stripe_payment_id: string | null;
@@ -25,6 +29,30 @@ export type CreateGuestBookingPayload = {
   sms_consent_disclosure?: string | null;
   sms_consent_page_url?: string | null;
 };
+
+export function repeatRequestPayload(opts: {
+  requestRepeating: boolean;
+  frequency: 'weekly' | 'biweekly' | 'monthly' | 'custom';
+  intervalDays?: number | null;
+  weekdays?: number[] | null;
+  monthNth?: number | null;
+}): Pick<
+  CreateGuestBookingPayload,
+  'request_repeating' | 'repeat_frequency' | 'repeat_interval_days' | 'repeat_weekdays' | 'repeat_month_nth'
+> {
+  if (!opts.requestRepeating) {
+    return { request_repeating: false };
+  }
+  const weeklyish = opts.frequency === 'weekly' || opts.frequency === 'biweekly';
+  const monthlyWeekday = opts.frequency === 'monthly' && opts.monthNth != null;
+  return {
+    request_repeating: true,
+    repeat_frequency: opts.frequency,
+    repeat_interval_days: opts.frequency === 'custom' ? Math.max(1, opts.intervalDays ?? 1) : null,
+    repeat_weekdays: weeklyish || monthlyWeekday ? (opts.weekdays ?? null) : null,
+    repeat_month_nth: opts.frequency === 'monthly' ? (opts.monthNth ?? null) : null,
+  };
+}
 
 export function mapCreateGuestBookingError(
   message?: string | null,

@@ -107,7 +107,7 @@ export const HELP_FAQS: HelpFaq[] = [
       'repeating bookings',
     ],
     answer:
-      'Open Booking → Recurring jobs (or Event types). At the top, turn on repeating for a booking type and pick weekly, every 2 weeks, monthly, or custom. Guests opt in when they book. You confirm new requests on Recurring jobs. Jobs you add yourself also live on that tab and roll 90 days on the calendar.',
+      'On your public booking link, customers can check Want this to repeat? and pick weekly, every 2 weeks, or specific days. You confirm those on Booking → Recurring jobs. To add a repeating customer yourself, use Book for someone (same form) and check This repeats.',
   },
   {
     id: 'standing-jobs',
@@ -119,7 +119,7 @@ export const HELP_FAQS: HelpFaq[] = [
       'weekly lawn',
     ],
     answer:
-      'Open Booking → Recurring jobs. Turn on repeating for a booking type at the top so guests can opt in. Or tap New recurring job to add a customer yourself — pick the service, cadence (weekly on Tue & Fri, first Monday of the month, or every N days), and first time. Visits fill the next 90 days. Guest opt-ins wait here for Confirm or Decline.',
+      'Open Booking → Recurring jobs and tap Book someone, or use Book for someone on the Booking page. Check This repeats and pick the days. Customer requests from your public page wait here for Confirm or Decline. Visits fill the next 90 days.'
   },
   {
     id: 'booking-link',

@@ -2,12 +2,10 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useSearchParams, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
-import type { Profile, Service, AvailabilitySlot, Booking, BookingQuestion, DateOverride, PaidBookingSettings, CalendarConflictSettings } from '../lib/types';
+import type { Profile, Service, AvailabilitySlot, Booking, BookingQuestion, DateOverride, PaidBookingSettings, CalendarConflictSettings, RecurrenceFrequency } from '../lib/types';
 import { LOCATION_TYPES, TIMEZONES, DEFAULT_CALENDAR_CONFLICT_SETTINGS } from '../lib/types';
 import {
   countRecurringSeriesOnSlot,
-  formatRecurrenceBadge,
-  formatRecurrenceHostLabel,
 } from '../lib/recurring';
 import { PHONE_PLACEHOLDER, PHONE_HINT, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import { normalizeExternalUrl } from '../lib/paymentLink';
@@ -26,7 +24,8 @@ import { syncBookingToExternalCalendars } from '../lib/writeCalendarEvent';
 import { stripePromise } from '../lib/stripe';
 import { StripeBookingCheckout } from '../components/StripeBookingCheckout';
 import { publicBusyWindow } from '../lib/queryWindow';
-import { mapCreateGuestBookingError } from '../lib/createGuestBooking';
+import { mapCreateGuestBookingError, repeatRequestPayload } from '../lib/createGuestBooking';
+import { FrequencyPicker } from '../components/FrequencyPicker';
 import {
   buildSlots,
   busyPeriodsFromEvents,
@@ -489,6 +488,10 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
   const [stripePaymentId, setStripePaymentId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<BookPaymentMethod>('stripe');
   const [requestRepeating, setRequestRepeating] = useState(false);
+  const [repeatFrequency, setRepeatFrequency] = useState<RecurrenceFrequency>('weekly');
+  const [repeatIntervalDays, setRepeatIntervalDays] = useState(10);
+  const [repeatWeekdays, setRepeatWeekdays] = useState<number[]>(() => [new Date().getDay()]);
+  const [repeatMonthNth, setRepeatMonthNth] = useState<number | null>(null);
 
   const timeRef = useRef<HTMLDivElement>(null);
   const dateStripRef = useRef<HTMLDivElement>(null);
@@ -511,6 +514,8 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
   const handleDateSelect = useCallback((dateKey: string) => {
     setSelectedDate(dateKey);
     setSelectedSlot(null);
+    const dow = new Date(`${dateKey}T12:00:00`).getDay();
+    setRepeatWeekdays((prev) => (prev.length <= 1 ? [dow] : prev));
     setTimeout(() => timeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
   }, []);
 
@@ -703,13 +708,6 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
 
   const isRecurringService = !!(selectedService?.is_recurring && selectedService.recurrence_frequency);
 
-  const recurringFrequencyLabel = selectedService?.recurrence_frequency
-    ? formatRecurrenceBadge(selectedService.recurrence_frequency, selectedService.recurrence_interval_days)
-    : '';
-  const recurringCadenceLabel = selectedService?.recurrence_frequency
-    ? formatRecurrenceHostLabel(selectedService.recurrence_frequency, selectedService.recurrence_interval_days)
-    : '';
-
   const displaySlotMap = useMemo(() => {
     if (!selectedService?.is_recurring) return slotMap;
     const maxClients = selectedService.max_recurring_clients ?? 1;
@@ -777,6 +775,8 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
     }
     setSelectedDate(null); setSelectedSlot(null); setAnswers({});
     setRequestRepeating(false);
+    setRepeatFrequency('weekly');
+    setRepeatMonthNth(null);
     setPaymentConfirmed(false);
     setPaymentError('');
     setClientSecret(null);
@@ -878,7 +878,13 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
         notes: guestNotes,
         is_recurring: false,
         recurrence_frequency: null,
-        request_repeating: isRecurringService && requestRepeating,
+        ...repeatRequestPayload({
+          requestRepeating,
+          frequency: repeatFrequency,
+          intervalDays: repeatIntervalDays,
+          weekdays: repeatWeekdays,
+          monthNth: repeatMonthNth,
+        }),
         reminder_channels: effectiveReminderChannels.length > 0 ? effectiveReminderChannels : ['email'],
         reminder_times: reminderTimes,
         stripe_payment_id: stripePaymentId,
@@ -988,7 +994,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
       } catch { /* non-blocking */ }
     }
     return data as Booking | null;
-  }, [selectedService, selectedDate, selectedSlot, host, guestName, guestEmail, phone, smsOptIn, whatsappOptIn, guestTimezone, guestNotes, guestAddress, questions, answers, singleUseLink, selectedChannels, selectedTimes, stripePaymentId, rescheduleSession, requestRepeating, isRecurringService]);
+  }, [selectedService, selectedDate, selectedSlot, host, guestName, guestEmail, phone, smsOptIn, whatsappOptIn, guestTimezone, guestNotes, guestAddress, questions, answers, singleUseLink, selectedChannels, selectedTimes, stripePaymentId, rescheduleSession, requestRepeating, repeatFrequency, repeatIntervalDays, repeatWeekdays, repeatMonthNth]);
 
   useEffect(() => {
     setClientSecret(null);
@@ -1570,11 +1576,11 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                     </div>
                   )}
                 </div>
-                {selectedDate && selectedSlot && isRecurringService && (
+                {selectedDate && selectedSlot && (
                   <div className="mt-4 p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
-                    <p className="text-sm font-semibold text-slate-800">This service can repeat {recurringCadenceLabel}</p>
+                    <p className="text-sm font-semibold text-slate-800">Want this to repeat?</p>
                     <p className="text-xs text-slate-500">
-                      You’re booking this first visit now. On the next step you can opt in to that same cadence — the host confirms before more visits are added.
+                      You can ask on the next step — weekly, every 2 weeks, or Tuesday and Thursday. The first visit is booked now; the host confirms before more visits are added.
                     </p>
                   </div>
                 )}
@@ -1605,26 +1611,37 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                   <span className="text-red-400 font-bold">*</span> Required fields
                 </p>
                 <div className="space-y-4">
-                  {isRecurringService && selectedService.recurrence_frequency && (
+                  {!isReschedule && (
                     <div className="p-4 rounded-xl border border-indigo-200 dark:border-indigo-800/50 bg-indigo-50/60 dark:bg-indigo-950/20 space-y-3">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Want this to repeat?</p>
-                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400">
-                          {recurringFrequencyLabel}
-                        </span>
-                      </div>
-                      <p className="text-sm text-slate-700 dark:text-slate-300">
-                        This first visit is booked now. If you opt in, the host confirms before more visits are added at this same cadence.
-                      </p>
                       <label className="flex items-start gap-2.5 cursor-pointer">
                         <input type="checkbox" checked={requestRepeating} onChange={(e) => setRequestRepeating(e.target.checked)}
                           className="mt-0.5 h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600 shrink-0" />
-                        <span className="text-sm text-slate-700 dark:text-slate-300">
-                          Yes — repeat this {recurringCadenceLabel}
-                          {isPaidService ? ' (payment to be arranged with host)' : ''}
+                        <span>
+                          <span className="block text-sm font-semibold text-slate-800 dark:text-slate-200">Want this to repeat?</span>
+                          <span className="block text-sm text-slate-600 dark:text-slate-300 mt-0.5">
+                            Optional. Check the box to pick weekly, every 2 weeks, or specific days. The host confirms before more visits are added.
+                            {isPaidService ? ' Payment for later visits is arranged with the host.' : ''}
+                          </span>
                         </span>
                       </label>
-                      {isPaidService && (
+                      {requestRepeating && (
+                        <FrequencyPicker
+                          value={repeatFrequency}
+                          intervalDays={repeatIntervalDays}
+                          advanced
+                          weekdays={repeatWeekdays}
+                          monthNth={repeatMonthNth}
+                          onWeekdaysChange={setRepeatWeekdays}
+                          onMonthNthChange={setRepeatMonthNth}
+                          onChange={(freq, days) => {
+                            setRepeatFrequency(freq);
+                            if (days != null) setRepeatIntervalDays(days);
+                            if (freq !== 'monthly') setRepeatMonthNth(null);
+                          }}
+                          size="sm"
+                        />
+                      )}
+                      {requestRepeating && isPaidService && (
                         <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
                           Recurring payment setup coming soon — host will be in touch to set up payment.
                         </div>
@@ -2022,7 +2039,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                       {guestEmail.trim() || phone || 'you'}
                     </span>
                   </p>
-                  {requestRepeating && isRecurringService && (
+                  {requestRepeating && (
                     <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
                       Your first visit is confirmed. The host will confirm before this repeats automatically.
                     </p>
