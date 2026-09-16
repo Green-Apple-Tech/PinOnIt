@@ -85,7 +85,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
     purpose: 'Your public booking page, the services on it, and how clients find a time.',
     steps: [
       'Copy your pinonit.com/yourname link and send it to clients.',
-      'Or tap Book for someone to pick a free slot and enter their name and phone — same hours and buffers as the public page.',
+      'Or tap Book for someone when you already know the time — we send them the confirmation and reminders.',
       'Add or edit services with Manage (Settings → Event types).',
       'Turn on “Let customers book repeating visits” on a service so guests can opt in to the cadence you set.',
     ],
