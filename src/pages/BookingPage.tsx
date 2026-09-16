@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import QRCode from 'qrcode';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import type { Service } from '../lib/types';
@@ -20,6 +21,32 @@ import {
 import { formatRecurrenceBadge } from '../lib/recurring';
 import { HostProxyBookingModal } from '../components/HostProxyBookingModal';
 import { RecurringJobsPanel } from './StandingJobs';
+import { QRModal } from '../components/QRModal';
+
+function BookingLinkQrThumb({ url, onOpen }: { url: string; onOpen: () => void }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    QRCode.toCanvas(canvas, url, {
+      width: 96,
+      margin: 1,
+      color: { dark: '#0f172a', light: '#ffffff' },
+    }).catch(() => {});
+  }, [url]);
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="shrink-0 rounded-xl border border-slate-200 dark:border-slate-700 bg-white p-1.5 hover:border-brand-300 dark:hover:border-brand-500/40 transition-colors"
+      aria-label="Open booking page QR code"
+    >
+      <canvas ref={canvasRef} className="block h-20 w-20" />
+    </button>
+  );
+}
 
 export function BookingPage() {
   const { profile } = useAuth();
@@ -29,6 +56,7 @@ export function BookingPage() {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [showProxyBook, setShowProxyBook] = useState(false);
+  const [showQr, setShowQr] = useState(false);
 
   useEffect(() => {
     if (!profile) return;
@@ -134,12 +162,22 @@ export function BookingPage() {
                     </a>
                   </div>
                 </div>
-                <Link
-                  to="/dashboard/settings?tab=event-types&new=one_on_one"
-                  className="mt-3 inline-flex items-center gap-1.5 px-3 py-2.5 text-sm font-semibold text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-500/40 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-500/10 transition-colors"
-                >
-                  <Plus className="h-4 w-4" /> Add new Booking Type
-                </Link>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <Link
+                    to="/dashboard/settings?tab=event-types&new=one_on_one"
+                    className="inline-flex items-center gap-1.5 px-3 py-2.5 text-sm font-semibold text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-500/40 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-500/10 transition-colors"
+                  >
+                    <Plus className="h-4 w-4" /> Add new Booking Type
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setShowQr(true)}
+                    disabled={!profile.slug}
+                    className="inline-flex items-center gap-1.5 px-3 py-2.5 text-sm font-semibold text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-500/40 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <QrCode className="h-4 w-4" /> QR code
+                  </button>
+                </div>
                 {!profile.slug && (
                   <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
                     Set up your custom link in{' '}
@@ -147,6 +185,9 @@ export function BookingPage() {
                   </p>
                 )}
               </div>
+              {profile.slug && (
+                <BookingLinkQrThumb url={bookingUrl} onOpen={() => setShowQr(true)} />
+              )}
             </div>
           </div>
 
@@ -300,6 +341,15 @@ export function BookingPage() {
         <HostProxyBookingModal
           onClose={() => setShowProxyBook(false)}
           onSaved={() => setShowProxyBook(false)}
+        />
+      )}
+
+      {showQr && profile.slug && (
+        <QRModal
+          url={bookingUrl}
+          title={`${profile.slug}'s booking page`}
+          variant="booking"
+          onClose={() => setShowQr(false)}
         />
       )}
     </main>
