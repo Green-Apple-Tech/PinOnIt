@@ -4,6 +4,7 @@ import { ArrowRight, Loader2, Plus, Repeat, Search, X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { ContactAutocomplete } from '../components/ContactAutocomplete';
 import { FrequencyPicker } from '../components/FrequencyPicker';
+import { GuestRepeatSetup } from '../components/GuestRepeatSetup';
 import { QuestionLead } from '../components/QuestionLead';
 import { supabase } from '../lib/supabase';
 import { PHONE_HINT, PHONE_PLACEHOLDER, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
@@ -164,11 +165,17 @@ export function RecurringJobsPanel() {
 
   return (
     <div>
+      {profile?.id && (
+        <div className="mb-6">
+          <GuestRepeatSetup hostId={profile.id} />
+        </div>
+      )}
+
       <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <QuestionLead
-          lead="Do you have customers who come back on a schedule?"
-          body="Recurring Jobs is for repeat visits — weekly lawn care, biweekly pool cleaning, monthly HVAC checkups. Set the customer up once, and PinOnIt automatically fills your calendar for the next 90 days. No need to book them again each time."
-          secondary="Skip a week, reschedule one visit, or change the rest of the series from a date forward. If a guest opts in on your public page, confirm here before more visits are added."
+          lead="Need to add a repeating customer yourself?"
+          body="New recurring job is for people you already see on a schedule — weekly lawn care, biweekly pool, monthly checkup. Set them up once and we fill the next 90 days on your calendar."
+          secondary="Customer requests from your booking page also show up here. Confirm to keep repeating, or Decline to keep only the first visit."
         />
         <button
           type="button"

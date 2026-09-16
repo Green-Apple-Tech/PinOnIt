@@ -22,6 +22,7 @@ import {
   Search, CreditCard, QrCode, Zap, Bell, ChevronDown, Shield, HelpCircle, PhoneCall, Repeat,
 } from 'lucide-react';
 import { QRModal } from '../components/QRModal';
+import { GuestRepeatSetup } from '../components/GuestRepeatSetup';
 import { ColorSwatchRow } from '../components/ColorSwatchRow';
 import { PaymentLinkFields } from '../components/PaymentLinkFields';
 import { revealTool } from '../lib/progressiveDisclosure';
@@ -809,29 +810,9 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
 
       {/* Pro upgrade banner removed — trial includes unlimited event types */}
 
-      {searchParams.get('highlight') === 'recurring' && (
-        <div
-          id="recurring-bookings-help"
-          className="mb-6 rounded-2xl border border-indigo-200 dark:border-indigo-800/60 bg-indigo-50/80 dark:bg-indigo-950/20 p-4 md:p-5"
-        >
-          <div className="flex items-start gap-3">
-            <div className="h-10 w-10 rounded-xl bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center shrink-0">
-              <Repeat className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-gray-900 dark:text-white">Let customers book repeating visits</p>
-              <p className="mt-1 text-sm text-gray-600 dark:text-slate-300">
-                This is the switch. Add a service or edit one below, then turn it on and pick weekly, every 2 weeks, monthly, or custom. Guests opt in to that cadence — they don’t pick a different frequency.
-              </p>
-              <button
-                type="button"
-                onClick={() => openNew()}
-                className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-full"
-              >
-                <Plus className="h-4 w-4" /> Add a service
-              </button>
-            </div>
-          </div>
+      {profile?.id && (
+        <div className="mb-6">
+          <GuestRepeatSetup hostId={profile.id} />
         </div>
       )}
 

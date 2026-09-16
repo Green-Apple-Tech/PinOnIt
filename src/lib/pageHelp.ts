@@ -87,7 +87,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
       'Copy your pinonit.com/yourname link and send it to clients.',
       'Or tap Book for someone when you already know the time — we send them the confirmation and reminders.',
       'Add or edit services with Manage (Settings → Event types).',
-      'Turn on “Let customers book repeating visits” on a service so guests can opt in to the cadence you set.',
+      'Open Recurring jobs to turn on repeating for a booking type, or to add a customer you already see on a schedule.',
     ],
     suggestedQuestions: ['Where are recurring jobs?', 'How do clients book me?', 'Where are standing jobs?'],
   },
@@ -108,6 +108,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
     title: 'Recurring jobs',
     purpose: 'Repeating visits you set up for a customer — weekly (including Tue & Fri), every 2 weeks, monthly (including first Monday), or a custom interval. Guests can also opt in to this cadence from your public page; you confirm before more visits are added.',
     steps: [
+      'At the top, turn on repeating for a booking type and pick weekly, every 2 weeks, monthly, or custom. Guests can then opt in when they book.',
       'Tap New recurring job. Pick the customer, service, cadence (days of the week or first/last weekday of the month), first date and time, and optional price.',
       'If they already agreed to SMS, check consent once. Later visits copy it and do not ask again.',
       'PinOnIt fills about 90 days of visits on the calendar. A daily job extends the window so reminders keep working.',
@@ -147,7 +148,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
     steps: [
       'Tap New event type (or edit an existing one).',
       'Set the name, duration, and in-person / video / phone.',
-      'For weekly lawn, biweekly pool, or monthly pest, turn on Let customers book repeating visits, then pick weekly / every 2 weeks / monthly / custom.',
+      'At the top, turn on repeating visits for a booking type and pick weekly / every 2 weeks / monthly / custom. Guests opt in when they book.',
       'On Questions, turn on Require guest agreement if they must check a waiver, NDA, contract, approval, or other document before they book.',
       'Save, then share your booking link from Booking or the Dashboard.',
     ],

@@ -107,7 +107,7 @@ export const HELP_FAQS: HelpFaq[] = [
       'repeating bookings',
     ],
     answer:
-      'Turn on “Let customers book repeating visits” on a service under Settings → Event types (also linked from Booking → Booking page). Guests opt in to the cadence you set. You confirm in Booking → Recurring jobs before more visits are added. Recurring jobs you create yourself also live on that tab and roll 90 days on the calendar.',
+      'Open Booking → Recurring jobs (or Event types). At the top, turn on repeating for a booking type and pick weekly, every 2 weeks, monthly, or custom. Guests opt in when they book. You confirm new requests on Recurring jobs. Jobs you add yourself also live on that tab and roll 90 days on the calendar.',
   },
   {
     id: 'standing-jobs',
@@ -119,7 +119,7 @@ export const HELP_FAQS: HelpFaq[] = [
       'weekly lawn',
     ],
     answer:
-      'Open Booking → Recurring jobs. Add the customer, service, cadence (weekly on Tue & Fri, first Monday of the month, or every N days), and first time. Visits are normal calendar bookings for the next 90 days. Skip or reschedule one visit without changing the series. Change from this date forward rewrites unstarted future visits. Guest opt-ins wait here for Confirm or Decline.',
+      'Open Booking → Recurring jobs. Turn on repeating for a booking type at the top so guests can opt in. Or tap New recurring job to add a customer yourself — pick the service, cadence (weekly on Tue & Fri, first Monday of the month, or every N days), and first time. Visits fill the next 90 days. Guest opt-ins wait here for Confirm or Decline.',
   },
   {
     id: 'booking-link',
