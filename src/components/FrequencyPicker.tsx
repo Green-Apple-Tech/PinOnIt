@@ -1,5 +1,6 @@
 import {
   MONTH_NTH_OPTIONS,
+  WEEKDAY_FULL,
   WEEKDAY_SHORT,
   type StandingFrequency,
 } from '../lib/standingJobs';
@@ -83,7 +84,13 @@ export function FrequencyPicker({
       )}
       {showDays && (
         <div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mb-1.5">Repeat on</p>
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">
+            Which days
+          </p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+            Tap every day they should visit — Tuesday and Thursday, for example.
+            {value === 'biweekly' ? ' This repeats every other week.' : ' Use Every 2 weeks if they skip a week.'}
+          </p>
           <div className="flex flex-wrap gap-1.5">
             {WEEKDAY_SHORT.map((label, dow) => {
               const on = selectedDays.includes(dow);
@@ -92,23 +99,32 @@ export function FrequencyPicker({
                   key={label}
                   type="button"
                   onClick={() => toggleDay(dow)}
-                  className={`w-9 h-9 rounded-full text-xs font-semibold border ${
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border min-h-[36px] ${
                     on
                       ? 'bg-indigo-600 border-indigo-600 text-white'
                       : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
                   }`}
                   aria-pressed={on}
-                  aria-label={label}
+                  aria-label={WEEKDAY_FULL[dow]}
                 >
-                  {label.slice(0, 2)}
+                  {label}
                 </button>
               );
             })}
           </div>
+          {selectedDays.length > 0 && (
+            <p className="mt-2 text-xs font-medium text-indigo-700 dark:text-indigo-300">
+              {value === 'biweekly' ? 'Every other week' : 'Every week'} on{' '}
+              {selectedDays.map((d) => WEEKDAY_FULL[d]).join(', ').replace(/, ([^,]+)$/, ' and $1')}
+            </p>
+          )}
         </div>
       )}
       {showMonthly && (
         <div className="space-y-2">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            For Tuesday and Thursday each week, choose Weekly (or Every 2 weeks) and tap those days.
+          </p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
