@@ -645,6 +645,7 @@ export function RemindersPage({
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">NeverMiss Reminders</h1>
             <div className="mt-3">
               <QuestionLead
+                introId="reminders"
                 lead="Tired of no-shows?"
                 body="NeverMiss automatically texts your customers before their appointment — no setup needed once it's turned on."
                 secondary="Remind yourself, your guests, and teammates — set defaults below, then open Advanced for coworkers and voice."

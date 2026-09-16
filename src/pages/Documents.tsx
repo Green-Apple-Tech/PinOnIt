@@ -118,6 +118,8 @@ export function DocumentsPage() {
           </h1>
           <div className="mt-3">
             <QuestionLead
+              introId="documents"
+              keepSecondary
               lead="Need something signed or paid, without email or an app?"
               body="Send a waiver, invoice, contract, quote, or receipt by text. Your customer taps the link, confirms or signs right from their phone, and you're done."
               secondary={`Quotes, invoices, NDAs, waivers — one place. No login for the recipient. ${HOLD_UP_COPY}`}
