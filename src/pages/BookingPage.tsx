@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import QRCode from 'qrcode';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import type { Service } from '../lib/types';
@@ -21,31 +20,6 @@ import { formatRecurrenceBadge } from '../lib/recurring';
 import { HostProxyBookingModal } from '../components/HostProxyBookingModal';
 import { RecurringJobsPanel } from './StandingJobs';
 import { QRModal } from '../components/QRModal';
-
-function BookingLinkQrThumb({ url, onOpen }: { url: string; onOpen: () => void }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    QRCode.toCanvas(canvas, url, {
-      width: 96,
-      margin: 1,
-      color: { dark: '#0f172a', light: '#ffffff' },
-    }).catch(() => {});
-  }, [url]);
-
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="shrink-0 rounded-xl border border-slate-200 dark:border-slate-700 bg-white p-1.5 hover:border-brand-300 dark:hover:border-brand-500/40 transition-colors"
-      aria-label="Open booking page QR code"
-    >
-      <canvas ref={canvasRef} className="block h-20 w-20" />
-    </button>
-  );
-}
 
 export function BookingPage() {
   const { profile } = useAuth();
@@ -184,9 +158,6 @@ export function BookingPage() {
                   </p>
                 )}
               </div>
-              {profile.slug && (
-                <BookingLinkQrThumb url={bookingUrl} onOpen={() => setShowQr(true)} />
-              )}
             </div>
           </div>
 
