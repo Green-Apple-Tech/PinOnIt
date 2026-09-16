@@ -177,7 +177,7 @@ export function BookingPage() {
               <div className="h-10 w-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center">
                 <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               </div>
-              <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 text-center">Availability</span>
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 text-center">Set your Availability</span>
             </Link>
             <Link
               to="/dashboard/qr-code"
