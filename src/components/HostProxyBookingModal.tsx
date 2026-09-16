@@ -16,6 +16,7 @@ import { publicBusyWindow } from '../lib/queryWindow';
 import { SMS_BOOKING_CONSENT_CTA } from '../lib/smsCompliance';
 import { syncBookingToExternalCalendarsAsHost } from '../lib/writeCalendarEvent';
 import { ContactAutocomplete } from './ContactAutocomplete';
+import { HScrollHint } from './HScrollHint';
 
 const BRAND = '#5864C6';
 
@@ -265,7 +266,8 @@ export function HostProxyBookingModal({
                 {dateKeys.length === 0 ? (
                   <p className="text-sm text-slate-500">No open times in the booking window. Check availability hours and calendar conflicts.</p>
                 ) : (
-                  <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+                  <HScrollHint alwaysShowArrows={dateKeys.length > 4}>
+                    <div className="flex gap-2 min-w-min">
                     {dateKeys.slice(0, 21).map((dk) => (
                       <button
                         key={dk}
@@ -281,7 +283,8 @@ export function HostProxyBookingModal({
                         {dateHeading(dk)}
                       </button>
                     ))}
-                  </div>
+                    </div>
+                  </HScrollHint>
                 )}
                 {selectedDate && (
                   <div className="mt-3 grid grid-cols-3 gap-2">
