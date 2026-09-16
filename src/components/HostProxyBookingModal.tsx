@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Check, Clock, Loader2, Phone, User, X } from 'lucide-react';
+import { Check, Clock, Loader2, Mail, Phone, User, X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import type { AvailabilitySlot, Booking, DateOverride, Profile, Service } from '../lib/types';
@@ -11,6 +11,7 @@ import {
   type PublicBusyPayload,
 } from '../lib/bookingSlots';
 import { mapCreateGuestBookingError } from '../lib/createGuestBooking';
+import { isValidEmail } from '../lib/normalizeImportedContacts';
 import { PHONE_HINT, PHONE_PLACEHOLDER, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import { publicBusyWindow } from '../lib/queryWindow';
 import { SMS_BOOKING_CONSENT_CTA } from '../lib/smsCompliance';
@@ -48,6 +49,7 @@ export function HostProxyBookingModal({
   const [guestName, setGuestName] = useState('');
   const [phone, setPhone] = useState('');
   const [phoneMasked, setPhoneMasked] = useState(false);
+  const [guestEmail, setGuestEmail] = useState('');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -119,6 +121,11 @@ export function HostProxyBookingModal({
       setError('Enter a valid mobile number so we can text the confirmation.');
       return;
     }
+    const email = guestEmail.trim();
+    if (email && !isValidEmail(email)) {
+      setError('Enter a valid email, or leave it blank to text only.');
+      return;
+    }
     setError('');
     setSaving(true);
     const [y, m, d] = selectedDate.split('-').map(Number);
@@ -130,17 +137,17 @@ export function HostProxyBookingModal({
         service_id: selectedService.id,
         host_id: profile.id,
         guest_name: guestName.trim(),
-        guest_email: null,
+        guest_email: email ? email.toLowerCase() : null,
         guest_phone: e164,
         guest_address: null,
-        notify_via: ['sms'],
+        notify_via: email ? ['sms', 'email'] : ['sms'],
         guest_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York',
         start_time: startTime.toISOString(),
         end_time: endTime.toISOString(),
         notes: '',
         is_recurring: false,
         recurrence_frequency: null,
-        reminder_channels: ['sms'],
+        reminder_channels: email ? ['sms', 'email'] : ['sms'],
         reminder_times: ['24hour', '1hour'],
         stripe_payment_id: null,
         created_by_host: true,
@@ -160,7 +167,8 @@ export function HostProxyBookingModal({
     void syncBookingToExternalCalendarsAsHost({ bookingId: booking.id, hostId: profile.id });
     const { data: { session } } = await supabase.auth.getSession();
     let smsOk = false;
-    let smsDetail = '';
+    let emailOk = false;
+    let detail = '';
     try {
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-reminder`, {
         method: 'POST',
@@ -171,32 +179,42 @@ export function HostProxyBookingModal({
         },
         body: JSON.stringify({
           immediate_sms: true,
+          immediate_confirm: true,
           booking_id: booking.id,
           action_token: booking.action_token,
         }),
       });
-      if (res.ok) {
-        smsOk = true;
-      } else {
-        const j = await res.json().catch(() => ({})) as { error?: string };
-        smsDetail = typeof j.error === 'string' ? j.error : `HTTP ${res.status}`;
+      const j = await res.json().catch(() => ({})) as {
+        sms?: boolean;
+        guest_email?: boolean;
+        error?: string;
+      };
+      smsOk = j.sms === true;
+      emailOk = j.guest_email === true;
+      if (!res.ok || (!smsOk && !emailOk)) {
+        detail = typeof j.error === 'string' ? j.error : `HTTP ${res.status}`;
       }
     } catch (e) {
-      smsDetail = e instanceof Error ? e.message : 'network error';
+      detail = e instanceof Error ? e.message : 'network error';
     }
     setSaving(false);
-    if (smsOk) {
-      toast.success('Booked. Confirmation text sent.');
+    const wantedEmail = Boolean(email);
+    if (smsOk && (!wantedEmail || emailOk)) {
+      toast.success(wantedEmail ? 'Booked. Confirmation text and email sent.' : 'Booked. Confirmation text sent.');
+    } else if (smsOk && wantedEmail && !emailOk) {
+      toast.warning("Booked. Text sent, but the confirmation email didn't send.");
+    } else if (!smsOk && emailOk) {
+      toast.warning("Booked. Email sent, but the confirmation text didn't send.");
     } else {
       toast.error(
-        smsDetail
-          ? `Booked, but the confirmation text didn't send. ${smsDetail}`
-          : "Booked, but the confirmation text didn't send.",
+        detail
+          ? `Booked, but the confirmation didn't send. ${detail}`
+          : "Booked, but the confirmation didn't send.",
       );
     }
     onSaved();
     onClose();
-  }, [profile, selectedService, selectedDate, selectedSlot, guestName, phone, onSaved, onClose]);
+  }, [profile, selectedService, selectedDate, selectedSlot, guestName, phone, guestEmail, onSaved, onClose]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
@@ -241,6 +259,7 @@ export function HostProxyBookingModal({
                       setPhone(c.phone);
                       setPhoneMasked(false);
                     }
+                    if (c.email) setGuestEmail(c.email);
                   }}
                 />
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5 mt-2">Name</label>
@@ -276,6 +295,22 @@ export function HostProxyBookingModal({
                   />
                 </div>
                 <p className="text-xs text-slate-400 mt-1">{PHONE_HINT} We&apos;ll text a confirmation and reminders at this number.</p>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Email <span className="font-normal normal-case tracking-normal">(optional)</span></label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <input
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    value={guestEmail}
+                    onChange={(e) => setGuestEmail(e.target.value)}
+                    placeholder="name@email.com"
+                    className="w-full pl-10 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+                  />
+                </div>
+                <p className="text-xs text-slate-400 mt-1">If you add one, we email the same confirmation. Picking a contact fills this in.</p>
               </div>
               <div>
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">

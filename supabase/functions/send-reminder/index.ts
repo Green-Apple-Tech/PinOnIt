@@ -1071,12 +1071,12 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json();
 
-    // ── Immediate confirmation SMS (Book for someone, and similar) ───────────
-    if (body.immediate_sms && body.booking_id) {
+    // ── Immediate confirmation (Book for someone: SMS + email + host copy) ──
+    if ((body.immediate_sms || body.immediate_confirm) && body.booking_id) {
       const actorId = await hostIdFromJwt(req, supabase);
       const { data: booking } = await supabase
         .from('bookings')
-        .select('id, host_id, guest_name, guest_phone, notify_via, created_by_host, start_time, guest_timezone, action_token, meet_link, status, services(name), profiles(full_name, slug, timezone)')
+        .select('id, host_id, guest_name, guest_phone, guest_email, notify_via, created_by_host, start_time, guest_timezone, action_token, meet_link, status, services(name, duration_minutes), profiles(full_name, slug, timezone, email, notification_email, slack_webhook_url)')
         .eq('id', body.booking_id)
         .maybeSingle();
       if (!booking) {
@@ -1094,12 +1094,10 @@ Deno.serve(async (req: Request) => {
       if (!(await hostPlanIsActive(supabase, booking.host_id as string))) {
         return jsonResponse({ error: 'Host account inactive' }, 403);
       }
-      const phone = (booking.guest_phone as string | null)?.trim();
-      if (!phone) {
-        return jsonResponse({ error: 'No guest phone on this booking' }, 400);
-      }
-      if (!bookingAllowsGuestSms(booking) && !booking.created_by_host) {
-        return jsonResponse({ error: 'Guest did not opt in to SMS' }, 400);
+      const phone = (booking.guest_phone as string | null)?.trim() || '';
+      const guestEmail = (booking.guest_email as string | null)?.trim() || '';
+      if (!phone && !guestEmail) {
+        return jsonResponse({ error: 'No guest phone or email on this booking' }, 400);
       }
       const hostProfile = booking.profiles as Record<string, unknown> | null;
       const service = booking.services as Record<string, unknown> | null;
@@ -1108,20 +1106,90 @@ Deno.serve(async (req: Request) => {
         || 'UTC';
       const { date, time } = formatBookingWhen(booking.start_time as string, tz);
       const rescheduleLink = await ensureRescheduleLink(supabase, booking.id);
-      const msg = defaultGuestConfirmationSms({
-        guestName: (booking.guest_name as string) || 'there',
-        hostName: (hostProfile?.full_name as string) || 'your host',
-        serviceName: (service?.name as string) || 'an appointment',
+      const guestName = (booking.guest_name as string) || 'there';
+      const hostName = (hostProfile?.full_name as string) || 'your host';
+      const serviceName = (service?.name as string) || 'an appointment';
+      const duration = `${service?.duration_minutes ?? 30} min`;
+      const guestMsg = defaultGuestConfirmationSms({
+        guestName,
+        hostName,
+        serviceName,
         date,
         time,
         meetLink: booking.meet_link as string | null,
         rescheduleLink,
       });
-      const result = await sendTwilioSms(supabase, phone, msg, 'guest');
-      if (!result.ok) {
-        return jsonResponse({ error: result.error || 'SMS failed' }, 502);
+
+      let smsOk = false;
+      let guestEmailOk = false;
+      let hostEmailOk = false;
+      const errors: string[] = [];
+
+      if (phone) {
+        if (!bookingAllowsGuestSms(booking) && !booking.created_by_host) {
+          errors.push('Guest did not opt in to SMS');
+        } else {
+          const result = await sendTwilioSms(supabase, phone, guestMsg, 'guest');
+          if (result.ok) smsOk = true;
+          else errors.push(result.error || 'SMS failed');
+        }
       }
-      return jsonResponse({ success: true });
+
+      const resendKey = Deno.env.get('RESEND_API_KEY');
+      if (guestEmail) {
+        if (!resendKey) {
+          errors.push('Email is not configured');
+        } else {
+          guestEmailOk = await sendResendEmail(
+            [guestEmail],
+            `You're booked: ${serviceName} with ${hostName}`,
+            guestMsg,
+            resendKey,
+          );
+          if (!guestEmailOk) errors.push('Guest email failed');
+        }
+      }
+
+      if (resendKey) {
+        const recipients = hostEmailRecipients(hostProfile ?? {});
+        if (recipients.length > 0) {
+          const hostBody = [
+            'You have a new booking.',
+            '',
+            `Guest: ${guestName}`,
+            guestEmail ? `Email: ${guestEmail}` : '',
+            phone ? `Phone: ${phone}` : '',
+            `Service: ${serviceName}`,
+            `When: ${date} at ${time} (${tz})`,
+            `Duration: ${duration}`,
+          ].filter(Boolean).join('\n');
+          hostEmailOk = await sendResendEmail(
+            recipients,
+            `New booking: ${serviceName} with ${guestName}`,
+            hostBody,
+            resendKey,
+          );
+          if (!hostEmailOk) errors.push('Host email failed');
+        }
+      }
+
+      await notifySlackWebhook(hostProfile?.slack_webhook_url, guestMsg);
+
+      if (!smsOk && !guestEmailOk && !hostEmailOk) {
+        return jsonResponse({
+          error: errors.join('; ') || 'Confirmation failed',
+          sms: false,
+          guest_email: false,
+          host_email: false,
+        }, 502);
+      }
+      return jsonResponse({
+        success: true,
+        sms: smsOk,
+        guest_email: guestEmailOk,
+        host_email: hostEmailOk,
+        error: errors[0],
+      });
     }
 
     // ── Recurring cancellation / decline notice ─────────────────────────────
