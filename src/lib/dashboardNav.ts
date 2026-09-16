@@ -36,7 +36,7 @@ export type DashboardNavItem = {
   docsCombined?: boolean;
 };
 
-/** Primary sidebar — product areas only (Settings is appended after More Tools). */
+/** Primary sidebar — product areas only. Secondary tools live on Dashboard tiles. */
 export const SIMPLE_PRIMARY_NAV: MoreToolsNavItem[] = [
   { label: 'Dashboard', icon: LayoutGrid, path: '/dashboard' },
   {
@@ -62,7 +62,7 @@ export const SETTINGS_NAV_ITEM: MoreToolsNavItem = {
   path: '/dashboard/settings',
 };
 
-/** Secondary tools under More Tools (QR + Signature live here). */
+/** Secondary tools (QR, signature, paid, group). Shown as Dashboard tiles; inlined in advanced sidebar. */
 export const MORE_TOOLS_NAV: MoreToolsNavItem[] = [
   {
     label: 'Group Scheduling',
@@ -152,5 +152,5 @@ export function buildSidebarNav(
       settings,
     };
   }
-  return { primary, moreTools: MORE_TOOLS_NAV, settings };
+  return { primary, moreTools: [], settings };
 }

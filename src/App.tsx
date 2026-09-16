@@ -58,9 +58,6 @@ const QRCreatorPage = lazy(() =>
 const QuoteViewPage = lazy(() =>
   import('./pages/QuoteView').then((m) => ({ default: m.QuoteViewPage })),
 );
-const MoreToolsPage = lazy(() =>
-  import('./pages/MoreTools').then((m) => ({ default: m.MoreToolsPage })),
-);
 const BookingPage = lazy(() =>
   import('./pages/BookingPage').then((m) => ({ default: m.BookingPage })),
 );
@@ -240,7 +237,7 @@ function App() {
               <Route path="settings" element={<SettingsPage />} />
               <Route path="billing" element={<Navigate to="/dashboard/settings?tab=billing" replace />} />
               <Route path="analytics" element={<Navigate to="/dashboard/settings?tab=analytics" replace />} />
-              <Route path="more-tools" element={<MoreToolsPage />} />
+              <Route path="more-tools" element={<Navigate to="/dashboard" replace />} />
               <Route path="signature" element={<EmailSignaturePage />} />
               <Route path="paid-booking" element={<PaidBookingPage />} />
               <Route path="group-scheduling" element={<GroupSchedulingPage />} />

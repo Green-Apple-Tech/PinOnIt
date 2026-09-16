@@ -74,20 +74,15 @@ describe('buildSidebarNav', () => {
     expect(primary.some((i) => i.docsCombined)).toBe(true);
     expect(primary.find((i) => i.docsCombined)?.children).toBeUndefined();
     expect(primary.some((i) => i.label === 'Quote-by-Text')).toBe(false);
-    expect(moreTools.map((i) => i.label)).toEqual([
-      'Group Scheduling',
-      'Paid Booking',
-      'QR Codes',
-      'Signature Creator',
-    ]);
+    expect(moreTools).toEqual([]);
     expect(settings.label).toBe('Settings');
     expect(moreTools.some((i) => i.label === 'Doc Center')).toBe(false);
   });
 
-  it('keeps paid booking under More Tools in simple mode even after it is used', () => {
+  it('keeps paid booking off the sidebar in simple mode even after it is used', () => {
     const { primary, moreTools } = buildSidebarNav('simple');
     expect(primary.map((i) => i.label)).not.toContain('Paid Booking');
-    expect(moreTools.some((i) => i.label === 'Paid Booking')).toBe(true);
+    expect(moreTools).toEqual([]);
   });
 
   it('flattens every tool in advanced mode', () => {

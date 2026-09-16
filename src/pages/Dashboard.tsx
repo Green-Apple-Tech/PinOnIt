@@ -11,12 +11,10 @@ import { syncStripeSubscription } from '../lib/stripe';
 import { effectivePlan, isActivePlan } from '../lib/plan';
 import { SMS_OPT_OUT_FOOTER } from '../lib/smsOptOut';
 import type { Service } from '../lib/types';
-import { LogOut, X, Check, Sun, Moon, Link2, Video, Phone, MapPin, ChevronRight, Loader2, Plus, ChevronLeft, LayoutGrid, Menu, Sparkles, Wrench as Tool, ChevronDown } from 'lucide-react';
+import { LogOut, X, Check, Sun, Moon, Link2, Video, Phone, MapPin, ChevronRight, Loader2, Plus, ChevronLeft, LayoutGrid, Menu, Sparkles } from 'lucide-react';
 import {
-  MORE_TOOLS_HUB_PATH,
   buildSidebarNav,
   isDashboardNavActive,
-  isMoreToolsSectionActive,
 } from '../lib/dashboardNav';
 import { DashboardHome, type DashboardBookingGlance } from '../components/DashboardHome';
 import { parseRevealedTools, revealTool } from '../lib/progressiveDisclosure';
@@ -348,19 +346,11 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [moreToolsOpen, setMoreToolsOpen] = useState(() =>
-    isMoreToolsSectionActive(location.pathname, location.search, location.hash),
-  );
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const planName = effectivePlan(subscription, profile);
   const [checklistDismissed, setChecklistDismissed] = useState(() => storageGet('onboarding_checklist_dismissed') === '1');
   const [liveSlug, setLiveSlug] = useState<string | null>(null);
-
-  // Expand while inside More Tools; collapse automatically when you leave that section.
-  useEffect(() => {
-    setMoreToolsOpen(isMoreToolsSectionActive(location.pathname, location.search, location.hash));
-  }, [location.pathname, location.search, location.hash]);
 
   const isCalendlyOAuthSuccessReturn = () => {
     const params = new URLSearchParams(window.location.search);
@@ -726,7 +716,7 @@ export function Dashboard() {
   };
 
   const uiMode = profile?.ui_mode === 'advanced' ? 'advanced' : 'simple';
-  const { primary: primaryNav, moreTools: moreToolsNav, settings: settingsNav } = buildSidebarNav(uiMode);
+  const { primary: primaryNav, settings: settingsNav } = buildSidebarNav(uiMode);
   const mapNav = (item: (typeof primaryNav)[number]): NavItem => ({
     to: item.to,
     icon: item.icon,
@@ -737,20 +727,6 @@ export function Dashboard() {
   });
   const mainNavItems: NavItem[] = [
     ...primaryNav.map(mapNav),
-    ...(moreToolsNav.length
-      ? [{
-          to: MORE_TOOLS_HUB_PATH,
-          icon: Tool,
-          label: 'More Tools',
-          children: moreToolsNav.map((item) => ({
-            to: item.path,
-            icon: item.icon,
-            label: item.label,
-            badge: item.badge,
-            docsCombined: item.docsCombined,
-          })),
-        } satisfies NavItem]
-      : []),
     {
       to: settingsNav.to,
       icon: settingsNav.icon,
@@ -762,13 +738,7 @@ export function Dashboard() {
   const isDashboardHome = location.pathname === '/dashboard';
   const isActive = (item: NavItem | string) => {
     if (typeof item === 'string') {
-      if (item === MORE_TOOLS_HUB_PATH) {
-        return location.pathname === MORE_TOOLS_HUB_PATH;
-      }
       return isDashboardNavActive({ to: item, label: '' }, location.pathname, location.search, location.hash);
-    }
-    if (item.to === MORE_TOOLS_HUB_PATH) {
-      return location.pathname === MORE_TOOLS_HUB_PATH;
     }
     return isDashboardNavActive(item, location.pathname, location.search, location.hash);
   };
@@ -826,57 +796,6 @@ export function Dashboard() {
     </Link>
   );
 
-  const renderMoreToolsGroup = (
-    item: NavItem,
-    opts?: { onNavigate?: () => void },
-  ) => {
-    const parentActive = isActive(item);
-    const parentPadding = parentActive ? 'pl-[calc(0.75rem-3px)] pr-1' : 'pl-3 pr-1';
-    return (
-      <div key={item.to} className="space-y-0.5">
-        <div
-          className={`flex items-center rounded-lg text-sm transition-colors ${parentPadding} ${
-            parentActive
-              ? 'bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400 font-semibold border-l-[3px] border-brand-600 dark:border-brand-500 rounded-l-none'
-              : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-900'
-          }`}
-        >
-          <Link
-            to={item.to}
-            onClick={() => {
-              setMoreToolsOpen(true);
-              opts?.onNavigate?.();
-            }}
-            className="flex flex-1 items-center gap-3 py-2.5 min-w-0"
-          >
-            {item.icon ? <item.icon className="h-[18px] w-[18px] shrink-0" /> : null}
-            <span className="truncate">{item.label}</span>
-          </Link>
-          <button
-            type="button"
-            aria-expanded={moreToolsOpen}
-            aria-label={moreToolsOpen ? 'Collapse More Tools' : 'Expand More Tools'}
-            onClick={() => setMoreToolsOpen((open) => !open)}
-            className="shrink-0 p-2 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors"
-          >
-            <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${moreToolsOpen ? '' : '-rotate-90'}`} />
-          </button>
-        </div>
-        <div
-          className={`grid transition-[grid-template-rows] duration-200 ease-out ${
-            moreToolsOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
-          }`}
-        >
-          <div className="overflow-hidden min-h-0">
-            <div className="ml-3 pl-2 border-l border-gray-200 dark:border-slate-800 space-y-0.5">
-              {item.children?.map((child) => renderNavLink(child, { ...opts, nested: true }))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   const renderNestedNavGroup = (
     item: NavItem,
     opts?: { collapsed?: boolean; onNavigate?: () => void },
@@ -890,9 +809,6 @@ export function Dashboard() {
   );
 
   const renderNavItem = (item: NavItem, opts?: { collapsed?: boolean; onNavigate?: () => void }) => {
-    if (item.to === MORE_TOOLS_HUB_PATH && item.children?.length && !opts?.collapsed) {
-      return renderMoreToolsGroup(item, opts);
-    }
     if (item.children?.length && !opts?.collapsed) {
       return renderNestedNavGroup(item, opts);
     }

@@ -50,7 +50,6 @@ function keyFromLocation(pathname: string, search: string, hash: string): string
   if (pathname.startsWith('/dashboard/contacts')) return 'contacts';
   if (pathname.startsWith('/dashboard/signature')) return 'signature';
   if (pathname.startsWith('/dashboard/qr')) return 'qr';
-  if (pathname.startsWith('/dashboard/more-tools')) return 'more-tools';
   return 'home';
 }
 
@@ -341,16 +340,6 @@ const GUIDES: Record<string, PageHelpGuide> = {
       'Use Documents for NDAs, waivers, contracts, invoices, quotes, and receipts.',
       'Status updates when the recipient views or signs.',
       'If a message failed, check the phone/email and try again.',
-    ],
-  },
-  'more-tools': {
-    title: 'All Tools',
-    purpose:
-      'Every PinOnIt tool in one place. The three main ones (Bookings, Send Docs + Sign-by-Text, NeverMiss) are featured; the rest are compact shortcuts.',
-    steps: [
-      'Use the three large cards for everyday work.',
-      'Open a smaller card for QR, signature, paid booking, or group scheduling.',
-      'Settings still holds Docs templates, branding, and account options.',
     ],
   },
 };
