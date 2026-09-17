@@ -638,6 +638,21 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
       const saved = data as Service;
       if (editingId === 'new') {
         setServices((prev) => [...prev, saved]);
+        const extras = reminders.filter((r) =>
+          r.is_active && !isLockedReminder(r.timing_offset_minutes, r.channel as ReminderChannelKey)
+        );
+        if (extras.length > 0) {
+          await supabase.from('service_reminders').insert(
+            extras.map((r) => ({
+              service_id: saved.id,
+              host_id: profile.id,
+              channel: r.channel,
+              timing_offset_minutes: r.timing_offset_minutes,
+              label: r.label,
+              is_active: true,
+            })),
+          );
+        }
       } else if (editingId) {
         setServices((prev) => prev.map((s) => (s.id === editingId ? saved : s)));
       }
@@ -689,8 +704,26 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
     || reminders.some((r) => r.timing_offset_minutes === offset && r.channel === channel && r.is_active);
 
   const handleToggleGridReminder = async (offset: number, channel: ReminderChannelKey) => {
-    if (!profile || !editingId || editingId === 'new') return;
+    if (!editingId) return;
     if (isLockedReminder(offset, channel)) return;
+    if (editingId === 'new') {
+      setReminders((prev) => {
+        const on = prev.some((r) => r.timing_offset_minutes === offset && r.channel === channel && r.is_active);
+        if (on) return prev.filter((r) => !(r.timing_offset_minutes === offset && r.channel === channel));
+        return [...prev, {
+          id: `pending:${offset}:${channel}`,
+          host_id: profile?.id ?? '',
+          service_id: '',
+          channel,
+          timing_offset_minutes: offset,
+          label: reminderGridLabel(offset),
+          is_active: true,
+          created_at: new Date().toISOString(),
+        }];
+      });
+      return;
+    }
+    if (!profile) return;
     const key = `${offset}:${channel}`;
     setSavingReminder(key);
     try {
@@ -719,6 +752,10 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
   };
 
   const handleDeleteReminder = async (rId: string) => {
+    if (rId.startsWith('pending:')) {
+      setReminders((prev) => prev.filter((r) => r.id !== rId));
+      return;
+    }
     await supabase.from('service_reminders').delete().eq('id', rId);
     setReminders((prev) => prev.filter((r) => r.id !== rId));
   };
@@ -1431,54 +1468,45 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
             {/* ── REMINDERS ── */}
             {activeTab === 'reminders' && (
               <div className="space-y-4">
-                {editingId === 'new' ? (
-                  <div className="flex items-start gap-2.5 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-xl">
-                    <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
-                    <p className="text-base text-amber-700 dark:text-amber-400">Save the event type first, then reopen to turn reminders on.</p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                        Active reminders
-                        <span className="ml-2 px-1.5 py-0.5 text-white rounded-full text-[10px]" style={{ backgroundColor: '#5864C6' }}>
-                          {REMINDER_GRID_SLOTS.reduce(
-                            (n, slot) => n + REMINDER_GRID_CHANNELS.filter((ch) => reminderIsOn(slot.offset, ch.key)).length,
-                            0,
-                          )}
-                        </span>
-                      </p>
-                    </div>
-                    <p className="text-sm text-gray-500 dark:text-slate-400 leading-relaxed">
-                      Tap a box to send that reminder for this event type. The 1 hour email — and text if they opted in with a phone — stays on.
-                    </p>
-                    <ReminderChannelGrid
-                      isChecked={reminderIsOn}
-                      onToggle={handleToggleGridReminder}
-                      savingKey={savingReminder}
-                      locked={isLockedReminder}
-                    />
-                    {reminders.filter((r) => r.is_active && !GRID_OFFSETS.has(r.timing_offset_minutes)).length > 0 && (
-                      <div className="space-y-2 pt-1">
-                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Custom timing</p>
-                        {reminders.filter((r) => r.is_active && !GRID_OFFSETS.has(r.timing_offset_minutes)).map((r) => (
-                          <div key={r.id} className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 min-h-[56px]">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-gray-900 dark:text-white">{r.label}</p>
-                              <p className="text-xs text-gray-500 dark:text-slate-400 capitalize">{r.channel}</p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteReminder(r.id)}
-                              className="p-2 text-gray-300 dark:text-slate-600 hover:text-red-500 transition-colors shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        ))}
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                    Active reminders
+                    <span className="ml-2 px-1.5 py-0.5 text-white rounded-full text-[10px]" style={{ backgroundColor: '#5864C6' }}>
+                      {REMINDER_GRID_SLOTS.reduce(
+                        (n, slot) => n + REMINDER_GRID_CHANNELS.filter((ch) => reminderIsOn(slot.offset, ch.key)).length,
+                        0,
+                      )}
+                    </span>
+                  </p>
+                </div>
+                <p className="text-sm text-gray-500 dark:text-slate-400 leading-relaxed">
+                  Tap a box to send that reminder for this event type. The 1 hour email — and text if they opted in with a phone — stays on.
+                </p>
+                <ReminderChannelGrid
+                  isChecked={reminderIsOn}
+                  onToggle={handleToggleGridReminder}
+                  savingKey={savingReminder}
+                  locked={isLockedReminder}
+                />
+                {reminders.filter((r) => r.is_active && !GRID_OFFSETS.has(r.timing_offset_minutes)).length > 0 && (
+                  <div className="space-y-2 pt-1">
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Custom timing</p>
+                    {reminders.filter((r) => r.is_active && !GRID_OFFSETS.has(r.timing_offset_minutes)).map((r) => (
+                      <div key={r.id} className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 min-h-[56px]">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white">{r.label}</p>
+                          <p className="text-xs text-gray-500 dark:text-slate-400 capitalize">{r.channel}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteReminder(r.id)}
+                          className="p-2 text-gray-300 dark:text-slate-600 hover:text-red-500 transition-colors shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
-                    )}
-                  </>
+                    ))}
+                  </div>
                 )}
               </div>
             )}
