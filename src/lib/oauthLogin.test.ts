@@ -43,6 +43,12 @@ describe('isIosIsolatedWebView', () => {
     expect(isIosIsolatedWebView(chrome)).toBe(false);
   });
 
+  it('still allows Chrome on iOS even when the Safari token is missing', () => {
+    const chromeNoSafari =
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0.6723.67 Mobile/15E148';
+    expect(isIosIsolatedWebView(chromeNoSafari)).toBe(false);
+  });
+
   it('flags the home-screen app and in-app browsers that bounce to Safari', () => {
     expect(isIosIsolatedWebView(safari, true)).toBe(true);
     expect(isIosIsolatedWebView(gsa)).toBe(true);

@@ -46,6 +46,10 @@ export function isIosIsolatedWebView(ua: string, standalone = false): boolean {
   ) {
     return true;
   }
+  // Chrome (CriOS), Firefox (FxiOS), Edge (EdgiOS), Opera (OPiOS) are full browsers on iOS
+  // that can complete OAuth in-place. Only flag as isolated when it's a bare WebKit view
+  // with no recognized browser token AND no Safari marker.
+  if (/CriOS|FxiOS|EdgiOS|OPiOS/i.test(ua)) return false;
   return /AppleWebKit/i.test(ua) && !/Safari/i.test(ua);
 }
 
