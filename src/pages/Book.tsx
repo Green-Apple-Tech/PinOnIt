@@ -17,7 +17,7 @@ import {
 import { SMS_BOOKING_CONSENT_CTA } from '../lib/smsCompliance';
 import { resolveTermsText } from '../lib/terms';
 import { resolveBookingAgreement } from '../lib/bookingAgreement';
-import { fillDocumentPlaceholders } from '../lib/documents';
+import { fillDocumentPlaceholders, documentFilePublicUrl } from '../lib/documents';
 import { bookableEventTypes, serviceMatchesTypeToken } from '../lib/eventTypes';
 import { isUnusedSingleUseExpired } from '../lib/singleUseLinks';
 import { syncBookingToExternalCalendars } from '../lib/writeCalendarEvent';
@@ -1187,7 +1187,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
     : '';
   const hasRequiredQuestions = questions.some((q) => q.required && !answers[q.id]?.trim());
   const bookingAgreement = selectedService ? resolveBookingAgreement(selectedService) : null;
-  const agreementBody = bookingAgreement
+  const agreementBody = bookingAgreement?.body
     ? fillDocumentPlaceholders(bookingAgreement.body, {
         topic: selectedService?.name,
         recipientName: guestName,
@@ -1999,9 +1999,29 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                         {bookingAgreement.label}
                       </p>
-                      <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto">
-                        {agreementBody}
-                      </p>
+                      {bookingAgreement.filePath ? (
+                        <div className="space-y-2">
+                          <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden bg-white">
+                            <iframe
+                              title={bookingAgreement.fileName || 'Agreement PDF'}
+                              src={`${documentFilePublicUrl(bookingAgreement.filePath) ?? ''}#view=FitH`}
+                              className="w-full h-80 bg-white"
+                            />
+                          </div>
+                          <a
+                            href={documentFilePublicUrl(bookingAgreement.filePath) ?? '#'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex text-sm font-medium text-indigo-600"
+                          >
+                            Open PDF{bookingAgreement.fileName ? ` (${bookingAgreement.fileName})` : ''}
+                          </a>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto">
+                          {agreementBody}
+                        </p>
+                      )}
                       <label className="flex items-start gap-2.5 cursor-pointer">
                         <input type="checkbox" checked={ndaAgreed} onChange={(e) => setNdaAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-600 shrink-0" />
                         <span className="text-sm text-slate-700 dark:text-slate-300">I agree to the {bookingAgreement.label.toLowerCase()} above <span className="text-red-500">*</span></span>

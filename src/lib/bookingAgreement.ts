@@ -50,13 +50,27 @@ export function resolveBookingAgreement(service: {
   require_nda?: boolean | null;
   booking_agreement_type?: string | null;
   booking_agreement_text?: string | null;
-}): { type: BookingAgreementType; label: string; body: string } | null {
+  booking_agreement_file_id?: string | null;
+  booking_agreement_file_path?: string | null;
+  booking_agreement_file_name?: string | null;
+}): {
+  type: BookingAgreementType;
+  label: string;
+  body: string;
+  filePath: string | null;
+  fileName: string | null;
+} | null {
   if (!service.require_nda) return null;
   const typeExplicit = isBookingAgreementType(service.booking_agreement_type);
   const type = typeExplicit ? service.booking_agreement_type : 'nda';
+  const filePath = service.booking_agreement_file_path?.trim() || null;
+  const fileName = service.booking_agreement_file_name?.trim() || null;
+  if (filePath) {
+    return { type, label: bookingAgreementLabel(type), body: '', filePath, fileName };
+  }
   const custom = service.booking_agreement_text?.trim();
   const body = custom
     || (typeExplicit ? defaultBookingAgreementText(type) : LEGACY_BOOKING_NDA_TEXT)
     || LEGACY_BOOKING_NDA_TEXT;
-  return { type, label: bookingAgreementLabel(type), body };
+  return { type, label: bookingAgreementLabel(type), body, filePath: null, fileName: null };
 }

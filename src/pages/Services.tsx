@@ -16,7 +16,8 @@ import {
   isBookingAgreementType,
   type BookingAgreementType,
 } from '../lib/bookingAgreement';
-import { BuiltInTemplateNoticePair } from '../components/BuiltInTemplateNoticePair';
+import { BookingAgreementPdfField } from '../components/BookingAgreementPdfField';
+import { activeHostDocumentFiles, type HostDocumentFile } from '../lib/hostDocuments';
 import { HostLegalStateNotice } from '../components/HostLegalStateNotice';
 import { LegalTemplatesNeedLink } from '../components/LegalTemplatesNeedLink';
 import { isUnmodifiedBuiltInTemplate, builtInTemplateScopeLine } from '../lib/builtInTemplateNotice';
@@ -74,6 +75,9 @@ const DEFAULT_SERVICE = {
   require_terms: false, require_nda: false,
   booking_agreement_type: 'waiver' as string,
   booking_agreement_text: '',
+  booking_agreement_file_id: null as string | null,
+  booking_agreement_file_path: null as string | null,
+  booking_agreement_file_name: null as string | null,
   show_description_on_booking_page: true, show_description_on_paid_booking: true,
   is_recurring: false,
   recurrence_frequency: null as RecurrenceFrequency | null,
@@ -444,15 +448,18 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
   const [reminders, setReminders] = useState<ServiceReminder[]>([]);
   const [recurrenceEndType, setRecurrenceEndType] = useState<RecurrenceEndType>('never');
   const [savingReminder, setSavingReminder] = useState<string | null>(null);
+  const [libraryFiles, setLibraryFiles] = useState<HostDocumentFile[]>([]);
 
   useEffect(() => {
     if (!profile) return;
     Promise.all([
       supabase.from('services').select('*').eq('host_id', profile.id).order('created_at', { ascending: true }),
       supabase.from('connected_calendars').select('id, provider, calendar_name, provider_account_email').eq('host_id', profile.id),
-    ]).then(([svcRes, calRes]) => {
+      supabase.from('host_document_files').select('*').eq('host_id', profile.id).order('created_at', { ascending: false }),
+    ]).then(([svcRes, calRes, filesRes]) => {
       setServices((svcRes.data as Service[]) ?? []);
       setConnectedCalendars((calRes.data as { id: string; provider: string; calendar_name: string; provider_account_email: string }[]) ?? []);
+      setLibraryFiles(activeHostDocumentFiles((filesRes.data as HostDocumentFile[]) ?? []));
       setLoading(false);
     });
   }, [profile]);
@@ -552,6 +559,9 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
       require_nda: (svc as any).require_nda ?? false,
       booking_agreement_type: svc.booking_agreement_type || 'waiver',
       booking_agreement_text: svc.booking_agreement_text ?? '',
+      booking_agreement_file_id: svc.booking_agreement_file_id ?? null,
+      booking_agreement_file_path: svc.booking_agreement_file_path ?? null,
+      booking_agreement_file_name: svc.booking_agreement_file_name ?? null,
       show_description_on_booking_page: (svc as any).show_description_on_booking_page ?? true,
       show_description_on_paid_booking: (svc as any).show_description_on_paid_booking ?? true,
       is_recurring: svc.is_recurring ?? false,
@@ -598,7 +608,7 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
     const zelle = form.zelle_handle?.trim() || null;
     const paypal = form.paypal_handle?.trim() || form.paypal_me_link?.trim() || null;
     const paymentLink = normalizeExternalUrl(form.payment_link);
-    const { cashapp_handle: _c, zelle_handle: _z, paypal_handle: _p, payment_methods: _pm, payment_link: _pl, payment_link_label: _pll, ...formFields } = form;
+    const { cashapp_handle: _c, zelle_handle: _z, paypal_handle: _p, payment_methods: _pm, payment_link: _pl, payment_link_label: _pll, booking_agreement_file_id: _fid, booking_agreement_file_path: _fpath, booking_agreement_file_name: _fname, ...formFields } = form;
     const basePayload = {
       ...formFields,
       price_cents: priceCents,
@@ -622,6 +632,9 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
       payment_link: paymentLink,
       payment_link_label: form.payment_link_label?.trim() || (paymentLink ? 'Pay' : null),
       payment_methods: buildPaymentMethods(form),
+      booking_agreement_file_id: form.booking_agreement_file_id || null,
+      booking_agreement_file_path: form.booking_agreement_file_path || null,
+      booking_agreement_file_name: form.booking_agreement_file_name || null,
     };
 
     const saveService = async (payload: Record<string, unknown>) => {
@@ -779,6 +792,15 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
         booking_agreement_text: replace ? defaultBookingAgreementText(next) : prev.booking_agreement_text,
       };
     });
+  };
+
+  const setAgreementPdf = (file: HostDocumentFile | null) => {
+    setForm((prev) => ({
+      ...prev,
+      booking_agreement_file_id: file?.id ?? null,
+      booking_agreement_file_path: file?.file_path ?? null,
+      booking_agreement_file_name: file?.name ?? file?.file_name ?? null,
+    }));
   };
 
   const applyMeetingType = (next: MeetingType) => {
@@ -1568,6 +1590,17 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
                             </button>
                           ))}
                         </div>
+                        {profile && (
+                          <BookingAgreementPdfField
+                            hostId={profile.id}
+                            files={libraryFiles}
+                            fileId={form.booking_agreement_file_id}
+                            fileName={form.booking_agreement_file_name}
+                            onFilesChange={setLibraryFiles}
+                            onChange={setAgreementPdf}
+                          />
+                        )}
+                        {!form.booking_agreement_file_path && (
                         <div>
                           <label className="block text-sm font-medium text-gray-500 dark:text-slate-400 mb-1.5">
                             {bookingAgreementLabel(form.booking_agreement_type)} text (shown when they book)
@@ -1612,6 +1645,7 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
                             </>
                           )}
                         </div>
+                        )}
                       </>
                     )}
                   </div>

@@ -189,6 +189,9 @@ export interface Service {
   require_nda: boolean;
   booking_agreement_type?: string | null;
   booking_agreement_text?: string | null;
+  booking_agreement_file_id?: string | null;
+  booking_agreement_file_path?: string | null;
+  booking_agreement_file_name?: string | null;
   // Description visibility
   show_description_on_booking_page: boolean;
   show_description_on_paid_booking: boolean;
