@@ -486,6 +486,42 @@ function reminderDedupe(channel: string, offsetMinutes: number, fallback: string
   return fallback;
 }
 
+type ServiceReminderRow = {
+  id: string;
+  service_id: string;
+  channel: string;
+  timing_offset_minutes: number;
+};
+
+function cannedGuestReminderMessage(opts: {
+  guestName: string;
+  hostName: string;
+  serviceName: string;
+  date: string;
+  time: string;
+  duration: string;
+  meetLink: string | null;
+  offset: number;
+}): string {
+  const when = opts.offset === 0
+    ? `is confirmed for ${opts.date} at ${opts.time}`
+    : opts.offset === -15
+      ? 'starts in 15 minutes'
+      : opts.offset === -30
+        ? 'starts in 30 minutes'
+        : opts.offset === -60
+          ? 'starts in 1 hour'
+          : opts.offset === -1440
+            ? `is tomorrow at ${opts.time}`
+            : opts.offset === -2880
+              ? `is in 2 days — ${opts.date} at ${opts.time}`
+              : `is on ${opts.date} at ${opts.time}`;
+  const lead = opts.offset === 0
+    ? `Hi ${opts.guestName}, you're booked with ${opts.hostName} for ${opts.serviceName} on ${opts.date} at ${opts.time}.`
+    : `Hi ${opts.guestName}, reminder: you have a ${opts.duration} ${opts.serviceName} with ${opts.hostName} that ${when}.`;
+  return [lead, opts.meetLink ? `Join: ${opts.meetLink}` : '', '— PinOnIt'].filter(Boolean).join(' ');
+}
+
 type SupabaseClient = ReturnType<typeof createClient>;
 
 async function insertMessageLog(
@@ -531,6 +567,91 @@ async function alreadyLogged(
     .limit(1)
     .maybeSingle();
   return Boolean(data);
+}
+
+async function fireServiceReminder(opts: {
+  supabase: SupabaseClient;
+  booking: Record<string, unknown>;
+  hostProfile: Record<string, unknown> | null;
+  reminder: ServiceReminderRow;
+  hostPhone: string | null;
+  hostWhatsapp: string | null;
+  rescheduleLink: string;
+  alsoPeople: AlsoPerson[];
+  dateStr: string;
+  timeStr: string;
+  duration: string;
+  meetLink: string | null;
+}): Promise<number> {
+  const {
+    supabase, booking, hostProfile, reminder, hostPhone, hostWhatsapp,
+    rescheduleLink, alsoPeople, dateStr, timeStr, duration, meetLink,
+  } = opts;
+  const channel = reminder.channel === 'both' ? 'email' : reminder.channel;
+  const offset = reminder.timing_offset_minutes;
+  const dedupe = reminderDedupe(channel, offset, `svc:${reminder.id}`);
+  if (await alreadyLogged(supabase, booking.id as string, channel, dedupe)) return 0;
+
+  const hostName = (hostProfile?.full_name as string) || 'Your host';
+  const service = booking.services as Record<string, unknown> | null;
+  const serviceName = (service?.name as string) || 'Appointment';
+  const msgBody = withChangeThisLink(
+    cannedGuestReminderMessage({
+      guestName: (booking.guest_name as string) || 'there',
+      hostName,
+      serviceName,
+      date: dateStr,
+      time: timeStr,
+      duration,
+      meetLink,
+      offset,
+    }),
+    rescheduleLink,
+  );
+  const emailSubject = offset === 0
+    ? `Your ${serviceName} is confirmed`
+    : `Reminder: ${serviceName}`;
+  const delivered = await deliverChannel({
+    supabase,
+    channel,
+    booking,
+    hostProfile,
+    hostPhone,
+    hostWhatsapp,
+    msgBody,
+    emailSubject,
+    meetLink,
+    offsetMinutes: offset,
+  });
+  await insertMessageLog(supabase, {
+    booking_id: booking.id as string,
+    host_id: booking.host_id as string,
+    channel,
+    status: delivered.ok ? 'sent' : 'failed',
+    recipient: delivered.to || '(none)',
+    subject: dedupe,
+    body: delivered.error ? `${msgBody}\n\n${delivered.error}` : msgBody,
+  });
+  if (channel === 'email' || channel === 'sms') {
+    await notifySlackWebhook(hostProfile?.slack_webhook_url, msgBody);
+  }
+  let sent = delivered.ok ? 1 : 0;
+  sent += await sendAlsoCopies({
+    supabase,
+    hostId: booking.host_id as string,
+    bookingId: booking.id as string,
+    channel,
+    people: alsoPeople,
+    dedupeKey: dedupe,
+    emailSubject: `Copy: ${emailSubject}`,
+    hostName,
+    serviceName,
+    guestName: booking.guest_name as string,
+    date: dateStr,
+    time: timeStr,
+    meetLink,
+  });
+  return sent;
 }
 
 async function dispatchPersonalReminders(supabase: SupabaseClient): Promise<number> {
@@ -824,6 +945,7 @@ async function dispatchScheduledReminders(supabase: SupabaseClient): Promise<num
       type: string;
     } | null;
   }>>();
+  const hostServiceRemindersCache = new Map<string, ServiceReminderRow[]>();
 
   for (const booking of bookings ?? []) {
     if (!activeHosts.has(booking.host_id as string)) continue;
@@ -858,6 +980,14 @@ async function dispatchScheduledReminders(supabase: SupabaseClient): Promise<num
         .eq('host_id', booking.host_id)
         .eq('is_active', true);
       hostRulesCache.set(booking.host_id, (rules ?? []) as typeof hostRulesCache extends Map<string, infer T> ? T : never);
+    }
+    if (!hostServiceRemindersCache.has(booking.host_id)) {
+      const { data: svcRows } = await supabase
+        .from('service_reminders')
+        .select('id, service_id, channel, timing_offset_minutes')
+        .eq('host_id', booking.host_id)
+        .eq('is_active', true);
+      hostServiceRemindersCache.set(booking.host_id, (svcRows ?? []) as ServiceReminderRow[]);
     }
     const rules = (hostRulesCache.get(booking.host_id) ?? []).filter(
       (r) => !r.service_id || r.service_id === booking.service_id,
@@ -938,6 +1068,28 @@ async function dispatchScheduledReminders(supabase: SupabaseClient): Promise<num
         guestName: booking.guest_name,
         date: dateStr,
         time: timeStr,
+        meetLink,
+      });
+    }
+
+    const serviceReminders = (hostServiceRemindersCache.get(booking.host_id) ?? []).filter(
+      (r) => r.service_id === booking.service_id && r.timing_offset_minutes !== 0,
+    );
+    for (const reminder of serviceReminders) {
+      const fireAt = startMs + reminder.timing_offset_minutes * 60 * 1000;
+      if (fireAt > now || now - fireAt > lateWindowMs) continue;
+      sent += await fireServiceReminder({
+        supabase,
+        booking,
+        hostProfile,
+        reminder,
+        hostPhone,
+        hostWhatsapp,
+        rescheduleLink,
+        alsoPeople,
+        dateStr,
+        timeStr,
+        duration,
         meetLink,
       });
     }
@@ -1074,6 +1226,7 @@ async function deliverChannel(opts: {
   msgBody: string;
   emailSubject: string;
   meetLink: string | null;
+  offsetMinutes?: number;
 }): Promise<{ ok: boolean; to: string | null; error?: string }> {
   const { supabase, channel, booking, hostProfile, msgBody, emailSubject } = opts;
   if (channel === 'email') {
@@ -1104,6 +1257,25 @@ async function deliverChannel(opts: {
       : null;
     if (!to) return { ok: false, to: null, error: 'no WhatsApp recipient' };
     const result = await sendTwilioWhatsapp(supabase, to, whatsappVarsFromBooking(booking, hostProfile));
+    return { ok: result.ok, to, error: result.error };
+  }
+  if (channel === 'voice') {
+    const to = (booking.guest_phone as string) || null;
+    if (!to) return { ok: false, to: null, error: 'no guest phone' };
+    const hostVoiceTemplate = (hostProfile?.voice_message_template as string | null) ?? null;
+    const timeUntil = formatTimeUntil(Math.abs(opts.offsetMinutes ?? 60));
+    const service = booking.services as Record<string, unknown> | null;
+    const twiml = hostVoiceTemplate
+      ? buildCustomVoiceTwiml(
+          hostVoiceTemplate
+            .replace(/\{\{host_name\}\}/g, (hostProfile?.full_name as string) || 'your host')
+            .replace(/\{\{service_name\}\}/g, (service?.name as string) || 'appointment')
+            .replace(/\{\{date\}\}/g, '')
+            .replace(/\{\{time\}\}/g, '')
+            .replace(/\{\{guest_name\}\}/g, (booking.guest_name as string) || 'there'),
+        )
+      : buildPinOnItVoiceTwiml(timeUntil);
+    const result = await sendTwilioVoice(to, twiml);
     return { ok: result.ok, to, error: result.error };
   }
   return { ok: false, to: null, error: `unsupported channel ${channel}` };
@@ -1638,6 +1810,67 @@ Deno.serve(async (req: Request) => {
       const sent = await dispatchScheduledReminders(supabase);
       const personal = await dispatchPersonalReminders(supabase);
       return jsonResponse({ success: true, sent: sent + personal });
+    }
+
+    // Event-type confirmation checkboxes (offset 0) — fired at booking time.
+    if (body.service_confirmation && body.booking_id) {
+      const { booking_id, action_token } = body;
+      const privileged = isServiceRoleRequest(req);
+      const actorId = privileged ? null : await hostIdFromJwt(req, supabase);
+      const { data: booking } = await supabase
+        .from('bookings')
+        .select('id, host_id, service_id, guest_name, guest_email, guest_phone, guest_address, notify_via, start_time, status, meet_link, guest_timezone, action_token, also_remind_ids, services(name, duration_minutes, location), profiles(full_name, slug, timezone, email, notification_email, phone, whatsapp_number, sms_opt_in, whatsapp_opt_in, reminder_also, slack_webhook_url, voice_message_template)')
+        .eq('id', booking_id)
+        .maybeSingle();
+      if (!booking) return jsonResponse({ error: 'Booking not found' }, 404);
+      if (booking.status === 'skipped' || booking.status === 'canceled' || booking.status === 'completed') {
+        return jsonResponse({ error: 'Booking is not remindable' }, 400);
+      }
+      if (!(await hostPlanIsActive(supabase, booking.host_id as string))) {
+        return jsonResponse({ error: 'Host account inactive' }, 403);
+      }
+      if (!privileged) {
+        const tokenOk = typeof action_token === 'string' && action_token.length > 0 && action_token === booking.action_token;
+        const hostOk = actorId === booking.host_id;
+        if (!tokenOk && !hostOk) {
+          return jsonAuthError(corsHeaders, 'Invalid booking token');
+        }
+      }
+      const { data: rows } = await supabase
+        .from('service_reminders')
+        .select('id, service_id, channel, timing_offset_minutes')
+        .eq('service_id', booking.service_id)
+        .eq('is_active', true)
+        .eq('timing_offset_minutes', 0);
+      const hostProfile = booking.profiles as Record<string, unknown> | null;
+      const service = booking.services as Record<string, unknown> | null;
+      const hostPhone = (hostProfile?.phone as string) || null;
+      const hostWhatsapp = (hostProfile?.whatsapp_number as string) || hostPhone;
+      const rescheduleLink = await ensureRescheduleLink(supabase, booking.id);
+      const tz = (booking.guest_timezone as string | null) || (hostProfile?.timezone as string) || 'UTC';
+      const { date: dateStr, time: timeStr } = formatBookingWhen(booking.start_time as string, tz);
+      const alsoPeople = resolveAlsoPeople(parseAlsoPeople(hostProfile?.reminder_also), {
+        serviceId: booking.service_id as string | null,
+        bookingAlsoIds: booking.also_remind_ids,
+      });
+      let sent = 0;
+      for (const reminder of (rows ?? []) as ServiceReminderRow[]) {
+        sent += await fireServiceReminder({
+          supabase,
+          booking,
+          hostProfile,
+          reminder,
+          hostPhone,
+          hostWhatsapp,
+          rescheduleLink,
+          alsoPeople,
+          dateStr,
+          timeStr,
+          duration: `${service?.duration_minutes ?? 30} min`,
+          meetLink: booking.meet_link as string | null,
+        });
+      }
+      return jsonResponse({ success: true, sent });
     }
 
     // ── Normal reminder mode ─────────────────────────────────────────────────

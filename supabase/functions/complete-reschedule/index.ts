@@ -133,6 +133,16 @@ Deno.serve(async (req: Request) => {
         });
       }
 
+      await fetch(`${supabaseUrl}/functions/v1/send-reminder`, {
+        method: "POST",
+        headers: calHeaders,
+        body: JSON.stringify({
+          booking_id: booking.id,
+          service_confirmation: true,
+          action_token: booking.action_token,
+        }),
+      });
+
       await fetch(`${supabaseUrl}/functions/v1/write-calendar-event`, {
         method: "POST",
         headers: calHeaders,

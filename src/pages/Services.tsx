@@ -5,7 +5,6 @@ import { supabase } from '../lib/supabase';
 import type { Service, BookingQuestion, MeetingType, RecurrenceFrequency } from '../lib/types';
 import { FrequencyPicker } from '../components/FrequencyPicker';
 import { getRecurrenceEndType, type RecurrenceEndType } from '../lib/recurring';
-import { resolveDefaultReminderChannel } from '../lib/reminderChannels';
 import { computeSingleUseExpiresAtForProfile, formatLinkExpiryHint, formatSingleUseExpiryLabel, isSingleUseLinksEnabled } from '../lib/singleUseLinks';
 import { eventTypeSlug } from '../lib/eventTypes';
 import { LOCATION_TYPES, MEETING_TYPE_META } from '../lib/types';
@@ -19,9 +18,16 @@ import {
 import {
   Plus, Trash2, X, Check, Loader2, MapPin, Clock, Settings2, MessageSquare,
   Copy, Smartphone, Mail, Pencil, ExternalLink, Link2, AlertCircle,
-  Search, CreditCard, QrCode, Zap, Bell, ChevronDown, Shield, HelpCircle, PhoneCall, Repeat,
+  Search, CreditCard, QrCode, Zap, Bell, ChevronDown, Shield, HelpCircle, Repeat,
 } from 'lucide-react';
 import { QRModal } from '../components/QRModal';
+import {
+  ReminderChannelGrid,
+  reminderGridLabel,
+  REMINDER_GRID_CHANNELS,
+  REMINDER_GRID_SLOTS,
+  type ReminderChannelKey,
+} from '../components/ReminderChannelGrid';
 import { ColorSwatchRow } from '../components/ColorSwatchRow';
 import { PaymentLinkFields } from '../components/PaymentLinkFields';
 import { revealTool } from '../lib/progressiveDisclosure';
@@ -73,22 +79,11 @@ const DEFAULT_SERVICE = {
 };
 type FormState = typeof DEFAULT_SERVICE;
 
-// Preset reminder options
-const REMINDER_PRESETS = [
-  { label: '15 min before', offset: -15 },
-  { label: '30 min before', offset: -30 },
-  { label: '1 hour before', offset: -60 },
-  { label: '2 hours before', offset: -120 },
-  { label: '1 day before', offset: -1440 },
-  { label: '2 days before', offset: -2880 },
-  { label: '1 week before', offset: -10080 },
-];
-const CHANNELS = [
-  { key: 'email' as const, label: 'Email', icon: Mail, color: 'text-blue-500' },
-  { key: 'sms' as const, label: 'SMS', icon: Smartphone, color: 'text-indigo-600' },
-  { key: 'whatsapp' as const, label: 'WhatsApp', icon: MessageSquare, color: 'text-indigo-600' },
-  { key: 'voice' as const, label: 'Voice Call', icon: PhoneCall, color: 'text-violet-500' },
-];
+const GRID_OFFSETS: Set<number> = new Set(REMINDER_GRID_SLOTS.map((s) => s.offset));
+
+function isLockedReminder(offset: number, channel: ReminderChannelKey) {
+  return offset === -60 && (channel === 'email' || channel === 'sms');
+}
 
 function formatPrice(cents: number) {
   if (!cents) return 'Free';
@@ -442,23 +437,8 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
 
   // Reminders
   const [reminders, setReminders] = useState<ServiceReminder[]>([]);
-  const [addingReminder, setAddingReminder] = useState(false);
   const [recurrenceEndType, setRecurrenceEndType] = useState<RecurrenceEndType>('never');
-  const [newReminderOffsets, setNewReminderOffsets] = useState<Set<number>>(new Set([-1440]));
-  const [newReminderChannels, setNewReminderChannels] = useState<Set<'email' | 'sms' | 'whatsapp' | 'voice'>>(() => new Set(['whatsapp']));
-  const [savingReminder, setSavingReminder] = useState(false);
-  const [customOffset, setCustomOffset] = useState(false);
-  const [customOffsetVal, setCustomOffsetVal] = useState('');
-
-  useEffect(() => {
-    if (!profile) return;
-    const ch = resolveDefaultReminderChannel(profile.default_reminder_channel);
-    if (ch === 'voice') {
-      setNewReminderChannels(new Set(['whatsapp']));
-    } else {
-      setNewReminderChannels(new Set([ch as 'email' | 'sms' | 'whatsapp']));
-    }
-  }, [profile?.default_reminder_channel]);
+  const [savingReminder, setSavingReminder] = useState<string | null>(null);
 
   useEffect(() => {
     if (!profile) return;
@@ -491,7 +471,6 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
     setReminders([]);
     setSelectedCalendarIds([]);
     setAddingQ(false);
-    setAddingReminder(false);
   };
 
   useEffect(() => {
@@ -583,7 +562,6 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
     setActiveTab('basic');
     setSelectedCalendarIds((svc as any).booking_calendar_ids ?? []);
     setAddingQ(false);
-    setAddingReminder(false);
     const [questionsRes, remindersRes] = await Promise.all([
       supabase.from('booking_questions').select('*').eq('service_id', svc.id).order('sort_order'),
       supabase.from('service_reminders').select('*').eq('service_id', svc.id).order('timing_offset_minutes'),
@@ -595,7 +573,6 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
   const closeForm = () => {
     setEditingId(null);
     setAddingQ(false);
-    setAddingReminder(false);
     setNewQLabel('');
     setNameError('');
   };
@@ -707,33 +684,43 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
     setQuestions((prev) => prev.filter((q) => q.id !== qId));
   };
 
-  const handleAddReminder = async () => {
+  const reminderIsOn = (offset: number, channel: ReminderChannelKey) =>
+    isLockedReminder(offset, channel)
+    || reminders.some((r) => r.timing_offset_minutes === offset && r.channel === channel && r.is_active);
+
+  const handleToggleGridReminder = async (offset: number, channel: ReminderChannelKey) => {
     if (!profile || !editingId || editingId === 'new') return;
-    setSavingReminder(true);
-    const customOffsetNum = customOffset ? -(Math.abs(parseInt(customOffsetVal) || 60)) : null;
-    const offsets = customOffsetNum !== null ? [customOffsetNum] : Array.from(newReminderOffsets);
-    const rows = Array.from(newReminderChannels).flatMap((ch) =>
-      offsets.map((offset) => {
-        const preset = REMINDER_PRESETS.find((p) => p.offset === offset);
-        const label = preset?.label ?? `${Math.abs(offset)} min before`;
-        return { service_id: editingId, host_id: profile.id, channel: ch, timing_offset_minutes: offset, label };
-      })
-    );
-    const { data } = await supabase.from('service_reminders').insert(rows).select();
-    if (data) setReminders((prev) => [...prev, ...(data as ServiceReminder[])]);
-    setAddingReminder(false);
-    setCustomOffset(false); setCustomOffsetVal('');
-    setSavingReminder(false);
+    if (isLockedReminder(offset, channel)) return;
+    const key = `${offset}:${channel}`;
+    setSavingReminder(key);
+    try {
+      const existing = reminders.filter((r) => r.timing_offset_minutes === offset && r.channel === channel);
+      const active = existing.filter((r) => r.is_active);
+      if (active.length > 0) {
+        await supabase.from('service_reminders').delete().in('id', active.map((r) => r.id));
+        setReminders((prev) => prev.filter((r) => !active.some((a) => a.id === r.id)));
+      } else if (existing.length > 0) {
+        const { data } = await supabase.from('service_reminders').update({ is_active: true }).eq('id', existing[0].id).select().maybeSingle();
+        if (data) setReminders((prev) => prev.map((x) => (x.id === existing[0].id ? data as ServiceReminder : x)));
+      } else {
+        const { data } = await supabase.from('service_reminders').insert({
+          service_id: editingId,
+          host_id: profile.id,
+          channel,
+          timing_offset_minutes: offset,
+          label: reminderGridLabel(offset),
+          is_active: true,
+        }).select().maybeSingle();
+        if (data) setReminders((prev) => [...prev, data as ServiceReminder]);
+      }
+    } finally {
+      setSavingReminder(null);
+    }
   };
 
   const handleDeleteReminder = async (rId: string) => {
     await supabase.from('service_reminders').delete().eq('id', rId);
     setReminders((prev) => prev.filter((r) => r.id !== rId));
-  };
-
-  const handleToggleReminder = async (r: ServiceReminder) => {
-    const { data } = await supabase.from('service_reminders').update({ is_active: !r.is_active }).eq('id', r.id).select().maybeSingle();
-    if (data) setReminders((prev) => prev.map((x) => x.id === r.id ? data as ServiceReminder : x));
   };
 
   const setField = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((prev) => ({ ...prev, [k]: v }));
@@ -1444,144 +1431,52 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
             {/* ── REMINDERS ── */}
             {activeTab === 'reminders' && (
               <div className="space-y-4">
-                <p className="text-base text-gray-600 dark:text-slate-400 leading-relaxed">
-                  Every event type includes a 1 hour reminder by email, and by text if they opted in with a phone. Add more below if you want.
-                </p>
-
                 {editingId === 'new' ? (
                   <div className="flex items-start gap-2.5 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-xl">
                     <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
-                    <p className="text-base text-amber-700 dark:text-amber-400">Save the event type first, then reopen to add reminders.</p>
+                    <p className="text-base text-amber-700 dark:text-amber-400">Save the event type first, then reopen to turn reminders on.</p>
                   </div>
                 ) : (
                   <>
-                    <div className="space-y-2">
-                      {reminders.length === 0 && !addingReminder && (
-                        <div className="text-center py-10 border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-xl">
-                          <Bell className="h-7 w-7 text-gray-300 dark:text-slate-600 mx-auto mb-2" />
-                          <p className="text-base text-gray-400 dark:text-slate-500">No reminders yet</p>
-                          <p className="text-sm text-gray-400 dark:text-slate-600 mt-0.5 mb-3">Add a reminder so guests get a text or email before they show up.</p>
-                          <button type="button" onClick={() => setAddingReminder(true)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600">
-                            <Plus className="h-4 w-4" /> Add reminder
-                          </button>
-                        </div>
-                      )}
-                      {reminders.map((r) => {
-                        const ch = CHANNELS.find(c => c.key === r.channel);
-                        const isDefaultOneHour = r.timing_offset_minutes === -60 && (r.channel === 'email' || r.channel === 'sms');
-                        return (
-                          <div key={r.id} className={`flex items-center gap-3 p-3 rounded-xl border transition-colors min-h-[60px] ${r.is_active ? 'bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700' : 'bg-gray-50 dark:bg-slate-800/50 border-gray-200 dark:border-slate-700 opacity-60'}`}>
-                            <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${r.is_active ? 'bg-brand-50 dark:bg-brand-950/30' : 'bg-gray-100 dark:bg-slate-800'}`}>
-                              {ch && <ch.icon className={`h-5 w-5 ${r.is_active ? ch.color : 'text-gray-400'}`} />}
-                            </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                        Active reminders
+                        <span className="ml-2 px-1.5 py-0.5 text-white rounded-full text-[10px]" style={{ backgroundColor: '#5864C6' }}>
+                          {REMINDER_GRID_SLOTS.reduce(
+                            (n, slot) => n + REMINDER_GRID_CHANNELS.filter((ch) => reminderIsOn(slot.offset, ch.key)).length,
+                            0,
+                          )}
+                        </span>
+                      </p>
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-slate-400 leading-relaxed">
+                      Tap a box to send that reminder for this event type. The 1 hour email — and text if they opted in with a phone — stays on.
+                    </p>
+                    <ReminderChannelGrid
+                      isChecked={reminderIsOn}
+                      onToggle={handleToggleGridReminder}
+                      savingKey={savingReminder}
+                      locked={isLockedReminder}
+                    />
+                    {reminders.filter((r) => r.is_active && !GRID_OFFSETS.has(r.timing_offset_minutes)).length > 0 && (
+                      <div className="space-y-2 pt-1">
+                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Custom timing</p>
+                        {reminders.filter((r) => r.is_active && !GRID_OFFSETS.has(r.timing_offset_minutes)).map((r) => (
+                          <div key={r.id} className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 min-h-[56px]">
                             <div className="flex-1 min-w-0">
-                              <p className="text-base font-semibold text-gray-900 dark:text-white">{r.label}</p>
-                              <p className="text-sm text-gray-500 dark:text-slate-400 capitalize">
-                                {r.channel}{isDefaultOneHour ? (r.channel === 'sms' ? ' · if they opted in with a phone' : ' · always on') : ''}
-                              </p>
+                              <p className="text-sm font-semibold text-gray-900 dark:text-white">{r.label}</p>
+                              <p className="text-xs text-gray-500 dark:text-slate-400 capitalize">{r.channel}</p>
                             </div>
-                            {isDefaultOneHour ? (
-                              <span className="text-xs font-semibold text-slate-400 shrink-0">Default</span>
-                            ) : (
-                              <>
-                            <button onClick={() => handleToggleReminder(r)}
-                              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0 ${r.is_active ? 'bg-brand-600' : 'bg-gray-300 dark:bg-slate-600'}`}>
-                              <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${r.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
-                            </button>
-                            <button onClick={() => handleDeleteReminder(r.id)} className="p-2 text-gray-300 dark:text-slate-600 hover:text-red-500 transition-colors shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center">
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteReminder(r.id)}
+                              className="p-2 text-gray-300 dark:text-slate-600 hover:text-red-500 transition-colors shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                            >
                               <Trash2 className="h-4 w-4" />
                             </button>
-                              </>
-                            )}
                           </div>
-                        );
-                      })}
-                    </div>
-
-                    {addingReminder && (
-                      <div className="p-4 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl space-y-4">
-                        <p className="text-sm font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wide">New reminder</p>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-500 dark:text-slate-400 mb-2">Channel</label>
-                          <div className="flex gap-2">
-                            {CHANNELS.map(({ key, label, icon: Icon, color }) => {
-                              const isSelected = newReminderChannels.has(key);
-                              return (
-                                <button key={key} type="button" onClick={() => {
-                                  setNewReminderChannels(prev => {
-                                    const next = new Set(prev);
-                                    if (next.has(key) && next.size === 1) return prev;
-                                    next.has(key) ? next.delete(key) : next.add(key);
-                                    return next;
-                                  });
-                                }}
-                                  className={`flex items-center gap-1.5 px-3 py-2.5 rounded-lg border text-sm font-medium transition-colors flex-1 justify-center min-h-[44px] ${isSelected ? 'bg-brand-50 dark:bg-brand-950/30 border-brand-500 text-brand-700 dark:text-brand-300' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300'}`}
-                                >
-                                  <Icon className={`h-4 w-4 ${isSelected ? 'text-brand-500' : color}`} />{label}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-500 dark:text-slate-400 mb-2">When to send <span className="font-normal text-gray-400 dark:text-slate-500">(select one or more)</span></label>
-                          {!customOffset ? (
-                            <div className="space-y-2">
-                              <div className="grid grid-cols-2 gap-2">
-                                {REMINDER_PRESETS.map((p) => {
-                                  const checked = newReminderOffsets.has(p.offset);
-                                  return (
-                                    <button key={p.offset} type="button" onClick={() => {
-                                      setNewReminderOffsets(prev => {
-                                        const next = new Set(prev);
-                                        if (next.has(p.offset) && next.size === 1) return prev;
-                                        next.has(p.offset) ? next.delete(p.offset) : next.add(p.offset);
-                                        return next;
-                                      });
-                                    }}
-                                      className={`flex items-center gap-2.5 px-3 py-3 rounded-lg border text-sm font-medium transition-colors text-left min-h-[48px] ${checked ? 'bg-brand-50 dark:bg-brand-950/30 border-brand-500 text-brand-700 dark:text-brand-300' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300'}`}>
-                                      <span className={`h-5 w-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${checked ? 'border-brand-500 bg-brand-500' : 'border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800'}`}>
-                                        {checked && <svg viewBox="0 0 10 10" className="h-3 w-3 text-white fill-none stroke-current" strokeWidth="2"><polyline points="1.5,5 4,7.5 8.5,2.5"/></svg>}
-                                      </span>
-                                      {p.label}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                              <button onClick={() => setCustomOffset(true)} className="text-sm text-brand-600 dark:text-brand-400 hover:text-brand-700 transition-colors py-1">
-                                + Custom timing
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <input type="number" min={1} value={customOffsetVal} onChange={(e) => setCustomOffsetVal(e.target.value)} placeholder="e.g. 90" className={`${inputCls} w-28`} />
-                              <span className="text-base text-gray-500 dark:text-slate-400 whitespace-nowrap">minutes before</span>
-                              <button onClick={() => { setCustomOffset(false); setCustomOffsetVal(''); }} className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-slate-200 transition-colors ml-auto">Cancel</button>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="flex gap-2">
-                          <button onClick={handleAddReminder} disabled={savingReminder || (customOffset && !customOffsetVal)}
-                            className="flex items-center gap-1.5 px-5 py-3 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 min-h-[48px]">
-                            {savingReminder ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                            Add reminder
-                          </button>
-                          <button onClick={() => { setAddingReminder(false); setCustomOffset(false); setCustomOffsetVal(''); }}
-                            className="px-5 py-3 text-sm text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-white transition-colors min-h-[48px]">
-                            Cancel
-                          </button>
-                        </div>
+                        ))}
                       </div>
-                    )}
-
-                    {!addingReminder && (
-                      <button onClick={() => setAddingReminder(true)}
-                        className="flex items-center gap-2 text-base text-brand-600 dark:text-brand-400 hover:text-brand-700 font-medium transition-colors min-h-[44px]">
-                        <Plus className="h-5 w-5" /> Add reminder
-                      </button>
                     )}
                   </>
                 )}

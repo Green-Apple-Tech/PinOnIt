@@ -991,6 +991,15 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
             }).catch(() => {});
           }
         }
+        fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-reminder`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
+          body: JSON.stringify({
+            booking_id: data.id,
+            service_confirmation: true,
+            action_token: (data as Booking).action_token,
+          }),
+        }).catch(() => {});
       } catch { /* non-blocking */ }
     }
     return data as Booking | null;
@@ -1076,7 +1085,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
       });
       setConfirmedBooking({
         ...confirmedBooking,
-        reminder_channels: effectiveChannels.length > 0 ? effectiveChannels : ['email'],
+        reminder_channels: reminderChannels.size > 0 ? [...reminderChannels] : ['email'],
         reminder_times: selectedTimes,
         notify_via: notifyViaUpdate.length > 0 ? notifyViaUpdate : null,
       });
