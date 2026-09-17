@@ -4,10 +4,13 @@ import {
   demoServicesForBusinessType,
   emailDomain,
   isPaidMenuPrice,
+  isPersistedServiceId,
   guessBusinessTypeFromDomain,
   isConsumerEmailDomain,
   isStoredPaidBookingCustomized,
   mergePaidBookingSuggestion,
+  paidBookingExampleInsertRows,
+  paidBookingFontStack,
   resolvePaidBookingSuggestion,
 } from './paidBookingSuggestions';
 
@@ -71,6 +74,21 @@ describe('paidBookingSuggestions', () => {
     expect(demos).toHaveLength(3);
     expect(demos[1]?.name).toMatch(/Estimate/i);
     expect(demos.every((d) => d.price_cents > 0)).toBe(true);
+  });
+
+  it('builds insert rows for bookable starter services', () => {
+    const rows = paidBookingExampleInsertRows('host-1', demoServicesForBusinessType('photography'));
+    expect(rows).toHaveLength(3);
+    expect(rows.every((r) => r.host_id === 'host-1')).toBe(true);
+    expect(rows.every((r) => r.is_active && r.price_cents > 1000)).toBe(true);
+    expect(rows.every((r) => r.show_description_on_paid_booking)).toBe(true);
+  });
+
+  it('picks a CSS font stack and ignores demo ids', () => {
+    expect(paidBookingFontStack('serif')).toMatch(/Georgia/i);
+    expect(paidBookingFontStack('unknown')).toBeUndefined();
+    expect(isPersistedServiceId('__demo_1')).toBe(false);
+    expect(isPersistedServiceId('a1b2c3')).toBe(true);
   });
 
   it('treats $10 or less as a show-up hold, not a price-list item', () => {

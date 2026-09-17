@@ -388,7 +388,7 @@ export function RemindersPage({
       await refreshProfile();
       setEditingContact(false);
     } catch (err) {
-      console.error('Failed to save contact channels:', err);
+      console.error('Failed to save phone number:', err);
       toast.error(`Failed to save: ${formatErrorMessage(err)}`);
     } finally {
       setSavingContact(false);
@@ -609,7 +609,7 @@ export function RemindersPage({
           storageKey="reminders_checklist"
           items={[
             { id: 'template', label: 'Create your first reminder template', why: 'Templates are the messages sent to guests before meetings', done: templates.length > 0 },
-            { id: 'phone', label: 'Add your phone number for SMS/WhatsApp', why: 'Required to receive SMS and WhatsApp reminders yourself', done: !!(contactPhone || effectiveWhatsapp) },
+            { id: 'phone', label: 'Add your phone number if you want texts to yourself', why: 'Guests type their own number when they book. Yours is only for texts and calls to you.', done: !!(contactPhone || effectiveWhatsapp) },
           ]}
         />
       )}
@@ -620,18 +620,18 @@ export function RemindersPage({
           <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <div className="min-w-0">
             <p className="text-sm text-amber-900 dark:text-amber-200">
-              Add your phone number in Settings → Profile to receive SMS and voice call reminders.
+              To get texts or calls yourself, add your number under Advanced. Guests type their own number when they book.
             </p>
-            <Link
-              to="/dashboard/settings?tab=profile"
-              onClick={(e) => {
-                e.preventDefault();
-                goToProfileSettings();
+            <button
+              type="button"
+              onClick={() => {
+                setShowAdvanced(true);
+                window.setTimeout(() => document.getElementById('your-phone')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
               }}
               className="inline-flex items-center gap-1 mt-1.5 text-sm font-semibold text-amber-700 dark:text-amber-300 hover:underline"
             >
-              Add phone number →
-            </Link>
+              Add your number →
+            </button>
           </div>
         </div>
       )}
@@ -1004,10 +1004,13 @@ export function RemindersPage({
       {/* ── ACTIVE REMINDERS GRID ── */}
       {hasAnyReminders && !showAddForm && (
         <div>
-          <div className="flex items-center justify-between mb-3">
+          <div className="mb-3">
             <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-              Active reminders
+              What guests get
               <span className="ml-2 px-1.5 py-0.5 text-white rounded-full text-[10px]" style={{ backgroundColor: '#5864C6' }}>{activeCount}</span>
+            </p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              Tap a box to turn that reminder on or off. Email confirmation is on by default. Guests get these after they book — this is the main control on this page.
             </p>
           </div>
 
@@ -1142,96 +1145,6 @@ export function RemindersPage({
         </div>
       )}
 
-      {/* ── CONTACT CHANNELS ── */}
-      <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-slate-800">
-          <div>
-            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Your contact channels</p>
-            <p className="text-xs text-slate-400 mt-0.5 inline-flex items-center gap-1.5">
-              <ChannelIcon channel="sms" className="h-3.5 w-3.5 text-amber-500" />
-              <ChannelIcon channel="whatsapp" className="h-3.5 w-3.5" style={{ color: '#25D366' }} />
-              Needed for SMS and WhatsApp reminders
-            </p>
-          </div>
-          {!editingContact && (
-            <button
-              onClick={() => setEditingContact(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-            >
-              <Pencil className="h-3.5 w-3.5" /> Edit
-            </button>
-          )}
-        </div>
-
-        {editingContact ? (
-          <div className="px-5 py-4 space-y-3">
-            {[
-              { label: 'Phone (SMS)', icon: Smartphone, value: contactPhone, setter: setContactPhone, placeholder: PHONE_PLACEHOLDER, hint: PHONE_HINT },
-              { label: 'WhatsApp number', icon: MessageSquare, value: contactWhatsapp, setter: setContactWhatsapp, placeholder: PHONE_PLACEHOLDER, hint: PHONE_HINT },
-            ].map(({ label, icon: Glyph, value, setter, placeholder, hint }) => (
-              <div key={label} className="flex items-center gap-3">
-                <div className="w-8 flex justify-center shrink-0">
-                  {Glyph ? <Glyph className="h-4 w-4 text-slate-400" /> : null}
-                </div>
-                <div className="flex-1">
-                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{label}</label>
-                  <input
-                    type="tel"
-                    value={value}
-                    onChange={(e) => setter(e.target.value)}
-                    onBlur={() => { if (value.trim()) setter(blurFormatPhone(value)); }}
-                    placeholder={placeholder}
-                    className={inputCls}
-                  />
-                  {hint && <p className="text-xs text-slate-400 mt-1">{hint}</p>}
-                </div>
-              </div>
-            ))}
-            <SmsBookingConsent className="text-xs text-gray-500 dark:text-slate-400 mt-1" />
-            <div className="flex items-center gap-2 pt-1">
-              <button onClick={handleSaveContact} disabled={savingContact} className="px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 inline-flex items-center gap-1.5 hover:opacity-90" style={{ backgroundColor: '#5864C6' }}>
-                {savingContact ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Save
-              </button>
-              <button onClick={() => setEditingContact(false)} className="px-4 py-2 text-sm text-slate-500 hover:text-slate-700 dark:hover:text-white transition-colors">Cancel</button>
-            </div>
-          </div>
-        ) : (
-          <div className="divide-y divide-slate-100 dark:divide-slate-800">
-            <div className="flex items-center gap-3 px-5 py-3">
-              <Mail className="h-4 w-4 text-blue-400 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Email</span>
-                <p className="text-sm text-slate-800 dark:text-slate-200 mt-0.5">{profile?.email}</p>
-              </div>
-              <span className="text-xs px-2 py-0.5 text-white rounded-full font-medium" style={{ backgroundColor: '#5864C6' }}>Active</span>
-            </div>
-            {[
-              { label: 'SMS', icon: Smartphone, value: contactPhone, placeholder: 'Add phone to enable SMS' },
-              { label: 'WhatsApp', icon: MessageSquare, value: contactWhatsapp || (effectiveWhatsapp && !contactWhatsapp ? blurFormatPhone(effectiveWhatsapp) : ''), placeholder: 'Add number to enable WhatsApp' },
-            ].map(({ label, icon: Glyph, value, placeholder }) => (
-              <div
-                key={label}
-                role={!value ? 'button' : undefined}
-                tabIndex={!value ? 0 : undefined}
-                onClick={!value ? () => setEditingContact(true) : undefined}
-                onKeyDown={!value ? (e) => { if (e.key === 'Enter' || e.key === ' ') setEditingContact(true); } : undefined}
-                className={`flex items-center gap-3 px-5 py-3 ${!value ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors' : ''}`}
-              >
-                {Glyph ? <Glyph className="h-4 w-4 text-slate-400 shrink-0" /> : null}
-                <div className="flex-1 min-w-0">
-                  <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</span>
-                  <p className={`text-sm mt-0.5 ${value ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400 italic'}`}>{value || placeholder}</p>
-                </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${value ? 'text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}
-                  style={value ? { backgroundColor: '#5864C6' } : {}}>
-                  {value ? 'Active' : 'Not set'}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
       <VoicePersonalReminder ref={personalReminderRef} />
 
       {/* ── ADVANCED SECTION (closed by default) ── */}
@@ -1250,7 +1163,87 @@ export function RemindersPage({
 
         {showAdvanced && (
           <div className="border-t border-slate-200 dark:border-slate-800 space-y-6 p-5">
-            <section className="space-y-3">
+            <section id="your-phone" className="space-y-3 scroll-mt-24">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-bold text-slate-900 dark:text-white">Your phone number</h2>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    This is <strong className="font-semibold">your</strong> number, so we can text or call you. Guests type their own number when they book — you do not enter theirs here.
+                  </p>
+                </div>
+                {!editingContact && (
+                  <button
+                    type="button"
+                    onClick={() => setEditingContact(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shrink-0"
+                  >
+                    <Pencil className="h-3.5 w-3.5" /> Edit
+                  </button>
+                )}
+              </div>
+
+              {editingContact ? (
+                <div className="space-y-3">
+                  {[
+                    { label: 'Your cell (for texts to you)', icon: Smartphone, value: contactPhone, setter: setContactPhone, placeholder: PHONE_PLACEHOLDER, hint: PHONE_HINT },
+                    { label: 'WhatsApp, if different', icon: MessageSquare, value: contactWhatsapp, setter: setContactWhatsapp, placeholder: PHONE_PLACEHOLDER, hint: 'Leave blank if it is the same as your cell.' },
+                  ].map(({ label, icon: Glyph, value, setter, placeholder, hint }) => (
+                    <div key={label} className="flex items-center gap-3">
+                      <div className="w-8 flex justify-center shrink-0">
+                        {Glyph ? <Glyph className="h-4 w-4 text-slate-400" /> : null}
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{label}</label>
+                        <input
+                          type="tel"
+                          value={value}
+                          onChange={(e) => setter(e.target.value)}
+                          onBlur={() => { if (value.trim()) setter(blurFormatPhone(value)); }}
+                          placeholder={placeholder}
+                          className={inputCls}
+                        />
+                        {hint && <p className="text-xs text-slate-400 mt-1">{hint}</p>}
+                      </div>
+                    </div>
+                  ))}
+                  <SmsBookingConsent className="text-xs text-gray-500 dark:text-slate-400 mt-1" />
+                  <div className="flex items-center gap-2 pt-1">
+                    <button type="button" onClick={() => void handleSaveContact()} disabled={savingContact} className="px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 inline-flex items-center gap-1.5 hover:opacity-90" style={{ backgroundColor: '#5864C6' }}>
+                      {savingContact ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Save
+                    </button>
+                    <button type="button" onClick={() => setEditingContact(false)} className="px-4 py-2 text-sm text-slate-500 hover:text-slate-700 dark:hover:text-white transition-colors">Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+                  {[
+                    { label: 'Texts to you', icon: Smartphone, value: contactPhone, placeholder: 'Not set' },
+                    { label: 'WhatsApp to you', icon: MessageSquare, value: contactWhatsapp || (effectiveWhatsapp && !contactWhatsapp ? blurFormatPhone(effectiveWhatsapp) : ''), placeholder: 'Same as your cell, or not set' },
+                  ].map(({ label, icon: Glyph, value, placeholder }) => (
+                    <div
+                      key={label}
+                      role={!value ? 'button' : undefined}
+                      tabIndex={!value ? 0 : undefined}
+                      onClick={!value ? () => setEditingContact(true) : undefined}
+                      onKeyDown={!value ? (e) => { if (e.key === 'Enter' || e.key === ' ') setEditingContact(true); } : undefined}
+                      className={`flex items-center gap-3 px-4 py-3 border-b last:border-b-0 border-slate-100 dark:border-slate-800 ${!value ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors' : ''}`}
+                    >
+                      {Glyph ? <Glyph className="h-4 w-4 text-slate-400 shrink-0" /> : null}
+                      <div className="flex-1 min-w-0">
+                        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</span>
+                        <p className={`text-sm mt-0.5 ${value ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400 italic'}`}>{value || placeholder}</p>
+                      </div>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${value ? 'text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}
+                        style={value ? { backgroundColor: '#5864C6' } : {}}>
+                        {value ? 'On' : 'Off'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section className="space-y-3 border-t border-slate-200 dark:border-slate-800 pt-5">
               <div>
                 <h2 className="text-sm font-bold text-slate-900 dark:text-white">Co-worker / team notifications</h2>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">

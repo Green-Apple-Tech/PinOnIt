@@ -38,6 +38,74 @@ export function isPaidMenuPrice(cents: number | null | undefined): boolean {
   return (cents ?? 0) >= PAID_MENU_MIN_CENTS;
 }
 
+export type PaidBookingFontId = 'sans' | 'serif' | 'rounded';
+
+export const PAID_BOOKING_FONTS: {
+  id: PaidBookingFontId;
+  label: string;
+  stack: string;
+  sample: string;
+}[] = [
+  {
+    id: 'sans',
+    label: 'Sans',
+    stack: 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif',
+    sample: 'Clean and modern',
+  },
+  {
+    id: 'serif',
+    label: 'Serif',
+    stack: 'Georgia, "Iowan Old Style", "Palatino Linotype", ui-serif, serif',
+    sample: 'Classic and editorial',
+  },
+  {
+    id: 'rounded',
+    label: 'Rounded',
+    stack: 'ui-rounded, "Avenir Next Rounded", "Nunito", "Avenir Next", system-ui, sans-serif',
+    sample: 'Friendly and soft',
+  },
+];
+
+export function paidBookingFontStack(font?: string | null): string | undefined {
+  return PAID_BOOKING_FONTS.find((f) => f.id === font)?.stack;
+}
+
+export function isPersistedServiceId(id: string | undefined | null): boolean {
+  return Boolean(id && !id.startsWith('__'));
+}
+
+/** Rows to insert so starter price-list items are real, bookable event types. */
+export function paidBookingExampleInsertRows(hostId: string, demos: PaidBookingDemoService[]) {
+  return demos
+    .filter((d) => isPaidMenuPrice(d.price_cents))
+    .slice(0, 3)
+    .map((d) => ({
+      host_id: hostId,
+      name: d.name,
+      description: d.description || '',
+      duration_minutes: d.duration_minutes,
+      color: d.color || BRAND,
+      price_cents: d.price_cents,
+      is_active: true,
+      meeting_type: 'one_on_one' as const,
+      buffer_before_minutes: 0,
+      buffer_after_minutes: 0,
+      min_notice_hours: 1,
+      booking_window_days: 60,
+      slot_increment_minutes: 15,
+      allow_cancellation: true,
+      allow_reschedule: true,
+      cancellation_policy: '',
+      location: '',
+      location_type: 'video' as const,
+      payment_provider: 'none' as const,
+      paypal_currency: 'USD',
+      booking_calendar_ids: [] as string[],
+      show_description_on_booking_page: false,
+      show_description_on_paid_booking: true,
+    }));
+}
+
 const CONSUMER_EMAIL_DOMAINS = new Set([
   'gmail.com',
   'googlemail.com',

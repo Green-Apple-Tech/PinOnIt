@@ -8,14 +8,18 @@ import {
   resolvePaidBookingSuggestion,
   isStoredPaidBookingCustomized,
   isPaidMenuPrice,
+  isPersistedServiceId,
+  paidBookingFontStack,
+  PAID_BOOKING_FONTS,
   type PaidBookingDemoService,
 } from '../lib/paidBookingSuggestions';
+import { ensurePaidBookingExamples } from '../lib/ensurePaidBookingExamples';
 import type { Service, PaidBookingSettings } from '../lib/types';
 import QRCode from 'qrcode';
 import {
   Copy, Check, Loader2, ExternalLink, Image as ImageIcon, Palette,
-  Save, AlertCircle, QrCode, Code, ChevronRight, ChevronLeft, X, Download,
-  Link2, ShoppingBag, Mail, MessageSquare, Sparkles,
+  Save, AlertCircle, QrCode, Code, ChevronRight, ChevronLeft, ChevronDown, X, Download,
+  Link2, ShoppingBag, Mail, MessageSquare, Sparkles, Pencil, Type,
 } from 'lucide-react';
 import { ColorSwatchRow } from '../components/ColorSwatchRow';
 
@@ -131,6 +135,7 @@ function PriceListPreview({
   usingExamples,
   slugHint,
   compact = false,
+  bookingUrl,
 }: {
   theme: ThemeDef;
   settings: PaidBookingSettings;
@@ -138,15 +143,19 @@ function PriceListPreview({
   usingExamples?: boolean;
   slugHint?: string;
   compact?: boolean;
+  bookingUrl?: string | null;
 }) {
   const btnColor = settings.btn_color || theme.btnBg;
   const btnLabel = settings.btn_label || 'Book';
   const pageBg = settings.bg_color || theme.bg;
+  const textColor = settings.text_color || theme.text;
+  const fontFamily = paidBookingFontStack(settings.font);
   const displayName = settings.display_name?.trim() || 'Your business';
   const tagline = settings.tagline?.trim() || 'Book a time that works for you';
   const bio = settings.bio?.trim();
   const photoUrl = settings.business_photo_url;
-  const list = (services.length > 0 ? services : FALLBACK_DEMO).slice(0, 3);
+  const exampleIds = new Set(settings.example_service_ids ?? []);
+  const list = (services.length > 0 ? services : FALLBACK_DEMO).slice(0, 6);
 
   return (
     <div className={`rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-lg ${compact ? '' : 'shadow-xl'}`}>
@@ -158,7 +167,7 @@ function PriceListPreview({
           pinonit.com/{slugHint || 'your-page'}/services
         </div>
       </div>
-      <div style={{ backgroundColor: pageBg }}>
+      <div style={{ backgroundColor: pageBg, fontFamily }}>
         <div className="h-1 w-full" style={{ backgroundColor: btnColor }} />
         <div className={`space-y-4 ${compact ? 'p-4' : 'p-5 sm:p-6'}`}>
           <div className="flex items-center gap-3">
@@ -170,7 +179,7 @@ function PriceListPreview({
               )}
             </div>
             <div className="min-w-0">
-              <h3 className={`font-bold truncate ${compact ? 'text-base' : 'text-lg'}`} style={{ color: theme.text }}>
+              <h3 className={`font-bold truncate ${compact ? 'text-base' : 'text-lg'}`} style={{ color: textColor }}>
                 {displayName}
               </h3>
               <p className="text-xs sm:text-sm truncate" style={{ color: theme.muted }}>{tagline}</p>
@@ -185,48 +194,77 @@ function PriceListPreview({
                 Examples
               </span>
               <span className="text-xs" style={{ color: theme.muted }}>
-                Sample price list until you add a paid booking
+                Starter options — guests can book these. Edit them to match your real prices.
               </span>
             </div>
           )}
-          <div className="space-y-2.5">
-            {list.map((svc) => (
-              <div
-                key={svc.id}
-                className="flex items-center justify-between gap-3 p-3.5 rounded-xl"
-                style={{ backgroundColor: theme.surface, border: `1px solid ${theme.border}` }}
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm font-semibold truncate" style={{ color: theme.text }}>{svc.name}</p>
-                    {usingExamples && (
-                      <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 shrink-0">
-                        Example
+          <div className={settings.layout === 'grid' ? 'grid grid-cols-2 gap-2.5' : 'space-y-2.5'}>
+            {list.map((svc) => {
+              const live = isPersistedServiceId(svc.id);
+              const bookHref = live && bookingUrl
+                ? `${bookingUrl}?types=${encodeURIComponent(eventTypeSlug(svc))}`
+                : null;
+              const showExampleBadge = usingExamples || exampleIds.has(svc.id);
+              return (
+                <div
+                  key={svc.id}
+                  className="flex items-center justify-between gap-3 p-3.5 rounded-xl"
+                  style={{ backgroundColor: theme.surface, border: `1px solid ${theme.border}` }}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold truncate" style={{ color: textColor }}>{svc.name}</p>
+                      {showExampleBadge && (
+                        <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 shrink-0">
+                          Example
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs mt-0.5" style={{ color: theme.muted }}>{svc.duration_minutes} min</p>
+                    {svc.description && !compact && (settings.show_descriptions ?? true) && (
+                      <p className="text-xs mt-0.5 leading-snug line-clamp-2" style={{ color: theme.muted }}>{svc.description}</p>
+                    )}
+                  </div>
+                  <div className="shrink-0 flex items-center gap-2">
+                    <span className="text-sm font-bold tabular-nums" style={{ color: btnColor }}>
+                      {formatPrice(svc.price_cents)}
+                    </span>
+                    {live && (
+                      <Link
+                        to={`/dashboard/settings?tab=event-types&edit=${svc.id}`}
+                        className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-semibold border"
+                        style={{ borderColor: theme.border, color: textColor }}
+                      >
+                        <Pencil className="h-3 w-3" />
+                        Edit
+                      </Link>
+                    )}
+                    {bookHref ? (
+                      <a
+                        href={bookHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold"
+                        style={{ backgroundColor: btnColor, color: theme.btnText }}
+                      >
+                        {btnLabel}
+                      </a>
+                    ) : (
+                      <span
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold"
+                        style={{ backgroundColor: btnColor, color: theme.btnText }}
+                      >
+                        {btnLabel}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs mt-0.5" style={{ color: theme.muted }}>{svc.duration_minutes} min</p>
-                  {svc.description && !compact && (
-                    <p className="text-xs mt-0.5 leading-snug line-clamp-2" style={{ color: theme.muted }}>{svc.description}</p>
-                  )}
                 </div>
-                <div className="shrink-0 flex items-center gap-2.5">
-                  <span className="text-sm font-bold tabular-nums" style={{ color: btnColor }}>
-                    {formatPrice(svc.price_cents)}
-                  </span>
-                  <span
-                    className="px-3 py-1.5 rounded-lg text-xs font-bold"
-                    style={{ backgroundColor: btnColor, color: theme.btnText }}
-                  >
-                    {btnLabel}
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           {usingExamples && (
             <p className="text-[11px] text-center" style={{ color: theme.muted }}>
-              Examples — guests see this sample until you add a paid booking
+              Examples are live on your public page. Edit them, or add your own paid booking.
             </p>
           )}
         </div>
@@ -448,6 +486,7 @@ export function PaidBookingPage() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const suggestion = useMemo(
     () =>
@@ -480,10 +519,17 @@ export function PaidBookingPage() {
       bio: s.bio || profile.bio || '',
       btn_color: s.btn_color || profile.brand_color || '#5864C6',
       btn_label: s.btn_label || 'Book',
+      bg_color: s.bg_color,
+      text_color: s.text_color,
+      font: s.font || 'sans',
       layout: s.layout || 'list',
       show_descriptions: s.show_descriptions ?? true,
+      show_images: s.show_images ?? false,
+      use_categories: s.use_categories ?? false,
+      categories: s.categories ?? [],
       business_photo_url: s.business_photo_url || profile.avatar_url || null,
       visible_service_ids: s.visible_service_ids ?? null,
+      example_service_ids: s.example_service_ids ?? null,
     };
     if (!customized) {
       const merged = mergePaidBookingSuggestion(
@@ -509,6 +555,32 @@ export function PaidBookingPage() {
         setLoadingServices(false);
       });
   }, [user]);
+
+  useEffect(() => {
+    if (!user || loadingServices) return;
+    const storedIds = settings.example_service_ids;
+    void (async () => {
+      const demos = suggestion.demoServices.filter((s) => isPaidMenuPrice(s.price_cents));
+      const result = await ensurePaidBookingExamples({
+        hostId: user.id,
+        demos: demos.length > 0 ? demos : FALLBACK_DEMO,
+        storedExampleIds: storedIds,
+      });
+      if (result.inserted.length > 0) {
+        setServices((prev) => {
+          const ids = new Set(prev.map((s) => s.id));
+          return [...prev, ...(result.inserted as ServiceWithMeta[]).filter((s) => !ids.has(s.id))];
+        });
+      }
+      if (result.exampleIds.length > 0 && result.exampleIds.join() !== (storedIds ?? []).join()) {
+        setSettings((prev) => {
+          const next = { ...prev, example_service_ids: result.exampleIds };
+          void supabase.from('profiles').update({ paid_booking_settings: next }).eq('id', user.id);
+          return next;
+        });
+      }
+    })();
+  }, [user, loadingServices, suggestion.demoServices, settings.example_service_ids]);
 
   const themeDef = getTheme(theme);
   const accent = settings.btn_color || themeDef.btnBg;
@@ -537,7 +609,10 @@ export function PaidBookingPage() {
     return (demos.length > 0 ? demos : FALLBACK_DEMO).slice(0, 3);
   }, [paidMenuServices, suggestion.demoServices]);
 
-  const usingExamples = paidMenuServices.length === 0;
+  const exampleIds = useMemo(() => new Set(settings.example_service_ids ?? []), [settings.example_service_ids]);
+  const usingExamples =
+    paidMenuServices.length === 0 ||
+    (exampleIds.size > 0 && paidMenuServices.every((s) => exampleIds.has(s.id)));
   const paidCount = paidMenuServices.length;
 
   const handleSave = async (andContinue = false) => {
@@ -606,10 +681,11 @@ export function PaidBookingPage() {
     showToast(`Applied ${suggestion.sourceLabel}`, 'success');
   };
 
-  const serviceLink = (svc: ServiceWithMeta) =>
-    profile?.slug
-      ? `${window.location.origin}/${profile.slug}?types=${eventTypeSlug(svc)}`
-      : null;
+  const serviceLink = (svc: ServiceWithMeta) => {
+    if (!profile?.slug) return null;
+    const path = isPaidMenuPrice(svc.price_cents) ? `/${profile.slug}/services` : `/${profile.slug}`;
+    return `${window.location.origin}${path}?types=${eventTypeSlug(svc)}`;
+  };
 
   if (!profile) {
     return (
@@ -669,14 +745,17 @@ export function PaidBookingPage() {
                 services={previewServices}
                 usingExamples={usingExamples}
                 slugHint={profile.slug || undefined}
+                bookingUrl={bookingUrl}
               />
             )}
 
-            {paidCount === 0 && !loadingServices && (
+            {usingExamples && !loadingServices && (
               <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-950/20 text-sm text-amber-900 dark:text-amber-200">
                 <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                 <p>
-                  A $10 hold on a meeting is not a price list. Add a real priced service to show yours here.{' '}
+                  {paidCount > 0
+                    ? 'These starter options are live — guests can book them. Tap Edit on a row to change the name, price, or length, or add your own paid booking in Event types.'
+                    : 'A $10 hold on a meeting is not a price list. Add a priced service over $10, or keep the starter options once they appear.'}{' '}
                   <Link to="/dashboard/settings?tab=event-types" className="font-semibold underline">Open Event types</Link>
                 </p>
               </div>
@@ -778,24 +857,8 @@ export function PaidBookingPage() {
 
                 <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4">
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Palette className="h-4 w-4 text-slate-400" /> Colors & style
+                    <Palette className="h-4 w-4 text-slate-400" /> Button
                   </h3>
-                  <div className="grid grid-cols-3 gap-2">
-                    {THEMES.map((t) => (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => setTheme(t.id)}
-                        className={`rounded-xl border-2 p-2 text-left transition-all ${
-                          theme === t.id ? 'border-[#5864C6] shadow-sm' : 'border-slate-200 dark:border-slate-700'
-                        }`}
-                        style={{ backgroundColor: t.previewBg }}
-                      >
-                        <div className="h-6 rounded-md mb-1 border" style={{ backgroundColor: t.bg, borderColor: t.border }} />
-                        <p className="text-xs font-bold text-slate-800 dark:text-slate-200">{t.label}</p>
-                      </button>
-                    ))}
-                  </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-500 mb-2">Brand / button color</label>
                     <ColorSwatchRow value={settings.btn_color || themeDef.btnBg} onChange={(v) => set('btn_color', v)} size="sm" />
@@ -840,7 +903,8 @@ export function PaidBookingPage() {
                         const checked = !visibleIds || visibleIds.length === 0 || visibleIds.includes(svc.id);
                         return (
                           <li key={svc.id}>
-                            <label className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                            <div className="flex items-center gap-2">
+                            <label className="flex-1 flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50">
                               <input
                                 type="checkbox"
                                 checked={checked}
@@ -851,9 +915,18 @@ export function PaidBookingPage() {
                                 <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{svc.name}</p>
                                 <p className="text-xs text-slate-500">
                                   {svc.duration_minutes} min · {formatPrice(svc.price_cents ?? 0)}
+                                  {exampleIds.has(svc.id) ? ' · Example' : ''}
                                 </p>
                               </div>
                             </label>
+                            <Link
+                              to={`/dashboard/settings?tab=event-types&edit=${svc.id}`}
+                              className="shrink-0 inline-flex items-center gap-1 px-2.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                              Edit
+                            </Link>
+                            </div>
                           </li>
                         );
                       })}
@@ -865,6 +938,110 @@ export function PaidBookingPage() {
                     </ul>
                   )}
                 </section>
+
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvanced((v) => !v)}
+                    className="w-full flex items-center justify-between px-5 py-4 text-sm font-bold text-slate-900 dark:text-white"
+                  >
+                    <span>Advanced</span>
+                    <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+                  </button>
+                  {showAdvanced && (
+                    <div className="px-5 pb-5 space-y-5 border-t border-slate-100 dark:border-slate-800 pt-4">
+                      <p className="text-xs text-slate-500">Fonts, color scheme, layout, and extra page options.</p>
+
+                      <div>
+                        <label className="block text-xs font-medium text-slate-500 mb-2 flex items-center gap-1.5">
+                          <Type className="h-3.5 w-3.5" /> Font
+                        </label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {PAID_BOOKING_FONTS.map((f) => (
+                            <button
+                              key={f.id}
+                              type="button"
+                              onClick={() => set('font', f.id)}
+                              className={`rounded-xl border-2 p-2.5 text-left ${
+                                (settings.font || 'sans') === f.id ? 'border-[#5864C6]' : 'border-slate-200 dark:border-slate-700'
+                              }`}
+                            >
+                              <p className="text-sm font-bold text-slate-900 dark:text-white" style={{ fontFamily: f.stack }}>{f.label}</p>
+                              <p className="text-[10px] text-slate-500 mt-0.5 leading-snug" style={{ fontFamily: f.stack }}>{f.sample}</p>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-slate-500 mb-2">Color scheme</label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {THEMES.map((t) => (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => setTheme(t.id)}
+                              className={`rounded-xl border-2 p-2 text-left ${
+                                theme === t.id ? 'border-[#5864C6] shadow-sm' : 'border-slate-200 dark:border-slate-700'
+                              }`}
+                              style={{ backgroundColor: t.previewBg }}
+                            >
+                              <div className="h-6 rounded-md mb-1 border" style={{ backgroundColor: t.bg, borderColor: t.border }} />
+                              <p className="text-xs font-bold text-slate-800 dark:text-slate-200">{t.label}</p>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-slate-500 mb-2">Page background</label>
+                        <ColorSwatchRow value={settings.bg_color || themeDef.bg} onChange={(v) => set('bg_color', v)} size="sm" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-500 mb-2">Heading color</label>
+                        <ColorSwatchRow value={settings.text_color || themeDef.text} onChange={(v) => set('text_color', v)} size="sm" />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-slate-500 mb-2">Layout</label>
+                        <div className="flex gap-2">
+                          {(['list', 'grid'] as const).map((layout) => (
+                            <button
+                              key={layout}
+                              type="button"
+                              onClick={() => set('layout', layout)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border capitalize ${
+                                (settings.layout || 'list') === layout ? 'text-white border-transparent' : 'border-slate-200 dark:border-slate-700'
+                              }`}
+                              style={(settings.layout || 'list') === layout ? { backgroundColor: accent } : {}}
+                            >
+                              {layout}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={settings.show_descriptions ?? true}
+                          onChange={(e) => set('show_descriptions', e.target.checked)}
+                          className="h-4 w-4 rounded border-slate-300 text-[#5864C6] focus:ring-[#5864C6]"
+                        />
+                        <span className="text-sm text-slate-700 dark:text-slate-300">Show descriptions on the price list</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={settings.show_images ?? false}
+                          onChange={(e) => set('show_images', e.target.checked)}
+                          className="h-4 w-4 rounded border-slate-300 text-[#5864C6] focus:ring-[#5864C6]"
+                        />
+                        <span className="text-sm text-slate-700 dark:text-slate-300">Show photos on each option (if the event type has one)</span>
+                      </label>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="lg:sticky lg:top-28">
@@ -875,6 +1052,7 @@ export function PaidBookingPage() {
                   services={previewServices}
                   usingExamples={usingExamples}
                   slugHint={profile.slug || undefined}
+                  bookingUrl={bookingUrl}
                   compact
                 />
               </div>

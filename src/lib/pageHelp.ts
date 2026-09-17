@@ -131,12 +131,12 @@ const GUIDES: Record<string, PageHelpGuide> = {
   reminders: {
     title: 'NeverMiss Reminders',
     purpose:
-      'Email, SMS, WhatsApp, or voice so people show up. Nothing sends until a reminder is turned on.',
+      'The grid on this page is what guests get after they book. Check a box to turn that email, text, WhatsApp, or call on. Your own phone number lives under Advanced — guests type theirs when they book.',
     steps: [
-      'Turn on Booking Confirmation and 24h / 1h guest reminders on this page.',
-      'Optional: add coworkers under Settings and copy them on events from Calendar.',
-      'Use Advanced for voice defaults and per-contact overrides in Contacts.',
-      'On Calendar, the bell on an event can customize that meeting only. Edit the On my way text under Settings → Profile ({{eta}} is the minutes you pick).',
+      'Use the grid: Booking Confirmation plus 24h / 1h reminders are the usual set.',
+      'Add Reminder is for a one-off reminder to yourself (a flight, a pickup), not the guest grid.',
+      'Under Advanced, add your cell if you want texts or calls to you. Coworkers and voice defaults are there too.',
+      'On Calendar, the bell on an event can customize that meeting only.',
     ],
     canDo: ['Remind guests and coworkers before meetings', 'Use email / SMS / WhatsApp / voice when enabled'],
     cannotDo: ['Reminders do not send until you enable them', 'PinOnIt cannot force a carrier to deliver every SMS'],
@@ -210,7 +210,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
     purpose: 'A price-list page clients can book from — share by link, email, SMS, or embed.',
     steps: [
       'See what it is: a short menu of your priced options.',
-      'Customize your logo, colors, and which event types appear (set prices under Event types).',
+      'Customize logo, name, and button. Advanced has fonts, color scheme, and layout.',
       'Share the full page link, or a single-option booking link.',
     ],
   },

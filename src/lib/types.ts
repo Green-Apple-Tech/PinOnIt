@@ -121,6 +121,8 @@ export interface Profile {
   updated_at: string;
 }
 
+export type PaidBookingFont = 'sans' | 'serif' | 'rounded';
+
 export interface PaidBookingSettings {
   display_name?: string;
   tagline?: string;
@@ -129,6 +131,7 @@ export interface PaidBookingSettings {
   btn_color?: string;
   text_color?: string;
   btn_label?: string;
+  font?: PaidBookingFont;
   layout?: 'list' | 'grid';
   show_descriptions?: boolean;
   show_images?: boolean;
@@ -137,6 +140,8 @@ export interface PaidBookingSettings {
   business_photo_url?: string | null;
   /** When set, only these service IDs appear on the paid booking menu. */
   visible_service_ids?: string[] | null;
+  /** Starter priced services we created so the public page is bookable. */
+  example_service_ids?: string[] | null;
 }
 
 export type MeetingType = 'one_on_one' | 'group' | 'one_off';

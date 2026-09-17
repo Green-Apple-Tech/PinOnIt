@@ -19,7 +19,13 @@ import { resolveTermsText } from '../lib/terms';
 import { resolveBookingAgreement } from '../lib/bookingAgreement';
 import { fillDocumentPlaceholders, documentFilePublicUrl } from '../lib/documents';
 import { bookableEventTypes, serviceMatchesTypeToken } from '../lib/eventTypes';
-import { defaultPaidBookingSuggestion, isPaidMenuPrice } from '../lib/paidBookingSuggestions';
+import {
+  defaultPaidBookingSuggestion,
+  isPaidMenuPrice,
+  paidBookingFontStack,
+  resolvePaidBookingSuggestion,
+} from '../lib/paidBookingSuggestions';
+import { ensurePaidBookingExamples } from '../lib/ensurePaidBookingExamples';
 import { isUnusedSingleUseExpired } from '../lib/singleUseLinks';
 import { syncBookingToExternalCalendars } from '../lib/writeCalendarEvent';
 import { stripePromise } from '../lib/stripe';
@@ -65,6 +71,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Pencil,
 } from 'lucide-react';
 
 const REMINDER_CHANNELS = [
@@ -697,6 +704,38 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
     })();
   }, [slug, token, searchParams]);
 
+  useEffect(() => {
+    if (!isPaidBookingPage || loading || !user || !host || user.id !== host.id) return;
+    if (services.length > 0) return;
+    const stored = host.paid_booking_settings?.example_service_ids;
+    let cancelled = false;
+    void (async () => {
+      const suggestion = resolvePaidBookingSuggestion({
+        email: host.email,
+        businessType: host.business_type,
+        fullName: host.full_name,
+      });
+      const result = await ensurePaidBookingExamples({
+        hostId: host.id,
+        demos: suggestion.demoServices,
+        storedExampleIds: stored,
+      });
+      if (cancelled) return;
+      if (result.inserted.length > 0) {
+        const nextSettings = {
+          ...(host.paid_booking_settings ?? {}),
+          example_service_ids: result.exampleIds,
+        };
+        await supabase.from('profiles').update({ paid_booking_settings: nextSettings }).eq('id', host.id);
+        setServices(result.inserted);
+        setHost((prev) => (prev ? { ...prev, paid_booking_settings: nextSettings } : prev));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isPaidBookingPage, loading, user, host, services.length]);
+
   // Auto-select service for single-use links (only one service is loaded)
   useEffect(() => {
     if (singleUseLink && services.length === 1 && !selectedService) {
@@ -1149,10 +1188,12 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
   const pageBusinessPhoto = isPaidBookingPage
     ? (paidSettings?.business_photo_url || host?.avatar_url || null)
     : (host?.avatar_url || null);
-  const pageTextColor = pageTheme.text;
+  const pageTextColor = isPaidBookingPage && paidSettings?.text_color ? paidSettings.text_color : pageTheme.text;
   const pageMutedColor = pageTheme.muted;
   const pageSurfaceColor = pageTheme.surface;
   const pageBorderColor = pageTheme.border;
+  const pageFontFamily = isPaidBookingPage ? paidBookingFontStack(paidSettings?.font) : undefined;
+  const exampleServiceIds = new Set(paidSettings?.example_service_ids ?? []);
   const showPaidExamples = isPaidBookingPage && !loading && services.length === 0 && !searchParams.get('types');
   const paidExampleItems = useMemo(
     () => defaultPaidBookingSuggestion(host?.full_name ?? '').demoServices.filter((s) => isPaidMenuPrice(s.price_cents)),
@@ -1273,7 +1314,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
   );
 
   return (
-    <div className={`min-h-screen transition-colors ${phonePicker ? 'bg-slate-100 text-slate-800' : calendlyStyle ? 'bg-white text-slate-800' : ''}`} style={phonePicker || calendlyStyle ? undefined : { backgroundColor: pageBgColor, color: pageTextColor }}>
+    <div className={`min-h-screen transition-colors ${phonePicker ? 'bg-slate-100 text-slate-800' : calendlyStyle ? 'bg-white text-slate-800' : ''}`} style={phonePicker || calendlyStyle ? undefined : { backgroundColor: pageBgColor, color: pageTextColor, fontFamily: pageFontFamily }}>
       {!calendlyStyle && !phonePicker && <div className="h-1.5 w-full" style={{ backgroundColor: pageTheme.accentBar }} />}
       <header className={`${phonePicker || calendlyStyle ? 'bg-transparent' : 'border-b sticky top-0 z-40 backdrop-blur-xl'} transition-colors`}
         style={phonePicker || calendlyStyle ? undefined : { borderColor: pageBorderColor, backgroundColor: pageBgColor + 'cc' }}>
@@ -1282,6 +1323,15 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
             <ArrowLeft className="h-4 w-4" /> Back
           </Link>
           <div className="flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500">
+            {isHostViewer && isPaidBookingPage && (
+              <Link
+                to="/dashboard/paid-booking"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold"
+                style={{ color: pageBtnColor }}
+              >
+                <Pencil className="h-3 w-3" /> Edit page
+              </Link>
+            )}
             {singleUseLink && (
               <span className="flex items-center gap-1 px-2 py-1 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 rounded-full font-semibold text-[11px]">
                 <Zap className="h-3 w-3" />
@@ -1406,17 +1456,35 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                 ) : (() => {
                   const renderSvc = (svc: Service) => {
                     const ext = svc as Service & { banner_image_url?: string | null; category?: string | null };
+                    const exampleBadge = isHostViewer && exampleServiceIds.has(svc.id) ? (
+                      <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800">Example</span>
+                    ) : null;
+                    const editLink = isHostViewer ? (
+                      <Link
+                        to={`/dashboard/settings?tab=event-types&edit=${svc.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute top-2 right-2 z-10 inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold border bg-white/90 dark:bg-slate-900/90"
+                        style={{ borderColor: pageBorderColor, color: pageTextColor }}
+                      >
+                        <Pencil className="h-3 w-3" /> Edit
+                      </Link>
+                    ) : null;
                     if (pageLayout === 'grid') {
                       return (
-                        <button key={svc.id} onClick={() => handleSelectService(svc)}
-                          className="flex flex-col rounded-xl overflow-hidden transition-all text-left shadow-sm border"
+                        <div key={svc.id} className="relative">
+                          {editLink}
+                          <button type="button" onClick={() => handleSelectService(svc)}
+                          className="w-full flex flex-col rounded-xl overflow-hidden transition-all text-left shadow-sm border"
                           style={{ backgroundColor: pageSurfaceColor, borderColor: pageBorderColor }}>
                           {pageShowImages && ext.banner_image_url
                             ? <img src={ext.banner_image_url} alt={svc.name} width={112} height={112} loading="lazy" className="w-full h-28 object-cover" />
                             : pageShowImages && <div className="w-full h-20 flex items-center justify-center" style={{ backgroundColor: pageBorderColor }}><span className="h-3 w-3 rounded-full" style={{ backgroundColor: svc.color }} /></div>
                           }
                           <div className="p-3.5 flex-1 flex flex-col gap-2">
-                            <p className="font-semibold text-sm" style={{ color: pageTextColor }}>{svc.name}</p>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-semibold text-sm" style={{ color: pageTextColor }}>{svc.name}</p>
+                              {exampleBadge}
+                            </div>
                             {serviceShowsDescription(svc) && <p className="text-xs line-clamp-2 flex-1" style={{ color: pageMutedColor }}>{svc.description}</p>}
                             <div className="flex items-center justify-between gap-2 mt-auto">
                               <span className="text-xs" style={{ color: pageMutedColor }}>{svc.duration_minutes} min{svc.price_cents > 0 ? ` · $${(svc.price_cents / 100).toFixed(2)}` : ' · Free'}</span>
@@ -1424,10 +1492,13 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                             </div>
                           </div>
                         </button>
+                        </div>
                       );
                     }
                     return (
-                      <button key={svc.id} onClick={() => handleSelectService(svc)}
+                      <div key={svc.id} className="relative">
+                        {editLink}
+                        <button type="button" onClick={() => handleSelectService(svc)}
                         className={`w-full p-4 rounded-xl transition-all text-left border ${isBoldTheme ? 'shadow-none' : 'shadow-sm'}`}
                         style={{ backgroundColor: pageSurfaceColor, borderColor: pageBorderColor }}>
                         <div className="flex items-start justify-between gap-3">
@@ -1437,9 +1508,10 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                               : <div className={`rounded-lg shrink-0 flex items-center justify-center ${isBoldTheme ? 'h-16 w-16' : 'h-14 w-14'}`} style={{ backgroundColor: pageBorderColor }}><span className="h-3 w-3 rounded-full" style={{ backgroundColor: svc.color }} /></div>
                             )}
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
                                 {!pageShowImages && <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: svc.color }} />}
                                 <span className={`font-semibold ${isBoldTheme ? 'text-base' : ''}`} style={{ color: pageTextColor }}>{svc.name}</span>
+                                {exampleBadge}
                               </div>
                               {serviceShowsDescription(svc) && <p className="text-sm mb-1.5" style={{ color: pageMutedColor }}>{svc.description}</p>}
                               <p className="text-xs" style={{ color: pageMutedColor }}>
@@ -1453,6 +1525,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                           <span style={{ backgroundColor: pageBtnColor, color: pageTheme.btnText }} className="shrink-0 px-3 py-1.5 text-xs font-semibold rounded-lg whitespace-nowrap self-center">{pageBtnLabel}</span>
                         </div>
                       </button>
+                      </div>
                     );
                   };
                   if (pageUseCategories && pageCategories.length > 0) {
