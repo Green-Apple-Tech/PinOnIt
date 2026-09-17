@@ -17,6 +17,7 @@ import {
   type BookingAgreementType,
 } from '../lib/bookingAgreement';
 import { BookingAgreementPdfField } from '../components/BookingAgreementPdfField';
+import { BuiltInTemplateNoticePair } from '../components/BuiltInTemplateNoticePair';
 import { activeHostDocumentFiles, type HostDocumentFile } from '../lib/hostDocuments';
 import { HostLegalStateNotice } from '../components/HostLegalStateNotice';
 import { LegalTemplatesNeedLink } from '../components/LegalTemplatesNeedLink';
