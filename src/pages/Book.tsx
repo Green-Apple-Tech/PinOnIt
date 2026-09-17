@@ -19,6 +19,7 @@ import { resolveTermsText } from '../lib/terms';
 import { resolveBookingAgreement } from '../lib/bookingAgreement';
 import { fillDocumentPlaceholders, documentFilePublicUrl } from '../lib/documents';
 import { bookableEventTypes, serviceMatchesTypeToken } from '../lib/eventTypes';
+import { defaultPaidBookingSuggestion, isPaidMenuPrice } from '../lib/paidBookingSuggestions';
 import { isUnusedSingleUseExpired } from '../lib/singleUseLinks';
 import { syncBookingToExternalCalendars } from '../lib/writeCalendarEvent';
 import { stripePromise } from '../lib/stripe';
@@ -671,10 +672,13 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
         ? ((loadedProfile as { paid_booking_settings?: PaidBookingSettings } | null)?.paid_booking_settings
             ?.visible_service_ids ?? null)
         : null;
+      const paidListed = onPaidMenu
+        ? listedServices.filter((s) => isPaidMenuPrice(s.price_cents))
+        : listedServices;
       const menuFiltered =
         visibleIds && visibleIds.length > 0
-          ? listedServices.filter((s) => visibleIds.includes(s.id))
-          : listedServices;
+          ? paidListed.filter((s) => visibleIds.includes(s.id))
+          : paidListed;
       const filteredServices = typesParam
         ? menuFiltered.filter((s) => typesParam.split(',').some((tok) => serviceMatchesTypeToken(s, tok)))
         : menuFiltered;
@@ -1149,6 +1153,11 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
   const pageMutedColor = pageTheme.muted;
   const pageSurfaceColor = pageTheme.surface;
   const pageBorderColor = pageTheme.border;
+  const showPaidExamples = isPaidBookingPage && !loading && services.length === 0 && !searchParams.get('types');
+  const paidExampleItems = useMemo(
+    () => defaultPaidBookingSuggestion(host?.full_name ?? '').demoServices.filter((s) => isPaidMenuPrice(s.price_cents)),
+    [host?.full_name],
+  );
 
   const calendlyStyle = !isPaidBookingPage;
   const phonePicker = step === 'datetime';
@@ -1344,9 +1353,57 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
           <div className={phonePicker ? 'p-5 sm:p-6' : calendlyStyle ? 'p-4 sm:p-6 md:p-8' : ''}>
             {step === 'service' && (
               <div>
-                <h2 className="text-xl font-bold mb-1" style={{ color: pageTextColor }}>Book an appointment</h2>
-                <p className="text-sm mb-6" style={{ color: pageMutedColor }}>Select a service to get started.</p>
-                {(() => {
+                {showPaidExamples ? (
+                  <>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 mb-3">
+                      Examples
+                    </span>
+                    <h2 className="text-xl font-bold mb-1" style={{ color: pageTextColor }}>Example price list</h2>
+                    <p className="text-sm mb-6" style={{ color: pageMutedColor }}>
+                      Sample options so you can see how this page looks. Your priced bookings show here after you add a paid booking.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h2 className="text-xl font-bold mb-1" style={{ color: pageTextColor }}>Book an appointment</h2>
+                    <p className="text-sm mb-6" style={{ color: pageMutedColor }}>Select a service to get started.</p>
+                  </>
+                )}
+                {showPaidExamples ? (
+                  <div className={pageLayout === 'grid' ? 'grid grid-cols-2 gap-3' : 'space-y-3'}>
+                    {paidExampleItems.map((svc) => (
+                      <div
+                        key={svc.id}
+                        className={`w-full p-4 rounded-xl text-left border ${isBoldTheme ? 'shadow-none' : 'shadow-sm'}`}
+                        style={{ backgroundColor: pageSurfaceColor, borderColor: pageBorderColor }}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <span className={`font-semibold ${isBoldTheme ? 'text-base' : ''}`} style={{ color: pageTextColor }}>{svc.name}</span>
+                              <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800">Example</span>
+                            </div>
+                            {pageShowDesc && svc.description && (
+                              <p className="text-sm mb-1.5" style={{ color: pageMutedColor }}>{svc.description}</p>
+                            )}
+                            <p className="text-xs" style={{ color: pageMutedColor }}>
+                              {svc.duration_minutes} min
+                              <span className="ml-2 font-semibold" style={{ color: pageBtnColor }}>
+                                ${(svc.price_cents / 100).toFixed(svc.price_cents % 100 === 0 ? 0 : 2)}
+                              </span>
+                            </p>
+                          </div>
+                          <span
+                            className="shrink-0 px-3 py-1.5 text-xs font-semibold rounded-lg whitespace-nowrap self-center opacity-60"
+                            style={{ backgroundColor: pageBtnColor, color: pageTheme.btnText }}
+                          >
+                            {pageBtnLabel}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (() => {
                   const renderSvc = (svc: Service) => {
                     const ext = svc as Service & { banner_image_url?: string | null; category?: string | null };
                     if (pageLayout === 'grid') {

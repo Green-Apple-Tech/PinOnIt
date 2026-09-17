@@ -146,7 +146,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
     title: 'Event types',
     purpose: 'Each event type is a meeting people can book — length, place, price, questions, and whether it repeats.',
     steps: [
-      'Tap New event type (or edit an existing one).',
+      'Tap New event type and pick meeting, paid meeting, or paid booking.',
       'Set the name, duration, and in-person / video / phone.',
       'Customers can request repeating visits on your public booking page. Confirm those on Recurring jobs.',
       'On Questions, turn on Require guest agreement if they must check a waiver, NDA, contract, approval, or other document before they book.',

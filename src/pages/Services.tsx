@@ -18,6 +18,7 @@ import {
 } from '../lib/bookingAgreement';
 import { BookingAgreementPdfField } from '../components/BookingAgreementPdfField';
 import { BuiltInTemplateNoticePair } from '../components/BuiltInTemplateNoticePair';
+import { isPaidMenuPrice } from '../lib/paidBookingSuggestions';
 import { activeHostDocumentFiles, type HostDocumentFile } from '../lib/hostDocuments';
 import { HostLegalStateNotice } from '../components/HostLegalStateNotice';
 import { LegalTemplatesNeedLink } from '../components/LegalTemplatesNeedLink';
@@ -26,6 +27,7 @@ import {
   Plus, Trash2, X, Check, Loader2, MapPin, Clock, Settings2, MessageSquare,
   Copy, Smartphone, Mail, Pencil, ExternalLink, Link2, AlertCircle,
   Search, CreditCard, QrCode, Zap, Bell, ChevronDown, Shield, HelpCircle, Repeat,
+  Calendar, ShoppingBag, DollarSign,
 } from 'lucide-react';
 import { QRModal } from '../components/QRModal';
 import {
@@ -54,6 +56,39 @@ interface ServiceReminder {
 
 
 type ServiceTab = 'basic' | 'scheduling' | 'location' | 'reminders' | 'questions' | 'policy' | 'payment';
+type EventOfferKind = 'meeting' | 'paid_meeting' | 'paid_booking';
+
+function offerKindFromPrice(cents: number): EventOfferKind {
+  if (!cents) return 'meeting';
+  if (!isPaidMenuPrice(cents)) return 'paid_meeting';
+  return 'paid_booking';
+}
+
+const OFFER_KINDS: {
+  id: EventOfferKind;
+  title: string;
+  hint: string;
+  icon: typeof Calendar;
+}[] = [
+  {
+    id: 'meeting',
+    title: 'Meeting / appointment',
+    hint: 'Free booking. They pick a time on your calendar.',
+    icon: Calendar,
+  },
+  {
+    id: 'paid_meeting',
+    title: 'Paid meeting / appointment',
+    hint: 'Same as a meeting, plus a price — even $10 so they show up.',
+    icon: DollarSign,
+  },
+  {
+    id: 'paid_booking',
+    title: 'Paid booking',
+    hint: 'A priced service on your price-list page that clients can book.',
+    icon: ShoppingBag,
+  },
+];
 
 const DEFAULT_SERVICE = {
   name: '', description: '', duration_minutes: 30, price_cents: 0, color: '#5864C6',
@@ -360,6 +395,9 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
   const [editingId, setEditingId] = useState<string | 'new' | null>(null);
   const [form, setForm] = useState<FormState>({ ...DEFAULT_SERVICE });
   const [priceStr, setPriceStr] = useState('');
+  const [pickingKind, setPickingKind] = useState(false);
+  const [offerKind, setOfferKind] = useState<EventOfferKind>('meeting');
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [activeTab, setActiveTab] = useState<ServiceTab>('basic');
   const [saving, setSaving] = useState(false);
   const [nameError, setNameError] = useState('');
@@ -479,11 +517,31 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
     setRecurrenceEndType('never');
     setPriceStr('');
     setEditingId('new');
+    setPickingKind(true);
+    setOfferKind('meeting');
+    setShowAdvanced(false);
     setActiveTab('basic');
     setQuestions([]);
     setReminders([]);
     setSelectedCalendarIds([]);
     setAddingQ(false);
+  };
+
+  const applyOfferKind = (kind: EventOfferKind) => {
+    setOfferKind(kind);
+    setPickingKind(false);
+    setShowAdvanced(false);
+    setActiveTab('basic');
+    if (kind === 'meeting') {
+      setPriceStr('');
+      setField('show_description_on_paid_booking', false);
+    } else if (kind === 'paid_meeting') {
+      setPriceStr('10.00');
+      setField('show_description_on_paid_booking', false);
+    } else {
+      setPriceStr('75.00');
+      setField('show_description_on_paid_booking', true);
+    }
   };
 
   useEffect(() => {
@@ -575,6 +633,9 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
     setRecurrenceEndType(getRecurrenceEndType(svc.recurrence_end_date, svc.recurrence_end_occurrences));
     setPriceStr(svc.price_cents ? (svc.price_cents / 100).toFixed(2) : '');
     setEditingId(svc.id);
+    setPickingKind(false);
+    setOfferKind(offerKindFromPrice(svc.price_cents ?? 0));
+    setShowAdvanced(false);
     setActiveTab('basic');
     setSelectedCalendarIds((svc as any).booking_calendar_ids ?? []);
     setAddingQ(false);
@@ -591,11 +652,18 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
     setAddingQ(false);
     setNewQLabel('');
     setNameError('');
+    setPickingKind(false);
+    setShowAdvanced(false);
   };
 
   const handleSave = async () => {
     if (!profile) return;
     if (!form.name.trim()) { setNameError('Event name is required.'); return; }
+    const priceCents = priceStr ? Math.round(parseFloat(priceStr) * 100) : 0;
+    if (offerKind !== 'meeting' && !(priceCents > 0)) {
+      setNameError(offerKind === 'paid_booking' ? 'Set a price for this paid booking.' : 'Set a price for this paid meeting — $10 is enough as a hold.');
+      return;
+    }
     if (form.is_recurring && !form.recurrence_frequency) { setNameError('Select a frequency for repeating visits.'); return; }
     if (form.is_recurring && form.recurrence_frequency === 'custom' && !(form.recurrence_interval_days && form.recurrence_interval_days >= 1)) {
       setNameError('Set how many days between visits for a custom cadence.');
@@ -603,7 +671,6 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
     }
     setNameError('');
     setSaving(true);
-    const priceCents = priceStr ? Math.round(parseFloat(priceStr) * 100) : 0;
     const venmo = form.venmo_handle?.trim() || null;
     const cashapp = form.cashapp_handle?.trim() || null;
     const zelle = form.zelle_handle?.trim() || null;
@@ -1123,7 +1190,15 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
             <div className="flex items-center gap-3 min-w-0">
               {editingSvc && <div className="h-3 w-3 rounded-full shrink-0 bg-brand-500" />}
               <h2 className="font-bold text-gray-900 dark:text-white text-lg truncate">
-                {editingId === 'new' ? 'New event type' : (editingSvc?.name ?? 'Edit event type')}
+                {pickingKind
+                  ? 'What are you adding?'
+                  : editingId === 'new'
+                    ? offerKind === 'paid_booking'
+                      ? 'New paid booking'
+                      : offerKind === 'paid_meeting'
+                        ? 'New paid meeting'
+                        : 'New meeting'
+                    : (editingSvc?.name ?? 'Edit event type')}
               </h2>
             </div>
             <div className="flex items-center gap-2 shrink-0">
@@ -1145,7 +1220,7 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
             </div>
           </div>
 
-          {/* ── Tab bar — horizontally scrollable ── */}
+          {!pickingKind && showAdvanced && (
           <div className="flex border-b border-gray-100 dark:border-slate-800 overflow-x-auto shrink-0 scrollbar-hide bg-white dark:bg-slate-950">
             {tabs.map((t) => (
               <button key={t.key} onClick={() => setActiveTab(t.key)}
@@ -1159,23 +1234,122 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
               </button>
             ))}
           </div>
+          )}
 
           {/* ── Scrollable content — pb-24 on mobile to clear sticky save button ── */}
           <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-5 pb-24 md:pb-6">
 
+            {pickingKind && (
+              <div className="max-w-lg mx-auto space-y-3 py-4">
+                <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">
+                  Pick one. You can change the details next — extra options stay under Advanced.
+                </p>
+                {OFFER_KINDS.map((kind) => {
+                  const Icon = kind.icon;
+                  return (
+                    <button
+                      key={kind.id}
+                      type="button"
+                      onClick={() => applyOfferKind(kind.id)}
+                      className="w-full flex items-start gap-4 p-4 rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-left hover:border-brand-500 hover:shadow-sm transition-all min-h-[72px]"
+                    >
+                      <div className="h-11 w-11 rounded-xl bg-brand-50 dark:bg-brand-950/40 flex items-center justify-center shrink-0">
+                        <Icon className="h-5 w-5 text-brand-600 dark:text-brand-400" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-base font-bold text-gray-900 dark:text-white">{kind.title}</p>
+                        <p className="text-sm text-gray-500 dark:text-slate-400 mt-0.5 leading-snug">{kind.hint}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {!pickingKind && (
+              <div className="space-y-5 max-w-xl">
+                {editingId === 'new' && (
+                  <button
+                    type="button"
+                    onClick={() => { setPickingKind(true); setNameError(''); }}
+                    className="text-sm font-semibold text-brand-600 hover:text-brand-700"
+                  >
+                    ← Change type
+                  </button>
+                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-slate-400 mb-1.5">Name *</label>
+                  <input type="text" value={form.name} onChange={(e) => { setField('name', e.target.value); if (nameError) setNameError(''); }}
+                    placeholder={
+                      offerKind === 'paid_booking'
+                        ? 'e.g. 60 Min Strategy Session'
+                        : offerKind === 'paid_meeting'
+                          ? 'e.g. 30 Min Meeting'
+                          : 'e.g. 30 Minute Consultation'
+                    }
+                    className={`${inputCls} ${nameError ? 'border-red-400 focus:ring-red-400' : ''}`} />
+                  {nameError && <p className="text-sm text-red-500 mt-1">{nameError}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-slate-400 mb-1.5">How long</label>
+                  <select value={form.duration_minutes} onChange={(e) => setField('duration_minutes', parseInt(e.target.value))} className={inputCls}>
+                    {[15, 20, 25, 30, 45, 60, 75, 90, 120, 150, 180, 240].map((d) => <option key={d} value={d}>{d} min</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-slate-400 mb-2">Where</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {(['video', 'in_person', 'phone'] as const).map((k) => (
+                      <button key={k} type="button" onClick={() => setField('location_type', k)}
+                        className={`px-3 py-3 rounded-xl border text-sm font-semibold text-left min-h-[48px] ${
+                          form.location_type === k
+                            ? 'bg-brand-50 dark:bg-brand-950/30 border-brand-500 text-brand-700 dark:text-brand-300'
+                            : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300'
+                        }`}>
+                        {LOCATION_TYPES[k]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {offerKind !== 'meeting' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 dark:text-slate-400 mb-1.5">
+                      {offerKind === 'paid_booking' ? 'Price' : 'Price (hold)'}
+                    </label>
+                    <input type="text" inputMode="decimal" placeholder={offerKind === 'paid_booking' ? '75.00' : '10.00'} value={priceStr} onChange={(e) => { setPriceStr(e.target.value); if (nameError) setNameError(''); }} className={inputCls} />
+                    <p className="text-xs text-gray-400 dark:text-slate-500 mt-1.5 leading-relaxed">
+                      {offerKind === 'paid_booking'
+                        ? 'Shows on your paid booking price list. Use more than $10 so it is not treated as a hold.'
+                        : 'Charge something small so they are more likely to show up. $10 is enough.'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!pickingKind && (
+              <div className="max-w-xl pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced((v) => !v)}
+                  className="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50/80 dark:bg-slate-900/40 text-sm font-semibold text-gray-800 dark:text-slate-200"
+                >
+                  Advanced
+                  <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+                </button>
+                {showAdvanced && (
+                  <p className="text-xs text-gray-400 dark:text-slate-500 mt-2 px-1">
+                    Buffers, repeating visits, reminders, questions, agreements, and payment details.
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* ── BASIC ── */}
-            {activeTab === 'basic' && (
+            {showAdvanced && !pickingKind && activeTab === 'basic' && (
               <div className="space-y-5 md:grid md:grid-cols-2 md:gap-x-8 md:gap-y-5 md:space-y-0 items-start">
                 {/* LEFT COLUMN — name, description, meeting type */}
                 <div className="space-y-5">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500 dark:text-slate-400 mb-1.5">Event name *</label>
-                    <input type="text" value={form.name} onChange={(e) => { setField('name', e.target.value); if (nameError) setNameError(''); }}
-                      placeholder="e.g. 30 Minute Consultation"
-                      className={`${inputCls} ${nameError ? 'border-red-400 focus:ring-red-400' : ''}`} />
-                    {nameError && <p className="text-sm text-red-500 mt-1">{nameError}</p>}
-                  </div>
-
                   <div>
                     <label className="block text-sm font-medium text-gray-500 dark:text-slate-400 mb-1.5">Description</label>
                     <textarea value={form.description} onChange={(e) => setField('description', e.target.value)}
@@ -1255,13 +1429,6 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
 
                 {/* RIGHT COLUMN — duration, price, color, active */}
                 <div className="space-y-5">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500 dark:text-slate-400 mb-1.5">Duration</label>
-                    <select value={form.duration_minutes} onChange={(e) => setField('duration_minutes', parseInt(e.target.value))} className={inputCls}>
-                      {[15, 20, 25, 30, 45, 60, 75, 90, 120, 150, 180, 240].map((d) => <option key={d} value={d}>{d} min</option>)}
-                    </select>
-                  </div>
-
                     <div id="recurring-bookings" className="p-4 border border-gray-100 dark:border-slate-800 rounded-xl space-y-4 bg-gray-50/50 dark:bg-slate-900/30">
                       <div className="flex items-center justify-between gap-3">
                         <div>
@@ -1345,11 +1512,6 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-500 dark:text-slate-400 mb-1.5">Price <span className="font-normal text-gray-400">(empty = free)</span></label>
-                    <input type="text" inputMode="decimal" placeholder="0.00" value={priceStr} onChange={(e) => setPriceStr(e.target.value)} className={inputCls} />
-                  </div>
-
-                  <div>
                     <label className="block text-sm font-medium text-gray-500 dark:text-slate-400 mb-2">Accent color</label>
                     <ColorSwatchRow value={form.color} onChange={(c) => setField('color', c)} />
                   </div>
@@ -1394,7 +1556,7 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
             )}
 
             {/* ── SCHEDULING ── */}
-            {activeTab === 'scheduling' && (
+            {showAdvanced && !pickingKind && activeTab === 'scheduling' && (
               <>
                 {([
                   { field: 'buffer_before_minutes' as const, label: 'Buffer before meeting', desc: 'Add a gap before every meeting so you have time to prepare.' },
@@ -1430,7 +1592,7 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
             )}
 
             {/* ── LOCATION ── */}
-            {activeTab === 'location' && (
+            {showAdvanced && !pickingKind && activeTab === 'location' && (
               <>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 dark:text-slate-400 mb-2">Where does this meeting happen?</label>
@@ -1496,7 +1658,7 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
             )}
 
             {/* ── REMINDERS ── */}
-            {activeTab === 'reminders' && (
+            {showAdvanced && !pickingKind && activeTab === 'reminders' && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
@@ -1542,7 +1704,7 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
             )}
 
             {/* ── QUESTIONS ── */}
-            {activeTab === 'questions' && (
+            {activeTab === 'questions' && showAdvanced && !pickingKind && (
               <>
                 <div className="space-y-2 mb-2">
                   <p className="text-sm font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">Guest agreement</p>
@@ -1734,7 +1896,7 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
             )}
 
             {/* ── POLICY ── */}
-            {activeTab === 'policy' && (
+            {activeTab === 'policy' && showAdvanced && !pickingKind && (
               <div className="space-y-4">
                 {[
                   { field: 'allow_cancellation' as const, label: 'Allow guest cancellation', desc: 'Guests can cancel via one-tap link' },
@@ -1769,7 +1931,7 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
             )}
 
             {/* ── PAYMENT ── */}
-            {activeTab === 'payment' && (
+            {activeTab === 'payment' && showAdvanced && !pickingKind && (
               <PaymentTab
                 form={form}
                 setField={(k, v) => setField(k, v as FormState[typeof k])}
@@ -1780,7 +1942,7 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
           </div>
 
           {/* ── Save button — sticky at bottom on mobile, inline footer on md+ ── */}
-          {activeTab !== 'reminders' && (
+          {activeTab !== 'reminders' && !pickingKind && (
             <>
               {/* Mobile: fixed full-width bar */}
               <div className="md:hidden fixed bottom-0 left-0 right-0 z-20 px-4 py-3 bg-white dark:bg-slate-950 border-t border-gray-100 dark:border-slate-800 safe-bottom">

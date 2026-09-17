@@ -179,6 +179,16 @@ function PriceListPreview({
           {bio && !compact && (
             <p className="text-sm leading-relaxed" style={{ color: theme.muted }}>{bio}</p>
           )}
+          {usingExamples && (
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                Examples
+              </span>
+              <span className="text-xs" style={{ color: theme.muted }}>
+                Sample price list until you add a paid booking
+              </span>
+            </div>
+          )}
           <div className="space-y-2.5">
             {list.map((svc) => (
               <div
@@ -187,7 +197,14 @@ function PriceListPreview({
                 style={{ backgroundColor: theme.surface, border: `1px solid ${theme.border}` }}
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold truncate" style={{ color: theme.text }}>{svc.name}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-semibold truncate" style={{ color: theme.text }}>{svc.name}</p>
+                    {usingExamples && (
+                      <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 shrink-0">
+                        Example
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs mt-0.5" style={{ color: theme.muted }}>{svc.duration_minutes} min</p>
                   {svc.description && !compact && (
                     <p className="text-xs mt-0.5 leading-snug line-clamp-2" style={{ color: theme.muted }}>{svc.description}</p>
@@ -209,7 +226,7 @@ function PriceListPreview({
           </div>
           {usingExamples && (
             <p className="text-[11px] text-center" style={{ color: theme.muted }}>
-              Example price list — yours show here after you add paid event types
+              Examples — guests see this sample until you add a paid booking
             </p>
           )}
         </div>
