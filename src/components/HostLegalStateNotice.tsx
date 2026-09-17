@@ -12,7 +12,7 @@ export function HostLegalStateNotice({
   const notice = hostLegalStateNotice(documentType, businessRegion);
   if (!notice) return null;
   return (
-    <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed">
+    <p className="text-[11px] text-black dark:text-white leading-relaxed">
       {notice}
     </p>
   );

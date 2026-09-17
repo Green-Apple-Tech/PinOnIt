@@ -34,7 +34,7 @@ export function BuiltInTemplateNoticePair({ type, show, footer, children }: Prop
         {builtInTemplateStandardLine(type)}
       </p>
       <div className="max-h-52 overflow-y-auto overscroll-contain">{children}</div>
-      <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed">
+      <p className="text-[11px] text-black dark:text-white leading-relaxed">
         {builtInTemplateScopeLine()}
       </p>
       {footer}

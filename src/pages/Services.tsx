@@ -1606,7 +1606,7 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
                                 placeholder="Paste or edit the agreement they must check."
                                 className={`${inputCls} resize-y min-h-[8rem]`}
                               />
-                              <p className="mt-1.5 text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed">
+                              <p className="mt-1.5 text-[11px] text-black dark:text-white leading-relaxed">
                                 {builtInTemplateScopeLine()}
                               </p>
                             </>
