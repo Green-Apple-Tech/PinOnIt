@@ -7,6 +7,7 @@ import {
   mergePaidBookingSuggestion,
   resolvePaidBookingSuggestion,
   isStoredPaidBookingCustomized,
+  isPaidMenuPrice,
   type PaidBookingDemoService,
 } from '../lib/paidBookingSuggestions';
 import type { Service, PaidBookingSettings } from '../lib/types';
@@ -79,9 +80,9 @@ const THEMES: ThemeDef[] = [
 ];
 
 const FALLBACK_DEMO: PaidBookingDemoService[] = [
-  { id: '__demo_1', name: '15 Min Quick Call', duration_minutes: 15, price_cents: 0, color: '#5864C6', description: 'A quick intro call.', category: null, banner_image_url: null },
-  { id: '__demo_2', name: '30 Min Consultation', duration_minutes: 30, price_cents: 5000, color: '#5864C6', description: 'Go deeper on your goals.', category: null, banner_image_url: null },
-  { id: '__demo_3', name: '60 Min Session', duration_minutes: 60, price_cents: 10000, color: '#5864C6', description: 'Full session with clear next steps.', category: null, banner_image_url: null },
+  { id: '__demo_1', name: '30 Min Consultation', duration_minutes: 30, price_cents: 7500, color: '#5864C6', description: 'Map the problem and leave with next steps.', category: null, banner_image_url: null },
+  { id: '__demo_2', name: '60 Min Strategy Session', duration_minutes: 60, price_cents: 15000, color: '#5864C6', description: 'Go deep on the plan, numbers, and who does what.', category: null, banner_image_url: null },
+  { id: '__demo_3', name: 'Half-Day Working Session', duration_minutes: 180, price_cents: 45000, color: '#5864C6', description: 'Work through it together, then leave with a written recap.', category: null, banner_image_url: null },
 ];
 
 const BTN_LABELS = ['Book', 'Select', 'Reserve', 'Schedule'];
@@ -182,30 +183,33 @@ function PriceListPreview({
             {list.map((svc) => (
               <div
                 key={svc.id}
-                className="flex items-center justify-between gap-3 p-3 rounded-xl"
+                className="flex items-center justify-between gap-3 p-3.5 rounded-xl"
                 style={{ backgroundColor: theme.surface, border: `1px solid ${theme.border}` }}
               >
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold truncate" style={{ color: theme.text }}>{svc.name}</p>
-                  <p className="text-xs mt-0.5" style={{ color: theme.muted }}>
-                    {svc.duration_minutes} min
-                    <span className="ml-1.5 font-semibold" style={{ color: svc.price_cents > 0 ? btnColor : theme.muted }}>
-                      {formatPrice(svc.price_cents)}
-                    </span>
-                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: theme.muted }}>{svc.duration_minutes} min</p>
+                  {svc.description && !compact && (
+                    <p className="text-xs mt-0.5 leading-snug line-clamp-2" style={{ color: theme.muted }}>{svc.description}</p>
+                  )}
                 </div>
-                <span
-                  className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold"
-                  style={{ backgroundColor: btnColor, color: theme.btnText }}
-                >
-                  {btnLabel}
-                </span>
+                <div className="shrink-0 flex items-center gap-2.5">
+                  <span className="text-sm font-bold tabular-nums" style={{ color: btnColor }}>
+                    {formatPrice(svc.price_cents)}
+                  </span>
+                  <span
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold"
+                    style={{ backgroundColor: btnColor, color: theme.btnText }}
+                  >
+                    {btnLabel}
+                  </span>
+                </div>
               </div>
             ))}
           </div>
           {usingExamples && (
             <p className="text-[11px] text-center" style={{ color: theme.muted }}>
-              Example options — yours show here after you add paid event types
+              Example price list — yours show here after you add paid event types
             </p>
           )}
         </div>
@@ -505,13 +509,19 @@ export function PaidBookingPage() {
     return realServices.filter((s) => setIds.has(s.id));
   }, [realServices, visibleIds]);
 
-  const previewServices = useMemo(() => {
-    if (menuServices.length > 0) return menuServices.slice(0, 6);
-    return suggestion.demoServices.slice(0, 3);
-  }, [menuServices, suggestion.demoServices]);
+  const paidMenuServices = useMemo(
+    () => menuServices.filter((s) => isPaidMenuPrice(s.price_cents)),
+    [menuServices],
+  );
 
-  const usingExamples = menuServices.length === 0;
-  const paidCount = realServices.filter((s) => (s.price_cents ?? 0) > 0).length;
+  const previewServices = useMemo(() => {
+    if (paidMenuServices.length > 0) return paidMenuServices.slice(0, 6);
+    const demos = suggestion.demoServices.filter((s) => isPaidMenuPrice(s.price_cents));
+    return (demos.length > 0 ? demos : FALLBACK_DEMO).slice(0, 3);
+  }, [paidMenuServices, suggestion.demoServices]);
+
+  const usingExamples = paidMenuServices.length === 0;
+  const paidCount = paidMenuServices.length;
 
   const handleSave = async (andContinue = false) => {
     if (!user) return;
@@ -649,7 +659,7 @@ export function PaidBookingPage() {
               <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-950/20 text-sm text-amber-900 dark:text-amber-200">
                 <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                 <p>
-                  Add a paid event type so clients can pay when they book.{' '}
+                  A $10 hold on a meeting is not a price list. Add a real priced service to show yours here.{' '}
                   <Link to="/dashboard/settings?tab=event-types" className="font-semibold underline">Open Event types</Link>
                 </p>
               </div>

@@ -31,6 +31,13 @@ export interface PaidBookingSuggestion {
 
 const BRAND = '#5864C6';
 
+/** $10 or less is a show-up hold, not an item on a paid price list. */
+export const PAID_MENU_MIN_CENTS = 1001;
+
+export function isPaidMenuPrice(cents: number | null | undefined): boolean {
+  return (cents ?? 0) >= PAID_MENU_MIN_CENTS;
+}
+
 const CONSUMER_EMAIL_DOMAINS = new Set([
   'gmail.com',
   'googlemail.com',
@@ -228,28 +235,42 @@ function demoService(
 
 export function demoServicesForBusinessType(type: BusinessType): PaidBookingDemoService[] {
   const preset = presetsForBusinessType(type);
+  const quick = TYPE_QUICK_START[type] ?? 'consult';
   const label = businessTypeLabel(type).replace(/\s*\/.*$/, '').trim();
   const paidDesc =
     preset.quoteLines[0]?.description
       ? `${preset.quoteLines[0].description} and more — pricing confirmed before work starts.`
       : 'Professional service with clear pricing. Book online in seconds.';
 
+  if (quick === 'photo') {
+    return [
+      demoService('__demo_1', 'Mini Session', 30, 14900, 'Quick portraits — great for headshots or socials.'),
+      demoService('__demo_2', 'Portrait Session', 90, 34900, 'Full session with guidance and a set of edited photos.'),
+      demoService('__demo_3', 'Event Coverage', 180, 79900, 'Half-day coverage for weddings, parties, or brand events.'),
+    ];
+  }
+
+  if (quick === 'home') {
+    const standardPrice = type === 'house_cleaning' || type === 'moving' ? 15000 : 9900;
+    return [
+      demoService('__demo_1', '30 Min Walkthrough', 30, 4900, 'See the job, confirm the scope, and leave a written price.'),
+      demoService('__demo_2', preset.eventName, preset.durationMinutes, standardPrice, paidDesc),
+      demoService('__demo_3', 'Half-Day Project', 240, 39900, `A booked block for larger ${label.toLowerCase()} work.`),
+    ];
+  }
+
+  if (quick === 'wellness') {
+    return [
+      demoService('__demo_1', '30 Min Session', 30, 6500, 'A focused visit — new clients or a check-in.'),
+      demoService('__demo_2', preset.eventName, preset.durationMinutes, 12000, paidDesc),
+      demoService('__demo_3', '90 Min Session', 90, 17500, 'Extra time for a full treatment or first visit.'),
+    ];
+  }
+
   return [
-    demoService('__demo_1', '15 Min Quick Call', 15, 0, 'A quick intro call to discuss what you need.'),
-    demoService(
-      '__demo_2',
-      preset.eventName,
-      preset.durationMinutes,
-      type === 'house_cleaning' || type === 'moving' ? 15000 : 7500,
-      paidDesc,
-    ),
-    demoService(
-      '__demo_3',
-      'Paid Consultation',
-      30,
-      5000,
-      `In-depth ${label.toLowerCase()} consultation for custom work or packages.`,
-    ),
+    demoService('__demo_1', '30 Min Consultation', 30, 7500, 'Map the problem and leave with next steps.'),
+    demoService('__demo_2', '60 Min Strategy Session', 60, 15000, 'Go deep on the plan, numbers, and who does what.'),
+    demoService('__demo_3', 'Half-Day Working Session', 180, 45000, 'Work through it together, then leave with a written recap.'),
   ];
 }
 

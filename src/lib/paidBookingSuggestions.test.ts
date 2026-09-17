@@ -3,6 +3,7 @@ import {
   businessNameFromDomain,
   demoServicesForBusinessType,
   emailDomain,
+  isPaidMenuPrice,
   guessBusinessTypeFromDomain,
   isConsumerEmailDomain,
   isStoredPaidBookingCustomized,
@@ -69,5 +70,21 @@ describe('paidBookingSuggestions', () => {
     const demos = demoServicesForBusinessType('landscaper');
     expect(demos).toHaveLength(3);
     expect(demos[1]?.name).toMatch(/Estimate/i);
+    expect(demos.every((d) => d.price_cents > 0)).toBe(true);
+  });
+
+  it('treats $10 or less as a show-up hold, not a price-list item', () => {
+    expect(isPaidMenuPrice(0)).toBe(false);
+    expect(isPaidMenuPrice(1000)).toBe(false);
+    expect(isPaidMenuPrice(1001)).toBe(true);
+    expect(isPaidMenuPrice(7500)).toBe(true);
+  });
+
+  it('uses a priced consult menu as the default example', () => {
+    const s = resolvePaidBookingSuggestion({ email: 'peter@gmail.com', fullName: 'Peter' });
+    expect(s.source).toBe('default');
+    expect(s.demoServices).toHaveLength(3);
+    expect(s.demoServices.every((d) => d.price_cents > 0)).toBe(true);
+    expect(s.demoServices[0]?.name).toMatch(/Consultation/i);
   });
 });
