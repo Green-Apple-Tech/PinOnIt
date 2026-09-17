@@ -38,7 +38,7 @@ export const IOS_OAUTH_SAFARI_MESSAGE =
 export function isIosIsolatedWebView(ua: string, standalone = false): boolean {
   const ios = /iPhone|iPad|iPod/i.test(ua);
   if (!ios) return false;
-  if (standalone) return true;
+  const isFullIosBrowser = /CriOS|FxiOS|EdgiOS|OPiOS/i.test(ua);
   if (
     /FBAN|FBAV|Instagram|Line\/|Twitter|LinkedInApp|Snapchat|TikTok|ByteLocale|GSA\/|DuckDuckGo|Pinterest|WhatsApp|Messenger/i.test(
       ua,
@@ -46,10 +46,10 @@ export function isIosIsolatedWebView(ua: string, standalone = false): boolean {
   ) {
     return true;
   }
-  // Chrome (CriOS), Firefox (FxiOS), Edge (EdgiOS), Opera (OPiOS) are full browsers on iOS
-  // that can complete OAuth in-place. Only flag as isolated when it's a bare WebKit view
-  // with no recognized browser token AND no Safari marker.
-  if (/CriOS|FxiOS|EdgiOS|OPiOS/i.test(ua)) return false;
+  // Chrome (CriOS), Firefox (FxiOS), Edge (EdgiOS), and Opera (OPiOS) can complete
+  // OAuth in-place, including when opened from a home-screen shortcut.
+  if (isFullIosBrowser) return false;
+  if (standalone) return true;
   return /AppleWebKit/i.test(ua) && !/Safari/i.test(ua);
 }
 

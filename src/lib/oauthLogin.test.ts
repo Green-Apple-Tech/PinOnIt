@@ -51,6 +51,7 @@ describe('isIosIsolatedWebView', () => {
 
   it('flags the home-screen app and in-app browsers that bounce to Safari', () => {
     expect(isIosIsolatedWebView(safari, true)).toBe(true);
+    expect(isIosIsolatedWebView(chrome, true)).toBe(false);
     expect(isIosIsolatedWebView(gsa)).toBe(true);
     expect(isIosIsolatedWebView(instagram)).toBe(true);
     expect(isIosIsolatedWebView('Mozilla/5.0 (iPhone) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 FBAN/FBAV')).toBe(
