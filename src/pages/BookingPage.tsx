@@ -186,25 +186,6 @@ export function BookingPage() {
             </Link>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setTab('recurring')}
-            className="w-full text-left flex items-start gap-4 rounded-2xl border border-indigo-200 dark:border-indigo-800/60 bg-indigo-50/70 dark:bg-indigo-950/20 p-5 md:p-6 mb-6 hover:border-indigo-300 dark:hover:border-indigo-600/60 hover:shadow-sm transition-all"
-          >
-            <div className="h-12 w-12 rounded-xl bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center shrink-0">
-              <Repeat className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Let customers book repeating visits</h2>
-              <p className="text-sm text-slate-600 dark:text-slate-300 mb-2">
-                On your public booking link they can check Want this to repeat? and pick weekly, every 2 weeks, or Tue and Thu. You confirm those requests here.
-              </p>
-              <span className="inline-flex items-center gap-1 text-sm font-semibold text-indigo-700 dark:text-indigo-300">
-                Set up repeating visits <ArrowRight className="h-4 w-4" />
-              </span>
-            </div>
-          </button>
-
           <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 md:p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-slate-900 dark:text-white">Your services</h2>
