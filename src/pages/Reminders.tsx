@@ -7,7 +7,7 @@ import type { MessageTemplate, ReminderRule, Service } from '../lib/types';
 import { SUPPORTED_LANGUAGES, TEMPLATE_VARIABLES } from '../lib/types';
 import { formatErrorMessage } from '../lib/errors';
 import { toast } from '../components/Toast';
-import { backfillMissingReminderRules } from '../lib/reminderSetup';
+import { backfillMissingReminderRules, ensureDefaultGuestEmailReminders } from '../lib/reminderSetup';
 import {
   Bell, Plus, Trash2, X, Check, Loader2, Mail, MessageSquare,
   Languages, Clock, ChevronDown, ChevronUp, Eye, Settings2,
@@ -338,7 +338,9 @@ export function RemindersPage({
           .map((t) => ({ id: t.id, timing_offset_minutes: t.timing_offset_minutes })),
         new Set(loadedRules.map((r) => r.template_id)),
       );
-      setTemplates(loadedTemplates);
+      const defaults = await ensureDefaultGuestEmailReminders(profile.id, loadedTemplates);
+      const allTemplates = [...loadedTemplates, ...(defaults.templates as MessageTemplate[])];
+      setTemplates(allTemplates);
       setRules([
         ...loadedRules,
         ...createdRules.map((r) => ({
@@ -346,31 +348,18 @@ export function RemindersPage({
           host_id: profile.id,
           service_id: null,
           created_at: new Date().toISOString(),
-          template: loadedTemplates.find((t) => t.id === r.template_id),
+          template: allTemplates.find((t) => t.id === r.template_id),
+        })),
+        ...defaults.rules.map((r) => ({
+          ...r,
+          host_id: profile.id,
+          service_id: null,
+          created_at: new Date().toISOString(),
+          template: allTemplates.find((t) => t.id === r.template_id),
         })),
       ]);
       setServices(svcRes.data ?? []);
       setLoading(false);
-
-      // Seed default 1-hour email reminder for brand-new users
-      if (loadedTemplates.length === 0) {
-        const slot = REMINDER_SLOTS.find((s) => s.key === 'reminder_60m')!;
-        const tplContent = CHANNEL_TEMPLATES['reminder_60m']['email'];
-        const { data: tpl } = await supabase
-          .from('message_templates')
-          .insert({ host_id: profile.id, name: `${slot.label} — Email`, type: slot.type, channel: 'email', subject: tplContent.subject, body: tplContent.body, timing_offset_minutes: slot.offset, is_active: true, language: 'en', auto_translate: false })
-          .select().maybeSingle();
-        if (tpl) {
-          setTemplates([tpl]);
-          const { data: rule } = await supabase
-            .from('reminder_rules')
-            .insert({ host_id: profile.id, template_id: tpl.id, service_id: null, timing_offset_minutes: slot.offset, is_active: true, is_critical: false })
-            .select('*, message_templates(*), services(*)').maybeSingle();
-          if (rule) {
-            setRules([{ ...rule, template: (rule as Record<string, unknown>).message_templates as MessageTemplate | undefined, service: (rule as Record<string, unknown>).services as Service | undefined }]);
-          }
-        }
-      }
     })();
   }, [profile]);
 
@@ -409,6 +398,44 @@ export function RemindersPage({
     if (!profile) return;
     const slot = REMINDER_SLOTS.find((s) => s.key === slotKey);
     if (!slot) return;
+    const existingTpl = templates.find(
+      (t) => t.type === slot.type && t.timing_offset_minutes === slot.offset && t.channel === channel,
+    );
+    if (existingTpl) {
+      await supabase.from('message_templates').update({ is_active: true }).eq('id', existingTpl.id);
+      const related = rules.filter((r) => r.template_id === existingTpl.id);
+      if (related.length === 0) {
+        const { data: rule } = await supabase
+          .from('reminder_rules')
+          .insert({
+            host_id: profile.id,
+            template_id: existingTpl.id,
+            service_id: null,
+            timing_offset_minutes: slot.offset,
+            is_active: true,
+            is_critical: false,
+          })
+          .select('*, message_templates(*), services(*)')
+          .maybeSingle();
+        if (rule) {
+          setRules((prev) => [
+            ...prev,
+            {
+              ...rule,
+              template: (rule as Record<string, unknown>).message_templates as MessageTemplate | undefined,
+              service: (rule as Record<string, unknown>).services as Service | undefined,
+            },
+          ]);
+        }
+      } else {
+        for (const r of related) {
+          await supabase.from('reminder_rules').update({ is_active: true }).eq('id', r.id);
+        }
+        setRules((prev) => prev.map((r) => (r.template_id === existingTpl.id ? { ...r, is_active: true } : r)));
+      }
+      setTemplates((prev) => prev.map((t) => (t.id === existingTpl.id ? { ...t, is_active: true } : t)));
+      return;
+    }
     const tplContent = CHANNEL_TEMPLATES[slotKey]?.[channel];
     if (!tplContent) return;
     const channelLabel = channel === 'email' ? 'Email' : channel === 'sms' ? 'SMS' : channel === 'voice' ? 'Voice Call' : 'WhatsApp';
@@ -434,10 +461,12 @@ export function RemindersPage({
     const tpl = templates.find((t) => t.type === slot.type && t.timing_offset_minutes === slot.offset && t.channel === channel);
     if (!tpl) return;
     const relatedRules = rules.filter((r) => r.template_id === tpl.id);
-    for (const r of relatedRules) await supabase.from('reminder_rules').delete().eq('id', r.id);
-    await supabase.from('message_templates').delete().eq('id', tpl.id);
-    setRules((prev) => prev.filter((r) => r.template_id !== tpl.id));
-    setTemplates((prev) => prev.filter((t) => t.id !== tpl.id));
+    for (const r of relatedRules) {
+      await supabase.from('reminder_rules').update({ is_active: false }).eq('id', r.id);
+    }
+    await supabase.from('message_templates').update({ is_active: false }).eq('id', tpl.id);
+    setRules((prev) => prev.map((r) => (r.template_id === tpl.id ? { ...r, is_active: false } : r)));
+    setTemplates((prev) => prev.map((t) => (t.id === tpl.id ? { ...t, is_active: false } : t)));
   };
 
   const handleToggleSlotChannel = async (slotKey: string, channel: Channel) => {
@@ -1004,13 +1033,20 @@ export function RemindersPage({
       {/* ── ACTIVE REMINDERS GRID ── */}
       {hasAnyReminders && !showAddForm && (
         <div>
+          <div className="mb-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 px-5 py-4">
+            <p className="text-sm font-bold text-slate-900 dark:text-white">What is this for?</p>
+            <p className="text-sm text-slate-600 dark:text-slate-300 mt-1.5 leading-relaxed">
+              After someone books, PinOnIt can remind them so they actually show up. Each row is a time. Each column is email, text, WhatsApp, or a phone call. A checkmark means that reminder is on.
+            </p>
+            <p className="text-sm text-slate-600 dark:text-slate-300 mt-1.5 leading-relaxed">
+              Guests get an email <strong className="font-semibold">24 hours before</strong> and <strong className="font-semibold">1 hour before</strong> unless you turn those off. Add SMS or WhatsApp the same way if you want a text too.
+            </p>
+          </div>
+
           <div className="mb-3">
             <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
               What guests get
               <span className="ml-2 px-1.5 py-0.5 text-white rounded-full text-[10px]" style={{ backgroundColor: '#5864C6' }}>{activeCount}</span>
-            </p>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Tap a box to turn that reminder on or off. Email confirmation is on by default. Guests get these after they book — this is the main control on this page.
             </p>
           </div>
 

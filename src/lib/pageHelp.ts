@@ -131,9 +131,9 @@ const GUIDES: Record<string, PageHelpGuide> = {
   reminders: {
     title: 'NeverMiss Reminders',
     purpose:
-      'The grid on this page is what guests get after they book. Check a box to turn that email, text, WhatsApp, or call on. Your own phone number lives under Advanced — guests type theirs when they book.',
+      'Email, text, WhatsApp, or a call so people show up. The grid is what guests get after they book. 24-hour and 1-hour emails are on by default.',
     steps: [
-      'Use the grid: Booking Confirmation plus 24h / 1h reminders are the usual set.',
+      'Use the grid: 24 hours before and 1 hour before email are already on. Tap a box to add SMS, WhatsApp, or a call.',
       'Add Reminder is for a one-off reminder to yourself (a flight, a pickup), not the guest grid.',
       'Under Advanced, add your cell if you want texts or calls to you. Coworkers and voice defaults are there too.',
       'On Calendar, the bell on an event can customize that meeting only.',
