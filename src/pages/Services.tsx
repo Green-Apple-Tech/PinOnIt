@@ -11,10 +11,15 @@ import { LOCATION_TYPES, MEETING_TYPE_META } from '../lib/types';
 import {
   BOOKING_AGREEMENT_TYPES,
   bookingAgreementLabel,
+  bookingAgreementSmbType,
   defaultBookingAgreementText,
   isBookingAgreementType,
   type BookingAgreementType,
 } from '../lib/bookingAgreement';
+import { BuiltInTemplateNoticePair } from '../components/BuiltInTemplateNoticePair';
+import { HostLegalStateNotice } from '../components/HostLegalStateNotice';
+import { LegalTemplatesNeedLink } from '../components/LegalTemplatesNeedLink';
+import { isUnmodifiedBuiltInTemplate, builtInTemplateScopeLine } from '../lib/builtInTemplateNotice';
 import {
   Plus, Trash2, X, Check, Loader2, MapPin, Clock, Settings2, MessageSquare,
   Copy, Smartphone, Mail, Pencil, ExternalLink, Link2, AlertCircle,
@@ -792,6 +797,8 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
 
   const singleUseEnabled = Boolean(profile && isSingleUseLinksEnabled(profile));
   const showSingleUseType = singleUseEnabled || form.meeting_type === 'one_off';
+  const agreementType = isBookingAgreementType(form.booking_agreement_type) ? form.booking_agreement_type : 'waiver';
+  const agreementSmbType = bookingAgreementSmbType(agreementType);
 
   const tabs: { key: ServiceTab; label: string; icon: typeof Clock | null }[] = [
     { key: 'basic', label: 'Basic', icon: Settings2 },
@@ -1565,13 +1572,45 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
                           <label className="block text-sm font-medium text-gray-500 dark:text-slate-400 mb-1.5">
                             {bookingAgreementLabel(form.booking_agreement_type)} text (shown when they book)
                           </label>
-                          <textarea
-                            value={form.booking_agreement_text}
-                            onChange={(e) => setField('booking_agreement_text', e.target.value)}
-                            rows={8}
-                            placeholder="Paste or edit the agreement they must check."
-                            className={`${inputCls} resize-y min-h-[8rem]`}
-                          />
+                          {agreementSmbType ? (
+                            <BuiltInTemplateNoticePair
+                              type={agreementSmbType}
+                              show={isUnmodifiedBuiltInTemplate(
+                                agreementSmbType,
+                                form.booking_agreement_text,
+                                defaultBookingAgreementText(agreementType),
+                              )}
+                              footer={
+                                agreementSmbType === 'waiver' ? (
+                                  <>
+                                    <HostLegalStateNotice documentType="waiver" businessRegion={profile?.business_region} />
+                                    <LegalTemplatesNeedLink className="inline-block" />
+                                  </>
+                                ) : undefined
+                              }
+                            >
+                              <textarea
+                                value={form.booking_agreement_text}
+                                onChange={(e) => setField('booking_agreement_text', e.target.value)}
+                                rows={8}
+                                placeholder="Paste or edit the agreement they must check."
+                                className={`${inputCls} resize-y min-h-[8rem]`}
+                              />
+                            </BuiltInTemplateNoticePair>
+                          ) : (
+                            <>
+                              <textarea
+                                value={form.booking_agreement_text}
+                                onChange={(e) => setField('booking_agreement_text', e.target.value)}
+                                rows={8}
+                                placeholder="Paste or edit the agreement they must check."
+                                className={`${inputCls} resize-y min-h-[8rem]`}
+                              />
+                              <p className="mt-1.5 text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed">
+                                {builtInTemplateScopeLine()}
+                              </p>
+                            </>
+                          )}
                         </div>
                       </>
                     )}

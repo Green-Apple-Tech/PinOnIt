@@ -38,6 +38,14 @@ export function defaultBookingAgreementText(type: BookingAgreementType): string 
   return '';
 }
 
+/** Built-in Send Docs types that share the host legal notice. */
+export function bookingAgreementSmbType(
+  type: string | null | undefined,
+): 'waiver' | 'nda' | 'contract' | null {
+  if (type === 'waiver' || type === 'nda' || type === 'contract') return type;
+  return null;
+}
+
 export function resolveBookingAgreement(service: {
   require_nda?: boolean | null;
   booking_agreement_type?: string | null;
