@@ -297,19 +297,13 @@ function ThreadMessages({
   );
 }
 
-function PhoneChrome({ children, compact = false }: { children: ReactNode; compact?: boolean }) {
+function PhoneChrome({ children }: { children: ReactNode }) {
   return (
-    <div
-      className={`rounded-[1.65rem] border-[5px] border-slate-900 bg-slate-50 overflow-hidden shadow-lg ${
-        compact ? 'w-full max-w-[16rem]' : 'w-full max-w-[19rem] sm:max-w-[21rem]'
-      }`}
-    >
-      <div className="h-6 bg-slate-900 flex items-center justify-center">
+    <div className="rounded-[1.65rem] border-[5px] border-slate-900 bg-slate-50 overflow-hidden shadow-lg flex flex-col w-full h-full">
+      <div className="h-6 shrink-0 bg-slate-900 flex items-center justify-center">
         <div className="h-1 w-16 rounded-full bg-slate-500" />
       </div>
-      <div className={`relative px-3.5 py-3 ${compact ? 'min-h-[260px]' : 'min-h-[320px]'}`}>
-        {children}
-      </div>
+      <div className="relative flex-1 min-h-0 px-3 py-2">{children}</div>
     </div>
   );
 }
@@ -374,7 +368,7 @@ export function HowItWorksStrip() {
             if (id) setActiveId(id);
           }
         },
-        { threshold: [0.25, 0.45, 0.6, 0.8], rootMargin: '-28% 0px -28% 0px' },
+        { threshold: [0.25, 0.45, 0.6, 0.8], rootMargin: '-18% 0px -18% 0px' },
       );
       steps.forEach((el) => io.observe(el));
       observers.push(io);
@@ -409,7 +403,7 @@ export function HowItWorksStrip() {
     <section
       ref={rootRef}
       id="how-it-works"
-      className={`py-16 md:py-20 px-4 sm:px-6 bg-white dark:bg-slate-950 scroll-mt-28 ${modeClass}`}
+      className={`py-10 md:py-12 px-4 sm:px-6 bg-white dark:bg-slate-950 scroll-mt-28 ${modeClass}`}
       aria-labelledby={headingId}
     >
       <div className="max-w-6xl mx-auto">
@@ -429,7 +423,7 @@ export function HowItWorksStrip() {
               <article
                 key={step.id}
                 data-hiw-step={step.id}
-                className="min-h-[100svh] flex flex-col justify-center py-10"
+                className="min-h-[68svh] flex flex-col justify-center py-6"
                 style={{ viewTimelineName: timelineName(step.id) } as CSSProperties}
                 aria-current={activeId === step.id ? 'step' : undefined}
               >
@@ -439,27 +433,29 @@ export function HowItWorksStrip() {
           </div>
 
           <div className="relative min-h-full">
-            <div className="sticky top-24 h-[calc(100svh-6rem)] flex items-center justify-center">
-              <div className="w-full max-w-sm sm:max-w-md mx-auto">
-                <MarketingShotFrame padding="p-6 sm:p-8">
-                  <div className="flex flex-col items-center gap-4">
-                    <PhoneChrome>
-                      {HOW_IT_WORKS_STEPS.map((step) => {
-                        const tl = timelineName(step.id);
-                        return (
-                          <div
-                            key={step.id}
-                            className={`hiw-thread pointer-events-none absolute inset-0 overflow-y-auto px-0.5 ${
-                              activeId === step.id ? 'is-active' : ''
-                            }`}
-                            aria-hidden={activeId === step.id ? undefined : true}
-                          >
-                            <StepScreen step={step} timeline={tl} scrollDriven={scrollDriven && activeId === step.id} />
-                          </div>
-                        );
-                      })}
-                    </PhoneChrome>
-                    <p className="text-center text-sm sm:text-base font-medium text-slate-600 leading-snug px-2">
+            <div className="sticky top-28 self-start">
+              <div className="w-full max-w-[22rem] mx-auto">
+                <MarketingShotFrame className="aspect-square" padding="p-5">
+                  <div className="h-full flex flex-col">
+                    <div className="flex-1 min-h-0">
+                      <PhoneChrome>
+                        {HOW_IT_WORKS_STEPS.map((step) => {
+                          const tl = timelineName(step.id);
+                          return (
+                            <div
+                              key={step.id}
+                              className={`hiw-thread pointer-events-none absolute inset-0 overflow-y-auto ${
+                                activeId === step.id ? 'is-active' : ''
+                              }`}
+                              aria-hidden={activeId === step.id ? undefined : true}
+                            >
+                              <StepScreen step={step} timeline={tl} scrollDriven={scrollDriven && activeId === step.id} />
+                            </div>
+                          );
+                        })}
+                      </PhoneChrome>
+                    </div>
+                    <p className="mt-3 h-10 shrink-0 text-center text-sm font-medium text-slate-600 leading-snug px-1 line-clamp-2">
                       {activeStep.caption ?? PHONE_CAPTION}
                     </p>
                   </div>
@@ -469,7 +465,7 @@ export function HowItWorksStrip() {
           </div>
         </div>
 
-        <div className="md:hidden space-y-8">
+        <div className="md:hidden space-y-5">
           {HOW_IT_WORKS_STEPS.map((step) => {
             const tl = `--hiw-m-${step.id}`;
             const seen = reduceMotion || inViewIds.includes(step.id);
@@ -477,20 +473,28 @@ export function HowItWorksStrip() {
               <article
                 key={step.id}
                 data-hiw-card={step.id}
-                className={`hiw-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-5 ${
+                className={`hiw-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-4 ${
                   seen ? 'is-inview' : ''
                 }`}
                 style={{ viewTimelineName: tl, timelineScope: tl } as CSSProperties}
               >
                 <StepCopy step={step} />
-                <div className="mt-5 flex justify-center">
-                  <PhoneChrome compact>
-                    <div className={`hiw-thread space-y-2 ${seen ? 'is-active' : ''}`}>
-                      <StepScreen step={step} timeline={tl} scrollDriven={scrollDriven} />
+                <div className="mt-4 mx-auto w-full max-w-[16rem]">
+                  <MarketingShotFrame className="aspect-square" padding="p-4">
+                    <div className="h-full flex flex-col">
+                      <div className="flex-1 min-h-0">
+                        <PhoneChrome>
+                          <div className={`hiw-thread absolute inset-0 overflow-y-auto ${seen ? 'is-active' : ''}`}>
+                            <StepScreen step={step} timeline={tl} scrollDriven={scrollDriven} />
+                          </div>
+                        </PhoneChrome>
+                      </div>
+                      <p className="mt-2 h-8 shrink-0 text-center text-xs font-medium text-slate-500 leading-snug line-clamp-2">
+                        {step.caption ?? PHONE_CAPTION}
+                      </p>
                     </div>
-                  </PhoneChrome>
+                  </MarketingShotFrame>
                 </div>
-                <p className="mt-3 text-center text-xs font-medium text-slate-500">{step.caption ?? PHONE_CAPTION}</p>
               </article>
             );
           })}
