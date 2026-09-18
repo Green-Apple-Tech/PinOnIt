@@ -6,6 +6,7 @@ import { useTheme } from '../hooks/useTheme';
 import { usePageMeta } from '../lib/pageMeta';
 import { signupHref } from '../lib/campaignAttribution';
 import { INTENT_OG_IMAGE, INTENT_PAGES } from '../lib/seoIntentPages';
+import { MarketingStickyHeader } from '../components/landing/MarketingAnnouncementBar';
 import {
   faqPageJsonLd,
   intentWebPageJsonLd,
@@ -41,7 +42,8 @@ export function SeoIntentPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white flex flex-col">
       <JsonLd data={ld} />
-      <nav className="sticky top-0 z-50 bg-white/95 dark:bg-slate-950/95 backdrop-blur border-b border-slate-200 dark:border-slate-800">
+      <MarketingStickyHeader>
+      <nav className="bg-white/95 dark:bg-slate-950/95 backdrop-blur border-b border-slate-200 dark:border-slate-800">
         <div className="max-w-3xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
           <Link to="/" className="shrink-0">
             <img src="/pinonit_logo.png" alt="PinOnIt" className="h-11 w-auto" />
@@ -67,6 +69,7 @@ export function SeoIntentPage() {
           </div>
         </div>
       </nav>
+      </MarketingStickyHeader>
 
       <main className="flex-1 px-6 py-12 md:py-16">
         <article className="max-w-3xl mx-auto">

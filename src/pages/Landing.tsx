@@ -5,7 +5,6 @@ import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { usePageMeta } from '../lib/pageMeta';
 import {
-  ArrowRight,
   Sun, Moon, Menu, X,
   Calendar, Bell, ClipboardSignature, Receipt, FileText,
 } from 'lucide-react';
@@ -15,6 +14,11 @@ import { EsignPromoBar } from '../components/EsignPromoBar';
 import { SmsPhoneMockup } from '../components/landing/SmsPhoneMockup';
 import { LandingPricingCard } from '../components/landing/LandingPricingCard';
 import { LandingFaq } from '../components/landing/LandingFaq';
+import { MarketingStickyHeader } from '../components/landing/MarketingAnnouncementBar';
+import { LandingHeroCtas, LandingCompactCta, LandingClosingCta } from '../components/landing/LandingHeroCtas';
+import { HowItWorksStrip } from '../components/landing/HowItWorksStrip';
+import { WorksWithRow } from '../components/landing/WorksWithRow';
+import { TestimonialsSection } from '../components/landing/TestimonialsSection';
 
 const HOME_META = {
   title: 'Run your business by text | PinOnIt',
@@ -82,7 +86,7 @@ export function Landing() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
-      <header className="sticky top-0 z-50">
+      <MarketingStickyHeader>
       <EsignPromoBar to="#sign-by-text" />
       <nav className="bg-white/95 dark:bg-slate-950/95 backdrop-blur border-b border-slate-200 dark:border-slate-800">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
@@ -91,7 +95,7 @@ export function Landing() {
           </Link>
 
           <div className="hidden lg:flex items-center gap-1 text-sm font-medium text-slate-600 dark:text-slate-300">
-            <a href="#demo" className="px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">How it works</a>
+            <a href="#how-it-works" className="px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">How it works</a>
             <a href="#tools" className="px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">What you get</a>
             <a href="#pricing" className="px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Pricing</a>
             <a href="#faq" className="px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">FAQ</a>
@@ -117,14 +121,14 @@ export function Landing() {
 
         {mobileMenuOpen && (
           <div className="lg:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-4 flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
-            <a href="#demo" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-brand-500 transition-colors">How it works</a>
+            <a href="#how-it-works" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-brand-500 transition-colors">How it works</a>
             <a href="#tools" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-brand-500 transition-colors">What you get</a>
             <a href="#pricing" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-brand-500 transition-colors">Pricing</a>
             <a href="#faq" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-brand-500 transition-colors">FAQ</a>
           </div>
         )}
       </nav>
-      </header>
+      </MarketingStickyHeader>
 
       <section className="relative overflow-hidden pt-10 pb-14 md:pt-16 md:pb-24 px-4 sm:px-6">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -146,20 +150,7 @@ export function Landing() {
             <p className="text-lg md:text-xl font-medium text-slate-600 dark:text-slate-300 leading-snug mb-8 max-w-xl mx-auto lg:mx-0">
               Quote a job in the driveway. Get it approved, signed, scheduled and paid before you drive away.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
-              <Link
-                to="/signup"
-                className="w-full sm:w-auto min-h-12 px-8 py-3.5 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-full text-base transition-all shadow-lg shadow-brand-200/60 dark:shadow-none inline-flex items-center justify-center gap-2"
-              >
-                Start free trial <ArrowRight className="h-4 w-4" />
-              </Link>
-              <a
-                href="#demo"
-                className="w-full sm:w-auto min-h-12 px-8 py-3.5 rounded-full text-base font-semibold border-2 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-brand-400 hover:text-brand-700 dark:hover:text-brand-300 inline-flex items-center justify-center"
-              >
-                See how it works
-              </a>
-            </div>
+            <LandingHeroCtas />
           </div>
           <div>
             <SmsPhoneMockup messages={QUOTE_THREAD} caption="A real text. Nothing to install on their phone." />
@@ -205,10 +196,15 @@ export function Landing() {
         </div>
       </section>
 
+      <HowItWorksStrip />
+      <LandingCompactCta />
+      <WorksWithRow />
+      <TestimonialsSection />
+
       <section id="demo" className="py-16 md:py-20 px-4 sm:px-6 bg-white dark:bg-slate-950 scroll-mt-28">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl md:text-3xl font-bold text-center text-slate-900 dark:text-white mb-10">
-            How it works
+            You text it. They tap it.
           </h2>
           <div className="grid lg:grid-cols-2 gap-10 items-center">
             <ol className="space-y-6">
@@ -273,20 +269,7 @@ export function Landing() {
         </div>
       </section>
 
-      <section className="py-20 md:py-24 px-4 sm:px-6 bg-brand-500">
-        <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-2xl md:text-4xl font-black text-white leading-tight mb-6">
-            Send your first quote or booking link in the next five minutes.
-          </h2>
-          <Link
-            to="/signup"
-            className="inline-flex items-center justify-center gap-3 min-h-12 px-10 py-4 bg-white text-brand-600 font-black text-lg rounded-full transition-all shadow-2xl hover:bg-brand-50"
-          >
-            Start free trial <ArrowRight className="h-5 w-5" />
-          </Link>
-          <p className="mt-5 text-brand-100 text-sm">$8.99/month after your trial. Nothing to install — for you or your customers.</p>
-        </div>
-      </section>
+      <LandingClosingCta />
 
       <footer className="border-t border-slate-200 dark:border-slate-800 py-10 px-4 sm:px-6 bg-white dark:bg-slate-950">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 mb-6">

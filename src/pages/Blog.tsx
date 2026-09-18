@@ -15,13 +15,15 @@ import {
 } from '../lib/blogPosts';
 import { blogIndexJsonLd, blogPostingJsonLd, organizationJsonLd } from '../lib/jsonLd';
 import { INTENT_OG_IMAGE } from '../lib/seoIntentPages';
+import { MarketingStickyHeader } from '../components/landing/MarketingAnnouncementBar';
 
 function BlogChrome({ children }: { children: ReactNode }) {
   const { theme, toggleTheme } = useTheme();
   const signup = signupHref();
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white flex flex-col">
-      <nav className="sticky top-0 z-50 bg-white/95 dark:bg-slate-950/95 backdrop-blur border-b border-slate-200 dark:border-slate-800">
+      <MarketingStickyHeader>
+      <nav className="bg-white/95 dark:bg-slate-950/95 backdrop-blur border-b border-slate-200 dark:border-slate-800">
         <div className="max-w-3xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
           <Link to="/" className="shrink-0">
             <img src="/pinonit_logo.png" alt="PinOnIt" className="h-11 w-auto" />
@@ -47,6 +49,7 @@ function BlogChrome({ children }: { children: ReactNode }) {
           </div>
         </div>
       </nav>
+      </MarketingStickyHeader>
       {children}
       <Footer />
     </div>

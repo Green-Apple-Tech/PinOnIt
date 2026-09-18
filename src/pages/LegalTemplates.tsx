@@ -10,6 +10,7 @@ import {
   LEGAL_TEMPLATES_UPLOAD_PATH,
   LEGAL_TEMPLATES_UPLOAD_STEPS,
 } from '../lib/legalTemplates';
+import { MarketingStickyHeader } from '../components/landing/MarketingAnnouncementBar';
 
 export function LegalTemplatesPage() {
   const { theme, toggleTheme } = useTheme();
@@ -22,7 +23,8 @@ export function LegalTemplatesPage() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white flex flex-col">
-      <nav className="sticky top-0 z-50 bg-white/95 dark:bg-slate-950/95 backdrop-blur border-b border-slate-200 dark:border-slate-800">
+      <MarketingStickyHeader>
+      <nav className="bg-white/95 dark:bg-slate-950/95 backdrop-blur border-b border-slate-200 dark:border-slate-800">
         <div className="max-w-3xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
           <Link to="/" className="shrink-0">
             <img src="/pinonit_logo.png" alt="PinOnIt" className="h-11 w-auto" />
@@ -50,6 +52,7 @@ export function LegalTemplatesPage() {
           </div>
         </div>
       </nav>
+      </MarketingStickyHeader>
 
       <main className="flex-1 px-6 py-12 md:py-16">
         <article className="max-w-3xl mx-auto">

@@ -17,6 +17,7 @@ import { NDA_HEADLINE, NDA_SUBHEAD } from '../lib/campaignLandings';
 import { HOLD_UP_COPY, AUDIT_RECORD_ITEMS } from '../lib/documentCopy';
 import { DocTypeShortcutRow } from '../components/CampaignLanding';
 import { usePageMeta } from '../lib/pageMeta';
+import { MarketingStickyHeader } from '../components/landing/MarketingAnnouncementBar';
 
 // ── Animated counter hook ────────────────────────────────────────────────────
 function useCounter(target: number, duration = 1800, start = false) {
@@ -355,7 +356,8 @@ export function CalendlyAlternative() {
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
 
       {/* ── Nav ── */}
-      <nav className="sticky top-0 z-50 bg-white/95 dark:bg-slate-950/95 backdrop-blur border-b border-slate-200 dark:border-slate-800">
+      <MarketingStickyHeader>
+      <nav className="bg-white/95 dark:bg-slate-950/95 backdrop-blur border-b border-slate-200 dark:border-slate-800">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 shrink-0">
             <img src="/pinonit_logo.png" alt="Pin on It" className="h-11 w-auto" />
@@ -402,6 +404,7 @@ export function CalendlyAlternative() {
           </div>
         )}
       </nav>
+      </MarketingStickyHeader>
 
       {/* ── App pill bar ── */}
       <div className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 py-3">

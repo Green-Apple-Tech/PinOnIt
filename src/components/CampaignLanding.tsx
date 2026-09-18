@@ -6,6 +6,7 @@ import { usePageMeta } from '../lib/pageMeta';
 import { captureCampaignParams, signupHref } from '../lib/campaignAttribution';
 import { DOC_TYPE_SHORTCUTS, type CampaignCopy } from '../lib/campaignLandings';
 import { AUDIT_RECORD_ITEMS } from '../lib/documentCopy';
+import { MarketingStickyHeader } from './landing/MarketingAnnouncementBar';
 import { useEffect } from 'react';
 
 function dashboardHref(path: string): string {
@@ -60,7 +61,8 @@ export function CampaignLanding({ copy }: { copy: CampaignCopy }) {
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
-      <nav className="sticky top-0 z-50 bg-white/95 dark:bg-slate-950/95 backdrop-blur border-b border-slate-200 dark:border-slate-800">
+      <MarketingStickyHeader>
+      <nav className="bg-white/95 dark:bg-slate-950/95 backdrop-blur border-b border-slate-200 dark:border-slate-800">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
           <Link to="/" className="shrink-0" aria-label="PinOnIt home">
             <img src="/pinonit_logo.png" alt="Pin on It" className="h-11 w-auto" />
@@ -83,6 +85,7 @@ export function CampaignLanding({ copy }: { copy: CampaignCopy }) {
           </div>
         </div>
       </nav>
+      </MarketingStickyHeader>
 
       {copy.topBanner ? (
         <div className="border-b border-brand-200 dark:border-brand-500/30 bg-brand-50 dark:bg-brand-500/10 px-6 py-3.5">

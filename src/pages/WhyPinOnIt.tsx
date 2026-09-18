@@ -4,6 +4,7 @@ import { Footer } from '../components/Footer';
 import { useTheme } from '../hooks/useTheme';
 import { usePageMeta } from '../lib/pageMeta';
 import { WHY_PINONIT, CALENDLY_EXCLUSIVES, type CompareValue } from '../lib/whyPinonit';
+import { MarketingStickyHeader } from '../components/landing/MarketingAnnouncementBar';
 
 function CellValue({ value, emphasize }: { value: CompareValue; emphasize?: boolean }) {
   if (value === true) {
@@ -40,7 +41,8 @@ export function WhyPinOnItPage() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
-      <nav className="sticky top-0 z-50 bg-white/95 dark:bg-slate-950/95 backdrop-blur border-b border-slate-200 dark:border-slate-800">
+      <MarketingStickyHeader>
+      <nav className="bg-white/95 dark:bg-slate-950/95 backdrop-blur border-b border-slate-200 dark:border-slate-800">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
           <Link to="/" className="shrink-0">
             <img src="/pinonit_logo.png" alt="PinOnIt" className="h-11 w-auto" />
@@ -58,6 +60,7 @@ export function WhyPinOnItPage() {
           </div>
         </div>
       </nav>
+      </MarketingStickyHeader>
 
       <main>
         <section className="px-6 pt-16 pb-12 md:pt-24 md:pb-16 text-center">
