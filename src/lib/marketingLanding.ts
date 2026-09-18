@@ -33,24 +33,68 @@ export type HowItWorksMessage = {
   text: string;
 };
 
+export type HowItWorksCalendarDate = {
+  dow: string;
+  day: string;
+  month: string;
+  selected?: boolean;
+};
+
+export type HowItWorksCalendarTime = {
+  label: string;
+  selected?: boolean;
+};
+
+export type HowItWorksCalendar = {
+  eventName: string;
+  duration: string;
+  dates: HowItWorksCalendarDate[];
+  heading: string;
+  times: HowItWorksCalendarTime[];
+  timezone: string;
+};
+
 export type HowItWorksStep = {
   id: string;
   label: string;
   scene: string;
+  screen?: 'sms' | 'calendar';
+  calendar?: HowItWorksCalendar;
   messages: HowItWorksMessage[];
+  caption?: string;
 };
 
-/** One-line scenes + SMS mock threads. Edit this array only. */
+/** One-line scenes + SMS mock threads / calendar. Edit this array only. */
 export const HOW_IT_WORKS_STEPS: HowItWorksStep[] = [
   {
     id: 'book',
     label: 'BOOK IT',
     scene: 'Customer picks Tuesday at noon from your link',
-    messages: [
-      { role: 'business', text: 'Pick a time: pinonit.com/greenlawn' },
-      { role: 'customer', text: 'Tuesday at noon works' },
-      { role: 'system', text: 'Booked · Tue 12:00 PM' },
-    ],
+    screen: 'calendar',
+    caption: 'They pick a time on their phone. Nothing to install.',
+    calendar: {
+      eventName: 'Front yard cleanup',
+      duration: '1 hr',
+      dates: [
+        { dow: 'Mon', day: '21', month: 'Sep' },
+        { dow: 'Tue', day: '22', month: 'Sep', selected: true },
+        { dow: 'Wed', day: '23', month: 'Sep' },
+        { dow: 'Thu', day: '24', month: 'Sep' },
+      ],
+      heading: 'Tuesday, September 22',
+      times: [
+        { label: '10:00 AM' },
+        { label: '10:30 AM' },
+        { label: '11:00 AM' },
+        { label: '11:30 AM' },
+        { label: '12:00 PM', selected: true },
+        { label: '1:00 PM' },
+        { label: '1:30 PM' },
+        { label: '2:00 PM' },
+      ],
+      timezone: 'Eastern Time',
+    },
+    messages: [],
   },
   {
     id: 'remind',

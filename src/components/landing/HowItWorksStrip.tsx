@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { HOW_IT_WORKS_STEPS, type HowItWorksMessage, type HowItWorksStep } from '../../lib/marketingLanding';
+import { HOW_IT_WORKS_STEPS, type HowItWorksCalendar, type HowItWorksMessage, type HowItWorksStep } from '../../lib/marketingLanding';
 import { MarketingShotFrame } from './MarketingShotFrame';
 import './HowItWorksStrip.css';
 
@@ -40,6 +40,98 @@ function coverRange(index: number, count: number): string {
   const start = start0 + index * step * 0.82;
   const end = Math.min(start + step + 10, 92);
   return `cover ${start.toFixed(1)}% cover ${end.toFixed(1)}%`;
+}
+
+function beatStyle(scrollDriven: boolean, timeline: string | undefined, index: number, count: number): CSSProperties | undefined {
+  if (!scrollDriven || !timeline) return undefined;
+  return { animationTimeline: timeline, animationRange: coverRange(index, count) } as CSSProperties;
+}
+
+function CalendarScreen({
+  calendar,
+  timeline,
+  scrollDriven,
+}: {
+  calendar: HowItWorksCalendar;
+  timeline?: string;
+  scrollDriven: boolean;
+}) {
+  const beats = 5;
+  return (
+    <div className="h-full overflow-y-auto text-slate-800">
+      <div className="hiw-msg" style={beatStyle(scrollDriven, timeline, 0, beats)}>
+        <p className="text-[11px] font-bold text-slate-900 leading-tight">{calendar.eventName}</p>
+        <p className="text-[10px] text-slate-500 mt-0.5">{calendar.duration}</p>
+      </div>
+
+      <p className="hiw-msg mt-3 text-[9px] font-semibold uppercase tracking-widest text-slate-400" style={beatStyle(scrollDriven, timeline, 1, beats)}>
+        Select a date
+      </p>
+      <div className="hiw-msg mt-1.5 flex gap-1.5" style={beatStyle(scrollDriven, timeline, 1, beats)}>
+        {calendar.dates.map((d) => (
+          <div
+            key={`${d.dow}-${d.day}`}
+            className={`flex-1 min-w-0 rounded-xl border px-1 py-1.5 text-center ${
+              d.selected
+                ? 'bg-brand-500 border-brand-500 text-white'
+                : 'bg-white border-slate-200 text-slate-700'
+            }`}
+          >
+            <p className={`text-[8px] font-semibold uppercase tracking-wide ${d.selected ? 'text-white/80' : 'text-slate-400'}`}>
+              {d.dow}
+            </p>
+            <p className="text-sm font-bold leading-none mt-0.5">{d.day}</p>
+            <p className={`text-[8px] mt-0.5 ${d.selected ? 'text-white/80' : 'text-slate-400'}`}>{d.month}</p>
+          </div>
+        ))}
+      </div>
+
+      <p
+        className="hiw-msg mt-3 text-[9px] font-bold uppercase tracking-wide text-slate-700"
+        style={beatStyle(scrollDriven, timeline, 2, beats)}
+      >
+        {calendar.heading}
+      </p>
+      <div className="hiw-msg mt-1.5 grid grid-cols-3 gap-1.5" style={beatStyle(scrollDriven, timeline, 3, beats)}>
+        {calendar.times.map((t) => (
+          <div
+            key={t.label}
+            className={`rounded-lg border px-1 py-1.5 text-center text-[10px] font-semibold ${
+              t.selected
+                ? 'bg-brand-500 border-brand-500 text-white'
+                : 'bg-white border-slate-200 text-slate-700'
+            }`}
+          >
+            {t.label}
+          </div>
+        ))}
+      </div>
+
+      <p className="hiw-msg mt-2 text-[10px] text-slate-500" style={beatStyle(scrollDriven, timeline, 4, beats)}>
+        {calendar.timezone}
+      </p>
+      <p className="hiw-check mt-2 flex justify-end" style={beatStyle(scrollDriven, timeline, 4, beats)}>
+        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white text-sm font-bold leading-none">
+          ✓
+        </span>
+      </p>
+    </div>
+  );
+}
+
+function StepScreen({
+  step,
+  timeline,
+  scrollDriven,
+}: {
+  step: HowItWorksStep;
+  timeline?: string;
+  scrollDriven: boolean;
+}) {
+  if (step.screen === 'calendar' && step.calendar) {
+    return <CalendarScreen calendar={step.calendar} timeline={timeline} scrollDriven={scrollDriven} />;
+  }
+  return <ThreadMessages messages={step.messages} timeline={timeline} scrollDriven={scrollDriven} />;
 }
 
 function ThreadMessages({
@@ -105,7 +197,7 @@ function PhoneChrome({ children, compact = false }: { children: ReactNode; compa
       <div className="h-6 bg-slate-900 flex items-center justify-center">
         <div className="h-1 w-16 rounded-full bg-slate-500" />
       </div>
-      <div className={`relative px-3.5 py-4 ${compact ? 'min-h-[188px]' : 'min-h-[248px]'}`}>
+      <div className={`relative px-3.5 py-3 ${compact ? 'min-h-[260px]' : 'min-h-[320px]'}`}>
         {children}
       </div>
     </div>
@@ -201,6 +293,7 @@ export function HowItWorksStrip() {
   const modeClass = reduceMotion ? 'hiw-static' : engine === 'scroll' ? 'hiw-scroll' : 'hiw-io';
   const desktopScope = HOW_IT_WORKS_STEPS.map((s) => timelineName(s.id)).join(', ');
   const scrollDriven = engine === 'scroll' && !reduceMotion;
+  const activeStep = HOW_IT_WORKS_STEPS.find((s) => s.id === activeId) ?? HOW_IT_WORKS_STEPS[0];
 
   return (
     <section
@@ -259,13 +352,13 @@ export function HowItWorksStrip() {
                             }
                             aria-hidden={activeId === step.id ? undefined : true}
                           >
-                            <ThreadMessages messages={step.messages} timeline={tl} scrollDriven={scrollDriven} />
+                            <StepScreen step={step} timeline={tl} scrollDriven={scrollDriven} />
                           </div>
                         );
                       })}
                     </PhoneChrome>
                     <p className="text-center text-sm sm:text-base font-medium text-slate-600 leading-snug px-2">
-                      {PHONE_CAPTION}
+                      {activeStep.caption ?? PHONE_CAPTION}
                     </p>
                   </div>
                 </MarketingShotFrame>
@@ -291,11 +384,11 @@ export function HowItWorksStrip() {
                 <div className="mt-5 flex justify-center">
                   <PhoneChrome compact>
                     <div className={`hiw-thread space-y-2 ${seen ? 'is-active' : ''}`}>
-                      <ThreadMessages messages={step.messages} timeline={tl} scrollDriven={scrollDriven} />
+                      <StepScreen step={step} timeline={tl} scrollDriven={scrollDriven} />
                     </div>
                   </PhoneChrome>
                 </div>
-                <p className="mt-3 text-center text-xs font-medium text-slate-500">{PHONE_CAPTION}</p>
+                <p className="mt-3 text-center text-xs font-medium text-slate-500">{step.caption ?? PHONE_CAPTION}</p>
               </article>
             );
           })}

@@ -41,6 +41,17 @@ describe('how-it-works sticky demo', () => {
     expect(css).toContain('opacity:');
     expect(css.includes('canvas')).toBe(false);
   });
+
+  it('shows a calendar picker on the BOOK IT phone screen', () => {
+    const book = HOW_IT_WORKS_STEPS[0];
+    expect(book.id).toBe('book');
+    expect(book.screen).toBe('calendar');
+    expect(book.calendar?.heading.toLowerCase()).toContain('tuesday');
+    expect(book.calendar?.times.some((t) => t.selected && t.label.includes('12:00'))).toBe(true);
+    const tsx = readFileSync(new URL('../components/landing/HowItWorksStrip.tsx', import.meta.url), 'utf8');
+    expect(tsx).toContain('CalendarScreen');
+    expect(tsx).toContain('Select a date');
+  });
 });
 
 describe('PWA navigation denylist', () => {
