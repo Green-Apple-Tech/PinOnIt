@@ -27,7 +27,7 @@ export function HowItWorksStrip() {
   return (
     <section
       id="how-it-works"
-      className="py-16 md:py-20 px-4 sm:px-6 bg-white dark:bg-slate-950 scroll-mt-32"
+      className="py-16 md:py-20 px-4 sm:px-6 bg-white dark:bg-slate-950 scroll-mt-28"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >

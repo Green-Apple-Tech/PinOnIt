@@ -16,6 +16,7 @@ import { SmsPhoneMockup } from '../components/landing/SmsPhoneMockup';
 import { LandingPricingCard } from '../components/landing/LandingPricingCard';
 import { LandingFaq } from '../components/landing/LandingFaq';
 import { LandingHeroCtas } from '../components/landing/LandingHeroCtas';
+import { HowItWorksStrip } from '../components/landing/HowItWorksStrip';
 
 const HOME_META = {
   title: 'Run your business by text | PinOnIt',
@@ -92,7 +93,7 @@ export function Landing() {
           </Link>
 
           <div className="hidden lg:flex items-center gap-1 text-sm font-medium text-slate-600 dark:text-slate-300">
-            <a href="#demo" className="px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">How it works</a>
+            <a href="#how-it-works" className="px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">How it works</a>
             <a href="#tools" className="px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">What you get</a>
             <a href="#pricing" className="px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Pricing</a>
             <a href="#faq" className="px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">FAQ</a>
@@ -118,7 +119,7 @@ export function Landing() {
 
         {mobileMenuOpen && (
           <div className="lg:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-4 flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
-            <a href="#demo" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-brand-500 transition-colors">How it works</a>
+            <a href="#how-it-works" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-brand-500 transition-colors">How it works</a>
             <a href="#tools" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-brand-500 transition-colors">What you get</a>
             <a href="#pricing" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-brand-500 transition-colors">Pricing</a>
             <a href="#faq" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-brand-500 transition-colors">FAQ</a>
@@ -196,31 +197,7 @@ export function Landing() {
         </div>
       </section>
 
-      <section id="demo" className="py-16 md:py-20 px-4 sm:px-6 bg-white dark:bg-slate-950 scroll-mt-28">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-2xl md:text-3xl font-bold text-center text-slate-900 dark:text-white mb-10">
-            How it works
-          </h2>
-          <div className="grid lg:grid-cols-2 gap-10 items-center">
-            <ol className="space-y-6">
-              {[
-                { n: '1', title: 'You text it', body: 'A quote, a document, or a booking link.' },
-                { n: '2', title: 'They tap the text', body: 'No app, no account, no email needed.' },
-                { n: '3', title: 'They approve, sign, or book', body: 'You get notified instantly.' },
-              ].map((step) => (
-                <li key={step.n} className="flex gap-4">
-                  <div className="h-10 w-10 rounded-full bg-brand-500 text-white font-black flex items-center justify-center shrink-0">{step.n}</div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 dark:text-white">{step.title}</h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mt-1">{step.body}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-            <SmsPhoneMockup messages={QUOTE_THREAD} caption="Not a stock photo. This is the text they get." />
-          </div>
-        </div>
-      </section>
+      <HowItWorksStrip />
 
       <section className="py-16 md:py-20 px-4 sm:px-6 bg-slate-50 dark:bg-slate-900/40">
         <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-5">
