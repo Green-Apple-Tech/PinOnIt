@@ -261,7 +261,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
     ],
   },
   qr: {
-    title: 'QR Code',
+    title: 'QR Code Creator',
     purpose: 'A code people can scan to open your booking page — cards, trucks, shop windows.',
     steps: [
       'Make sure your booking URL is set.',

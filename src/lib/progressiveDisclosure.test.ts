@@ -90,7 +90,7 @@ describe('buildSidebarNav', () => {
     expect(moreTools).toEqual([]);
     expect(primary.some((i) => i.label === 'Send Docs + Sign-by-Text')).toBe(true);
     expect(primary.some((i) => i.label === 'Paid Booking')).toBe(true);
-    expect(primary.some((i) => i.label === 'QR Codes')).toBe(true);
+    expect(primary.some((i) => i.label === 'QR Code Creator')).toBe(true);
     expect(settings.label).toBe('Settings');
   });
 });

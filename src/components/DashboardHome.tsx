@@ -121,7 +121,7 @@ const OTHER_TOOLS: DashTool[] = [
   },
   {
     to: '/dashboard/qr-code',
-    title: 'QR Codes',
+    title: 'QR Code Creator',
     blurb: 'Codes for cards, flyers, signs.',
     icon: QrCode,
     accent: 'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-300',

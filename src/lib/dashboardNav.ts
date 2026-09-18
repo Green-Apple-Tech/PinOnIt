@@ -74,7 +74,7 @@ export const MORE_TOOLS_NAV: MoreToolsNavItem[] = [
   },
   { label: 'Paid Booking', icon: ShoppingBag, path: '/dashboard/paid-booking', toolId: 'paid-booking' },
   {
-    label: 'QR Codes',
+    label: 'QR Code Creator',
     icon: QrCode,
     path: '/dashboard/qr-code',
     activePaths: ['/dashboard/qr'],

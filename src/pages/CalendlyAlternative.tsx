@@ -137,7 +137,7 @@ const SCREENSHOTS = [
     title: 'QR Code Creator',
     emoji: '📲',
     desc: 'Print a booking QR for cards, trucks, and shop windows. Scan to book — no app, no account.',
-    tag: 'QR Codes',
+    tag: 'QR Code Creator',
     color: 'from-cyan-500 to-sky-700',
     image: `/screenshots/qr-code.png?v=${SCREENSHOT_V}`,
   },
