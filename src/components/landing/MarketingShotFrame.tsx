@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-/** Darker rounded square behind a product shot — marketing pages only. */
+/** Rounded square behind a product shot — light gray mixed with blue lights. */
 export function MarketingShotFrame({
   children,
   className = '',
@@ -12,17 +12,19 @@ export function MarketingShotFrame({
 }) {
   return (
     <div
-      className={`relative rounded-[2.25rem] overflow-hidden bg-gradient-to-br from-brand-400 via-brand-600 to-brand-900 ${padding} shadow-2xl shadow-brand-900/25 ${className}`}
+      className={`relative rounded-[2.25rem] overflow-hidden bg-gradient-to-br from-slate-100 via-slate-200 to-brand-200 ${padding} shadow-xl shadow-slate-400/30 ${className}`}
     >
+      <div className="pointer-events-none absolute -top-10 -left-8 h-44 w-44 rounded-full bg-brand-300/55 blur-3xl" aria-hidden="true" />
+      <div className="pointer-events-none absolute top-1/3 -right-10 h-40 w-40 rounded-full bg-brand-400/40 blur-3xl" aria-hidden="true" />
+      <div className="pointer-events-none absolute -bottom-12 left-1/4 h-36 w-36 rounded-full bg-brand-200/70 blur-3xl" aria-hidden="true" />
       <div
-        className="pointer-events-none absolute inset-0 opacity-[0.18]"
+        className="pointer-events-none absolute inset-0 opacity-[0.12]"
         aria-hidden="true"
         style={{
           backgroundImage:
-            'repeating-linear-gradient(90deg, transparent 0 18px, rgba(255,255,255,0.35) 18px 19px)',
+            'repeating-linear-gradient(90deg, transparent 0 18px, rgba(88,101,198,0.35) 18px 19px)',
         }}
       />
-      <div className="pointer-events-none absolute -top-16 -left-10 h-40 w-40 rounded-full bg-white/20 blur-3xl" aria-hidden="true" />
       <div className="relative h-full">{children}</div>
     </div>
   );

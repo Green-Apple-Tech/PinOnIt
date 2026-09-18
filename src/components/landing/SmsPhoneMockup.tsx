@@ -7,8 +7,8 @@ export type SmsMockMessage = {
 
 export function SmsPhoneMockup({ messages, caption }: { messages: SmsMockMessage[]; caption?: string }) {
   return (
-    <div className="w-full max-w-md sm:max-w-lg mx-auto">
-      <MarketingShotFrame className="aspect-square" padding="p-7 sm:p-10">
+    <div className="w-full max-w-sm sm:max-w-md mx-auto">
+      <MarketingShotFrame className="aspect-square" padding="p-6 sm:p-8">
         <div className="h-full flex flex-col items-center justify-center gap-5">
           <div className="w-full max-w-[19rem] sm:max-w-[21rem] rounded-[1.65rem] border-[5px] border-slate-900 bg-slate-50 overflow-hidden shadow-lg">
             <div className="h-6 bg-slate-900 flex items-center justify-center">
@@ -41,7 +41,7 @@ export function SmsPhoneMockup({ messages, caption }: { messages: SmsMockMessage
             </div>
           </div>
           {caption ? (
-            <p className="text-center text-sm sm:text-base font-medium text-white/95 leading-snug px-2">
+            <p className="text-center text-sm sm:text-base font-medium text-slate-600 leading-snug px-2">
               {caption}
             </p>
           ) : null}
