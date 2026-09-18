@@ -19,6 +19,28 @@ describe('marketing landing copy', () => {
       expect(step.label.length).toBeGreaterThan(0);
     }
   });
+
+  it('does not claim documents are legally binding or enforceable', () => {
+    const blob = JSON.stringify(HOW_IT_WORKS_STEPS).toLowerCase();
+    expect(blob.includes('legally binding')).toBe(false);
+    expect(blob.includes('enforceable')).toBe(false);
+  });
+});
+
+describe('how-it-works sticky demo', () => {
+  it('renders every step from the editable array and uses scroll-driven CSS with an IO fallback', () => {
+    const tsx = readFileSync(new URL('../components/landing/HowItWorksStrip.tsx', import.meta.url), 'utf8');
+    const css = readFileSync(new URL('../components/landing/HowItWorksStrip.css', import.meta.url), 'utf8');
+    expect(tsx).toContain('HOW_IT_WORKS_STEPS.map');
+    expect(tsx).toContain('step.messages');
+    expect(tsx).toContain('IntersectionObserver');
+    expect(tsx).toContain('prefers-reduced-motion');
+    expect(tsx).toContain('animation-timeline: view()');
+    expect(tsx).toContain('sticky ');
+    expect(css).toContain('transform: translateY');
+    expect(css).toContain('opacity:');
+    expect(css.includes('canvas')).toBe(false);
+  });
 });
 
 describe('PWA navigation denylist', () => {

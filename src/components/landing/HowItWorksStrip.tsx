@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
-import { HOW_IT_WORKS_STEPS } from '../../lib/marketingLanding';
-import { SmsPhoneMockup } from './SmsPhoneMockup';
+import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { HOW_IT_WORKS_STEPS, type HowItWorksMessage, type HowItWorksStep } from '../../lib/marketingLanding';
+import { MarketingShotFrame } from './MarketingShotFrame';
+import './HowItWorksStrip.css';
 
-const ADVANCE_MS = 3000;
-const STEP_COUNT = HOW_IT_WORKS_STEPS.length;
+const PHONE_CAPTION = 'A real text. Nothing to install on their phone.';
 
 function prefersReducedMotion() {
   try {
@@ -13,93 +13,292 @@ function prefersReducedMotion() {
   }
 }
 
+function supportsScrollDriven() {
+  try {
+    return CSS.supports('animation-timeline: view()') && CSS.supports('timeline-scope: none');
+  } catch {
+    return false;
+  }
+}
+
+function isDesktopMq() {
+  try {
+    return window.matchMedia('(min-width: 768px)').matches;
+  } catch {
+    return false;
+  }
+}
+
+function timelineName(id: string) {
+  return `--hiw-${id}`;
+}
+
+function coverRange(index: number, count: number): string {
+  const start0 = 16;
+  const span = 62;
+  const step = span / Math.max(count, 1);
+  const start = start0 + index * step * 0.82;
+  const end = Math.min(start + step + 10, 92);
+  return `cover ${start.toFixed(1)}% cover ${end.toFixed(1)}%`;
+}
+
+function ThreadMessages({
+  messages,
+  timeline,
+  scrollDriven,
+}: {
+  messages: HowItWorksMessage[];
+  timeline?: string;
+  scrollDriven: boolean;
+}) {
+  const beats = messages.length + 1;
+  return (
+    <>
+      {messages.map((msg, i) => {
+        const isCustomer = msg.role === 'customer';
+        const range = scrollDriven && timeline ? coverRange(i, beats) : undefined;
+        const style = (scrollDriven && timeline
+          ? { animationTimeline: timeline, animationRange: range }
+          : undefined) as CSSProperties | undefined;
+        if (msg.role === 'system') {
+          return (
+            <p key={i} className="hiw-msg text-center text-[10px] text-slate-500 py-1" style={style}>
+              {msg.text}
+            </p>
+          );
+        }
+        return (
+          <div key={i} className={`hiw-msg flex ${isCustomer ? 'justify-end' : 'justify-start'}`} style={style}>
+            <div
+              className={`max-w-[85%] rounded-2xl px-3 py-2 text-xs leading-snug ${
+                isCustomer ? 'bg-blue-500 text-white rounded-br-sm' : 'bg-slate-200 text-slate-800 rounded-bl-sm'
+              }`}
+            >
+              {msg.text}
+            </div>
+          </div>
+        );
+      })}
+      <p
+        className="hiw-check mt-2 flex justify-end"
+        style={
+          (scrollDriven && timeline
+            ? { animationTimeline: timeline, animationRange: coverRange(messages.length, beats) }
+            : undefined) as CSSProperties | undefined
+        }
+      >
+        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white text-sm font-bold leading-none">
+          ✓
+        </span>
+      </p>
+    </>
+  );
+}
+
+function PhoneChrome({ children, compact = false }: { children: ReactNode; compact?: boolean }) {
+  return (
+    <div
+      className={`rounded-[1.65rem] border-[5px] border-slate-900 bg-slate-50 overflow-hidden shadow-lg ${
+        compact ? 'w-full max-w-[16rem]' : 'w-full max-w-[19rem] sm:max-w-[21rem]'
+      }`}
+    >
+      <div className="h-6 bg-slate-900 flex items-center justify-center">
+        <div className="h-1 w-16 rounded-full bg-slate-500" />
+      </div>
+      <div className={`relative px-3.5 py-4 ${compact ? 'min-h-[188px]' : 'min-h-[248px]'}`}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function StepCopy({ step }: { step: HowItWorksStep }) {
+  return (
+    <>
+      <p className="text-xs font-bold tracking-widest text-brand-600 dark:text-brand-400 mb-3">{step.label}</p>
+      <h3 className="text-2xl md:text-3xl lg:text-4xl font-semibold text-slate-800 dark:text-slate-100 leading-snug">
+        {step.scene}
+      </h3>
+    </>
+  );
+}
+
 export function HowItWorksStrip() {
-  const [active, setActive] = useState(0);
-  const [paused, setPaused] = useState(false);
+  const headingId = useId();
+  const rootRef = useRef<HTMLElement>(null);
   const [reduceMotion, setReduceMotion] = useState(false);
+  const [engine, setEngine] = useState<'io' | 'scroll'>('io');
+  const [isDesktop, setIsDesktop] = useState(false);
+  const [activeId, setActiveId] = useState(HOW_IT_WORKS_STEPS[0].id);
+  const [inViewIds, setInViewIds] = useState<string[]>([]);
 
   useEffect(() => {
-    setReduceMotion(prefersReducedMotion());
+    const reduced = prefersReducedMotion();
+    setReduceMotion(reduced);
+    setEngine(!reduced && supportsScrollDriven() ? 'scroll' : 'io');
+    setIsDesktop(isDesktopMq());
+
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const desktop = window.matchMedia('(min-width: 768px)');
+    const onMotion = () => {
+      const next = prefersReducedMotion();
+      setReduceMotion(next);
+      setEngine(!next && supportsScrollDriven() ? 'scroll' : 'io');
+    };
+    const onDesktop = () => setIsDesktop(desktop.matches);
+    motion.addEventListener('change', onMotion);
+    desktop.addEventListener('change', onDesktop);
+    return () => {
+      motion.removeEventListener('change', onMotion);
+      desktop.removeEventListener('change', onDesktop);
+    };
   }, []);
 
   useEffect(() => {
-    if (paused) return;
-    const id = window.setInterval(() => {
-      setActive((i) => (i + 1) % STEP_COUNT);
-    }, ADVANCE_MS);
-    return () => window.clearInterval(id);
-  }, [paused]);
+    const root = rootRef.current;
+    if (!root) return;
 
-  const go = (i: number) => setActive(i);
+    const observers: IntersectionObserver[] = [];
+
+    if (isDesktop) {
+      const steps = root.querySelectorAll<HTMLElement>('[data-hiw-step]');
+      const io = new IntersectionObserver(
+        (entries) => {
+          const hit = entries
+            .filter((e) => e.isIntersecting)
+            .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+          if (hit) {
+            const id = hit.target.getAttribute('data-hiw-step');
+            if (id) setActiveId(id);
+          }
+        },
+        { threshold: [0.25, 0.45, 0.6, 0.8], rootMargin: '-28% 0px -28% 0px' },
+      );
+      steps.forEach((el) => io.observe(el));
+      observers.push(io);
+    } else {
+      const cards = root.querySelectorAll<HTMLElement>('[data-hiw-card]');
+      const io = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            const id = entry.target.getAttribute('data-hiw-card');
+            if (id) {
+              setInViewIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+              io.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.35 },
+      );
+      cards.forEach((el) => io.observe(el));
+      observers.push(io);
+    }
+
+    return () => observers.forEach((o) => o.disconnect());
+  }, [engine, reduceMotion, isDesktop]);
+
+  const modeClass = reduceMotion ? 'hiw-static' : engine === 'scroll' ? 'hiw-scroll' : 'hiw-io';
+  const desktopScope = HOW_IT_WORKS_STEPS.map((s) => timelineName(s.id)).join(', ');
+  const scrollDriven = engine === 'scroll' && !reduceMotion;
 
   return (
     <section
+      ref={rootRef}
       id="how-it-works"
-      className="py-16 md:py-20 px-4 sm:px-6 bg-white dark:bg-slate-950 scroll-mt-28"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onFocusCapture={() => setPaused(true)}
-      onBlurCapture={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setPaused(false);
-      }}
+      className={`py-16 md:py-20 px-4 sm:px-6 bg-white dark:bg-slate-950 scroll-mt-28 ${modeClass}`}
+      aria-labelledby={headingId}
     >
       <div className="max-w-6xl mx-auto">
-        <h2 className="text-2xl md:text-3xl font-bold text-center text-slate-900 dark:text-white mb-3">
+        <h2 id={headingId} className="text-2xl md:text-3xl font-bold text-center text-slate-900 dark:text-white mb-3">
           How it works
         </h2>
-        <p className="text-center text-slate-600 dark:text-slate-400 mb-10 max-w-2xl mx-auto">
+        <p className="text-center text-slate-600 dark:text-slate-400 mb-10 md:mb-4 max-w-2xl mx-auto">
           Book it. Remind it. Send it. Sign it. Pin it.
         </p>
 
-        <div role="tablist" aria-label="How PinOnIt works" className="flex flex-wrap justify-center gap-2 mb-8">
-          {HOW_IT_WORKS_STEPS.map((step, i) => {
-            const selected = i === active;
-            return (
-              <button
-                key={step.id}
-                type="button"
-                role="tab"
-                id={`how-tab-${step.id}`}
-                aria-selected={selected}
-                aria-controls="how-screens"
-                tabIndex={selected ? 0 : -1}
-                onClick={() => go(i)}
-                className={`px-3 py-2 rounded-full text-xs font-bold tracking-widest transition-colors ${
-                  selected
-                    ? 'bg-brand-500 text-white'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                }`}
-              >
-                {step.label}
-              </button>
-            );
-          })}
-        </div>
-
-        <div id="how-screens" className="overflow-hidden" aria-live="polite">
-          <div
-            className={`flex ${reduceMotion ? '' : 'transition-transform duration-500 ease-out'}`}
-            style={{ transform: `translateX(-${active * 100}%)` }}
-          >
+        <div
+          className="hiw-desktop hidden md:grid md:grid-cols-2 gap-10 lg:gap-14 items-start"
+          style={{ timelineScope: desktopScope } as CSSProperties}
+        >
+          <div>
             {HOW_IT_WORKS_STEPS.map((step) => (
-              <div
+              <article
                 key={step.id}
-                role="tabpanel"
-                aria-labelledby={`how-tab-${step.id}`}
-                className="min-w-full w-full shrink-0 px-1"
+                data-hiw-step={step.id}
+                className="min-h-[100svh] flex flex-col justify-center py-10"
+                style={{ viewTimelineName: timelineName(step.id) } as CSSProperties}
+                aria-current={activeId === step.id ? 'step' : undefined}
               >
-                <div className="grid md:grid-cols-2 gap-8 md:gap-10 items-center max-w-5xl mx-auto">
-                  <p className="text-2xl md:text-3xl lg:text-4xl font-semibold text-slate-800 dark:text-slate-100 leading-snug text-center md:text-left">
-                    {step.scene}
-                  </p>
-                  <SmsPhoneMockup
-                    messages={step.messages}
-                    caption="A real text. Nothing to install on their phone."
-                  />
-                </div>
-              </div>
+                <StepCopy step={step} />
+              </article>
             ))}
           </div>
+
+          <div className="relative min-h-full">
+            <div className="sticky top-24 h-[calc(100svh-6rem)] flex items-center justify-center">
+              <div className="w-full max-w-sm sm:max-w-md mx-auto">
+                <MarketingShotFrame padding="p-6 sm:p-8">
+                  <div className="flex flex-col items-center gap-4">
+                    <PhoneChrome>
+                      {HOW_IT_WORKS_STEPS.map((step) => {
+                        const tl = timelineName(step.id);
+                        return (
+                          <div
+                            key={step.id}
+                            className={`hiw-thread pointer-events-none absolute inset-0 space-y-2 ${
+                              activeId === step.id ? 'is-active' : ''
+                            }`}
+                            style={
+                              (scrollDriven
+                                ? {
+                                    animationTimeline: tl,
+                                    animationRange: 'cover 8% cover 92%',
+                                  }
+                                : undefined) as CSSProperties | undefined
+                            }
+                            aria-hidden={activeId === step.id ? undefined : true}
+                          >
+                            <ThreadMessages messages={step.messages} timeline={tl} scrollDriven={scrollDriven} />
+                          </div>
+                        );
+                      })}
+                    </PhoneChrome>
+                    <p className="text-center text-sm sm:text-base font-medium text-slate-600 leading-snug px-2">
+                      {PHONE_CAPTION}
+                    </p>
+                  </div>
+                </MarketingShotFrame>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="md:hidden space-y-8">
+          {HOW_IT_WORKS_STEPS.map((step) => {
+            const tl = `--hiw-m-${step.id}`;
+            const seen = reduceMotion || inViewIds.includes(step.id);
+            return (
+              <article
+                key={step.id}
+                data-hiw-card={step.id}
+                className={`hiw-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-5 ${
+                  seen ? 'is-inview' : ''
+                }`}
+                style={{ viewTimelineName: tl, timelineScope: tl } as CSSProperties}
+              >
+                <StepCopy step={step} />
+                <div className="mt-5 flex justify-center">
+                  <PhoneChrome compact>
+                    <div className={`hiw-thread space-y-2 ${seen ? 'is-active' : ''}`}>
+                      <ThreadMessages messages={step.messages} timeline={tl} scrollDriven={scrollDriven} />
+                    </div>
+                  </PhoneChrome>
+                </div>
+                <p className="mt-3 text-center text-xs font-medium text-slate-500">{PHONE_CAPTION}</p>
+              </article>
+            );
+          })}
         </div>
       </div>
     </section>

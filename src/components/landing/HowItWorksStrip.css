@@ -1,0 +1,126 @@
+/** How it works — scroll-driven sticky phone. Animate transform/opacity only. */
+
+@keyframes hiw-fade-slide {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hiw-thread-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.hiw-scroll .hiw-desktop .hiw-thread,
+.hiw-scroll .hiw-card .hiw-thread {
+  animation-name: hiw-thread-fade;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+}
+
+.hiw-scroll .hiw-desktop .hiw-msg,
+.hiw-scroll .hiw-desktop .hiw-check,
+.hiw-scroll .hiw-card .hiw-msg,
+.hiw-scroll .hiw-card .hiw-check {
+  animation-name: hiw-fade-slide;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+}
+
+.hiw-io .hiw-desktop .hiw-thread:not(.is-active) {
+  opacity: 0;
+}
+
+.hiw-io .hiw-desktop .hiw-thread:not(.is-active) .hiw-msg,
+.hiw-io .hiw-desktop .hiw-thread:not(.is-active) .hiw-check {
+  opacity: 0;
+  transform: translateY(12px);
+  animation: none;
+}
+
+.hiw-io .hiw-desktop .hiw-thread.is-active {
+  animation: hiw-thread-fade 0.35s ease-out both;
+}
+
+.hiw-io .hiw-thread.is-active .hiw-msg,
+.hiw-io .hiw-thread.is-active .hiw-check {
+  animation: hiw-fade-slide 0.45s ease-out both;
+}
+
+.hiw-io .hiw-thread.is-active .hiw-msg:nth-child(1) {
+  animation-delay: 0.04s;
+}
+.hiw-io .hiw-thread.is-active .hiw-msg:nth-child(2) {
+  animation-delay: 0.18s;
+}
+.hiw-io .hiw-thread.is-active .hiw-msg:nth-child(3) {
+  animation-delay: 0.32s;
+}
+.hiw-io .hiw-thread.is-active .hiw-msg:nth-child(4) {
+  animation-delay: 0.46s;
+}
+.hiw-io .hiw-thread.is-active .hiw-msg:nth-child(5) {
+  animation-delay: 0.6s;
+}
+.hiw-io .hiw-thread.is-active .hiw-check {
+  animation-delay: 0.58s;
+}
+
+.hiw-io .hiw-card:not(.is-inview) .hiw-msg,
+.hiw-io .hiw-card:not(.is-inview) .hiw-check {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.hiw-static .hiw-msg,
+.hiw-static .hiw-check {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+.hiw-static .hiw-desktop .hiw-thread {
+  animation: none !important;
+  opacity: 0;
+}
+
+.hiw-static .hiw-desktop .hiw-thread.is-active {
+  opacity: 1;
+}
+
+.hiw-static .hiw-card .hiw-thread {
+  animation: none !important;
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hiw-msg,
+  .hiw-check {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .hiw-card .hiw-thread {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+
+  .hiw-desktop .hiw-thread {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+
+  .hiw-desktop .hiw-thread.is-active {
+    opacity: 1 !important;
+  }
+}
