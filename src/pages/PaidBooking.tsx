@@ -704,7 +704,7 @@ export function PaidBookingPage() {
               <div className="h-8 w-8 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: '#5864C620' }}>
                 <ShoppingBag className="h-4 w-4" style={{ color: '#5864C6' }} />
               </div>
-              <h1 className="text-lg font-bold text-slate-900 dark:text-white truncate">Paid Booking</h1>
+              <h1 className="text-lg font-bold text-slate-900 dark:text-white truncate">Send Payment Menu</h1>
             </div>
             {step === 2 && (
               <button

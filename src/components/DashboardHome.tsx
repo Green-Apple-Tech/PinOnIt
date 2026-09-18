@@ -114,7 +114,7 @@ const OTHER_TOOLS: DashTool[] = [
   },
   {
     to: '/dashboard/paid-booking',
-    title: 'Paid Booking',
+    title: 'Send Payment Menu',
     blurb: 'Collect payment at booking.',
     icon: ShoppingBag,
     accent: 'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-300',
