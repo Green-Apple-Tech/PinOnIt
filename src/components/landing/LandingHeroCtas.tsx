@@ -1,8 +1,14 @@
 import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { ArrowRight, Loader2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { isIosIsolatedWebView, readIosStandalone } from '../../lib/oauthLogin';
+import {
+  LANDING_CLOSING_HEADLINE,
+  LANDING_GOOGLE_CTA,
+  LANDING_PRIMARY_CTA,
+  TRIAL_FRICTION_LINE,
+} from '../../lib/marketingLanding';
 
 function GoogleIcon() {
   return (
@@ -29,6 +35,21 @@ function MicrosoftIcon() {
 const PILL =
   'min-h-12 px-5 sm:px-6 py-3 rounded-full bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm sm:text-base font-semibold shadow-md shadow-slate-900/10 border border-slate-200/80 dark:border-slate-700 inline-flex items-center justify-center gap-2.5 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-60 w-full sm:w-auto';
 
+const PRIMARY_BTN =
+  'w-full sm:w-auto min-h-12 px-8 py-3.5 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-full text-base transition-all shadow-lg shadow-brand-200/60 dark:shadow-none inline-flex items-center justify-center gap-2';
+
+export function LandingPrimaryCta({ className = PRIMARY_BTN }: { className?: string }) {
+  return (
+    <Link to="/signup" className={className}>
+      {LANDING_PRIMARY_CTA} <ArrowRight className="h-4 w-4" />
+    </Link>
+  );
+}
+
+export function TrialFrictionLine({ className }: { className?: string }) {
+  return <p className={className}>{TRIAL_FRICTION_LINE}</p>;
+}
+
 export function LandingHeroCtas() {
   const { signInWithGoogle, signInWithMicrosoft } = useAuth();
   const [loading, setLoading] = useState<'google' | 'microsoft' | null>(null);
@@ -52,22 +73,47 @@ export function LandingHeroCtas() {
   return (
     <div className="flex flex-col items-center lg:items-start gap-3">
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-3 w-full">
+        <LandingPrimaryCta />
         <button type="button" onClick={() => void start('google')} disabled={isolated || !!loading} className={PILL}>
           {loading === 'google' ? <Loader2 className="h-5 w-5 animate-spin" /> : <GoogleIcon />}
-          Sign up with Google
+          {LANDING_GOOGLE_CTA}
         </button>
         <button type="button" onClick={() => void start('microsoft')} disabled={isolated || !!loading} className={PILL}>
           {loading === 'microsoft' ? <Loader2 className="h-5 w-5 animate-spin" /> : <MicrosoftIcon />}
           Sign up with Microsoft
         </button>
       </div>
+      <TrialFrictionLine className="text-sm text-slate-500 dark:text-slate-400" />
       <p className="text-sm text-slate-500 dark:text-slate-400">
         <Link to="/signup" className="underline underline-offset-2 font-medium text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400">
           Sign up with email
         </Link>
-        {' · '}
-        No credit card required
       </p>
     </div>
+  );
+}
+
+export function LandingCompactCta() {
+  return (
+    <section className="py-10 md:py-12 px-4 sm:px-6 bg-slate-50 dark:bg-slate-900/40">
+      <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-5">
+        <LandingPrimaryCta />
+        <TrialFrictionLine className="text-sm text-slate-500 dark:text-slate-400 text-center sm:text-left" />
+      </div>
+    </section>
+  );
+}
+
+export function LandingClosingCta() {
+  return (
+    <section className="py-20 md:py-24 px-4 sm:px-6 bg-brand-500">
+      <div className="max-w-2xl mx-auto text-center">
+        <h2 className="text-2xl md:text-4xl font-black text-white leading-tight mb-6">
+          {LANDING_CLOSING_HEADLINE}
+        </h2>
+        <LandingPrimaryCta className="inline-flex items-center justify-center gap-3 min-h-12 px-10 py-4 bg-white text-brand-600 font-black text-lg rounded-full transition-all shadow-2xl hover:bg-brand-50" />
+        <TrialFrictionLine className="mt-5 text-brand-100 text-sm" />
+      </div>
+    </section>
   );
 }
