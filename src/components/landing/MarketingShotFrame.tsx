@@ -23,7 +23,7 @@ export function MarketingShotFrame({
         }}
       />
       <div className="pointer-events-none absolute -top-16 -left-10 h-40 w-40 rounded-full bg-white/20 blur-3xl" aria-hidden="true" />
-      <div className="relative">{children}</div>
+      <div className="relative h-full">{children}</div>
     </div>
   );
 }
