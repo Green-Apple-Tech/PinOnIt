@@ -118,18 +118,22 @@ export function AuthCallback() {
       }
       if (cancelled) return;
       const redirect = getPostLoginRedirect();
+      const next = !completed
+        ? '/dashboard?onboarding=1'
+        : redirect;
       if (!completed) {
         if (wizardActive) {
           clearStaleOnboardingLocalState();
         } else {
           clearClientOnboardingState();
         }
-        navigate('/dashboard?onboarding=1', { replace: true });
       } else {
         markOnboardingCompletedLocal();
         clearWizardLocal();
-        navigate(redirect, { replace: true });
       }
+      // Full load so Chrome picks up the persisted session. React navigate races
+      // ProtectedRoute (user still null) and looks like Google sign-in needs a second click.
+      window.location.replace(next);
     };
 
     const fail = (message: string) => {

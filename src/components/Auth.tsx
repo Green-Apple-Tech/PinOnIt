@@ -46,8 +46,7 @@ export function AuthForm() {
   );
 
   useEffect(() => {
-    // Don't steal an in-flight OAuth redirect if a session event fires first
-    if (user && !oauthInFlight.current) navigate(redirectTo, { replace: true });
+    if (user) navigate(redirectTo, { replace: true });
   }, [user, navigate, redirectTo]);
 
   useEffect(() => {
@@ -164,10 +163,9 @@ export function AuthForm() {
   useEffect(() => {
     if (loading) return;
     if (user) {
-      const hadPending = pendingOauth.current !== null;
       pendingOauth.current = null;
-      if (hadPending) resetOauthLoading();
-      if (!oauthInFlight.current || hadPending) navigate(redirectTo, { replace: true });
+      resetOauthLoading();
+      navigate(redirectTo, { replace: true });
       return;
     }
     if (!pendingOauth.current) return;

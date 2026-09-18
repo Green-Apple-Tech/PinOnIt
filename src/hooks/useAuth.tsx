@@ -35,8 +35,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = useCallback(async (userId: string) => {
-    const { data: sessionData } = await supabase.auth.getUser();
-    const authUser = sessionData?.user;
+    const { data: sessionData } = await supabase.auth.getSession();
+    const authUser = sessionData?.session?.user;
 
     const { data } = await supabase
       .from('profiles')
@@ -134,6 +134,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     provider: 'google' | 'azure',
     options: { redirectTo: string; scopes?: string; queryParams?: Record<string, string> },
   ) => {
+    const { data: existing } = await supabase.auth.getSession();
+    if (existing.session?.user) {
+      window.location.replace('/dashboard');
+      return { error: null };
+    }
     // Claim before signInWithOAuth — a second call overwrites the PKCE verifier and Google asks again
     if (!claimOauthStart()) return { error: null };
     const { data, error } = await supabase.auth.signInWithOAuth({
