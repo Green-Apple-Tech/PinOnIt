@@ -18,6 +18,7 @@ import { HOLD_UP_COPY, AUDIT_RECORD_ITEMS } from '../lib/documentCopy';
 import { DocTypeShortcutRow } from '../components/CampaignLanding';
 import { usePageMeta } from '../lib/pageMeta';
 import { MarketingStickyHeader } from '../components/landing/MarketingAnnouncementBar';
+import { MarketingShotFrame } from '../components/landing/MarketingShotFrame';
 
 // ── Animated counter hook ────────────────────────────────────────────────────
 function useCounter(target: number, duration = 1800, start = false) {
@@ -253,19 +254,8 @@ function ScreenshotShowcase() {
                 <p className="text-gray-500 dark:text-slate-400 text-sm leading-relaxed">{current.desc}</p>
               </div>
 
-              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-slate-700 overflow-hidden">
-                <div className="bg-gray-100 dark:bg-slate-700 px-4 py-2.5 flex items-center gap-2 border-b border-gray-200 dark:border-slate-600">
-                  <div className="flex gap-1.5">
-                    <div className="w-3 h-3 rounded-full bg-red-400" />
-                    <div className="w-3 h-3 rounded-full bg-yellow-400" />
-                    <div className="w-3 h-3 rounded-full bg-green-400" />
-                  </div>
-                  <div className="flex-1 bg-white dark:bg-slate-900 rounded-md px-3 py-1 text-xs text-gray-400 dark:text-slate-500 font-mono">
-                    pinonit.com
-                  </div>
-                </div>
-
-                <div className="relative min-h-64 bg-slate-50 dark:bg-slate-900">
+              <MarketingShotFrame>
+                <div className="rounded-2xl overflow-hidden bg-white shadow-lg min-h-64">
                   {!imageFailed ? (
                     <img
                       key={current.image}
@@ -282,7 +272,7 @@ function ScreenshotShowcase() {
                     </div>
                   )}
                 </div>
-              </div>
+              </MarketingShotFrame>
 
               <div className="flex justify-center items-center gap-3 mt-5">
                 <button

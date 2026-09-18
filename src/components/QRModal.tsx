@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { X, Download, Copy, Check, QrCode, Zap } from 'lucide-react';
+import { MarketingShotFrame } from './landing/MarketingShotFrame';
 
 interface QRModalProps {
   url: string;
@@ -121,9 +122,11 @@ export function QRModal({ url, title, onClose, singleUse = false, variant = 'def
 
         {/* QR canvas */}
         <div className="flex flex-col items-center px-6 py-6">
-          <div className="p-4 bg-white rounded-2xl shadow-inner border border-slate-100">
-            <canvas ref={canvasRef} className="block" style={{ width: qrSize, height: qrSize }} />
-          </div>
+          <MarketingShotFrame className="w-full" padding="p-4">
+            <div className="bg-white rounded-2xl overflow-hidden flex justify-center p-3">
+              <canvas ref={canvasRef} className="block" style={{ width: qrSize, height: qrSize }} />
+            </div>
+          </MarketingShotFrame>
           <p className={`mt-4 text-xs text-slate-400 dark:text-slate-500 text-center leading-relaxed ${variant === 'booking' ? 'max-w-[280px]' : 'max-w-[220px]'}`}>
             {description}
           </p>

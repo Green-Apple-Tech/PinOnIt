@@ -5,6 +5,7 @@ import {
   ChevronDown, Palette,
 } from 'lucide-react';
 import { ColorSwatchRow } from '../components/ColorSwatchRow';
+import { MarketingShotFrame } from '../components/landing/MarketingShotFrame';
 
 const PRESETS = [
   { label: 'Your website', placeholder: 'https://yourwebsite.com' },
@@ -187,25 +188,27 @@ export function QRCreatorPage() {
 
         {/* ── Preview panel ────────────────────────────────────────────────────── */}
         <div className="flex flex-col items-center">
-          <div className={`w-full max-w-xs aspect-square rounded-2xl border-2 flex items-center justify-center transition-all ${
-            qrDataUrl
-              ? 'border-gray-200 dark:border-slate-700 bg-white shadow-lg'
-              : 'border-dashed border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/30'
-          }`}>
-            {generating ? (
-              <div className="flex flex-col items-center gap-3 text-gray-400">
-                <RefreshCw className="h-8 w-8 animate-spin" />
-                <p className="text-xs">Generating…</p>
+          {qrDataUrl && !generating ? (
+            <MarketingShotFrame className="w-full max-w-xs" padding="p-4">
+              <div className="aspect-square rounded-2xl bg-white overflow-hidden flex items-center justify-center">
+                <img src={qrDataUrl} alt="QR Code" className="w-full h-full object-contain p-3" />
               </div>
-            ) : qrDataUrl ? (
-              <img src={qrDataUrl} alt="QR Code" className="w-full h-full object-contain p-4 rounded-2xl" />
-            ) : (
-              <div className="flex flex-col items-center gap-3 text-gray-300 dark:text-slate-600">
-                <QrCode className="h-16 w-16" />
-                <p className="text-xs text-gray-400 dark:text-slate-500">Enter a link to preview</p>
-              </div>
-            )}
-          </div>
+            </MarketingShotFrame>
+          ) : (
+            <div className="w-full max-w-xs aspect-square rounded-2xl border-2 border-dashed border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/30 flex items-center justify-center">
+              {generating ? (
+                <div className="flex flex-col items-center gap-3 text-gray-400">
+                  <RefreshCw className="h-8 w-8 animate-spin" />
+                  <p className="text-xs">Generating…</p>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-3 text-gray-300 dark:text-slate-600">
+                  <QrCode className="h-16 w-16" />
+                  <p className="text-xs text-gray-400 dark:text-slate-500">Enter a link to preview</p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Actions */}
           {qrDataUrl && (

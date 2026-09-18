@@ -8,6 +8,7 @@ import {
   BookOpen,
 } from 'lucide-react';
 import { ColorSwatchRow } from '../components/ColorSwatchRow';
+import { MarketingShotFrame } from '../components/landing/MarketingShotFrame';
 import linkedInBluePng from '../assets/social-icons/LI-In-Bug.png';
 
 // CDN icon URLs — reliable in both browser preview and email clients
@@ -486,14 +487,16 @@ export function EmailSignaturePage() {
           <div>
             <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Style</p>
             {/* Preview card */}
-            <div className="rounded-xl border-2 border-slate-900 dark:border-slate-200 bg-white dark:bg-slate-900/50 p-4 transition-all mb-3">
-              <CarouselPreview htmlString={htmlString} />
-              <div className="flex items-center justify-end mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <span className="text-xs font-semibold tabular-nums text-slate-400 dark:text-slate-500">
-                  {styleIndex + 1} / {STYLES.length}
-                </span>
+            <MarketingShotFrame padding="p-4" className="mb-3">
+              <div className="rounded-xl bg-white p-4">
+                <CarouselPreview htmlString={htmlString} />
+                <div className="flex items-center justify-end mt-3 pt-3 border-t border-slate-100">
+                  <span className="text-xs font-semibold tabular-nums text-slate-400">
+                    {styleIndex + 1} / {STYLES.length}
+                  </span>
+                </div>
               </div>
-            </div>
+            </MarketingShotFrame>
             {/* Nav arrows — row on all sizes, larger tap targets */}
             <div className="flex items-center justify-center gap-4">
               <button onClick={goPrev} className="w-12 h-12 rounded-full border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600 transition-colors shadow-sm touch-manipulation" aria-label="Previous style">

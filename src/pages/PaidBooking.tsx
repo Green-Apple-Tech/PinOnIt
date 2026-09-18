@@ -22,6 +22,7 @@ import {
   Link2, ShoppingBag, Mail, MessageSquare, Sparkles, Pencil, Type,
 } from 'lucide-react';
 import { ColorSwatchRow } from '../components/ColorSwatchRow';
+import { MarketingShotFrame } from '../components/landing/MarketingShotFrame';
 
 type Theme = 'clean' | 'bold' | 'warm';
 type WizardStep = 1 | 2 | 3;
@@ -306,7 +307,11 @@ function QRModal({ url, onClose }: { url: string; onClose: () => void }) {
           </button>
         </div>
         <div className="p-5 space-y-4">
-          <div className="flex justify-center"><canvas ref={canvasRef} className="rounded-xl" /></div>
+          <MarketingShotFrame padding="p-4">
+            <div className="flex justify-center bg-white rounded-2xl p-3">
+              <canvas ref={canvasRef} className="rounded-xl" />
+            </div>
+          </MarketingShotFrame>
           <div className="flex gap-2">
             <button type="button" onClick={() => download('png')} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-white text-sm font-semibold rounded-xl" style={{ backgroundColor: '#5864C6' }}>
               <Download className="h-4 w-4" /> PNG
