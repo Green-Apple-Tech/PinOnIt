@@ -52,6 +52,17 @@ describe('how-it-works sticky demo', () => {
     expect(tsx).toContain('CalendarScreen');
     expect(tsx).toContain('Select a date');
   });
+
+  it('shows the real document-type catalog on SEND IT', () => {
+    expect(HOW_IT_WORKS_STEPS.find((s) => s.id === 'send')?.screen).toBe('docs');
+    const tsx = readFileSync(new URL('../components/landing/HowItWorksStrip.tsx', import.meta.url), 'utf8');
+    expect(tsx).toContain('SMB_DOCUMENT_TYPES');
+    expect(tsx).toContain('DocsScreen');
+    expect(tsx).toContain('SignScreen');
+    expect(tsx).toContain('PinScreen');
+    const css = readFileSync(new URL('../components/landing/HowItWorksStrip.css', import.meta.url), 'utf8');
+    expect(css).toContain('visibility: hidden');
+  });
 });
 
 describe('PWA navigation denylist', () => {

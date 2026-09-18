@@ -58,10 +58,12 @@ export type HowItWorksStep = {
   id: string;
   label: string;
   scene: string;
-  screen?: 'sms' | 'calendar';
+  screen?: 'sms' | 'calendar' | 'docs' | 'sign' | 'pin';
   calendar?: HowItWorksCalendar;
   messages: HowItWorksMessage[];
   caption?: string;
+  signTitle?: string;
+  pinItems?: string[];
 };
 
 /** One-line scenes + SMS mock threads / calendar. Edit this array only. */
@@ -100,6 +102,7 @@ export const HOW_IT_WORKS_STEPS: HowItWorksStep[] = [
     id: 'remind',
     label: 'REMIND IT',
     scene: 'A text reminder goes out the day before',
+    screen: 'sms',
     messages: [
       { role: 'business', text: 'Reminder: tomorrow at noon. Reply 1 to cancel, 2 to reschedule.' },
       { role: 'customer', text: 'See you then' },
@@ -110,31 +113,27 @@ export const HOW_IT_WORKS_STEPS: HowItWorksStep[] = [
     id: 'send',
     label: 'SEND IT',
     scene: 'You send a quote or waiver by text',
-    messages: [
-      { role: 'business', text: "Here's your quote for the front yard — $450. View: pinonit.com/d/…" },
-      { role: 'system', text: 'Opened · they tapped the text' },
-      { role: 'customer', text: 'Looks good' },
-    ],
+    screen: 'docs',
+    caption: 'Quotes, NDAs, waivers, invoices — pick a type and send.',
+    messages: [],
   },
   {
     id: 'sign',
     label: 'SIGN IT',
     scene: 'They reply and sign from their phone in about 10 seconds',
-    messages: [
-      { role: 'business', text: 'Sign from your phone: pinonit.com/d/…' },
-      { role: 'customer', text: 'Signed' },
-      { role: 'system', text: 'Signed · about 10 seconds' },
-    ],
+    screen: 'sign',
+    signTitle: 'Front yard cleanup quote',
+    caption: 'They sign on their phone. Nothing to install.',
+    messages: [],
   },
   {
     id: 'pin',
     label: 'PIN IT',
     scene: 'Everything lands in one place',
-    messages: [
-      { role: 'system', text: 'Quote · signed · booked · paid' },
-      { role: 'business', text: "You're all set. See you Tuesday." },
-      { role: 'customer', text: '👍' },
-    ],
+    screen: 'pin',
+    pinItems: ['Booked · Tue 12:00 PM', 'Reminder sent', 'Quote signed', 'Paid'],
+    caption: 'Booked, reminded, signed, paid — one thread.',
+    messages: [],
   },
 ];
 

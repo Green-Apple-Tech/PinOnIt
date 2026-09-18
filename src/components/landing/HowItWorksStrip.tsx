@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { HOW_IT_WORKS_STEPS, type HowItWorksCalendar, type HowItWorksMessage, type HowItWorksStep } from '../../lib/marketingLanding';
+import { SMB_DOCUMENT_TYPES } from '../../lib/documentTypes';
 import { MarketingShotFrame } from './MarketingShotFrame';
 import './HowItWorksStrip.css';
 
@@ -119,6 +120,106 @@ function CalendarScreen({
   );
 }
 
+function DocsScreen({ timeline, scrollDriven }: { timeline?: string; scrollDriven: boolean }) {
+  const types = SMB_DOCUMENT_TYPES.filter((t) => t.id !== 'other');
+  return (
+    <div className="h-full overflow-y-auto text-slate-800">
+      <p className="hiw-msg text-[9px] font-semibold uppercase tracking-widest text-slate-400" style={beatStyle(scrollDriven, timeline, 0, 3)}>
+        Document type
+      </p>
+      <ul className="hiw-msg mt-1.5" style={beatStyle(scrollDriven, timeline, 1, 3)}>
+        {types.map((t) => {
+          const selected = t.id === 'quote';
+          return (
+            <li
+              key={t.id}
+              className={`flex items-center gap-1.5 px-2 py-1 text-[11px] leading-snug ${
+                selected ? 'bg-brand-500 text-white rounded-md font-semibold' : 'text-slate-700'
+              }`}
+            >
+              <span className={`w-3 text-center ${selected ? 'text-white' : 'text-transparent'}`}>✓</span>
+              {t.label}
+            </li>
+          );
+        })}
+      </ul>
+      <p className="hiw-check mt-2 flex justify-end" style={beatStyle(scrollDriven, timeline, 2, 3)}>
+        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white text-sm font-bold leading-none">
+          ✓
+        </span>
+      </p>
+    </div>
+  );
+}
+
+function SignScreen({
+  title,
+  timeline,
+  scrollDriven,
+}: {
+  title: string;
+  timeline?: string;
+  scrollDriven: boolean;
+}) {
+  return (
+    <div className="h-full flex flex-col text-slate-800">
+      <p className="hiw-msg text-[9px] font-semibold uppercase tracking-widest text-slate-400" style={beatStyle(scrollDriven, timeline, 0, 4)}>
+        Sign by text
+      </p>
+      <p className="hiw-msg mt-1 text-[12px] font-bold text-slate-900" style={beatStyle(scrollDriven, timeline, 1, 4)}>
+        {title}
+      </p>
+      <div className="hiw-msg mt-3 rounded-xl border border-slate-200 bg-white px-3 py-3" style={beatStyle(scrollDriven, timeline, 2, 4)}>
+        <p className="text-[9px] font-semibold uppercase tracking-wide text-slate-400 mb-2">Signature</p>
+        <svg viewBox="0 0 140 40" className="w-full h-9 text-slate-800" aria-hidden="true">
+          <path d="M6 28 C 22 10, 38 34, 58 18 S 96 8, 134 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+        <div className="mt-1 border-t border-slate-200" />
+      </div>
+      <p className="hiw-msg mt-2 text-[10px] text-slate-500" style={beatStyle(scrollDriven, timeline, 3, 4)}>
+        Signed on their phone · about 10 seconds
+      </p>
+      <p className="hiw-check mt-auto flex justify-end pt-2" style={beatStyle(scrollDriven, timeline, 3, 4)}>
+        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white text-sm font-bold leading-none">
+          ✓
+        </span>
+      </p>
+    </div>
+  );
+}
+
+function PinScreen({
+  items,
+  timeline,
+  scrollDriven,
+}: {
+  items: string[];
+  timeline?: string;
+  scrollDriven: boolean;
+}) {
+  return (
+    <div className="h-full text-slate-800">
+      <p className="hiw-msg text-[9px] font-semibold uppercase tracking-widest text-slate-400" style={beatStyle(scrollDriven, timeline, 0, items.length + 1)}>
+        This job
+      </p>
+      <ul className="mt-2 space-y-1.5">
+        {items.map((item, i) => (
+          <li
+            key={item}
+            className="hiw-msg flex items-center gap-2 text-[12px] font-medium text-slate-800"
+            style={beatStyle(scrollDriven, timeline, i + 1, items.length + 1)}
+          >
+            <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white text-[11px] font-bold">
+              ✓
+            </span>
+            {item}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function StepScreen({
   step,
   timeline,
@@ -130,6 +231,15 @@ function StepScreen({
 }) {
   if (step.screen === 'calendar' && step.calendar) {
     return <CalendarScreen calendar={step.calendar} timeline={timeline} scrollDriven={scrollDriven} />;
+  }
+  if (step.screen === 'docs') {
+    return <DocsScreen timeline={timeline} scrollDriven={scrollDriven} />;
+  }
+  if (step.screen === 'sign') {
+    return <SignScreen title={step.signTitle || 'Document'} timeline={timeline} scrollDriven={scrollDriven} />;
+  }
+  if (step.screen === 'pin') {
+    return <PinScreen items={step.pinItems ?? []} timeline={timeline} scrollDriven={scrollDriven} />;
   }
   return <ThreadMessages messages={step.messages} timeline={timeline} scrollDriven={scrollDriven} />;
 }
@@ -339,20 +449,12 @@ export function HowItWorksStrip() {
                         return (
                           <div
                             key={step.id}
-                            className={`hiw-thread pointer-events-none absolute inset-0 space-y-2 ${
+                            className={`hiw-thread pointer-events-none absolute inset-0 overflow-y-auto px-0.5 ${
                               activeId === step.id ? 'is-active' : ''
                             }`}
-                            style={
-                              (scrollDriven
-                                ? {
-                                    animationTimeline: tl,
-                                    animationRange: 'cover 8% cover 92%',
-                                  }
-                                : undefined) as CSSProperties | undefined
-                            }
                             aria-hidden={activeId === step.id ? undefined : true}
                           >
-                            <StepScreen step={step} timeline={tl} scrollDriven={scrollDriven} />
+                            <StepScreen step={step} timeline={tl} scrollDriven={scrollDriven && activeId === step.id} />
                           </div>
                         );
                       })}

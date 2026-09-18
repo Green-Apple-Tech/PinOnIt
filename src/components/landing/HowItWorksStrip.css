@@ -1,4 +1,4 @@
-/** How it works — scroll-driven sticky phone. Animate transform/opacity only. */
+/** How it works — one phone screen at a time. Animate transform/opacity only. */
 
 @keyframes hiw-fade-slide {
   from {
@@ -11,44 +11,25 @@
   }
 }
 
-@keyframes hiw-thread-fade {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+.hiw-desktop .hiw-thread {
+  opacity: 0;
+  visibility: hidden;
+  z-index: 0;
 }
 
-.hiw-scroll .hiw-desktop .hiw-thread,
-.hiw-scroll .hiw-card .hiw-thread {
-  animation-name: hiw-thread-fade;
-  animation-timing-function: linear;
-  animation-fill-mode: both;
+.hiw-desktop .hiw-thread.is-active {
+  opacity: 1;
+  visibility: visible;
+  z-index: 1;
 }
 
-.hiw-scroll .hiw-desktop .hiw-msg,
-.hiw-scroll .hiw-desktop .hiw-check,
-.hiw-scroll .hiw-card .hiw-msg,
-.hiw-scroll .hiw-card .hiw-check {
+.hiw-scroll .hiw-thread.is-active .hiw-msg,
+.hiw-scroll .hiw-thread.is-active .hiw-check,
+.hiw-scroll .hiw-card.is-inview .hiw-msg,
+.hiw-scroll .hiw-card.is-inview .hiw-check {
   animation-name: hiw-fade-slide;
   animation-timing-function: linear;
   animation-fill-mode: both;
-}
-
-.hiw-io .hiw-desktop .hiw-thread:not(.is-active) {
-  opacity: 0;
-}
-
-.hiw-io .hiw-desktop .hiw-thread:not(.is-active) .hiw-msg,
-.hiw-io .hiw-desktop .hiw-thread:not(.is-active) .hiw-check {
-  opacity: 0;
-  transform: translateY(12px);
-  animation: none;
-}
-
-.hiw-io .hiw-desktop .hiw-thread.is-active {
-  animation: hiw-thread-fade 0.35s ease-out both;
 }
 
 .hiw-io .hiw-thread.is-active .hiw-msg,
@@ -88,39 +69,11 @@
   transform: none !important;
 }
 
-.hiw-static .hiw-desktop .hiw-thread {
-  animation: none !important;
-  opacity: 0;
-}
-
-.hiw-static .hiw-desktop .hiw-thread.is-active {
-  opacity: 1;
-}
-
-.hiw-static .hiw-card .hiw-thread {
-  animation: none !important;
-  opacity: 1;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .hiw-msg,
   .hiw-check {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
-  }
-
-  .hiw-card .hiw-thread {
-    animation: none !important;
-    opacity: 1 !important;
-  }
-
-  .hiw-desktop .hiw-thread {
-    animation: none !important;
-    opacity: 0 !important;
-  }
-
-  .hiw-desktop .hiw-thread.is-active {
-    opacity: 1 !important;
   }
 }
