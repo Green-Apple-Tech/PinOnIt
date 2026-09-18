@@ -81,7 +81,7 @@ describe('buildSidebarNav', () => {
 
   it('keeps paid booking off the sidebar in simple mode even after it is used', () => {
     const { primary, moreTools } = buildSidebarNav('simple');
-    expect(primary.map((i) => i.label)).not.toContain('Send Payment Menu');
+    expect(primary.map((i) => i.label)).not.toContain('Send Payment Menu/Options');
     expect(moreTools).toEqual([]);
   });
 
@@ -89,7 +89,7 @@ describe('buildSidebarNav', () => {
     const { primary, moreTools, settings } = buildSidebarNav('advanced');
     expect(moreTools).toEqual([]);
     expect(primary.some((i) => i.label === 'Send Docs + Sign-by-Text')).toBe(true);
-    expect(primary.some((i) => i.label === 'Send Payment Menu')).toBe(true);
+    expect(primary.some((i) => i.label === 'Send Payment Menu/Options')).toBe(true);
     expect(primary.some((i) => i.label === 'QR Code Creator')).toBe(true);
     expect(settings.label).toBe('Settings');
   });

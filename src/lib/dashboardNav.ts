@@ -72,7 +72,7 @@ export const MORE_TOOLS_NAV: MoreToolsNavItem[] = [
     activePathPrefixes: ['/dashboard/group-scheduling'],
     activePaths: ['/dashboard/coordinate'],
   },
-  { label: 'Send Payment Menu', icon: ShoppingBag, path: '/dashboard/paid-booking', toolId: 'paid-booking' },
+  { label: 'Send Payment Menu/Options', icon: ShoppingBag, path: '/dashboard/paid-booking', toolId: 'paid-booking' },
   {
     label: 'QR Code Creator',
     icon: QrCode,

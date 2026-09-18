@@ -413,7 +413,7 @@ export function CalendlyAlternative() {
             { num: '1', label: 'Scheduling' },
             { num: '2', label: 'NeverMiss Reminders' },
             { num: '3', label: 'Doc Center' },
-            { num: '4', label: 'Send Payment Menu' },
+            { num: '4', label: 'Send Payment Menu/Options' },
             { num: '5', label: 'QR Code Creator' },
             { num: '6', label: 'Email Signature' },
           ].map(({ num, label }) => (
@@ -596,7 +596,7 @@ export function CalendlyAlternative() {
             {[
               { icon: Calendar, title: 'Scheduling', desc: 'Booking page, event types, and Google / Outlook / Apple sync so you do not double-book.' },
               { icon: Bell, title: 'NeverMiss Reminders', desc: 'Email, SMS, WhatsApp, and voice — plus two-way text to cancel or reschedule.' },
-              { icon: ShoppingBag, title: 'Send Payment Menu', desc: 'A price-list storefront. Stripe, PayPal, Venmo, Cash App, or Zelle at booking time.' },
+              { icon: ShoppingBag, title: 'Send Payment Menu/Options', desc: 'A price-list storefront. Stripe, PayPal, Venmo, Cash App, or Zelle at booking time.' },
               { icon: QrCode, title: 'QR Code Creator', desc: 'Print a code for cards, trucks, and shop windows that opens your booking page.' },
               { icon: Mail, title: 'Email Signature', desc: 'A signature with your booking link so every email can get you a meeting.' },
             ].map(({ icon: Icon, title, desc }) => (

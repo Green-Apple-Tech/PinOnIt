@@ -206,7 +206,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
     suggestedQuestions: ['How do they pay?', 'What does Viewed mean?', 'How do I mark a quote paid?'],
   },
   'paid-booking': {
-    title: 'Send Payment Menu',
+    title: 'Send Payment Menu/Options',
     purpose: 'A price-list page clients can book from — share by link, email, SMS, or embed.',
     steps: [
       'See what it is: a short menu of your priced options.',
