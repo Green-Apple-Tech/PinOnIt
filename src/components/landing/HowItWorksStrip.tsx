@@ -89,7 +89,7 @@ export function HowItWorksStrip() {
                 className="min-w-full w-full shrink-0 px-1"
               >
                 <div className="grid md:grid-cols-2 gap-8 md:gap-10 items-center max-w-5xl mx-auto">
-                  <p className="text-lg md:text-xl font-medium text-slate-800 dark:text-slate-100 leading-snug text-center md:text-left">
+                  <p className="text-2xl md:text-3xl lg:text-4xl font-semibold text-slate-800 dark:text-slate-100 leading-snug text-center md:text-left">
                     {step.scene}
                   </p>
                   <SmsPhoneMockup
