@@ -5,6 +5,7 @@ import {
   PINONIT_PRICE_LABEL,
   PINONIT_SOFTWARE,
   PINONIT_SOFTWARE_DESCRIPTION,
+  PINONIT_WHO,
 } from './seoIdentity';
 import type { IntentFaq, IntentPage } from './seoIntentPages';
 
@@ -33,6 +34,20 @@ export function softwareApplicationJsonLd() {
     applicationCategory: PINONIT_SOFTWARE.applicationCategory,
     operatingSystem: PINONIT_SOFTWARE.operatingSystem,
     url: PINONIT_ORG.url,
+    image: PINONIT_ORG.logo,
+    screenshot: 'https://pinonit.com/og-why-pinonit.png',
+    audience: {
+      '@type': 'Audience',
+      audienceType: PINONIT_WHO,
+    },
+    featureList: [
+      'Quote by text',
+      'Sign-by-Text',
+      'Booking link with Google and Outlook sync',
+      'SMS WhatsApp email and voice reminders',
+      'Two-way SMS cancel or reschedule',
+      'NDAs waivers invoices and receipts by text',
+    ],
     offers: {
       '@type': 'Offer',
       price: PINONIT_SOFTWARE.price,

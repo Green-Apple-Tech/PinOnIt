@@ -1,0 +1,133 @@
+PinOnIt directory + outreach kit
+================================
+Paste the same words everywhere. Do not invent a second pitch.
+Do not claim PinOnIt replaces every feature of Calendly or DocuSign.
+
+NAME
+PinOnIt
+
+URL
+https://pinonit.com
+
+LOGO
+https://pinonit.com/pinonit_logo.png
+
+OG IMAGE
+https://pinonit.com/og-why-pinonit.png
+
+COMPANY
+Miami Expeditions LLC
+
+EMAIL
+support@pinonit.com
+
+PRICE
+$8.99/month after a 14-day trial. No credit card for the 14-day trial.
+
+ONE-LINER
+Text-first office for small service businesses: quote, sign, book, remind.
+
+SHORT DESCRIPTION (use this)
+PinOnIt is a text-first office for small businesses: quote a job, get a signature, book a time, and send reminders by SMS. $8.99/month after a 14-day trial.
+
+LONG DESCRIPTION (use this)
+PinOnIt is a text-first office for small businesses: quote a job, get a signature, book a time, and send reminders by SMS. $8.99/month after a 14-day trial. Guests pick a time on their phone. NeverMiss can text a reminder; they reply 1 to cancel or 2 to reschedule. Sign-by-Text is an SMS link, a one-time code, and a finger signature. It is not a notary and not multi-signer closing software. You get paid on your own Zelle, Cash App, Venmo, or PayPal. PinOnIt never takes a cut. It covers the basic versions of those jobs in one product. It does not replace every feature of Calendly, DocuSign, or a full accounting suite.
+
+AUDIENCE
+Small service businesses and independent operators: contractors, venues, lawn and pool routes, trades, and one-person shops who work from a phone — not a contract desk.
+
+CATEGORIES
+Appointment Scheduling, Calendar, Electronic Signature, SMS, Small Business
+
+COMPETITORS / ALTERNATIVES TO
+Calendly, Acuity Scheduling, Setmore, Square Appointments, DocuSign
+
+COMPARE PAGE
+https://pinonit.com/calendly-alternative
+
+
+WHAT TO SUBMIT THIS WEEK (free)
+1. SaaSHub — https://www.saashub.com/services/submit
+   Verify with support@pinonit.com. List competitors or they bury the listing.
+
+2. AlternativeTo — create the account TODAY.
+   New accounts cannot submit for 7 days. Then: Suggest new application.
+   Platforms: Web. License: Commercial. Tags: scheduling, sms, small-business.
+
+3. G2 — create a free vendor profile with the copy above.
+   Do not buy a G2 plan. Ask 3 real users for a review after the profile exists.
+   An empty G2 page is worse than no page.
+
+4. Capterra — same as G2. Free profile only. Skip paid leads.
+
+5. Product Hunt — do not submit until you pick a launch day.
+   That is a one-day event, not a listing.
+
+
+REDDIT — post once, in one place, then wait
+-------------------------------------------
+Do not paste the same post in five groups the same day.
+
+Title:
+I got tired of writing quotes on a pad and chasing "are we still on?"
+
+Body:
+I run jobs from a phone. Calendly is a meeting tool. I needed quote + sign + book + a reminder in one text, for about $9/month.
+
+What I built is PinOnIt (pinonit.com). They get a normal SMS. No app for them. They reply 1 to cancel or 2 to reschedule. Sign is a link + a code + a finger, not a notary and not a closing desk.
+
+If that is useful, the 14-day trial does not ask for a card. If this is the wrong sub, say so and I will take it down.
+
+Where to post first (pick ONE):
+- a Miami / South Florida trade or small-business Facebook group you already belong to
+- r/smallbusiness  (not r/landscaping on day one — that sub hates product posts)
+
+Follow-up later, different wording, different week:
+- r/EntrepreneurRideAlong
+- a local lawn/pool Facebook group if you actually work those jobs
+
+
+GOOGLE BUSINESS PROFILE (free)
+------------------------------
+Claim Miami Expeditions LLC / PinOnIt if you have not.
+Same short description. Category: Software company.
+Service area: Miami-Dade. Website: pinonit.com
+Do not buy Google GBP ads.
+
+
+PAID UNDER $100 / MONTH
+-----------------------
+Do not start Meta at $10/day. That is $300/month.
+
+If you have ~$80 left after Google Ads:
+- put it on the Google Ads campaign you already started (same account, same keywords)
+- or Places credits for scout2 if discovery is the bottleneck
+
+Do not split $80 across Google + Meta + Capterra leads. You will learn nothing.
+
+
+SCOUT2 / GMASS (do this before exporting more)
+----------------------------------------------
+Sheet: https://docs.google.com/spreadsheets/d/1Etb_Eju0DN5v8LrhoHGWD_SWYas4ptlgHt43GlYVGGU
+
+Landscaping ready pool is almost empty (a handful of leads).
+83 leads are already marked exported on this sheet.
+Send any unsent tabs first, oldest first:
+
+  landscaping-day01-20260825
+  landscaping-day02-20260826
+  landscaping-day03-20260831
+  landscaping-day04-20260902-n10
+  landscaping-day05-20260904
+  landscaping-day06-20260907
+  landscaping-day07-20260908
+  landscaping-day08-20260916
+
+Before each send: yesterday's GMass report — bounces under 2%, complaints 0.
+
+When landscaping is sent and you need more rows:
+
+  cd ~/Projects/PinOnIt && ./batch.sh all
+
+That mixes barbers, detailing, electrical, pressure washing, plumbing, etc.
+Do not run another landscaping-only batch — the well is dry.

@@ -65,6 +65,8 @@ describe('SEO intent pages', () => {
     const json = JSON.stringify(softwareApplicationJsonLd());
     expect(json).not.toMatch(/aggregateRating/);
     expect(json).toContain(String(PRO_PRICE));
+    expect(json).toContain('featureList');
+    expect(json).toContain('Sign-by-Text');
     expect(JSON.stringify(websiteJsonLd())).toContain('WebSite');
   });
 });
