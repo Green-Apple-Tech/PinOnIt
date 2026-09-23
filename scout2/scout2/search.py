@@ -1,8 +1,10 @@
-"""Organic search links. Default is free (DuckDuckGo, then Bing). ScaleSerp optional."""
+"""Organic search links. Default is free (Bing, then DuckDuckGo). ScaleSerp optional."""
 
 from __future__ import annotations
 
 import asyncio
+import base64
+import time
 from typing import Any, Callable
 from urllib.parse import parse_qs, unquote, urljoin, urlparse
 
@@ -16,13 +18,21 @@ DDG_HTML = "https://html.duckduckgo.com/html/"
 BING_SEARCH = "https://www.bing.com/search"
 SEARCH_UA = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 )
+BROWSER_HEADERS = {
+    "User-Agent": SEARCH_UA,
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+}
 
 ExpiredFn = Callable[[], bool] | None
 _backend_logged = False
-_ddg_fail_streak = 0
-_DDG_GIVE_UP = 3
+_ddg_blocked_until = 0.0
+_ddg_cooldown = 0.0
+_ddg_block_logged = False
+_last_ddg_at = 0.0
+_DDG_MIN_GAP = 2.5
 
 
 def _has_scaleserp() -> bool:
@@ -47,18 +57,87 @@ def _unwrap_ddg(href: str) -> str:
     return abs_url
 
 
+def _decode_bing_redirect(url: str) -> str | None:
+    """Bing wraps results as /ck/a?...&u=a1<base64 url>."""
+    parsed = urlparse(url)
+    host = (parsed.hostname or "").lower()
+    if "bing.com" not in host:
+        return url
+    raw = (parse_qs(parsed.query).get("u") or [""])[0].strip()
+    if raw.startswith("a1"):
+        raw = raw[2:]
+    if not raw:
+        return None
+    raw += "=" * (-len(raw) % 4)
+    try:
+        text = base64.urlsafe_b64decode(raw).decode("utf-8", "ignore")
+    except Exception:
+        return None
+    if text.startswith("http://") or text.startswith("https://"):
+        return text
+    return None
+
+
 def _clean_result(href: str) -> str | None:
     url = (href or "").strip()
     if not url or url.startswith("#"):
         return None
-    if "duckduckgo.com" in urlparse(url).netloc:
+    host = (urlparse(url).hostname or "").lower()
+    if "duckduckgo.com" in host:
         url = _unwrap_ddg(url)
+    elif "bing.com" in host:
+        decoded = _decode_bing_redirect(url)
+        if not decoded:
+            return None
+        url = decoded
     host = (urlparse(url).hostname or "").lower()
     if not host or host.endswith("duckduckgo.com") or host.endswith("bing.com"):
         return None
     if urlparse(url).scheme not in {"http", "https"}:
         return None
     return url
+
+
+def _search_client() -> httpx.AsyncClient:
+    """Fresh client per query. Reusing DuckDuckGo cookies turns the next search into a 202."""
+    return httpx.AsyncClient(
+        timeout=20.0,
+        follow_redirects=True,
+        headers=BROWSER_HEADERS,
+    )
+
+
+def _ddg_is_blocked() -> bool:
+    return time.monotonic() < _ddg_blocked_until
+
+
+def _note_ddg_block(reason: str) -> None:
+    global _ddg_blocked_until, _ddg_cooldown, _ddg_block_logged
+    _ddg_cooldown = min(600.0, _ddg_cooldown * 2 if _ddg_cooldown else 45.0)
+    _ddg_blocked_until = time.monotonic() + _ddg_cooldown
+    if not _ddg_block_logged:
+        print(
+            f"[search] DuckDuckGo blocked ({reason}). "
+            f"Using Bing for {int(_ddg_cooldown)}s, then retrying DuckDuckGo.",
+            flush=True,
+        )
+        _ddg_block_logged = True
+
+
+def _note_ddg_ok() -> None:
+    global _ddg_cooldown, _ddg_block_logged, _ddg_blocked_until
+    _ddg_cooldown = 0.0
+    _ddg_blocked_until = 0.0
+    _ddg_block_logged = False
+
+
+async def _pace_ddg() -> None:
+    """Space queries out so a long night does not trip DuckDuckGo's block immediately."""
+    global _last_ddg_at
+    wait = _DDG_MIN_GAP - (time.monotonic() - _last_ddg_at)
+    if wait > 0:
+        await asyncio.sleep(wait)
+    _last_ddg_at = time.monotonic()
 
 
 async def _ddg_links(
@@ -69,42 +148,39 @@ async def _ddg_links(
     max_links: int,
     deadline_expired: ExpiredFn,
 ) -> list[str]:
-    global _ddg_fail_streak
-    if _ddg_fail_streak >= _DDG_GIVE_UP:
+    if _ddg_is_blocked():
         return []
     links: list[str] = []
     seen: set[str] = set()
     offset = 0
-    for _ in range(max(1, pages)):
+    for _page in range(max(1, pages)):
         if deadline_expired and deadline_expired():
             break
         if len(links) >= max_links:
             break
+        await _pace_ddg()
         try:
-            r = await client.post(
-                DDG_HTML,
-                data={"q": query, "s": str(offset), "b": ""},
-                headers={
-                    "User-Agent": SEARCH_UA,
-                    "Referer": DDG_HTML,
-                    "Content-Type": "application/x-www-form-urlencoded",
-                },
-                timeout=12.0,
-                follow_redirects=True,
-            )
-            r.raise_for_status()
-            html = r.text
-        except Exception as exc:
-            _ddg_fail_streak += 1
-            print(f"[search] DuckDuckGo failed q={query!r}: {exc}")
-            if _ddg_fail_streak >= _DDG_GIVE_UP:
-                print(
-                    "[search] DuckDuckGo blocked — skipping it for this run",
-                    flush=True,
+            # GET on a fresh client. POST, or sending DuckDuckGo's cookie back, returns 202/403.
+            async with _search_client() as http:
+                r = await http.get(
+                    DDG_HTML,
+                    params={"q": query, "s": str(offset), "kl": "us-en"},
+                    headers={"Referer": "https://duckduckgo.com/"},
+                    timeout=12.0,
                 )
+        except Exception as exc:
+            print(f"[search] DuckDuckGo failed q={query!r}: {exc}")
+            _note_ddg_block(type(exc).__name__)
             break
-        _ddg_fail_streak = 0
-        soup = BeautifulSoup(html, "lxml")
+        if r.status_code in {202, 403, 429, 503}:
+            print(f"[search] DuckDuckGo HTTP {r.status_code} q={query!r}")
+            _note_ddg_block(str(r.status_code))
+            break
+        if r.status_code >= 400:
+            print(f"[search] DuckDuckGo failed q={query!r}: HTTP {r.status_code}")
+            _note_ddg_block(str(r.status_code))
+            break
+        soup = BeautifulSoup(r.text, "lxml")
         found = 0
         for a in soup.select("a.result__a, a.result-link"):
             url = _clean_result(a.get("href") or "")
@@ -116,7 +192,11 @@ async def _ddg_links(
             if len(links) >= max_links:
                 break
         if found == 0:
+            # Challenge pages are HTTP 200 with no result links.
+            if offset == 0 and "result__a" not in r.text:
+                _note_ddg_block("empty challenge page")
             break
+        _note_ddg_ok()
         offset += 30
         await asyncio.sleep(1.5)
     return links
@@ -139,13 +219,12 @@ async def _bing_links(
             break
         first = 1 + page * 10
         try:
-            r = await client.get(
-                BING_SEARCH,
-                params={"q": query, "setlang": "en", "cc": "US", "first": first},
-                headers={"User-Agent": SEARCH_UA, "Accept-Language": "en-US,en;q=0.9"},
-                timeout=30.0,
-                follow_redirects=True,
-            )
+            async with _search_client() as http:
+                r = await http.get(
+                    BING_SEARCH,
+                    params={"q": query, "setlang": "en", "cc": "US", "first": first},
+                    timeout=30.0,
+                )
             r.raise_for_status()
             html = r.text
         except Exception as exc:
@@ -176,7 +255,7 @@ async def _free_links(
     max_links: int,
     deadline_expired: ExpiredFn,
 ) -> list[str]:
-    links = await _ddg_links(
+    links = await _bing_links(
         client,
         query,
         pages=pages,
@@ -185,7 +264,7 @@ async def _free_links(
     )
     if len(links) >= 3 or (deadline_expired and deadline_expired()):
         return links
-    extra = await _bing_links(
+    extra = await _ddg_links(
         client,
         query,
         pages=pages,
@@ -277,7 +356,7 @@ async def organic_links(
     global _backend_logged
     backend = _backend()
     if not _backend_logged:
-        label = "ScaleSerp (paid)" if backend == "scaleserp" else "DuckDuckGo/Bing (free)"
+        label = "ScaleSerp (paid)" if backend == "scaleserp" else "Bing (free)"
         print(f"[search] using {label}", flush=True)
         _backend_logged = True
     if backend == "scaleserp":

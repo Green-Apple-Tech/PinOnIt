@@ -35,7 +35,7 @@ def settings() -> dict:
             or os.environ.get("SCALESERP_API_KEY")
             or ""
         ),
-        # free (DuckDuckGo/Bing HTML) | scaleserp
+        # free (Bing HTML, DuckDuckGo if Bing is empty) | scaleserp
         "search_backend": os.environ.get("SCOUT2_SEARCH", "free"),
         "directory_niches_path": ROOT / "config" / "directory_niches.yaml",
         "logs_dir": ROOT / "logs",
