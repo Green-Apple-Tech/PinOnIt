@@ -1,5 +1,29 @@
-# Google Places query niches (appended with metro name at runtime)
+# Google Places query niches (appended with metro name at runtime).
+# Waiver / Sign-by-Text first — liability forms, not just booking.
 niches:
+  - trampoline park
+  - bounce house rental
+  - party rental
+  - inflatable rental
+  - climbing gym
+  - martial arts
+  - yoga studio
+  - tour company
+  - boat rental
+  - kayak rental
+  - escape room
+  - axe throwing
+  - paintball
+  - laser tag
+  - go kart
+  - event venue
+  - horseback riding
+  - dance studio
+  - crossfit gym
+  - gymnastics
+  - swim school
+  - skate park
+  # Booking / other SMBs after waivers
   - landscaping
   - pool service
   - plumbing

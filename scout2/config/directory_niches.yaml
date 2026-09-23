@@ -1,6 +1,28 @@
-# Niches for ScaleSerp directory scrapers (chamber / thumbtack / bark / night SERP).
-# Separate from config/niches.yaml (Google Places).
+# Niches for free directory scrapers (chamber / thumbtack / bark / night SERP).
+# Waiver-first, then booking SMBs. Separate from config/niches.yaml (Google Places).
 niches:
+  - trampoline park
+  - bounce house rental
+  - party rental
+  - inflatable rental
+  - climbing gym
+  - martial arts
+  - yoga studio
+  - tour company
+  - boat rental
+  - kayak rental
+  - escape room
+  - axe throwing
+  - paintball
+  - laser tag
+  - go kart
+  - event venue
+  - horseback riding
+  - dance studio
+  - gymnastics
+  - swim school
+  - waiver
+  - liability waiver
   - therapist
   - life coach
   - real estate agent
