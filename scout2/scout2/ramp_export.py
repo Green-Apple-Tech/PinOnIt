@@ -20,6 +20,7 @@ from .export_sheet import (
 from .settings import ROOT, settings
 
 SEND_BATCHES = "scout2_send_batches"
+SEND_TODAY_TAB = "send-today"
 LOCAL_TZ = ZoneInfo("America/New_York")
 GMASS_CHECKLIST = (
     "Before sending: check yesterday's GMass report — bounces <2%, complaints 0, note replies."
@@ -109,6 +110,33 @@ def _write_new_tab(sh, tab_name: str, rows: list[dict]) -> None:
         lead["_sheet_tab"] = title
 
 
+def replace_send_today(source_tab: str) -> dict:
+    """Overwrite the fixed send-today tab. Mailmeteor's daily schedule reads this tab."""
+    sh, url = _open_campaign_spreadsheet()
+    existing = {ws.title: ws for ws in sh.worksheets()}
+    src = existing.get(source_tab)
+    if src is None:
+        raise SystemExit(f"Missing sheet tab {source_tab!r}")
+    values = src.get_all_values()
+    if SEND_TODAY_TAB in existing:
+        ws = existing[SEND_TODAY_TAB]
+        ws.clear()
+    else:
+        ws = sh.add_worksheet(
+            title=SEND_TODAY_TAB,
+            rows=max(50, len(values) + 5),
+            cols=max(len(CAMPAIGN_HEADERS), 20),
+        )
+    if values:
+        ws.update("A1", values, value_input_option="USER_ENTERED")
+    return {
+        "tab": SEND_TODAY_TAB,
+        "source_tab": source_tab,
+        "rows": max(0, len(values) - 1),
+        "sheet_url": url,
+    }
+
+
 def pinonit_root() -> Path:
     # ROOT is scout2/; batch.sh and LaunchAgents live at PinOnIt repo root
     return ROOT.parent
@@ -180,6 +208,7 @@ def export_batch(
     send_date: date | None = None,
     force: bool = False,
     schedule: bool = False,
+    count: int | None = None,
 ) -> dict:
     niche = (niche or "").strip()
     if not niche:
@@ -215,6 +244,10 @@ def export_batch(
         day_number = int(existing["day_number"])
 
     target = target_for_day(day_number)
+    if count is not None:
+        if count < 1:
+            raise SystemExit("--count must be at least 1")
+        target = count
     rows = select_export_rows(sb, niche=select_niche, limit=target)
     shortfall = max(0, target - len(rows))
     warning = None

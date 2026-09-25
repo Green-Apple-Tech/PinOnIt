@@ -299,6 +299,12 @@ def export_batch_cmd(
         "--schedule",
         help="Write a weekday 10:00am launchd plist (does not enable it)",
     ),
+    count: Optional[int] = typer.Option(
+        None,
+        "--count",
+        "-n",
+        help="Override the ramp size for this batch",
+    ),
 ) -> None:
     """Ramp warmup export: next day_number from ramp.yaml → new sheet tab → status=exported."""
     from datetime import date
@@ -309,7 +315,9 @@ def export_batch_cmd(
             parsed = date.fromisoformat(send_date)
         except ValueError as e:
             raise typer.BadParameter(f"Invalid --date {send_date!r}; use YYYY-MM-DD") from e
-    result = export_batch(niche=niche, send_date=parsed, force=force, schedule=schedule)
+    result = export_batch(
+        niche=niche, send_date=parsed, force=force, schedule=schedule, count=count
+    )
     rprint(result)
     if result.get("scheduled"):
         rprint(f"Load (you run this): {result.get('load')}")
@@ -323,6 +331,37 @@ def export_batch_cmd(
         rprint(result["checklist"])
     if result.get("warning"):
         rprint(f"[yellow]Warning:[/yellow] {result['warning']}")
+
+
+@app.command("morning-send")
+def morning_send_cmd(
+    count: Optional[int] = typer.Option(
+        None, "--count", "-n", help="Override the ramp size for today"
+    ),
+) -> None:
+    """Export today's ramp batch (unless it exists) and copy it onto the send-today tab."""
+    from datetime import date
+
+    from .ramp_export import existing_batch_for_date, export_batch, replace_send_today, today_local
+
+    send_date: date = today_local()
+    sb = get_client()
+    existing = existing_batch_for_date(sb, "mixed", send_date)
+    if existing and existing.get("tab_name"):
+        staged = {
+            "exported": 0,
+            "already": True,
+            "tab_name": existing["tab_name"],
+            "send_date": send_date.isoformat(),
+        }
+    else:
+        staged = export_batch(niche="all", send_date=send_date, count=count)
+    tab = staged.get("tab_name")
+    if not tab:
+        rprint(staged)
+        raise typer.Exit(1)
+    staged["send_today"] = replace_send_today(tab)
+    rprint(staged)
 
 
 @app.command("batches")

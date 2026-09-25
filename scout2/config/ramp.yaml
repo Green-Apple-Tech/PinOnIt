@@ -1,27 +1,26 @@
-# Daily GMass send ramp (warmup). Keys are day_number for a niche.
-# day 21+ uses the "21_plus" cap — never exceed without editing this file.
-
+# Daily send ramp for one mailbox. Steps up every few days.
+# Day 21+ stays at the cap. One Gmail inbox starts getting spam-filtered above this.
 days:
-  1: 10
-  2: 10
-  3: 10
-  4: 20
-  5: 20
-  6: 20
-  7: 20
-  8: 35
-  9: 35
-  10: 35
-  11: 35
-  12: 50
-  13: 50
-  14: 50
-  15: 50
+  1: 20
+  2: 20
+  3: 25
+  4: 25
+  5: 35
+  6: 35
+  7: 35
+  8: 45
+  9: 45
+  10: 45
+  11: 60
+  12: 60
+  13: 60
+  14: 75
+  15: 75
   16: 75
-  17: 75
-  18: 75
-  19: 75
-  20: 75
+  17: 90
+  18: 90
+  19: 90
+  20: 100
 
 # Cap for day 21 and beyond
 21_plus: 110
