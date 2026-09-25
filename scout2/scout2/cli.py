@@ -436,11 +436,30 @@ def scrape_night_cmd(
         "--hours",
         help="Stop after this many hours (default 5). Does not touch Places nightly.",
     ),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help="Print ScaleSerp queries and exit. Does not call ScaleSerp.",
+    ),
+    scaleserp: bool = typer.Option(
+        True,
+        "--scaleserp/--no-scaleserp",
+        help="Run capped ScaleSerp discovery once at the start of this manual session.",
+    ),
 ) -> None:
     """One-click session: free SERP, chamber, thumbtack, bark, plus extra directories."""
     from .night import NightSession
+    from .scaleserp_discover import plan_queries, scaleserp_enabled
 
-    session = NightSession(hours=hours)
+    use_scaleserp = scaleserp and scaleserp_enabled()
+    if dry_run:
+        planned = plan_queries()
+        print(f"[ScaleSerp dry-run] {len(planned)} searches, no API calls", flush=True)
+        for _kind, query in planned:
+            print(f"  {query}", flush=True)
+        return
+
+    session = NightSession(hours=hours, scaleserp=use_scaleserp)
     try:
         _run(session.run())
     except KeyboardInterrupt:

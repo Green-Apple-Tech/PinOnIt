@@ -205,9 +205,19 @@ def _open_campaign_spreadsheet() -> tuple[object, str]:
 
 
 def _ensure_header(ws) -> None:
+    """Append new tool columns. Do not rewrite headers or rows already on the sheet."""
     first = ws.row_values(1)
-    if first[: len(CAMPAIGN_HEADERS)] != CAMPAIGN_HEADERS:
-        ws.update("A1", [CAMPAIGN_HEADERS], value_input_option="USER_ENTERED")
+    if first[: len(CAMPAIGN_HEADERS)] == CAMPAIGN_HEADERS:
+        return
+    if not first:
+        ws.update(values=[CAMPAIGN_HEADERS], range_name="A1", value_input_option="USER_ENTERED")
+        return
+    extra = CAMPAIGN_HEADERS[len(first) :]
+    if extra and CAMPAIGN_HEADERS[: len(first)] == first:
+        from gspread.utils import rowcol_to_a1
+
+        cell = rowcol_to_a1(1, len(first) + 1)
+        ws.update(values=[extra], range_name=cell, value_input_option="USER_ENTERED")
 
 
 def _write_niche_tabs(sh, rows: list[dict]) -> dict[str, int]:

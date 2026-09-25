@@ -15,7 +15,6 @@ from ..db import get_client, insert_new_lead
 from ..discover_cc import load_yaml_list
 from ..sheets_sync import queue_lead_for_sheets
 from ..extract import EMAIL_RE, emails_from_html, pick_best
-from ..fingerprint import detect_scheduler
 from ..politeness import PoliteFetcher, domain_of
 from ..settings import settings
 
@@ -371,19 +370,26 @@ def extract_directory_members(
     return []
 
 
-async def scan_calendly(fetcher: PoliteFetcher, domain: str) -> tuple[str, Optional[str]]:
-    """Homepage first, then common booking paths. Calendly is often not on the front page."""
-    paths = ("", "/book", "/booking", "/schedule", "/appointments", "/contact")
-    saw_html = False
-    for path in paths:
+async def fetch_tool_pages(fetcher: PoliteFetcher, domain: str) -> list[str]:
+    from ..tool_detect import SCAN_PATHS
+
+    pages: list[str] = []
+    for path in SCAN_PATHS:
         _, _, html = await fetcher.get_text(f"https://{domain}{path}")
-        if not html:
-            continue
-        saw_html = True
-        name, booking = detect_scheduler(html)
-        if name == "calendly":
-            return "yes", booking
-    return ("no", None) if saw_html else ("no", None)
+        if html:
+            pages.append(html)
+    return pages
+
+
+async def scan_calendly(fetcher: PoliteFetcher, domain: str) -> tuple[str, Optional[str], dict]:
+    """Homepage plus booking pages. Returns calendly yes/no, url, and tool flags."""
+    from ..tool_detect import merge_tool_flags
+
+    pages = await fetch_tool_pages(fetcher, domain)
+    flags = merge_tool_flags(pages)
+    yes = flags.get("uses_calendly") == "Y"
+    url = flags.get("detected_url") if yes else None
+    return ("yes" if yes else "no", url, flags)
 
 
 def commit_lead(
@@ -447,7 +453,11 @@ async def ingest_website(
     if known.is_dupe(domain, rec.get("email")):
         stats.dupes += 1
         return
-    detected, booking = await scan_calendly(fetcher, domain)
+    detected, booking, flags = await scan_calendly(fetcher, domain)
+    flags["_domain"] = domain
+    from ..tool_detect import note_flags
+
+    note_flags(stats, flags)
     commit_lead(
         source=source,
         category=category,

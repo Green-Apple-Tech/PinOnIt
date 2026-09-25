@@ -171,6 +171,11 @@ CAMPAIGN_HEADERS = [
     "date_sent",
     "replied",
     "unsubscribed",
+    "uses_calendly",
+    "uses_docusign",
+    "uses_waiver",
+    "waiver_provider",
+    "detected_url",
 ]
 
 
@@ -194,4 +199,27 @@ def campaign_row(lead: dict) -> list[str]:
         "",
         "",
         "",
+        _tool_cell(lead, "uses_calendly"),
+        _tool_cell(lead, "uses_docusign"),
+        _tool_cell(lead, "uses_waiver"),
+        _tool_text(lead, "waiver_provider"),
+        _tool_text(lead, "detected_url"),
     ]
+
+
+def _tool_saved(lead: dict) -> dict:
+    from .tool_detect import flags_for
+
+    saved = flags_for(lead.get("domain") or "")
+    return {**saved, **{k: v for k, v in lead.items() if v not in (None, "")}}
+
+
+def _tool_cell(lead: dict, key: str) -> str:
+    raw = _tool_saved(lead).get(key)
+    if raw in (None, ""):
+        return ""
+    return "Y" if str(raw).strip().lower() in {"y", "yes", "true", "1"} else "N"
+
+
+def _tool_text(lead: dict, key: str) -> str:
+    return str(_tool_saved(lead).get(key) or "").strip()

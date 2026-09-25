@@ -30,6 +30,15 @@ def format_summary(deadline: Deadline, stats: ScrapeStats, log_path: Path) -> st
         if val:
             lines.append(f"  {key}: {val} new")
     lines.append(f"  Dupes skipped: {stats.dupes}")
+    flags = getattr(stats, "tool_flags", None) or {}
+    if any(flags.values()):
+        lines.append(
+            "  Flagged Calendly={calendly} DocuSign={docusign} Waiver={waiver}".format(
+                calendly=flags.get("calendly") or 0,
+                docusign=flags.get("docusign") or 0,
+                waiver=flags.get("waiver") or 0,
+            )
+        )
     lines.append(f"Log: {log_path}")
     return "\n".join(lines)
 
@@ -89,16 +98,26 @@ async def run_directories_once(
 class NightSession:
     """Runs until `hours` elapse. Safe to Ctrl+C — inserts are per-lead."""
 
-    def __init__(self, hours: float = 5.0) -> None:
+    def __init__(self, hours: float = 5.0, *, scaleserp: bool = True, dry_run: bool = False) -> None:
         self.deadline = Deadline(hours=hours)
         self.stats = ScrapeStats()
         self.loop_n = 0
         self.path = log_path_for_today()
         self.stopped = "time"
+        self.scaleserp = scaleserp
+        self.dry_run = dry_run
+        self.scaleserp_summary = None
 
     async def run(self) -> None:
         known = _known()
         metros = load_metros() or ["USA"]
+        self.scaleserp_summary = None
+        if self.scaleserp and not self.dry_run:
+            from .scaleserp_discover import run_scaleserp_discovery
+
+            self.scaleserp_summary = await run_scaleserp_discovery(
+                known=known, stats=self.stats, dry_run=False
+            )
         try:
             while True:
                 if self.deadline.expired():

@@ -99,6 +99,11 @@ class ExportFilterTests(unittest.TestCase):
                 "date_sent",
                 "replied",
                 "unsubscribed",
+                "uses_calendly",
+                "uses_docusign",
+                "uses_waiver",
+                "waiver_provider",
+                "detected_url",
             ],
         )
         row = campaign_row(
