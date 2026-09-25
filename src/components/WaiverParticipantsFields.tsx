@@ -1,5 +1,6 @@
 import { Plus, Trash2 } from 'lucide-react';
 import {
+  MAX_WAIVER_PARTICIPANTS,
   newWaiverParticipant,
   type WaiverParticipant,
 } from '../lib/waiverParticipants';
@@ -18,14 +19,14 @@ export function WaiverParticipantsFields({ participants, onChange, disabled }: P
 
   return (
     <div className="space-y-3">
-      <p className="text-sm font-semibold text-slate-900">Participants</p>
+      <p className="text-sm font-semibold text-slate-900">People on this waiver</p>
       <p className="text-xs text-slate-500">
-        One waiver covers every child listed here. Do not send a separate waiver per child.
+        Add each person, up to {MAX_WAIVER_PARTICIPANTS}. One signature covers everyone listed.
       </p>
       {participants.map((row, index) => (
         <div key={row.id} className="grid grid-cols-1 sm:grid-cols-[1fr_10rem_auto] gap-2 items-end">
           <label className="block">
-            <span className="text-xs font-medium text-slate-500">Child {index + 1} full name</span>
+            <span className="text-xs font-medium text-slate-500">Person {index + 1} full name</span>
             <input
               type="text"
               autoComplete="off"
@@ -53,7 +54,7 @@ export function WaiverParticipantsFields({ participants, onChange, disabled }: P
               disabled={disabled}
               onClick={() => onChange(participants.filter((p) => p.id !== row.id))}
               className="min-h-11 px-3 rounded-xl border border-slate-200 text-slate-500 inline-flex items-center justify-center"
-              aria-label={`Remove child ${index + 1}`}
+              aria-label={`Remove person ${index + 1}`}
             >
               <Trash2 className="h-4 w-4" />
             </button>
@@ -62,14 +63,18 @@ export function WaiverParticipantsFields({ participants, onChange, disabled }: P
           )}
         </div>
       ))}
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => onChange([...participants, newWaiverParticipant()])}
-        className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600"
-      >
-        <Plus className="h-4 w-4" /> Add another child
-      </button>
+      {participants.length < MAX_WAIVER_PARTICIPANTS ? (
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => onChange([...participants, newWaiverParticipant()])}
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600"
+        >
+          <Plus className="h-4 w-4" /> Add a person
+        </button>
+      ) : (
+        <p className="text-xs text-slate-500">Maximum of {MAX_WAIVER_PARTICIPANTS} people on one signature.</p>
+      )}
     </div>
   );
 }

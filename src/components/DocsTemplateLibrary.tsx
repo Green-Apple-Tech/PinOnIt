@@ -374,7 +374,7 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
             ))}
           </select>
           <span className="mt-1 block text-[11px] text-slate-400">
-            Default is keep. If you pick a period, children&apos;s names and birthdates on completed waivers are removed after that time. The signed record stays.
+            Default is keep. If you pick a period, names and birthdates on completed family waivers are removed after that time. The signed record stays.
           </span>
         </label>
         <div className="space-y-2">

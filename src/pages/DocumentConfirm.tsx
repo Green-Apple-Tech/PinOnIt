@@ -33,6 +33,7 @@ import type { HostQuoteLineItem, PublicSmbDocument } from '../lib/types';
 import { WaiverParticipantsFields } from '../components/WaiverParticipantsFields';
 import {
   PARENTAL_CONSENT_STATEMENT,
+  MAX_WAIVER_PARTICIPANTS,
   emptyWaiverParticipants,
   isParentalConsentWaiver,
   isWaiverFamily,
@@ -239,7 +240,11 @@ export function DocumentConfirmPage() {
         return;
       }
       if (listed.length === 0) {
-        setError('Add each child\'s full name and date of birth.');
+        setError('Add each person\'s full name and date of birth.');
+        return;
+      }
+      if (listed.length > MAX_WAIVER_PARTICIPANTS) {
+        setError(`Add at most ${MAX_WAIVER_PARTICIPANTS} people.`);
         return;
       }
     }

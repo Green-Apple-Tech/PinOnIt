@@ -11,7 +11,7 @@ const KNOWN_JARGON = [
 /** Lowercase type names in the host notice, except acronyms (NDA). */
 const KIND_LABEL: Partial<Record<SmbDocumentType, string>> = {
   waiver: 'waiver',
-  parental_consent_waiver: 'parental consent waiver',
+  parental_consent_waiver: 'family waiver',
   nda: 'NDA',
   contract: 'contract',
   quick_addendum: 'addendum',

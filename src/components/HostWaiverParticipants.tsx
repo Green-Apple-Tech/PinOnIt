@@ -22,7 +22,7 @@ export function HostWaiverParticipants({ documentId, status }: { documentId: str
         onClick={() => setOpen((v) => !v)}
         className="text-xs font-semibold text-brand-600"
       >
-        {open ? 'Hide children' : 'View children on this waiver'}
+        {open ? 'Hide people' : 'View people on this waiver'}
       </button>
       {open && (
         <ul className="mt-1 text-xs text-slate-600 dark:text-slate-300 space-y-0.5">

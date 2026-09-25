@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  MAX_WAIVER_PARTICIPANTS,
   ageFromDob,
   emptyWaiverParticipants,
   newWaiverParticipant,
@@ -13,6 +14,7 @@ describe('waiver participants', () => {
     const three = [...rows, newWaiverParticipant(), newWaiverParticipant()];
     expect(three).toHaveLength(3);
     expect(new Set(three.map((r) => r.id)).size).toBe(3);
+    expect(MAX_WAIVER_PARTICIPANTS).toBe(10);
   });
 
   it('requires name and ISO date of birth', () => {

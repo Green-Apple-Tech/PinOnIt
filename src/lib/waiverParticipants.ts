@@ -4,6 +4,8 @@ export type WaiverParticipant = {
   dateOfBirth: string;
 };
 
+export const MAX_WAIVER_PARTICIPANTS = 10;
+
 export const PARENTAL_CONSENT_STATEMENT =
   'I am the parent or legal guardian of each child listed on this form, and I am authorized to sign this waiver for each of them.';
 
