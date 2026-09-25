@@ -372,14 +372,18 @@ def extract_directory_members(
 
 
 async def scan_calendly(fetcher: PoliteFetcher, domain: str) -> tuple[str, Optional[str]]:
-    url = f"https://{domain}"
-    _, _, html = await fetcher.get_text(url)
-    if not html:
-        return "no", None
-    name, booking = detect_scheduler(html)
-    if name == "calendly":
-        return "yes", booking
-    return "no", booking
+    """Homepage first, then common booking paths. Calendly is often not on the front page."""
+    paths = ("", "/book", "/booking", "/schedule", "/appointments", "/contact")
+    saw_html = False
+    for path in paths:
+        _, _, html = await fetcher.get_text(f"https://{domain}{path}")
+        if not html:
+            continue
+        saw_html = True
+        name, booking = detect_scheduler(html)
+        if name == "calendly":
+            return "yes", booking
+    return ("no", None) if saw_html else ("no", None)
 
 
 def commit_lead(

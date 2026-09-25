@@ -97,7 +97,9 @@ def fetch_taken_emails(sb) -> set[str]:
     return taken
 
 
-def fetch_ready_candidates(sb, *, niche: str | None, fetch_limit: int) -> list[dict]:
+def fetch_ready_candidates(
+    sb, *, niche: str | None, fetch_limit: int, scheduler: str | None = None
+) -> list[dict]:
     q = (
         sb.table(TABLE)
         .select("*")
@@ -109,6 +111,8 @@ def fetch_ready_candidates(sb, *, niche: str | None, fetch_limit: int) -> list[d
     )
     if niche:
         q = q.ilike("niche", niche.strip())
+    if scheduler:
+        q = q.eq("scheduler_name", scheduler)
     return list(q.execute().data or [])
 
 
@@ -123,7 +127,13 @@ def select_export_rows(
     seen_email: set[str] = set()
     picked: list[dict] = []
     excluded_ids: list[str] = []
-    candidates = fetch_ready_candidates(sb, niche=niche, fetch_limit=max(limit * 20, 500))
+    pool = max(limit * 20, 500)
+    calendly_first = fetch_ready_candidates(
+        sb, niche=niche, fetch_limit=pool, scheduler="calendly"
+    )
+    rest = fetch_ready_candidates(sb, niche=niche, fetch_limit=pool)
+    seen_ids = {row.get("id") for row in calendly_first}
+    candidates = calendly_first + [row for row in rest if row.get("id") not in seen_ids]
     for lead in candidates:
         email = (lead.get("email") or "").strip().lower()
         domain = (lead.get("domain") or "").strip().lower()
