@@ -24,6 +24,7 @@ export const SMB_DOCUMENT_TYPES: DocumentTypeOption[] = [
   { id: 'nda', label: 'NDA', hint: 'Keep talks confidential', confirmationType: 'sign' },
   { id: 'waiver', label: 'Waiver', hint: 'One person signs', confirmationType: 'sign' },
   { id: 'parental_consent_waiver', label: 'Waiver (family)', hint: 'Add up to 10 names and birthdays, then sign once', confirmationType: 'sign' },
+  { id: 'boat_waiver', label: 'Waiver (boat)', hint: 'Guest fills in the vessel, date, and emergency contact, then signs', confirmationType: 'sign' },
   { id: 'quick_addendum', label: 'Quick Addendum', hint: 'Short add-on to sign by text', confirmationType: 'sign' },
   { id: 'consent_form', label: 'Consent Form', hint: 'Record consent', confirmationType: 'sign' },
   { id: 'cancellation_policy', label: 'Cancellation Policy', hint: 'Acknowledge cancel terms', confirmationType: 'approve' },
@@ -87,6 +88,7 @@ const REQUIRE_OTP_TYPES = new Set<SmbDocumentType>([
   'nda',
   'waiver',
   'parental_consent_waiver',
+  'boat_waiver',
   'contract',
   'quick_addendum',
   'consent_form',
@@ -120,7 +122,7 @@ export function resolveRequireOtp(
 }
 
 export function documentBodyIsEditable(type: SmbDocumentType) {
-  return type === 'nda' || type === 'contract' || type === 'waiver' || type === 'parental_consent_waiver' || type === 'quick_addendum';
+  return type === 'nda' || type === 'contract' || type === 'waiver' || type === 'parental_consent_waiver' || type === 'boat_waiver' || type === 'quick_addendum';
 }
 
 /** Kept for callers that always show a recipient page. Signature itself is `verification_required`. */

@@ -30,7 +30,17 @@ import {
   plainLanguageBulletsFromStored,
 } from '../lib/plainLanguageSummary';
 import type { HostQuoteLineItem, PublicSmbDocument } from '../lib/types';
+import { BoatWaiverFields } from '../components/BoatWaiverFields';
 import { WaiverParticipantsFields } from '../components/WaiverParticipantsFields';
+import {
+  EMPTY_BOAT_WAIVER,
+  boatWaiverError,
+  displayOutingDate,
+  fillBoatWaiver,
+  localIsoDate,
+  isBoatWaiver,
+  type BoatWaiverAnswers,
+} from '../lib/boatWaiver';
 import {
   PARENTAL_CONSENT_STATEMENT,
   MAX_WAIVER_PARTICIPANTS,
@@ -77,6 +87,7 @@ export function DocumentConfirmPage() {
   const [parentName, setParentName] = useState('');
   const [parentEmail, setParentEmail] = useState('');
   const [participants, setParticipants] = useState(emptyWaiverParticipants());
+  const [boat, setBoat] = useState<BoatWaiverAnswers>(EMPTY_BOAT_WAIVER);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
@@ -100,6 +111,13 @@ export function DocumentConfirmPage() {
       setDoc(data);
       setParentName(data.recipient_name || '');
       setParentEmail(data.recipient_email || '');
+      if (isBoatWaiver(data.document_type)) {
+        setBoat({
+          ...EMPTY_BOAT_WAIVER,
+          owner: data.sender_business_name?.trim() || '',
+          participant: data.recipient_name?.trim() || '',
+        });
+      }
       setOtpVerified(Boolean(data.otp_verified));
       if (data.status === 'declined') {
         setDeclined(true);
@@ -248,6 +266,14 @@ export function DocumentConfirmPage() {
         return;
       }
     }
+    const boatDoc = isBoatWaiver(doc.document_type);
+    if (boatDoc) {
+      const boatError = boatWaiverError(boat);
+      if (boatError) {
+        setError(boatError);
+        return;
+      }
+    }
     setError('');
     setSubmitting(true);
     const ip = await fetchClientIp();
@@ -264,12 +290,17 @@ export function DocumentConfirmPage() {
         ]
           .filter(Boolean)
           .join('\n')
-      : fillDocumentPlaceholders(doc.full_text || doc.summary_text || '', {
-          topic: doc.topic,
-          recipientName: parental ? parentName.trim() : doc.recipient_name,
-          businessName: doc.sender_business_name,
-          activityDescription: doc.topic,
-        }) || doc.topic || '';
+      : (() => {
+          const filled = fillDocumentPlaceholders(doc.full_text || doc.summary_text || '', {
+            topic: doc.topic,
+            recipientName: parental ? parentName.trim() : boat.participant.trim() || doc.recipient_name,
+            businessName: doc.sender_business_name,
+            activityDescription: doc.topic,
+          });
+          return boatDoc
+            ? fillBoatWaiver(filled, boat, displayOutingDate(localIsoDate()))
+            : filled;
+        })() || doc.topic || '';
     const parentalBlock = parental
       ? [
           '',
@@ -426,14 +457,20 @@ export function DocumentConfirmPage() {
   const moneyTotals = quoteTotals(lineItems, taxPercent);
   const showMoney = Boolean(doc && (isMoneyDocumentType(doc.document_type) || lineItems.length > 0));
   const parental = Boolean(doc && isParentalConsentWaiver(doc.document_type));
+  const boatDoc = Boolean(doc && isBoatWaiver(doc.document_type));
   const listedChildren = validWaiverParticipants(participants);
   const fullBody = doc
-    ? fillDocumentPlaceholders(doc.full_text, {
-        topic: doc.topic,
-        recipientName: parental ? parentName.trim() || doc.recipient_name : doc.recipient_name,
-        businessName: doc.sender_business_name,
-        activityDescription: doc.topic,
-      })
+    ? (() => {
+        const filled = fillDocumentPlaceholders(doc.full_text, {
+          topic: doc.topic,
+          recipientName: parental
+            ? parentName.trim() || doc.recipient_name
+            : boat.participant.trim() || doc.recipient_name,
+          businessName: doc.sender_business_name,
+          activityDescription: doc.topic,
+        });
+        return boatDoc ? fillBoatWaiver(filled, boat, displayOutingDate(localIsoDate())) : filled;
+      })()
     : '';
 
   const plainBullets =
@@ -534,6 +571,7 @@ export function DocumentConfirmPage() {
               {isWaiverFamily(doc.document_type) && doc.topic ? (
                 <p className="mt-3 text-sm text-slate-600">This waiver covers: {doc.topic}</p>
               ) : null}
+              {boatDoc && <BoatWaiverFields value={boat} onChange={setBoat} />}
               {parental && (
                 <div className="mt-4 space-y-4">
                   <label className="block">
@@ -767,7 +805,8 @@ export function DocumentConfirmPage() {
                 !esignConsent ||
                 !agreed ||
                 (needsCanvas && !hasMarked) ||
-                (parental && (!parentName.trim() || listedChildren.length === 0))
+                (parental && (!parentName.trim() || listedChildren.length === 0)) ||
+                (boatDoc && Boolean(boatWaiverError(boat)))
               }
               className="w-full min-h-12 rounded-xl bg-indigo-600 text-white font-semibold disabled:opacity-40"
             >

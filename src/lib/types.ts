@@ -493,6 +493,7 @@ export type SmbDocumentType =
   | 'receipt'
   | 'waiver'
   | 'parental_consent_waiver'
+  | 'boat_waiver'
   | 'quote'
   | 'work_order'
   | 'change_order'

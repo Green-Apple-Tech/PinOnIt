@@ -16,6 +16,8 @@ describe('defaultRequireOtp', () => {
     expect(SMB_DOCUMENT_TYPES[waiver]?.hint).toMatch(/one person/i);
     expect(family).toBe(waiver + 1);
     expect(SMB_DOCUMENT_TYPES[family]?.label).toBe('Waiver (family)');
+    expect(SMB_DOCUMENT_TYPES[family + 1]?.id).toBe('boat_waiver');
+    expect(SMB_DOCUMENT_TYPES[family + 1]?.label).toBe('Waiver (boat)');
   });
 
   it('defaults Sign-by-Text on for waivers, NDAs, contracts, and similar', () => {

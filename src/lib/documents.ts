@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import type { PublicSmbDocument, SmbDocumentType } from './types';
+import { BOAT_WAIVER_STARTER_TEXT } from './boatWaiver';
 import { GENERIC_DOCUMENT_STARTER_TEXT } from './documentTypes';
 
 export const WAIVER_STARTER_TEXT = `LIABILITY WAIVER AND RELEASE
@@ -185,6 +186,7 @@ export function defaultDocumentBody(type: SmbDocumentType, saved?: string | null
   if (type === 'parental_consent_waiver') {
     return injectSenderPlaceholders(trimmed || PARENTAL_CONSENT_WAIVER_STARTER_TEXT);
   }
+  if (type === 'boat_waiver') return trimmed || BOAT_WAIVER_STARTER_TEXT;
   if (trimmed) return injectSenderPlaceholders(trimmed);
   if (type === 'nda') return NDA_STARTER_TEXT;
   if (type === 'contract') return CONTRACT_STARTER_TEXT;

@@ -12,6 +12,7 @@ const KNOWN_JARGON = [
 const KIND_LABEL: Partial<Record<SmbDocumentType, string>> = {
   waiver: 'waiver',
   parental_consent_waiver: 'family waiver',
+  boat_waiver: 'boat waiver',
   nda: 'NDA',
   contract: 'contract',
   quick_addendum: 'addendum',
