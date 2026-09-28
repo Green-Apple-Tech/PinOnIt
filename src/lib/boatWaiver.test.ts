@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   BOAT_WAIVER_STARTER_TEXT,
+  boatPartyBlock,
+  boatPartyError,
   boatWaiverError,
   displayOutingDate,
   fillBoatWaiver,
@@ -35,5 +37,14 @@ describe('boat waiver blanks', () => {
     expect(boatWaiverError({ ...complete, outingDate: 'yesterday' })).toMatch(/Date of outing/);
     expect(boatWaiverError(complete)).toBeNull();
     expect(displayOutingDate('2026-09-26')).toBe('September 26, 2026');
+  });
+
+  it('lets a boat waiver add more people under the same signature', () => {
+    expect(boatPartyError([])).toBeNull();
+    expect(boatPartyError([{ fullName: 'Ada', dateOfBirth: '' }])).toMatch(/full name and date of birth/);
+    const block = boatPartyBlock([{ fullName: 'Ada Guest', dateOfBirth: '2016-04-02' }]);
+    expect(block).toContain('Ada Guest');
+    expect(block).toContain('April 2, 2016');
+    expect(block).toContain('One signature covers');
   });
 });

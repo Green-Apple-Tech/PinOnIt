@@ -155,6 +155,28 @@ export function displayOutingDate(iso: string) {
   return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
+export function boatPartyBlock(rows: Array<{ fullName: string; dateOfBirth: string }>) {
+  const listed = rows.filter((row) => row.fullName.trim() && displayOutingDate(row.dateOfBirth));
+  if (listed.length === 0) return '';
+  return [
+    '',
+    'Additional people covered by this signature:',
+    ...listed.map((row) => `- ${row.fullName.trim()} (born ${displayOutingDate(row.dateOfBirth)})`),
+    'One signature covers the participant and each person listed above.',
+  ].join('\n');
+}
+
+export function boatPartyError(rows: Array<{ fullName: string; dateOfBirth: string }>, max = 10) {
+  if (rows.length > max) return `Add at most ${max} additional people.`;
+  for (const row of rows) {
+    const name = row.fullName.trim();
+    const dob = row.dateOfBirth.trim();
+    if (!name && !dob) return 'Each additional person needs a full name and date of birth.';
+    if (!name || !displayOutingDate(dob)) return 'Each additional person needs a full name and date of birth.';
+  }
+  return null;
+}
+
 export function boatWaiverError(fields: BoatWaiverAnswers) {
   for (const field of REQUIRED) {
     const value = fields[field.key].trim();

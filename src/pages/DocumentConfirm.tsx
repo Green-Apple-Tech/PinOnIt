@@ -7,6 +7,7 @@ import {
   LEGAL_DISCLAIMER,
   defaultVerificationRequired,
   documentFilePublicUrl,
+  documentViewUrl,
   fetchClientIp,
   fillDocumentPlaceholders,
   generateDocumentCertificate,
@@ -34,6 +35,8 @@ import { BoatWaiverFields } from '../components/BoatWaiverFields';
 import { WaiverParticipantsFields } from '../components/WaiverParticipantsFields';
 import {
   EMPTY_BOAT_WAIVER,
+  boatPartyBlock,
+  boatPartyError,
   boatWaiverError,
   displayOutingDate,
   fillBoatWaiver,
@@ -117,6 +120,7 @@ export function DocumentConfirmPage() {
           owner: data.sender_business_name?.trim() || '',
           participant: data.recipient_name?.trim() || '',
         });
+        setParticipants([]);
       }
       setOtpVerified(Boolean(data.otp_verified));
       if (data.status === 'declined') {
@@ -267,8 +271,9 @@ export function DocumentConfirmPage() {
       }
     }
     const boatDoc = isBoatWaiver(doc.document_type);
+    const boatPeople = boatDoc ? validWaiverParticipants(participants) : [];
     if (boatDoc) {
-      const boatError = boatWaiverError(boat);
+      const boatError = boatWaiverError(boat) || boatPartyError(participants, MAX_WAIVER_PARTICIPANTS);
       if (boatError) {
         setError(boatError);
         return;
@@ -313,7 +318,12 @@ export function DocumentConfirmPage() {
           .filter(Boolean)
           .join('\n')
       : '';
-    const snapshotWithParticipants = parental ? `${snapshot}\n${parentalBlock}` : snapshot;
+    const boatBlock = boatDoc ? boatPartyBlock(boatPeople) : '';
+    const snapshotWithParticipants = parental
+      ? `${snapshot}\n${parentalBlock}`
+      : boatBlock
+        ? `${snapshot}${boatBlock}`
+        : snapshot;
     const hash = await sha256Hex(snapshotWithParticipants);
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
@@ -332,15 +342,17 @@ export function DocumentConfirmPage() {
       parentalConsentText: parental ? PARENTAL_CONSENT_STATEMENT : null,
       participants: parental
         ? listed.map((row) => ({ full_name: row.fullName.trim(), date_of_birth: row.dateOfBirth }))
-        : null,
+        : boatDoc && boatPeople.length > 0
+          ? boatPeople.map((row) => ({ full_name: row.fullName.trim(), date_of_birth: row.dateOfBirth }))
+          : null,
     });
     if (err || !data?.ok) {
       setError(err?.message ?? data?.error ?? 'Could not submit');
       setSubmitting(false);
       return;
     }
-    // Best-effort certificate + host email; signing already succeeded.
-    void generateDocumentCertificate(token);
+    // Best-effort certificate. A boat link stays open, so the signed copy is the record.
+    if (!boatDoc) void generateDocumentCertificate(token);
     setSubmitted(true);
     setSubmitting(false);
   }
@@ -398,6 +410,7 @@ export function DocumentConfirmPage() {
   if (submitted && doc) {
     const typeLabel = documentTypeLabel(doc.document_type, doc.document_type_custom);
     const isQuote = doc.document_type === 'quote';
+    const signedBoat = isBoatWaiver(doc.document_type);
     const showPay = Boolean(doc.pay_elsewhere_url) && doc.pay_mode !== 'off' && doc.status !== 'paid';
     const payHref = normalizeExternalUrl(doc.pay_elsewhere_url) ?? doc.pay_elsewhere_url;
     const payAmount = doc.pay_amount_cents != null ? money(doc.pay_amount_cents / 100, doc.currency) : null;
@@ -419,9 +432,25 @@ export function DocumentConfirmPage() {
               ? 'This quote is marked paid. Thank you.'
               : isQuote
               ? 'You approved this quote.'
+              : signedBoat
+              ? 'You signed. Everyone you listed is covered by your signature.'
               : `You have confirmed this ${typeLabel}.`}
-            {doc.signed_at && <span className="block mt-1">{formatDate(doc.signed_at)}</span>}
+            {doc.signed_at && !signedBoat && <span className="block mt-1">{formatDate(doc.signed_at)}</span>}
           </p>
+          {signedBoat && token && (
+            <div className="mt-6 text-left">
+              <p className="text-sm text-slate-600">
+                Someone else on the boat who is not in your group can use this same link and sign for themselves.
+              </p>
+              <button
+                type="button"
+                onClick={() => void navigator.clipboard.writeText(documentViewUrl(token))}
+                className="mt-3 w-full min-h-11 rounded-xl bg-indigo-600 text-white text-sm font-semibold"
+              >
+                Copy link for the next guest
+              </button>
+            </div>
+          )}
           {showPay && payHref && (
             <a
               href={payHref}
@@ -469,7 +498,8 @@ export function DocumentConfirmPage() {
           businessName: doc.sender_business_name,
           activityDescription: doc.topic,
         });
-        return boatDoc ? fillBoatWaiver(filled, boat, displayOutingDate(localIsoDate())) : filled;
+        const waiver = boatDoc ? fillBoatWaiver(filled, boat, displayOutingDate(localIsoDate())) : filled;
+        return boatDoc ? `${waiver}${boatPartyBlock(participants)}` : waiver;
       })()
     : '';
 
@@ -571,7 +601,20 @@ export function DocumentConfirmPage() {
               {isWaiverFamily(doc.document_type) && doc.topic ? (
                 <p className="mt-3 text-sm text-slate-600">This waiver covers: {doc.topic}</p>
               ) : null}
-              {boatDoc && <BoatWaiverFields value={boat} onChange={setBoat} />}
+              {boatDoc && (
+                <>
+                  <BoatWaiverFields value={boat} onChange={setBoat} />
+                  <div className="mt-4">
+                    <WaiverParticipantsFields
+                      participants={participants}
+                      onChange={setParticipants}
+                      allowEmpty
+                      title="Other people on this outing"
+                      hint={`Add family or kids here, up to ${MAX_WAIVER_PARTICIPANTS}. Your signature covers them. Someone who is not in your group uses this same link and signs separately.`}
+                    />
+                  </div>
+                </>
+              )}
               {parental && (
                 <div className="mt-4 space-y-4">
                   <label className="block">
@@ -806,7 +849,7 @@ export function DocumentConfirmPage() {
                 !agreed ||
                 (needsCanvas && !hasMarked) ||
                 (parental && (!parentName.trim() || listedChildren.length === 0)) ||
-                (boatDoc && Boolean(boatWaiverError(boat)))
+                (boatDoc && Boolean(boatWaiverError(boat) || boatPartyError(participants, MAX_WAIVER_PARTICIPANTS)))
               }
               className="w-full min-h-12 rounded-xl bg-indigo-600 text-white font-semibold disabled:opacity-40"
             >

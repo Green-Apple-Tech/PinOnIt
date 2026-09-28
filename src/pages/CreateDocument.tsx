@@ -462,7 +462,11 @@ export function CreateDocumentPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!user?.id || !selectedTemplate) return;
+    if (!user?.id) return;
+    if (!selectedTemplate) {
+      setError('This document type is not ready yet. Reload the page and choose it again.');
+      return;
+    }
     const libraryName = selectedLibraryFile?.name?.trim();
     const topicText = topic.trim();
     const phone = recipientPhone.trim() ? normalizePhoneE164(recipientPhone) : null;
@@ -679,18 +683,27 @@ export function CreateDocumentPage() {
     setSuccess({ token, smsStatus: phone ? 'sending' : 'idle', phone: recipientPhone || undefined });
     setSubmitting(false);
 
-    if (isMoney) {
-      await revealTool(user.id, 'quotes', profile?.revealed_tools);
-      await refreshProfile();
-    }
+    try {
+      if (isMoney) {
+        await revealTool(user.id, 'quotes', profile?.revealed_tools);
+        await refreshProfile();
+      }
 
-    if (!phone) return;
-    const sms = await sendDocumentLink(token, link, documentType === 'quote' ? 'quote' : 'link');
-    if (!sms.ok) {
-      setSuccess({ token, smsStatus: 'failed', smsError: sms.error, phone: recipientPhone });
-      return;
+      if (!phone) return;
+      const sms = await sendDocumentLink(token, link, documentType === 'quote' ? 'quote' : 'link');
+      if (!sms.ok) {
+        setSuccess({ token, smsStatus: 'failed', smsError: sms.error, phone: recipientPhone });
+        return;
+      }
+      setSuccess({ token, smsStatus: 'sent', phone: recipientPhone });
+    } catch (e) {
+      setSuccess({
+        token,
+        smsStatus: phone ? 'failed' : 'idle',
+        smsError: e instanceof Error ? e.message : 'Something went wrong after the link was created.',
+        phone: recipientPhone || undefined,
+      });
     }
-    setSuccess({ token, smsStatus: 'sent', phone: recipientPhone });
   };
 
   if (success) {
@@ -699,9 +712,11 @@ export function CreateDocumentPage() {
       <main className="p-4 md:p-8 max-w-lg">
         <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 text-center">
           <CheckCircle className="h-10 w-10 mx-auto text-emerald-500" />
-          <h1 className="mt-3 text-xl font-bold text-gray-900 dark:text-white">Document created</h1>
+          <h1 className="mt-3 text-xl font-bold text-gray-900 dark:text-white">Link is ready</h1>
           <p className="mt-2 text-sm text-gray-500 dark:text-slate-400">
-            Share this link with <span className="font-medium text-gray-800 dark:text-slate-200">{recipientName}</span>.
+            {documentType === 'boat_waiver'
+              ? 'Send this one link. A guest can sign for their family, or pass the same link to someone else on the boat who signs separately.'
+              : <>Share this link with <span className="font-medium text-gray-800 dark:text-slate-200">{recipientName}</span>.</>}
           </p>
           {success.smsStatus !== 'idle' && (
             <div className={`mt-4 rounded-xl px-4 py-3 text-left text-sm ${
@@ -715,7 +730,7 @@ export function CreateDocumentPage() {
                 <MessageSquare className="h-4 w-4 mt-0.5 shrink-0" />
                 {success.smsStatus === 'sending' && `Sending SMS to ${success.phone}…`}
                 {success.smsStatus === 'sent' && `SMS sent to ${success.phone}.`}
-                {success.smsStatus === 'failed' && (success.smsError || 'SMS failed. Copy the link and share it manually.')}
+                {success.smsStatus === 'failed' && `The link is ready. The text did not send. ${success.smsError || 'Copy the link and share it.'}`}
               </span>
             </div>
           )}

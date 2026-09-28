@@ -188,6 +188,8 @@ export function DocumentsPage() {
           <ul className="divide-y divide-gray-100 dark:divide-slate-800">
             {docs.map((doc) => {
               const quoteStatus = doc.document_type === 'quote' ? quoteHostStatus(doc) : null;
+              const boatCopy = doc.document_type === 'boat_waiver' && doc.document_type_custom === 'boat-waiver-signed-copy';
+              const boatShareLink = doc.document_type === 'boat_waiver' && !boatCopy;
               const quoteUi = quoteStatus ? QUOTE_STATUS_UI[quoteStatus.key] : null;
               const meta = quoteStatus
                 ? {
@@ -214,12 +216,15 @@ export function DocumentsPage() {
                       </span>
                     </div>
                     <p className="mt-1 text-sm text-gray-600 dark:text-slate-300 truncate">{doc.topic}</p>
+                    {boatShareLink && (
+                      <p className="mt-0.5 text-xs text-indigo-600">Same link stays open. Copy it for the next guest.</p>
+                    )}
                     <p className="mt-0.5 text-xs text-gray-400">
                       {formatWhen(doc.created_at)}
                       {doc.recipient_phone ? ` · ${doc.recipient_phone}` : ''}
                       {doc.recipient_email ? ` · ${doc.recipient_email}` : ''}
                     </p>
-                    {isParentalConsentWaiver(doc.document_type) && (
+                    {(isParentalConsentWaiver(doc.document_type) || doc.document_type === 'boat_waiver') && (
                       <HostWaiverParticipants documentId={doc.id} status={doc.status} />
                     )}
                   </div>
@@ -245,14 +250,16 @@ export function DocumentsPage() {
                         {certBusyId === doc.id ? 'Preparing…' : 'Certificate'}
                       </button>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => void copyLink(doc.token, doc.id)}
-                      className="inline-flex items-center gap-1.5 min-h-10 px-3 rounded-xl border border-gray-200 dark:border-slate-700 text-sm text-gray-600 dark:text-slate-300"
-                    >
-                      <Copy className="h-4 w-4" />
-                      {copiedId === doc.id ? 'Copied' : 'Copy link'}
-                    </button>
+                    {!boatCopy && (
+                      <button
+                        type="button"
+                        onClick={() => void copyLink(doc.token, doc.id)}
+                        className="inline-flex items-center gap-1.5 min-h-10 px-3 rounded-xl border border-gray-200 dark:border-slate-700 text-sm text-gray-600 dark:text-slate-300"
+                      >
+                        <Copy className="h-4 w-4" />
+                        {copiedId === doc.id ? 'Copied' : boatShareLink ? 'Copy link again' : 'Copy link'}
+                      </button>
+                    )}
                   </div>
                 </li>
               );

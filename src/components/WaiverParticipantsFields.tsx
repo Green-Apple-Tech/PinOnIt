@@ -9,20 +9,29 @@ type Props = {
   participants: WaiverParticipant[];
   onChange: (rows: WaiverParticipant[]) => void;
   disabled?: boolean;
+  title?: string;
+  hint?: string;
+  /** When true, the last row can be removed so the list can be empty. */
+  allowEmpty?: boolean;
 };
 
 /** Shared child rows — signing page now, venue Waiver-by-Text later. */
-export function WaiverParticipantsFields({ participants, onChange, disabled }: Props) {
+export function WaiverParticipantsFields({
+  participants,
+  onChange,
+  disabled,
+  title = 'People on this waiver',
+  hint = `Add each person, up to ${MAX_WAIVER_PARTICIPANTS}. One signature covers everyone listed.`,
+  allowEmpty = false,
+}: Props) {
   const update = (id: string, patch: Partial<WaiverParticipant>) => {
     onChange(participants.map((row) => (row.id === id ? { ...row, ...patch } : row)));
   };
 
   return (
     <div className="space-y-3">
-      <p className="text-sm font-semibold text-slate-900">People on this waiver</p>
-      <p className="text-xs text-slate-500">
-        Add each person, up to {MAX_WAIVER_PARTICIPANTS}. One signature covers everyone listed.
-      </p>
+      <p className="text-sm font-semibold text-slate-900">{title}</p>
+      <p className="text-xs text-slate-500">{hint}</p>
       {participants.map((row, index) => (
         <div key={row.id} className="grid grid-cols-1 sm:grid-cols-[1fr_10rem_auto] gap-2 items-end">
           <label className="block">
@@ -48,7 +57,7 @@ export function WaiverParticipantsFields({ participants, onChange, disabled }: P
               required
             />
           </label>
-          {participants.length > 1 ? (
+          {participants.length > 1 || allowEmpty ? (
             <button
               type="button"
               disabled={disabled}
