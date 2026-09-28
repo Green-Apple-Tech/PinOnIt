@@ -6,6 +6,8 @@ import {
   boatWaiverError,
   displayOutingDate,
   fillBoatWaiver,
+  isOpenBoatLinkName,
+  OPEN_BOAT_LINK_NAME,
 } from './boatWaiver';
 
 const complete = {
@@ -37,6 +39,12 @@ describe('boat waiver blanks', () => {
     expect(boatWaiverError({ ...complete, outingDate: 'yesterday' })).toMatch(/Date of outing/);
     expect(boatWaiverError(complete)).toBeNull();
     expect(displayOutingDate('2026-09-26')).toBe('September 26, 2026');
+  });
+
+  it('treats a blank host name as an open link the guest must fill in', () => {
+    expect(isOpenBoatLinkName('')).toBe(true);
+    expect(isOpenBoatLinkName(OPEN_BOAT_LINK_NAME)).toBe(true);
+    expect(isOpenBoatLinkName('Ada Guest')).toBe(false);
   });
 
   it('lets a boat waiver add more people under the same signature', () => {

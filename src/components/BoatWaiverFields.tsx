@@ -53,7 +53,7 @@ export function BoatWaiverFields({ value, onChange, disabled }: Props) {
         />
       </label>
       <label className="block">
-        <span className="text-xs font-medium text-slate-500">Participant/guest full name</span>
+        <span className="text-xs font-medium text-slate-500">Your full name</span>
         <input
           type="text"
           value={value.participant}

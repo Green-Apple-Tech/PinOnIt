@@ -40,6 +40,7 @@ import {
   boatWaiverError,
   displayOutingDate,
   fillBoatWaiver,
+  isOpenBoatLinkName,
   localIsoDate,
   isBoatWaiver,
   type BoatWaiverAnswers,
@@ -118,7 +119,7 @@ export function DocumentConfirmPage() {
         setBoat({
           ...EMPTY_BOAT_WAIVER,
           owner: data.sender_business_name?.trim() || '',
-          participant: data.recipient_name?.trim() || '',
+          participant: isOpenBoatLinkName(data.recipient_name) ? '' : (data.recipient_name?.trim() || ''),
         });
         setParticipants([]);
       }
@@ -150,7 +151,9 @@ export function DocumentConfirmPage() {
         return;
       }
 
-      if (verificationOn(data) && !data.otp_verified) {
+      if (isBoatWaiver(data.document_type)) {
+        setOtpVerified(true);
+      } else if (verificationOn(data) && !data.otp_verified) {
         const otp = await sendDocumentOtp(consentToken);
         if (otp.data?.already_verified) {
           setOtpVerified(true);
@@ -247,9 +250,10 @@ export function DocumentConfirmPage() {
 
   async function handleConfirm() {
     if (!token || !doc) return;
-    const requireSign = verificationOn(doc);
+    const requireSign = verificationOn(doc) || isBoatWaiver(doc.document_type);
+    const skipPhoneCheck = isBoatWaiver(doc.document_type);
     if (!requireSign) return;
-    if (requireSign && !otpVerified) return;
+    if (requireSign && !otpVerified && !skipPhoneCheck) return;
     const needsMark = doc.confirmation_type !== 'confirm_receipt';
     if (needsMark && !hasMarked) return;
     if (!esignConsent) return;
@@ -466,8 +470,9 @@ export function DocumentConfirmPage() {
     );
   }
 
-  const requireSign = doc ? verificationOn(doc) : true;
-  const otpReady = !requireSign || otpVerified;
+  const requireSign = doc ? (verificationOn(doc) || isBoatWaiver(doc.document_type)) : true;
+  const skipPhoneCheck = Boolean(doc && isBoatWaiver(doc.document_type));
+  const otpReady = !requireSign || otpVerified || skipPhoneCheck;
   const confirmLabel =
     doc?.document_type === 'quote'
       ? 'Approve'
@@ -534,7 +539,11 @@ export function DocumentConfirmPage() {
           <p className="mt-1 text-base font-semibold text-slate-900">
             {doc ? documentTypeLabel(doc.document_type, doc.document_type_custom) : 'Document'}
           </p>
-          <h1 className="mt-3 text-lg font-bold">For {doc?.recipient_name}</h1>
+          <h1 className="mt-3 text-lg font-bold">
+            {doc && isBoatWaiver(doc.document_type) && isOpenBoatLinkName(doc.recipient_name)
+              ? 'Enter your name and sign'
+              : `For ${doc?.recipient_name}`}
+          </h1>
           {doc?.file_path && (
             <div className="mt-4 space-y-2">
               <div className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
@@ -702,7 +711,7 @@ export function DocumentConfirmPage() {
           </div>
         )}
 
-        {requireSign && !quoteExpired && (
+        {requireSign && !skipPhoneCheck && !quoteExpired && (
         <div className="bg-white rounded-2xl border border-slate-200 p-5">
           <h2 className="text-sm font-semibold">Verify your phone</h2>
           {otpVerified ? (

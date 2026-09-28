@@ -140,6 +140,14 @@ export function isBoatWaiver(type: string) {
   return type === 'boat_waiver';
 }
 
+/** Stored on a link the host shares without naming anyone. The guest types their own name. */
+export const OPEN_BOAT_LINK_NAME = 'Anyone with the link';
+
+export function isOpenBoatLinkName(name: string | null | undefined) {
+  const trimmed = name?.trim() ?? '';
+  return trimmed.length === 0 || trimmed === OPEN_BOAT_LINK_NAME;
+}
+
 export function localIsoDate(now = new Date()) {
   const y = now.getFullYear();
   const m = String(now.getMonth() + 1).padStart(2, '0');

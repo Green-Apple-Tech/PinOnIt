@@ -126,7 +126,10 @@ BEGIN
     RETURN jsonb_build_object('ok', true, 'status', 'declined');
   END IF;
 
-  IF COALESCE(v_row.verification_required, false) AND NOT v_row.otp_verified THEN
+  -- A boat link is shared. Each guest types their name and signs. No code to one phone.
+  IF COALESCE(v_row.verification_required, false)
+     AND NOT v_row.otp_verified
+     AND v_row.document_type IS DISTINCT FROM 'boat_waiver' THEN
     RETURN jsonb_build_object('ok', false, 'error', 'phone verification required');
   END IF;
 

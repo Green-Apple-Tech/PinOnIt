@@ -52,6 +52,7 @@ import { isUnmodifiedBuiltInTemplate } from '../lib/builtInTemplateNotice';
 import { BuiltInTemplateNoticePair } from '../components/BuiltInTemplateNoticePair';
 import { HostLegalStateNotice } from '../components/HostLegalStateNotice';
 import { LegalTemplatesNeedLink } from '../components/LegalTemplatesNeedLink';
+import { OPEN_BOAT_LINK_NAME } from '../lib/boatWaiver';
 import { isParentalConsentWaiver, isWaiverFamily } from '../lib/waiverParticipants';
 import {
   normalizePlainLanguageBullets,
@@ -214,7 +215,8 @@ export function CreateDocumentPage() {
   const isMoney = isMoneyDocumentType(documentType);
   const isQuote = documentType === 'quote';
   const showPayLink = documentShowsPayLink(documentType);
-  const phoneRequired = verificationRequired || isQuote;
+  const openBoatLink = documentType === 'boat_waiver';
+  const phoneRequired = (verificationRequired || isQuote) && !openBoatLink;
   const bodyEditable = documentBodyIsEditable(documentType) && !isLibraryPdf;
   const typeSelectValue = libraryFileId ? `${LIBRARY_FILE_PREFIX}${libraryFileId}` : documentType;
   const recipientName = `${recipientFirstName.trim()} ${recipientLastName.trim()}`.trim();
@@ -470,7 +472,7 @@ export function CreateDocumentPage() {
     const libraryName = selectedLibraryFile?.name?.trim();
     const topicText = topic.trim();
     const phone = recipientPhone.trim() ? normalizePhoneE164(recipientPhone) : null;
-    const resolvedName = recipientName.trim() || (isQuote ? 'Customer' : '');
+    const resolvedName = recipientName.trim() || (isQuote ? 'Customer' : documentType === 'boat_waiver' ? OPEN_BOAT_LINK_NAME : '');
     if (documentType === 'other' && !customTypeLabel.trim()) {
       setError('Enter a custom document type.');
       return;
@@ -483,7 +485,7 @@ export function CreateDocumentPage() {
       setError('Give this PDF a template name so you can reuse it.');
       return;
     }
-    if (!isQuote && !recipientFirstName.trim()) {
+    if (!isQuote && documentType !== 'boat_waiver' && !recipientFirstName.trim()) {
       setError('Add the recipient’s first name.');
       return;
     }
@@ -506,7 +508,7 @@ export function CreateDocumentPage() {
       phoneInputRef.current?.focus();
       return;
     }
-    if (verificationRequired && !phone) {
+    if (verificationRequired && !phone && documentType !== 'boat_waiver') {
       setError('Add a valid phone number so the recipient can verify.');
       phoneInputRef.current?.focus();
       return;
@@ -818,7 +820,9 @@ export function CreateDocumentPage() {
                 Require a signature & SMS verify
               </span>
               <span className="block mt-1 text-xs text-gray-500 dark:text-slate-400">
-                {verificationRequired
+                {openBoatLink
+                  ? 'Whoever opens the link types their name, can add other people, and signs. No text code.'
+                  : verificationRequired
                   ? 'They enter a 6-digit code we text to the same number, then sign and check ESIGN. Default on for waivers, NDAs, and contracts — change it per template in Settings → Docs.'
                   : 'Just send the link. They can view it, and Pay Now if you added a pay link. No signature, no extra code. Default for quotes and invoices.'}
               </span>
@@ -937,13 +941,13 @@ export function CreateDocumentPage() {
           />
           <label className="block">
             <span className="text-xs font-medium text-gray-600 dark:text-slate-400">
-              Recipient name {isQuote ? '(optional)' : <span className="text-red-500">*</span>}
+              Recipient name {isQuote || openBoatLink ? '(optional)' : <span className="text-red-500">*</span>}
             </span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
               <input
                 value={recipientFirstName}
                 onChange={(e) => setRecipientFirstName(e.target.value)}
-                required={!isQuote}
+                required={!isQuote && !openBoatLink}
                 className={fieldClass.replace('mt-1 ', '')}
                 placeholder="Jane"
                 autoComplete="given-name"
@@ -959,7 +963,9 @@ export function CreateDocumentPage() {
               />
             </div>
             <p className="mt-1 text-xs text-gray-400">
-              {isQuote
+              {openBoatLink
+                ? 'Leave this blank. Whoever opens the link types their own name and can add other people.'
+                : isQuote
                 ? 'Optional. Fills the quote greeting; we use “Customer” if you skip it.'
                 : 'Fills [Recipient Name] in the document below as you type. Last name is optional.'}
             </p>
