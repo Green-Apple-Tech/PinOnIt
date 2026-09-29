@@ -37,9 +37,9 @@ export function WaiverParticipantsFields({
   };
 
   return (
-    <div className={prominent ? 'space-y-4 rounded-2xl border-2 border-red-500 bg-red-50 p-4' : 'space-y-3'}>
-      <p className={prominent ? 'text-xl font-bold text-red-800' : 'text-sm font-semibold text-slate-900'}>{title}</p>
-      <p className={prominent ? 'text-base leading-relaxed text-slate-800' : 'text-xs text-slate-500'}>{hint}</p>
+    <div className={prominent ? 'space-y-3 rounded-2xl border-2 border-orange-300 bg-orange-50 p-3 motion-safe:animate-softBlink' : 'space-y-3'}>
+      <p className={prominent ? 'text-base font-bold text-orange-800' : 'text-sm font-semibold text-slate-900'}>{title}</p>
+      <p className={prominent ? 'text-sm leading-relaxed text-slate-700' : 'text-xs text-slate-500'}>{hint}</p>
       {participants.map((row, index) => (
         <div key={row.id} className="grid grid-cols-1 sm:grid-cols-[1fr_10rem_auto] gap-2 items-end">
           <label className="block">
@@ -51,7 +51,7 @@ export function WaiverParticipantsFields({
               disabled={disabled}
               onChange={(e) => update(row.id, { fullName: e.target.value })}
               className={prominent
-                ? 'mt-1 w-full rounded-xl border-2 border-red-300 bg-white px-4 py-3 text-base'
+                ? 'mt-1 w-full rounded-xl border-2 border-orange-200 bg-white px-3 py-2.5 text-sm'
                 : 'mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm'}
               required
             />
@@ -64,7 +64,7 @@ export function WaiverParticipantsFields({
               disabled={disabled}
               onChange={(e) => update(row.id, { dateOfBirth: e.target.value })}
               className={prominent
-                ? 'mt-1 w-full rounded-xl border-2 border-red-300 bg-white px-4 py-3 text-base'
+                ? 'mt-1 w-full rounded-xl border-2 border-orange-200 bg-white px-3 py-2.5 text-sm'
                 : 'mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm'}
               required
             />
@@ -90,10 +90,10 @@ export function WaiverParticipantsFields({
           disabled={disabled}
           onClick={() => onChange([...participants, newWaiverParticipant()])}
           className={prominent
-            ? 'inline-flex items-center gap-2 min-h-12 text-lg font-bold text-red-700'
+            ? 'inline-flex items-center gap-1.5 min-h-10 text-base font-bold text-orange-700'
             : 'inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600'}
         >
-          <Plus className={prominent ? 'h-6 w-6' : 'h-4 w-4'} /> {addLabel}
+          <Plus className={prominent ? 'h-5 w-5' : 'h-4 w-4'} /> {addLabel}
         </button>
       ) : (
         <p className="text-xs text-slate-500">Maximum of {MAX_WAIVER_PARTICIPANTS} people on one signature.</p>

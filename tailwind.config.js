@@ -23,9 +23,14 @@ export default {
           from: { opacity: '0', transform: 'translateY(-8px)' },
           to: { opacity: '1', transform: 'translateY(0)' },
         },
+        softBlink: {
+          '0%, 100%': { boxShadow: '0 0 0 0 rgba(251, 146, 60, 0)' },
+          '50%': { boxShadow: '0 0 0 3px rgba(251, 146, 60, 0.45)' },
+        },
       },
       animation: {
         coordDayIn: 'coordDayIn 0.3s ease-out',
+        softBlink: 'softBlink 2.4s ease-in-out infinite',
       },
     },
   },

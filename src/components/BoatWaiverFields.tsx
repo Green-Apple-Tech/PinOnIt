@@ -65,15 +65,15 @@ export function BoatWaiverFields({ value, onChange, disabled, ask }: Props) {
       </label>
       )}
       {show('participant') && (
-      <label className="block rounded-2xl border-2 border-red-500 bg-red-50 p-4">
-        <span className="text-base font-bold text-red-700">Your full name</span>
+      <label className="block rounded-2xl border-2 border-orange-300 bg-orange-50 p-3 motion-safe:animate-softBlink">
+        <span className="text-sm font-bold text-orange-700">Your full name</span>
         <input
           type="text"
           value={value.participant}
           disabled={disabled}
           onChange={(e) => set({ participant: e.target.value })}
           placeholder="Type your full name"
-          className="mt-2 w-full rounded-xl border-2 border-red-400 bg-white px-4 py-4 text-lg font-medium text-slate-900 placeholder:text-red-300"
+          className="mt-1.5 w-full rounded-xl border-2 border-orange-200 bg-white px-3 py-3 text-base font-medium text-slate-900 placeholder:text-orange-300"
           autoComplete="name"
           required
         />
