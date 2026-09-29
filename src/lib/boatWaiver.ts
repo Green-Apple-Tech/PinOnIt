@@ -187,17 +187,28 @@ export function boatPartyError(rows: Array<{ fullName: string; dateOfBirth: stri
   return null;
 }
 
+/** First labeled line that is not still a [token]. The signature block can repeat the token later. */
+export function boatLineValue(text: string, label: string) {
+  const prefix = `${label}:`;
+  for (const line of text.split('\n')) {
+    if (!line.startsWith(prefix)) continue;
+    const value = line.slice(prefix.length).trim();
+    if (value && !value.startsWith('[')) return value;
+  }
+  return '';
+}
+
 /** Blanks still written as [tokens]. The guest is not asked for ones the host already filled in. Name is always asked. */
 export function openBoatBlankFields(text: string): BoatBlankKey[] {
   const withoutOwner = text.split('[Vessel Owner/Operator]').join('');
   const withoutPhone = text.split('[Emergency Contact Phone]').join('');
   const keys: BoatBlankKey[] = [];
-  if (withoutOwner.includes('[Vessel]')) keys.push('vessel');
-  if (text.includes('[Vessel Owner/Operator]')) keys.push('owner');
-  if (text.includes('[Date of Outing]')) keys.push('outingDate');
+  if (!boatLineValue(text, 'Vessel') && withoutOwner.includes('[Vessel]')) keys.push('vessel');
+  if (!boatLineValue(text, 'Vessel Owner/Operator') && text.includes('[Vessel Owner/Operator]')) keys.push('owner');
+  if (!boatLineValue(text, 'Date of Outing') && text.includes('[Date of Outing]')) keys.push('outingDate');
   keys.push('participant');
-  if (withoutPhone.includes('[Emergency Contact]')) keys.push('emergencyContact');
-  if (text.includes('[Emergency Contact Phone]')) keys.push('emergencyPhone');
+  if (!boatLineValue(text, 'Emergency Contact') && withoutPhone.includes('[Emergency Contact]')) keys.push('emergencyContact');
+  if (!boatLineValue(text, 'Emergency Contact Phone') && text.includes('[Emergency Contact Phone]')) keys.push('emergencyPhone');
   return keys;
 }
 
@@ -214,14 +225,14 @@ export function boatWaiverError(fields: BoatWaiverAnswers, open: BoatBlankKey[] 
 
 /** Replace boat blanks. Empty answers stay as tokens so the guest still sees the blank. */
 export function fillBoatWaiver(text: string, fields: BoatWaiverAnswers, signDate: string) {
-  const outing = displayOutingDate(fields.outingDate);
+  const outing = displayOutingDate(fields.outingDate) || boatLineValue(text, 'Date of Outing');
   const replace = (token: string, value: string) => (value.trim() ? value.trim() : token);
   return text
-    .replaceAll('[Vessel Owner/Operator]', replace('[Vessel Owner/Operator]', fields.owner))
-    .replaceAll('[Vessel]', replace('[Vessel]', fields.vessel))
+    .replaceAll('[Vessel Owner/Operator]', replace('[Vessel Owner/Operator]', fields.owner || boatLineValue(text, 'Vessel Owner/Operator')))
+    .replaceAll('[Vessel]', replace('[Vessel]', fields.vessel || boatLineValue(text, 'Vessel')))
     .replaceAll('[Date of Outing]', outing || '[Date of Outing]')
     .replaceAll('[Participant/Guest]', replace('[Participant/Guest]', fields.participant))
-    .replaceAll('[Emergency Contact Phone]', replace('[Emergency Contact Phone]', fields.emergencyPhone))
-    .replaceAll('[Emergency Contact]', replace('[Emergency Contact]', fields.emergencyContact))
+    .replaceAll('[Emergency Contact Phone]', replace('[Emergency Contact Phone]', fields.emergencyPhone || boatLineValue(text, 'Emergency Contact Phone')))
+    .replaceAll('[Emergency Contact]', replace('[Emergency Contact]', fields.emergencyContact || boatLineValue(text, 'Emergency Contact')))
     .replaceAll('[Sign Date]', signDate.trim() || '[Sign Date]');
 }

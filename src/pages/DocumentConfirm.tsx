@@ -620,8 +620,8 @@ export function DocumentConfirmPage() {
                       participants={participants}
                       onChange={setParticipants}
                       allowEmpty
-                      title="Other people on this outing"
-                      hint={`Add family or kids here, up to ${MAX_WAIVER_PARTICIPANTS}. Your signature covers them. Someone who is not in your group uses this same link and signs separately.`}
+                      title="People on this outing"
+                      hint={`Add everyone on this outing, up to ${MAX_WAIVER_PARTICIPANTS}. Your signature covers them. Or send this same link so someone else can sign on their own.`}
                     />
                   </div>
                 </>

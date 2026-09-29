@@ -42,6 +42,18 @@ describe('boat waiver blanks', () => {
     expect(displayOutingDate('2026-09-26')).toBe('September 26, 2026');
   });
 
+  it('keeps the owner the host already wrote, including the signature line', () => {
+    const text = BOAT_WAIVER_STARTER_TEXT
+      .replace('Vessel Owner/Operator: [Vessel Owner/Operator]', 'Vessel Owner/Operator: Miami Expeditions LLC - Boat Operator / pilot Peter Stebbins')
+      .replace('Vessel: [Vessel]', 'Vessel: Stone Crab')
+      .replace('Date of Outing: [Date of Outing]', 'Date of Outing: Sept 29, 2026');
+    expect(openBoatBlankFields(text)).not.toContain('owner');
+    expect(openBoatBlankFields(text)).not.toContain('vessel');
+    const filled = fillBoatWaiver(text, { ...complete, owner: '', vessel: '', outingDate: '' }, 'September 29, 2026');
+    expect(filled).toContain('Miami Expeditions LLC - Boat Operator / pilot Peter Stebbins');
+    expect(filled).not.toContain('[Vessel Owner/Operator]');
+  });
+
   it('does not ask the guest for blanks the host already filled in', () => {
     const text = BOAT_WAIVER_STARTER_TEXT
       .replaceAll('[Vessel Owner/Operator]', 'Pedro')
