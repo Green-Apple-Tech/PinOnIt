@@ -626,6 +626,7 @@ export function DocumentConfirmPage() {
                       title="Minors in your family"
                       personLabel="Minor"
                       addLabel="Add a minor"
+                      prominent
                       hint={`Add minors in your family you can sign for, up to ${MAX_WAIVER_PARTICIPANTS}. Your signature covers them. Other adults use this same link and sign for themselves.`}
                     />
                   </div>

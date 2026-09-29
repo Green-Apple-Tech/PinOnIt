@@ -14,6 +14,8 @@ type Props = {
   /** Noun for each row, such as Person or Minor. */
   personLabel?: string;
   addLabel?: string;
+  /** Larger heading, instructions, and add button for the guest signing page. */
+  prominent?: boolean;
   /** When true, the last row can be removed so the list can be empty. */
   allowEmpty?: boolean;
 };
@@ -27,6 +29,7 @@ export function WaiverParticipantsFields({
   hint = `Add each person, up to ${MAX_WAIVER_PARTICIPANTS}. One signature covers everyone listed.`,
   personLabel = 'Person',
   addLabel = 'Add a person',
+  prominent = false,
   allowEmpty = false,
 }: Props) {
   const update = (id: string, patch: Partial<WaiverParticipant>) => {
@@ -34,31 +37,35 @@ export function WaiverParticipantsFields({
   };
 
   return (
-    <div className="space-y-3">
-      <p className="text-sm font-semibold text-slate-900">{title}</p>
-      <p className="text-xs text-slate-500">{hint}</p>
+    <div className={prominent ? 'space-y-4 rounded-2xl border-2 border-red-500 bg-red-50 p-4' : 'space-y-3'}>
+      <p className={prominent ? 'text-xl font-bold text-red-800' : 'text-sm font-semibold text-slate-900'}>{title}</p>
+      <p className={prominent ? 'text-base leading-relaxed text-slate-800' : 'text-xs text-slate-500'}>{hint}</p>
       {participants.map((row, index) => (
         <div key={row.id} className="grid grid-cols-1 sm:grid-cols-[1fr_10rem_auto] gap-2 items-end">
           <label className="block">
-            <span className="text-xs font-medium text-slate-500">{personLabel} {index + 1} full name</span>
+            <span className={prominent ? 'text-sm font-semibold text-slate-700' : 'text-xs font-medium text-slate-500'}>{personLabel} {index + 1} full name</span>
             <input
               type="text"
               autoComplete="off"
               value={row.fullName}
               disabled={disabled}
               onChange={(e) => update(row.id, { fullName: e.target.value })}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
+              className={prominent
+                ? 'mt-1 w-full rounded-xl border-2 border-red-300 bg-white px-4 py-3 text-base'
+                : 'mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm'}
               required
             />
           </label>
           <label className="block">
-            <span className="text-xs font-medium text-slate-500">Date of birth</span>
+            <span className={prominent ? 'text-sm font-semibold text-slate-700' : 'text-xs font-medium text-slate-500'}>Date of birth</span>
             <input
               type="date"
               value={row.dateOfBirth}
               disabled={disabled}
               onChange={(e) => update(row.id, { dateOfBirth: e.target.value })}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
+              className={prominent
+                ? 'mt-1 w-full rounded-xl border-2 border-red-300 bg-white px-4 py-3 text-base'
+                : 'mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm'}
               required
             />
           </label>
@@ -82,9 +89,11 @@ export function WaiverParticipantsFields({
           type="button"
           disabled={disabled}
           onClick={() => onChange([...participants, newWaiverParticipant()])}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600"
+          className={prominent
+            ? 'inline-flex items-center gap-2 min-h-12 text-lg font-bold text-red-700'
+            : 'inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600'}
         >
-          <Plus className="h-4 w-4" /> {addLabel}
+          <Plus className={prominent ? 'h-6 w-6' : 'h-4 w-4'} /> {addLabel}
         </button>
       ) : (
         <p className="text-xs text-slate-500">Maximum of {MAX_WAIVER_PARTICIPANTS} people on one signature.</p>
