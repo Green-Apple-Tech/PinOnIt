@@ -7,6 +7,7 @@ import {
   displayOutingDate,
   fillBoatWaiver,
   isOpenBoatLinkName,
+  openBoatBlankFields,
   OPEN_BOAT_LINK_NAME,
 } from './boatWaiver';
 
@@ -39,6 +40,19 @@ describe('boat waiver blanks', () => {
     expect(boatWaiverError({ ...complete, outingDate: 'yesterday' })).toMatch(/Date of outing/);
     expect(boatWaiverError(complete)).toBeNull();
     expect(displayOutingDate('2026-09-26')).toBe('September 26, 2026');
+  });
+
+  it('does not ask the guest for blanks the host already filled in', () => {
+    const text = BOAT_WAIVER_STARTER_TEXT
+      .replaceAll('[Vessel Owner/Operator]', 'Pedro')
+      .replaceAll('[Vessel]', 'Sea Glass')
+      .replaceAll('[Date of Outing]', 'September 26, 2026');
+    const open = openBoatBlankFields(text);
+    expect(open).not.toContain('vessel');
+    expect(open).not.toContain('owner');
+    expect(open).not.toContain('outingDate');
+    expect(open).toContain('participant');
+    expect(boatWaiverError({ ...complete, vessel: '', owner: '', outingDate: '' }, open)).toBeNull();
   });
 
   it('treats a blank host name as an open link the guest must fill in', () => {

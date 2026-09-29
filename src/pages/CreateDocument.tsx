@@ -1272,7 +1272,15 @@ export function CreateDocumentPage() {
               </div>
               <span className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Edit full text</span>
               <p className="mb-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                {isWaiver ? (
+                {documentType === 'boat_waiver' ? (
+                  <>
+                    Replace [Vessel], [Vessel Owner/Operator], and [Date of Outing] in the text below. Whoever opens the link is not asked for those again. They type their own name and can add other people. You can also save a default in{' '}
+                    <Link to="/dashboard/settings?tab=docs" className="font-semibold text-brand-600 hover:text-brand-700">
+                      Settings → Docs
+                    </Link>
+                    .
+                  </>
+                ) : isWaiver ? (
                   <>
                     Recipient name, activity, and business name fill the [brackets]. You can edit this send, or save a
                     default in{' '}

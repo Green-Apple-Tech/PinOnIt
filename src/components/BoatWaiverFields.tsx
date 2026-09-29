@@ -1,22 +1,29 @@
-import type { BoatWaiverAnswers } from '../lib/boatWaiver';
+import type { BoatBlankKey, BoatWaiverAnswers } from '../lib/boatWaiver';
 
 type Props = {
   value: BoatWaiverAnswers;
   onChange: (next: BoatWaiverAnswers) => void;
   disabled?: boolean;
+  /** Blanks still open. Omitted fields were already filled in by the host. */
+  ask?: BoatBlankKey[];
 };
 
 const inputCls = 'mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm';
 
-export function BoatWaiverFields({ value, onChange, disabled }: Props) {
+export function BoatWaiverFields({ value, onChange, disabled, ask }: Props) {
   const set = (patch: Partial<BoatWaiverAnswers>) => onChange({ ...value, ...patch });
+  const show = (key: BoatBlankKey) => !ask || ask.includes(key);
+  const onlyName = ask && ask.every((key) => key === 'participant' || key === 'emergencyContact' || key === 'emergencyPhone');
 
   return (
     <div className="mt-4 space-y-3">
-      <p className="text-sm font-semibold text-slate-900">Fill in the blanks</p>
+      <p className="text-sm font-semibold text-slate-900">{onlyName ? 'Your details' : 'Fill in the blanks'}</p>
       <p className="text-xs text-slate-500">
-        These answers are written into the waiver. Your signature below is the participant signature.
+        {onlyName
+          ? 'The boat details are already on this waiver. Enter your name. Your signature below is the participant signature.'
+          : 'These answers are written into the waiver. Your signature below is the participant signature.'}
       </p>
+      {show('vessel') && (
       <label className="block">
         <span className="text-xs font-medium text-slate-500">Vessel</span>
         <input
@@ -29,6 +36,8 @@ export function BoatWaiverFields({ value, onChange, disabled }: Props) {
           required
         />
       </label>
+      )}
+      {show('owner') && (
       <label className="block">
         <span className="text-xs font-medium text-slate-500">Vessel owner/operator</span>
         <input
@@ -41,6 +50,8 @@ export function BoatWaiverFields({ value, onChange, disabled }: Props) {
           required
         />
       </label>
+      )}
+      {show('outingDate') && (
       <label className="block">
         <span className="text-xs font-medium text-slate-500">Date of outing</span>
         <input
@@ -52,6 +63,8 @@ export function BoatWaiverFields({ value, onChange, disabled }: Props) {
           required
         />
       </label>
+      )}
+      {show('participant') && (
       <label className="block">
         <span className="text-xs font-medium text-slate-500">Your full name</span>
         <input
@@ -64,6 +77,8 @@ export function BoatWaiverFields({ value, onChange, disabled }: Props) {
           required
         />
       </label>
+      )}
+      {show('emergencyContact') && (
       <label className="block">
         <span className="text-xs font-medium text-slate-500">Emergency contact</span>
         <input
@@ -76,6 +91,8 @@ export function BoatWaiverFields({ value, onChange, disabled }: Props) {
           required
         />
       </label>
+      )}
+      {show('emergencyPhone') && (
       <label className="block">
         <span className="text-xs font-medium text-slate-500">Emergency contact phone</span>
         <input
@@ -88,6 +105,7 @@ export function BoatWaiverFields({ value, onChange, disabled }: Props) {
           required
         />
       </label>
+      )}
     </div>
   );
 }

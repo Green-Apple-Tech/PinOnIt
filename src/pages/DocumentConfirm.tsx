@@ -41,6 +41,7 @@ import {
   displayOutingDate,
   fillBoatWaiver,
   isOpenBoatLinkName,
+  openBoatBlankFields,
   localIsoDate,
   isBoatWaiver,
   type BoatWaiverAnswers,
@@ -116,9 +117,10 @@ export function DocumentConfirmPage() {
       setParentName(data.recipient_name || '');
       setParentEmail(data.recipient_email || '');
       if (isBoatWaiver(data.document_type)) {
+        const open = openBoatBlankFields(data.full_text || '');
         setBoat({
           ...EMPTY_BOAT_WAIVER,
-          owner: data.sender_business_name?.trim() || '',
+          owner: open.includes('owner') ? (data.sender_business_name?.trim() || '') : '',
           participant: isOpenBoatLinkName(data.recipient_name) ? '' : (data.recipient_name?.trim() || ''),
         });
         setParticipants([]);
@@ -277,7 +279,7 @@ export function DocumentConfirmPage() {
     const boatDoc = isBoatWaiver(doc.document_type);
     const boatPeople = boatDoc ? validWaiverParticipants(participants) : [];
     if (boatDoc) {
-      const boatError = boatWaiverError(boat) || boatPartyError(participants, MAX_WAIVER_PARTICIPANTS);
+      const boatError = boatWaiverError(boat, openBoatBlankFields(doc.full_text || '')) || boatPartyError(participants, MAX_WAIVER_PARTICIPANTS);
       if (boatError) {
         setError(boatError);
         return;
@@ -612,7 +614,7 @@ export function DocumentConfirmPage() {
               ) : null}
               {boatDoc && (
                 <>
-                  <BoatWaiverFields value={boat} onChange={setBoat} />
+                  <BoatWaiverFields value={boat} onChange={setBoat} ask={openBoatBlankFields(doc.full_text || '')} />
                   <div className="mt-4">
                     <WaiverParticipantsFields
                       participants={participants}
@@ -858,7 +860,7 @@ export function DocumentConfirmPage() {
                 !agreed ||
                 (needsCanvas && !hasMarked) ||
                 (parental && (!parentName.trim() || listedChildren.length === 0)) ||
-                (boatDoc && Boolean(boatWaiverError(boat) || boatPartyError(participants, MAX_WAIVER_PARTICIPANTS)))
+                (boatDoc && Boolean(boatWaiverError(boat, openBoatBlankFields(doc?.full_text || '')) || boatPartyError(participants, MAX_WAIVER_PARTICIPANTS)))
               }
               className="w-full min-h-12 rounded-xl bg-indigo-600 text-white font-semibold disabled:opacity-40"
             >

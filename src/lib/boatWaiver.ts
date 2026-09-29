@@ -127,7 +127,9 @@ Vessel Owner/Operator: [Vessel Owner/Operator]
 Signature: ______________________________
 Date: ______________________________`;
 
-const REQUIRED: Array<{ key: keyof BoatWaiverAnswers; label: string }> = [
+export type BoatBlankKey = keyof BoatWaiverAnswers;
+
+const REQUIRED: Array<{ key: BoatBlankKey; label: string }> = [
   { key: 'vessel', label: 'Vessel' },
   { key: 'owner', label: 'Vessel owner/operator' },
   { key: 'outingDate', label: 'Date of outing' },
@@ -185,8 +187,24 @@ export function boatPartyError(rows: Array<{ fullName: string; dateOfBirth: stri
   return null;
 }
 
-export function boatWaiverError(fields: BoatWaiverAnswers) {
+/** Blanks still written as [tokens]. The guest is not asked for ones the host already filled in. Name is always asked. */
+export function openBoatBlankFields(text: string): BoatBlankKey[] {
+  const withoutOwner = text.split('[Vessel Owner/Operator]').join('');
+  const withoutPhone = text.split('[Emergency Contact Phone]').join('');
+  const keys: BoatBlankKey[] = [];
+  if (withoutOwner.includes('[Vessel]')) keys.push('vessel');
+  if (text.includes('[Vessel Owner/Operator]')) keys.push('owner');
+  if (text.includes('[Date of Outing]')) keys.push('outingDate');
+  keys.push('participant');
+  if (withoutPhone.includes('[Emergency Contact]')) keys.push('emergencyContact');
+  if (text.includes('[Emergency Contact Phone]')) keys.push('emergencyPhone');
+  return keys;
+}
+
+export function boatWaiverError(fields: BoatWaiverAnswers, open: BoatBlankKey[] = REQUIRED.map((field) => field.key)) {
+  const asked = new Set(open);
   for (const field of REQUIRED) {
+    if (!asked.has(field.key)) continue;
     const value = fields[field.key].trim();
     if (!value) return `${field.label} is required.`;
     if (field.key === 'outingDate' && !displayOutingDate(value)) return 'Date of outing is required.';
