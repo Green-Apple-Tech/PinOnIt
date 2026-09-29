@@ -47,3 +47,9 @@ export function activeHostDocumentFiles(files: HostDocumentFile[]) {
 export function templateNameFromFile(file: File) {
   return file.name.replace(/\.pdf$/i, '').trim().slice(0, 120) || 'Uploaded waiver';
 }
+
+/** First line of saved wording, for the Customized docs list. */
+export function templatePreview(fullText: string) {
+  const line = fullText.split('\n').map((part) => part.trim()).find(Boolean) || 'Saved wording';
+  return line.length > 90 ? `${line.slice(0, 87)}…` : line;
+}

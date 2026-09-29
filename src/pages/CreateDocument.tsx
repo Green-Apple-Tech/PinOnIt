@@ -1341,7 +1341,7 @@ export function CreateDocumentPage() {
                         full_text: customText.trim(),
                       } as HostDocumentTemplate];
                     });
-                    setWordingNote('Saved. The next document of this type starts with this wording.');
+                    setWordingNote('Saved under Customized docs. The next document of this type starts with this wording.');
                   });
                 }}
                 className="mt-3 inline-flex items-center justify-center min-h-10 px-3 rounded-xl border border-gray-200 dark:border-slate-700 text-sm font-semibold text-gray-700 dark:text-slate-200 disabled:opacity-40"

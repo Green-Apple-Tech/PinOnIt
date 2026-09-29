@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle, Clock, Copy, DollarSign, Download, Eye, FileText, Plus, QrCode, XCircle } from 'lucide-react';
+import { Bookmark, CheckCircle, Clock, Copy, DollarSign, Download, Eye, FileText, Plus, QrCode, XCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { documentsNewPath } from '../lib/documentActions';
+import { documentBodyIsEditable } from '../lib/documentTypes';
+import { templatePreview, type HostDocumentTemplate } from '../lib/hostDocuments';
 import {
   documentTypeLabel,
   documentViewUrl,
@@ -48,27 +50,60 @@ function formatWhen(iso: string) {
 export function DocumentsPage() {
   const { user } = useAuth();
   const [docs, setDocs] = useState<SmbDocument[]>([]);
+  const [savedDocs, setSavedDocs] = useState<HostDocumentTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [savingDocId, setSavingDocId] = useState<string | null>(null);
+  const [savedDocId, setSavedDocId] = useState<string | null>(null);
   const [qrDoc, setQrDoc] = useState<SmbDocument | null>(null);
   const [certBusyId, setCertBusyId] = useState<string | null>(null);
   const [paidBusyId, setPaidBusyId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!user?.id) return;
-    const { data } = await supabase
-      .from('documents')
-      .select('*')
-      .eq('sender_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(200);
-    setDocs((data as SmbDocument[]) ?? []);
+    const [sent, templates] = await Promise.all([
+      supabase
+        .from('documents')
+        .select('*')
+        .eq('sender_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(200),
+      supabase
+        .from('host_document_templates')
+        .select('*')
+        .eq('host_id', user.id)
+        .order('updated_at', { ascending: false }),
+    ]);
+    setDocs((sent.data as SmbDocument[]) ?? []);
+    setSavedDocs((templates.data as HostDocumentTemplate[]) ?? []);
     setLoading(false);
   }, [user?.id]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  const saveToReuse = async (doc: SmbDocument) => {
+    const text = doc.custom_text?.trim();
+    if (!user?.id || !text) return;
+    setSavingDocId(doc.id);
+    const { error } = await supabase.from('host_document_templates').upsert(
+      {
+        host_id: user.id,
+        document_type: doc.document_type,
+        full_text: text,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'host_id,document_type' },
+    );
+    setSavingDocId(null);
+    if (error) {
+      window.alert(error.message);
+      return;
+    }
+    setSavedDocId(doc.id);
+    void load();
+  };
 
   const copyLink = async (token: string, id: string) => {
     await navigator.clipboard.writeText(documentViewUrl(token));
@@ -173,6 +208,38 @@ export function DocumentsPage() {
         ))}
       </div>
 
+      <section className="mb-6 rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-5">
+        <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Customized docs</h2>
+        <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
+          Saved wording you can start from again. One saved version per type. Saving again replaces that version. The links below are the ones you already sent.
+        </p>
+        {savedDocs.length === 0 ? (
+          <p className="mt-3 text-sm text-gray-600 dark:text-slate-300">
+            Nothing saved yet. On a document in the list, tap <span className="font-semibold">Save to reuse</span>.
+          </p>
+        ) : (
+          <ul className="mt-3 divide-y divide-gray-100 dark:divide-slate-800">
+            {savedDocs.map((row) => (
+              <li key={row.id} className="py-3 flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {documentTypeLabel(row.document_type)}
+                  </p>
+                  <p className="mt-0.5 text-sm text-gray-600 dark:text-slate-300 truncate">{templatePreview(row.full_text)}</p>
+                  <p className="mt-0.5 text-xs text-gray-400">Saved {formatWhen(row.updated_at || row.created_at)}</p>
+                </div>
+                <Link
+                  to={documentsNewPath(null, row.document_type)}
+                  className="inline-flex items-center justify-center min-h-10 px-3 rounded-xl bg-brand-600 text-white text-sm font-semibold"
+                >
+                  Use again
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
         {loading ? (
           <div className="p-10 flex justify-center">
@@ -250,6 +317,17 @@ export function DocumentsPage() {
                       >
                         <Download className="h-4 w-4" />
                         {certBusyId === doc.id ? 'Preparing…' : 'Certificate'}
+                      </button>
+                    )}
+                    {!boatCopy && documentBodyIsEditable(doc.document_type) && doc.custom_text?.trim() && (
+                      <button
+                        type="button"
+                        onClick={() => void saveToReuse(doc)}
+                        disabled={savingDocId === doc.id}
+                        className="inline-flex items-center gap-1.5 min-h-10 px-3 rounded-xl border border-gray-200 dark:border-slate-700 text-sm text-gray-600 dark:text-slate-300 disabled:opacity-50"
+                      >
+                        <Bookmark className="h-4 w-4" />
+                        {savingDocId === doc.id ? 'Saving…' : savedDocId === doc.id ? 'Saved' : 'Save to reuse'}
                       </button>
                     )}
                     {!boatCopy && (
