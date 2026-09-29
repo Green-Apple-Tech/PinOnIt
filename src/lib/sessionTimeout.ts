@@ -1,3 +1,5 @@
+import { isGuestNoIndexPath } from './guestNoIndex';
+
 /** Idle auto sign-out. 15 minutes is the common HIPAA workstation / OWASP mid-risk default. */
 export const DEFAULT_SESSION_TIMEOUT_MINUTES = 15;
 
@@ -21,6 +23,12 @@ export function resolveSessionTimeoutMinutes(
   if (value === 0) return null;
   if (value == null || value < 0) return DEFAULT_SESSION_TIMEOUT_MINUTES;
   return value;
+}
+
+/** Guest waiver and booking links stay open. Only the host dashboard goes to sign-in. */
+export function inactivitySignOutDestination(pathname: string) {
+  if (isGuestNoIndexPath(pathname)) return null;
+  return '/login?signed_out=inactivity';
 }
 
 export function sessionTimeoutOptionValue(

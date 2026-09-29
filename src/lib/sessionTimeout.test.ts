@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_SESSION_TIMEOUT_MINUTES,
+  inactivitySignOutDestination,
   resolveSessionTimeoutMinutes,
   sessionTimeoutOptionValue,
 } from './sessionTimeout';
@@ -14,6 +15,11 @@ describe('session timeout', () => {
   it('treats 0 as no auto sign-out', () => {
     expect(resolveSessionTimeoutMinutes(0)).toBeNull();
     expect(sessionTimeoutOptionValue(0)).toBe(0);
+  });
+
+  it('leaves a guest waiver link open when the host session times out', () => {
+    expect(inactivitySignOutDestination('/d/abc')).toBeNull();
+    expect(inactivitySignOutDestination('/dashboard/documents')).toBe('/login?signed_out=inactivity');
   });
 
   it('keeps an explicit saved timeout', () => {

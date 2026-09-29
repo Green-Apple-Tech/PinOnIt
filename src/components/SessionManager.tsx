@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
-import { resolveSessionTimeoutMinutes } from '../lib/sessionTimeout';
+import { inactivitySignOutDestination, resolveSessionTimeoutMinutes } from '../lib/sessionTimeout';
 import { storageGet, storageRemove, storageSet } from '../lib/safeStorage';
 
 const LAST_ACTIVITY_KEY = 'pinonit_last_activity';
@@ -26,7 +26,12 @@ export function SessionManager() {
     signingOut.current = true;
     storageRemove(LAST_ACTIVITY_KEY);
     await supabase.auth.signOut();
-    window.location.href = '/login?signed_out=inactivity';
+    const next = inactivitySignOutDestination(window.location.pathname);
+    if (!next) {
+      signingOut.current = false;
+      return;
+    }
+    window.location.href = next;
   }, []);
 
   const checkInactivity = useCallback(() => {
