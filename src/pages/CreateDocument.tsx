@@ -711,9 +711,10 @@ export function CreateDocumentPage() {
     }
   };
 
-  if (success) {
-    const link = documentViewUrl(success.token);
-    return (
+  const link = success ? documentViewUrl(success.token) : '';
+  return (
+    <>
+      {success ? (
       <main className="p-4 md:p-8 max-w-lg">
         <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 text-center">
           <CheckCircle className="h-10 w-10 mx-auto text-emerald-500" />
@@ -771,10 +772,8 @@ export function CreateDocumentPage() {
           </Link>
         </div>
       </main>
-    );
-  }
-
-  return (
+      ) : null}
+      <div hidden={success != null}>
     <main className="p-4 md:p-8 max-w-2xl pb-28 md:pb-8">
       <Link to="/dashboard/documents" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 dark:text-slate-400 dark:hover:text-white">
         <ArrowLeft className="h-4 w-4" />
@@ -1403,5 +1402,7 @@ export function CreateDocumentPage() {
         </button>
       </form>
     </main>
+      </div>
+    </>
   );
 }

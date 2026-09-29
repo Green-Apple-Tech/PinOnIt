@@ -19,6 +19,11 @@ function stripCacheBustParam() {
   }
 }
 
+function isDomNotFound(error: Error) {
+  const message = `${error.name} ${error.message}`;
+  return /NotFoundError|object can not be found here|not a child of this node|removeChild/i.test(message);
+}
+
 function isStaleDeployError(error: Error) {
   const message = `${error.name} ${error.message}`;
   return /Failed to fetch dynamically imported module|Loading chunk|Importing a module script failed|error loading dynamically imported module|Failed to load module script/i.test(
@@ -71,6 +76,21 @@ class RootErrorBoundary extends Component<{ children: ReactNode }, { error: Erro
   }
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error(error, info.componentStack);
+    if (isDomNotFound(error)) {
+      const path = window.location.pathname;
+      if (path.includes('/documents/new')) {
+        window.location.replace('/dashboard/documents');
+        return;
+      }
+      try {
+        if (sessionStorage.getItem('pinonit-dom-reload')) return;
+        sessionStorage.setItem('pinonit-dom-reload', '1');
+      } catch {
+        return;
+      }
+      window.location.reload();
+      return;
+    }
     if (!isStaleDeployError(error)) return;
     hardReloadOnce();
   }
