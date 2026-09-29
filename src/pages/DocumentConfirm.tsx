@@ -720,8 +720,10 @@ export function DocumentConfirmPage() {
         )}
 
         {requireSign && !quoteExpired && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
-          <h2 className="text-sm font-semibold">Verify your phone</h2>
+        <div className={boatDoc && !otpVerified
+          ? 'rounded-2xl border-2 border-orange-300 bg-orange-50 p-4 motion-safe:animate-softBlink'
+          : 'bg-white rounded-2xl border border-slate-200 p-5'}>
+          <h2 className={boatDoc && !otpVerified ? 'text-base font-bold text-orange-800' : 'text-sm font-semibold'}>Verify your phone</h2>
           {otpVerified ? (
             <p className="mt-2 text-sm text-emerald-700">Phone verified. You can continue below.</p>
           ) : boatNeedsCode && !boatCodeSent ? (
@@ -763,7 +765,7 @@ export function DocumentConfirmPage() {
               }}
               className="mt-3 space-y-3"
             >
-              <p className="text-sm text-slate-500">Enter your mobile number. We text a code before you sign.</p>
+              <p className="text-sm text-slate-700">Enter your mobile number. We text a code before you sign.</p>
               <input
                 type="tel"
                 inputMode="tel"
@@ -771,20 +773,20 @@ export function DocumentConfirmPage() {
                 value={boatPhone}
                 onChange={(e) => setBoatPhone(e.target.value)}
                 placeholder="305-555-0100"
-                className="w-full rounded-xl border border-slate-200 px-3 py-3 text-base"
+                className="w-full rounded-xl border-2 border-orange-200 bg-white px-3 py-3 text-base text-slate-900 placeholder:text-orange-300"
               />
               {otpError && <p className="text-sm text-red-600">{otpError}</p>}
               <button
                 type="submit"
                 disabled={otpBusy || !boatPhone.trim()}
-                className="w-full min-h-11 rounded-xl bg-indigo-600 text-white text-sm font-semibold disabled:opacity-40"
+                className="w-full min-h-11 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold disabled:opacity-40"
               >
                 {otpBusy ? 'Sending…' : 'Text me a code'}
               </button>
             </form>
           ) : (
             <form onSubmit={(e) => void handleVerifyOtp(e)} className="mt-3 space-y-3">
-              <p className="text-sm text-slate-500">{otpNotice || 'Enter the 6-digit code we texted you.'}</p>
+              <p className={boatDoc ? 'text-sm text-slate-700' : 'text-sm text-slate-500'}>{otpNotice || 'Enter the 6-digit code we texted you.'}</p>
               <input
                 type="text"
                 inputMode="numeric"
@@ -792,14 +794,16 @@ export function DocumentConfirmPage() {
                 value={otpCode}
                 onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 placeholder="000000"
-                className="w-full rounded-xl border border-slate-200 px-3 py-3 text-center tracking-[0.4em] text-lg"
+                className={boatDoc
+                  ? 'w-full rounded-xl border-2 border-orange-200 bg-white px-3 py-3 text-center tracking-[0.4em] text-lg'
+                  : 'w-full rounded-xl border border-slate-200 px-3 py-3 text-center tracking-[0.4em] text-lg'}
               />
               {otpError && <p className="text-sm text-red-600">{otpError}</p>}
               <div className="flex gap-2">
                 <button
                   type="submit"
                   disabled={otpCode.length !== 6 || otpBusy}
-                  className="flex-1 min-h-11 rounded-xl bg-indigo-600 text-white text-sm font-semibold disabled:opacity-40"
+                  className={`flex-1 min-h-11 rounded-xl text-white text-sm font-semibold disabled:opacity-40 ${boatDoc ? 'bg-orange-500 hover:bg-orange-600' : 'bg-indigo-600'}`}
                 >
                   {otpBusy ? 'Checking…' : 'Verify code'}
                 </button>
