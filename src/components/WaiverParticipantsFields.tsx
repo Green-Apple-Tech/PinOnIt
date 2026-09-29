@@ -11,6 +11,9 @@ type Props = {
   disabled?: boolean;
   title?: string;
   hint?: string;
+  /** Noun for each row, such as Person or Minor. */
+  personLabel?: string;
+  addLabel?: string;
   /** When true, the last row can be removed so the list can be empty. */
   allowEmpty?: boolean;
 };
@@ -22,6 +25,8 @@ export function WaiverParticipantsFields({
   disabled,
   title = 'People on this waiver',
   hint = `Add each person, up to ${MAX_WAIVER_PARTICIPANTS}. One signature covers everyone listed.`,
+  personLabel = 'Person',
+  addLabel = 'Add a person',
   allowEmpty = false,
 }: Props) {
   const update = (id: string, patch: Partial<WaiverParticipant>) => {
@@ -35,7 +40,7 @@ export function WaiverParticipantsFields({
       {participants.map((row, index) => (
         <div key={row.id} className="grid grid-cols-1 sm:grid-cols-[1fr_10rem_auto] gap-2 items-end">
           <label className="block">
-            <span className="text-xs font-medium text-slate-500">Person {index + 1} full name</span>
+            <span className="text-xs font-medium text-slate-500">{personLabel} {index + 1} full name</span>
             <input
               type="text"
               autoComplete="off"
@@ -79,7 +84,7 @@ export function WaiverParticipantsFields({
           onClick={() => onChange([...participants, newWaiverParticipant()])}
           className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600"
         >
-          <Plus className="h-4 w-4" /> Add a person
+          <Plus className="h-4 w-4" /> {addLabel}
         </button>
       ) : (
         <p className="text-xs text-slate-500">Maximum of {MAX_WAIVER_PARTICIPANTS} people on one signature.</p>

@@ -442,14 +442,14 @@ export function DocumentConfirmPage() {
               : isQuote
               ? 'You approved this quote.'
               : signedBoat
-              ? 'You signed. Everyone you listed is covered by your signature.'
+              ? 'You signed. The minors you listed are covered by your signature.'
               : `You have confirmed this ${typeLabel}.`}
             {doc.signed_at && !signedBoat && <span className="block mt-1">{formatDate(doc.signed_at)}</span>}
           </p>
           {signedBoat && token && (
             <div className="mt-6 text-left">
               <p className="text-sm text-slate-600">
-                Someone else on the boat who is not in your group can use this same link and sign for themselves.
+                Another adult on the boat uses this same link and signs for themselves.
               </p>
               <button
                 type="button"
@@ -623,8 +623,10 @@ export function DocumentConfirmPage() {
                       participants={participants}
                       onChange={setParticipants}
                       allowEmpty
-                      title="People on this outing"
-                      hint={`Add everyone on this outing, up to ${MAX_WAIVER_PARTICIPANTS}. Your signature covers them. Or send this same link so someone else can sign on their own.`}
+                      title="Minors in your family"
+                      personLabel="Minor"
+                      addLabel="Add a minor"
+                      hint={`Add minors in your family you can sign for, up to ${MAX_WAIVER_PARTICIPANTS}. Your signature covers them. Other adults use this same link and sign for themselves.`}
                     />
                   </div>
                 </>

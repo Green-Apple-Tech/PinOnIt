@@ -720,7 +720,7 @@ export function CreateDocumentPage() {
           <h1 className="mt-3 text-xl font-bold text-gray-900 dark:text-white">Link is ready</h1>
           <p className="mt-2 text-sm text-gray-500 dark:text-slate-400">
             {documentType === 'boat_waiver'
-              ? 'Send this one link. A guest can sign for their family, or pass the same link to someone else on the boat who signs separately.'
+              ? 'Send this one link. A guest signs for themselves and can add minors in their family. Other adults use the same link and sign separately.'
               : <>Share this link with <span className="font-medium text-gray-800 dark:text-slate-200">{recipientName}</span>.</>}
           </p>
           {success.smsStatus !== 'idle' && (
@@ -830,7 +830,7 @@ export function CreateDocumentPage() {
               </span>
               <span className="block mt-1 text-xs text-gray-500 dark:text-slate-400">
                 {openBoatLink
-                  ? 'Whoever opens the link types their name, gets a text code on their own phone, can add other people, and signs.'
+                  ? 'Whoever opens the link types their name, gets a text code on their own phone, can add minors in their family, and signs.'
                   : verificationRequired
                   ? 'They enter a 6-digit code we text to the same number, then sign and check ESIGN. Default on for waivers, NDAs, and contracts — change it per template in Settings → Docs.'
                   : 'Just send the link. They can view it, and Pay Now if you added a pay link. No signature, no extra code. Default for quotes and invoices.'}
@@ -973,7 +973,7 @@ export function CreateDocumentPage() {
             </div>
             <p className="mt-1 text-xs text-gray-400">
               {openBoatLink
-                ? 'Leave this blank. Whoever opens the link types their own name and can add other people.'
+                ? 'Leave this blank. Whoever opens the link types their own name and can add minors in their family.'
                 : isQuote
                 ? 'Optional. Fills the quote greeting; we use “Customer” if you skip it.'
                 : 'Fills [Recipient Name] in the document below as you type. Last name is optional.'}
@@ -1283,7 +1283,7 @@ export function CreateDocumentPage() {
               <p className="mb-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                 {documentType === 'boat_waiver' ? (
                   <>
-                    Replace [Vessel], [Vessel Owner/Operator], and [Date of Outing] in the text below. Whoever opens the link is not asked for those again. They type their own name and can add other people. You can also save a default in{' '}
+                    Replace [Vessel], [Vessel Owner/Operator], and [Date of Outing] in the text below. Whoever opens the link is not asked for those again. They type their own name and can add minors in their family. You can also save a default in{' '}
                     <Link to="/dashboard/settings?tab=docs" className="font-semibold text-brand-600 hover:text-brand-700">
                       Settings → Docs
                     </Link>

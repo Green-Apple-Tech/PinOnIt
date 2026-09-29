@@ -24,7 +24,7 @@ export const SMB_DOCUMENT_TYPES: DocumentTypeOption[] = [
   { id: 'nda', label: 'NDA', hint: 'Keep talks confidential', confirmationType: 'sign' },
   { id: 'waiver', label: 'Waiver', hint: 'One person signs', confirmationType: 'sign' },
   { id: 'parental_consent_waiver', label: 'Waiver (family)', hint: 'Add up to 10 names and birthdays, then sign once', confirmationType: 'sign' },
-  { id: 'boat_waiver', label: 'Waiver (boat)', hint: 'One link. Whoever opens it types their name and can add other people', confirmationType: 'sign' },
+  { id: 'boat_waiver', label: 'Waiver (boat)', hint: 'One link. The guest signs for themselves and can add minors in their family', confirmationType: 'sign' },
   { id: 'quick_addendum', label: 'Quick Addendum', hint: 'Short add-on to sign by text', confirmationType: 'sign' },
   { id: 'consent_form', label: 'Consent Form', hint: 'Record consent', confirmationType: 'sign' },
   { id: 'cancellation_policy', label: 'Cancellation Policy', hint: 'Acknowledge cancel terms', confirmationType: 'approve' },
