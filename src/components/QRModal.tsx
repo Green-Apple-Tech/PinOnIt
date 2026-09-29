@@ -10,9 +10,12 @@ interface QRModalProps {
   singleUse?: boolean;
   /** Booking-page style: larger QR, custom heading/subtitle, PNG + SVG downloads */
   variant?: 'default' | 'booking';
+  heading?: string;
+  description?: string;
+  urlLabel?: string;
 }
 
-export function QRModal({ url, title, onClose, singleUse = false, variant = 'default' }: QRModalProps) {
+export function QRModal({ url, title, onClose, singleUse = false, variant = 'default', heading, description, urlLabel }: QRModalProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [copied, setCopied] = useState(false);
   const [dataUrl, setDataUrl] = useState('');
@@ -69,17 +72,17 @@ export function QRModal({ url, title, onClose, singleUse = false, variant = 'def
     }
   };
 
-  const heading = variant === 'booking'
+  const headingText = heading ?? (variant === 'booking'
     ? 'Your booking QR code'
     : singleUse
       ? 'Single-use QR Code'
-      : 'Booking QR Code';
+      : 'Booking QR Code');
 
-  const description = variant === 'booking'
+  const descriptionText = description ?? (variant === 'booking'
     ? 'Print or share this QR code so clients can book directly from their phone'
     : singleUse
       ? 'This QR code can only be used once. After one booking it becomes invalid.'
-      : 'Anyone who scans this code will land directly on your booking page.';
+      : 'Anyone who scans this code will land directly on your booking page.');
 
   return (
     <div
@@ -99,7 +102,7 @@ export function QRModal({ url, title, onClose, singleUse = false, variant = 'def
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <p className="text-sm font-bold text-slate-900 dark:text-white leading-none">
-                  {heading}
+                  {headingText}
                 </p>
                 {singleUse && variant !== 'booking' && (
                   <span className="px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 text-[10px] font-bold rounded-full uppercase tracking-wide">
@@ -128,13 +131,13 @@ export function QRModal({ url, title, onClose, singleUse = false, variant = 'def
             </div>
           </MarketingShotFrame>
           <p className={`mt-4 text-xs text-slate-400 dark:text-slate-500 text-center leading-relaxed ${variant === 'booking' ? 'max-w-[280px]' : 'max-w-[220px]'}`}>
-            {description}
+            {descriptionText}
           </p>
         </div>
 
         {/* URL preview */}
         <div className="mx-6 mb-4 px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
-          <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-0.5">Booking URL</p>
+          <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-0.5">{urlLabel ?? 'Booking URL'}</p>
           <p className="text-xs text-slate-600 dark:text-slate-300 font-mono break-all leading-relaxed">{url}</p>
         </div>
 

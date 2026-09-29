@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle, Clock, Copy, DollarSign, Download, Eye, FileText, Plus, XCircle } from 'lucide-react';
+import { CheckCircle, Clock, Copy, DollarSign, Download, Eye, FileText, Plus, QrCode, XCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { documentsNewPath } from '../lib/documentActions';
@@ -15,6 +15,7 @@ import { HOLD_UP_COPY } from '../lib/documentCopy';
 import { quoteHostStatus } from '../lib/quoteSms';
 import type { SmbDocument, SmbDocumentStatus } from '../lib/types';
 import { HostWaiverParticipants } from '../components/HostWaiverParticipants';
+import { QRModal } from '../components/QRModal';
 import { QuestionLead } from '../components/QuestionLead';
 import { isParentalConsentWaiver } from '../lib/waiverParticipants';
 
@@ -49,6 +50,7 @@ export function DocumentsPage() {
   const [docs, setDocs] = useState<SmbDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [qrDoc, setQrDoc] = useState<SmbDocument | null>(null);
   const [certBusyId, setCertBusyId] = useState<string | null>(null);
   const [paidBusyId, setPaidBusyId] = useState<string | null>(null);
 
@@ -253,6 +255,16 @@ export function DocumentsPage() {
                     {!boatCopy && (
                       <button
                         type="button"
+                        onClick={() => setQrDoc(doc)}
+                        className="inline-flex items-center gap-1.5 min-h-10 px-3 rounded-xl border border-gray-200 dark:border-slate-700 text-sm text-gray-600 dark:text-slate-300"
+                      >
+                        <QrCode className="h-4 w-4" />
+                        QR code
+                      </button>
+                    )}
+                    {!boatCopy && (
+                      <button
+                        type="button"
                         onClick={() => void copyLink(doc.token, doc.id)}
                         className="inline-flex items-center gap-1.5 min-h-10 px-3 rounded-xl border border-gray-200 dark:border-slate-700 text-sm text-gray-600 dark:text-slate-300"
                       >
@@ -267,6 +279,16 @@ export function DocumentsPage() {
           </ul>
         )}
       </div>
+      {qrDoc && (
+        <QRModal
+          url={documentViewUrl(qrDoc.token)}
+          title={qrDoc.topic || documentTypeLabel(qrDoc.document_type, qrDoc.document_type_custom)}
+          heading="Scan to sign"
+          description="Print this and put it where people can see it. They scan with their phone and sign. No app."
+          urlLabel="Signing link"
+          onClose={() => setQrDoc(null)}
+        />
+      )}
     </main>
   );
 }

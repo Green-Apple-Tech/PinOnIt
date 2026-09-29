@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, Copy, Loader2, MessageSquare, Plus } from 'lucide-react';
+import { SigningQr } from '../components/SigningQr';
 import { useAuth } from '../hooks/useAuth';
 import { ContactAutocomplete } from '../components/ContactAutocomplete';
 import { splitContactName, type ContactPickerSelection } from '../lib/contactPicker';
@@ -146,6 +147,8 @@ export function CreateDocumentPage() {
     phone?: string;
   } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [wordingNote, setWordingNote] = useState('');
+  const [savingWording, setSavingWording] = useState(false);
   const [scopeAcked, setScopeAcked] = useState(false);
   /** Cached for the recipient signing page only — not shown on this sender form. */
   const [plainSummary, setPlainSummary] = useState('');
@@ -742,6 +745,12 @@ export function CreateDocumentPage() {
             </p>
           )}
           <p className="mt-4 text-xs font-mono break-all text-brand-600">{link}</p>
+          <SigningQr
+            url={link}
+            caption={documentType === 'boat_waiver'
+              ? 'Print this and put it on the boat. People scan and sign. This link stays in Doc Center.'
+              : 'Print this QR. People scan and sign. This link stays in Doc Center.'}
+          />
           <button
             type="button"
             onClick={() => {
@@ -1295,11 +1304,53 @@ export function CreateDocumentPage() {
               </p>
               <textarea
                 value={customText}
-                onChange={(e) => setCustomText(e.target.value)}
+                onChange={(e) => {
+                  setCustomText(e.target.value);
+                  setWordingNote('');
+                }}
                 required
                 rows={8}
                 className={`${fieldClass} min-h-[10rem] font-mono text-sm leading-relaxed`}
               />
+              <button
+                type="button"
+                disabled={savingWording || !customText.trim() || !user?.id}
+                onClick={() => {
+                  if (!user?.id || !customText.trim()) return;
+                  setSavingWording(true);
+                  setWordingNote('');
+                  void supabase.from('host_document_templates').upsert(
+                    {
+                      host_id: user.id,
+                      document_type: documentType,
+                      full_text: customText.trim(),
+                      updated_at: new Date().toISOString(),
+                    },
+                    { onConflict: 'host_id,document_type' },
+                  ).then(({ error: saveErr }) => {
+                    setSavingWording(false);
+                    if (saveErr) {
+                      setWordingNote(saveErr.message);
+                      return;
+                    }
+                    setHostOverrides((prev) => {
+                      const next = prev.filter((row) => row.document_type !== documentType);
+                      return [...next, {
+                        host_id: user.id,
+                        document_type: documentType,
+                        full_text: customText.trim(),
+                      } as HostDocumentTemplate];
+                    });
+                    setWordingNote('Saved. The next document of this type starts with this wording.');
+                  });
+                }}
+                className="mt-3 inline-flex items-center justify-center min-h-10 px-3 rounded-xl border border-gray-200 dark:border-slate-700 text-sm font-semibold text-gray-700 dark:text-slate-200 disabled:opacity-40"
+              >
+                {savingWording ? 'Saving…' : 'Save this wording'}
+              </button>
+              {wordingNote && (
+                <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">{wordingNote}</p>
+              )}
             </label>
           </div>
         ) : !isUpload && selectedTemplate ? (
