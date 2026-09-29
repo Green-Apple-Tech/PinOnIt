@@ -66,7 +66,8 @@
 /r  /index.html  200
 /r/*  /index.html  200
 /d  /index.html  200
-/d/*  /index.html  200
+# Signing links. iMessage reads this HTML, not the React page.
+/d/:token  /.netlify/functions/document-shell?token=:token  200!
 /embed.js  /embed.js  200
 
 # Host booking slugs — Netlify function rewrites Supabase HTML to text/html
