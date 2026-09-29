@@ -237,10 +237,12 @@
   from = "/d"
   to = "/index.html"
   status = 200
+# Signing links. iMessage reads this HTML, not the React page.
 [[redirects]]
-  from = "/d/*"
-  to = "/index.html"
+  from = "/d/:token"
+  to = "/.netlify/functions/document-shell?token=:token"
   status = 200
+  force = true
 [[redirects]]
   from = "/c"
   to = "/index.html"
