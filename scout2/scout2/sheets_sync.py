@@ -339,7 +339,11 @@ def sync_leads_to_sheets(rows: list[dict] | None = None) -> dict:
     full = rows is None
     if full:
         rows = fetch_all(get_client())
-    if (settings().get("google_sheets_webapp_url") or "").strip() and not _sa_path():
+    webapp_ready = bool(
+        (settings().get("google_sheets_webapp_url") or "").strip()
+        and (settings().get("google_sheets_webhook_secret") or "").strip()
+    )
+    if webapp_ready and not _sa_path():
         try:
             return _sync_via_webapp(rows, full=full)
         except Exception as e:
@@ -367,6 +371,13 @@ def sync_leads_to_sheets(rows: list[dict] | None = None) -> dict:
             "total": len(rows),
         }
     except Exception as e:
+        # The service account can read the sheet and still be blocked from writing
+        # when it is only a viewer. The Apps Script web app runs as the owner.
+        if webapp_ready and ("403" in str(e) or "permission" in str(e).lower()):
+            try:
+                return _sync_via_webapp(rows, full=full)
+            except Exception as web_e:
+                return {"skipped": True, "error": f"{e}; webapp: {web_e}", "via": "webapp"}
         return {"skipped": True, "error": str(e)}
 
 

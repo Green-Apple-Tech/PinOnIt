@@ -28,7 +28,7 @@ DROP_LOCAL = frozenset(
         "webmaster",
     }
 )
-from .tool_detect import SCAN_PATHS, merge_tool_flags, note_flags
+from .tool_detect import SCAN_PATHS, merge_tool_flags, remember_flags
 PHONE_RE = re.compile(
     r"(?:\+1[\s.-]?)?(?:\(?\d{3}\)?[\s.-]?)\d{3}[\s.-]?\d{4}"
 )
@@ -142,7 +142,7 @@ async def run_extract(limit: int = 100) -> dict:
                         phone = phones_from_html(html)
             flags = merge_tool_flags(pages)
             flags["_domain"] = domain
-            note_flags(row, flags)
+            remember_flags(domain, flags)
             email, email_rank = pick_best(all_emails, domain)
             payload = {
                 "domain": domain,

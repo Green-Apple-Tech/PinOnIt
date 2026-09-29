@@ -188,10 +188,16 @@ def flags_for(domain: str) -> dict:
 
 
 def note_flags(stats: object, flags: dict) -> None:
-    bucket = getattr(stats, "tool_flags", None)
-    if bucket is None:
-        bucket = {"calendly": 0, "docusign": 0, "waiver": 0}
-        setattr(stats, "tool_flags", bucket)
+    if isinstance(stats, dict):
+        bucket = stats.get("tool_flags")
+        if not isinstance(bucket, dict):
+            bucket = {"calendly": 0, "docusign": 0, "waiver": 0}
+            stats["tool_flags"] = bucket
+    else:
+        bucket = getattr(stats, "tool_flags", None)
+        if bucket is None:
+            bucket = {"calendly": 0, "docusign": 0, "waiver": 0}
+            setattr(stats, "tool_flags", bucket)
     if flags.get("uses_calendly") == "Y":
         bucket["calendly"] += 1
     if flags.get("uses_docusign") == "Y":
