@@ -78,7 +78,7 @@ Deno.serve(async (req: Request) => {
   const sms = await sendTwilioSmsGuarded(
     admin,
     to,
-    `Hi ${result.recipient_name || 'there'}, your PinOnIt verification code is ${result.code}. It expires in 10 minutes.`,
+    `Your PinOnIt verification code is ${result.code}. It expires in 10 minutes.`,
   );
   if (!sms.ok) {
     if (sms.skipped === 'opted_out') {

@@ -642,7 +642,7 @@ export function CreateDocumentPage() {
       topic: resolvedTopic,
       custom_text: isUpload ? null : (bodyForSave || null),
       status: 'pending',
-      verification_required: verificationRequired,
+      verification_required: documentType === 'boat_waiver' ? true : verificationRequired,
       line_items: lineItems,
       tax_percent: isMoney ? Number(taxPercent) || 0 : 0,
       notes: isMoney ? notes.trim() || null : null,
@@ -830,7 +830,7 @@ export function CreateDocumentPage() {
               </span>
               <span className="block mt-1 text-xs text-gray-500 dark:text-slate-400">
                 {openBoatLink
-                  ? 'Whoever opens the link types their name, can add other people, and signs. No text code.'
+                  ? 'Whoever opens the link types their name, gets a text code on their own phone, can add other people, and signs.'
                   : verificationRequired
                   ? 'They enter a 6-digit code we text to the same number, then sign and check ESIGN. Default on for waivers, NDAs, and contracts — change it per template in Settings → Docs.'
                   : 'Just send the link. They can view it, and Pay Now if you added a pay link. No signature, no extra code. Default for quotes and invoices.'}

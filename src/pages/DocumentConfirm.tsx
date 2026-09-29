@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+import { normalizePhoneE164 } from '../lib/phone';
 import { AlertCircle, CheckCircle, Lock, PenLine, RotateCcw } from 'lucide-react';
 import {
   CONTRACT_HOST_HINT,
@@ -80,6 +82,8 @@ export function DocumentConfirmPage() {
   const [showDecline, setShowDecline] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
   const [otpCode, setOtpCode] = useState('');
+  const [boatPhone, setBoatPhone] = useState('');
+  const [boatCodeSent, setBoatCodeSent] = useState(false);
   const [otpBusy, setOtpBusy] = useState(false);
   const [otpNotice, setOtpNotice] = useState('');
   const [otpError, setOtpError] = useState('');
@@ -154,7 +158,7 @@ export function DocumentConfirmPage() {
       }
 
       if (isBoatWaiver(data.document_type)) {
-        setOtpVerified(true);
+        if (data.otp_verified) setOtpVerified(true);
       } else if (verificationOn(data) && !data.otp_verified) {
         const otp = await sendDocumentOtp(consentToken);
         if (otp.data?.already_verified) {
@@ -253,9 +257,8 @@ export function DocumentConfirmPage() {
   async function handleConfirm() {
     if (!token || !doc) return;
     const requireSign = verificationOn(doc) || isBoatWaiver(doc.document_type);
-    const skipPhoneCheck = isBoatWaiver(doc.document_type);
     if (!requireSign) return;
-    if (requireSign && !otpVerified && !skipPhoneCheck) return;
+    if (requireSign && !otpVerified) return;
     const needsMark = doc.confirmation_type !== 'confirm_receipt';
     if (needsMark && !hasMarked) return;
     if (!esignConsent) return;
@@ -473,8 +476,8 @@ export function DocumentConfirmPage() {
   }
 
   const requireSign = doc ? (verificationOn(doc) || isBoatWaiver(doc.document_type)) : true;
-  const skipPhoneCheck = Boolean(doc && isBoatWaiver(doc.document_type));
-  const otpReady = !requireSign || otpVerified || skipPhoneCheck;
+  const boatNeedsCode = Boolean(doc && isBoatWaiver(doc.document_type) && !otpVerified);
+  const otpReady = !requireSign || otpVerified;
   const confirmLabel =
     doc?.document_type === 'quote'
       ? 'Approve'
@@ -713,11 +716,69 @@ export function DocumentConfirmPage() {
           </div>
         )}
 
-        {requireSign && !skipPhoneCheck && !quoteExpired && (
+        {requireSign && !quoteExpired && (
         <div className="bg-white rounded-2xl border border-slate-200 p-5">
           <h2 className="text-sm font-semibold">Verify your phone</h2>
           {otpVerified ? (
             <p className="mt-2 text-sm text-emerald-700">Phone verified. You can continue below.</p>
+          ) : boatNeedsCode && !boatCodeSent ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!token || otpBusy) return;
+                const phone = normalizePhoneE164(boatPhone);
+                if (!phone) {
+                  setOtpError('Enter a valid mobile number.');
+                  return;
+                }
+                setOtpError('');
+                setOtpBusy(true);
+                void (async () => {
+                  const saved = await supabase.rpc('set_boat_signer_phone', { p_token: token, p_phone: phone });
+                  const savedRow = saved.data as { ok?: boolean; error?: string; already_verified?: boolean } | null;
+                  if (saved.error || !savedRow?.ok) {
+                    setOtpError(saved.error?.message ?? savedRow?.error ?? 'Could not use that number');
+                    setOtpBusy(false);
+                    return;
+                  }
+                  if (savedRow.already_verified) {
+                    setOtpVerified(true);
+                    setOtpBusy(false);
+                    return;
+                  }
+                  const otp = await sendDocumentOtp(token, true);
+                  if (otp.data?.already_verified) {
+                    setOtpVerified(true);
+                  } else if (otp.error || !otp.data?.ok) {
+                    setOtpError(otp.error?.message ?? otp.data?.error ?? 'Could not text a code');
+                  } else {
+                    setBoatCodeSent(true);
+                    setOtpNotice('We texted a 6-digit code to your phone. It expires in 10 minutes.');
+                  }
+                  setOtpBusy(false);
+                })();
+              }}
+              className="mt-3 space-y-3"
+            >
+              <p className="text-sm text-slate-500">Enter your mobile number. We text a code before you sign.</p>
+              <input
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                value={boatPhone}
+                onChange={(e) => setBoatPhone(e.target.value)}
+                placeholder="305-555-0100"
+                className="w-full rounded-xl border border-slate-200 px-3 py-3 text-base"
+              />
+              {otpError && <p className="text-sm text-red-600">{otpError}</p>}
+              <button
+                type="submit"
+                disabled={otpBusy || !boatPhone.trim()}
+                className="w-full min-h-11 rounded-xl bg-indigo-600 text-white text-sm font-semibold disabled:opacity-40"
+              >
+                {otpBusy ? 'Sending…' : 'Text me a code'}
+              </button>
+            </form>
           ) : (
             <form onSubmit={(e) => void handleVerifyOtp(e)} className="mt-3 space-y-3">
               <p className="text-sm text-slate-500">{otpNotice || 'Enter the 6-digit code we texted you.'}</p>

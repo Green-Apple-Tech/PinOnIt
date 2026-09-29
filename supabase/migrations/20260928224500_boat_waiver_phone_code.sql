@@ -1,29 +1,60 @@
--- Store extra people on a boat waiver, and keep the same link open for the next guest.
+-- Each person on a shared boat waiver texts a code to their own phone, then signs.
 
-ALTER TABLE public.documents
-  ADD COLUMN IF NOT EXISTS parent_guardian_name text,
-  ADD COLUMN IF NOT EXISTS parent_guardian_email text,
-  ADD COLUMN IF NOT EXISTS parental_consent_text text;
+CREATE OR REPLACE FUNCTION public.set_boat_signer_phone(p_token text, p_phone text)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_row public.documents%ROWTYPE;
+  v_phone text;
+BEGIN
+  IF p_token IS NULL OR btrim(p_token) = '' THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'token required');
+  END IF;
 
+  v_phone := NULLIF(btrim(COALESCE(p_phone, '')), '');
+  IF v_phone IS NULL OR length(regexp_replace(v_phone, '\D', '', 'g')) < 10 THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'Enter a valid mobile number.');
+  END IF;
 
+  SELECT * INTO v_row
+  FROM public.documents
+  WHERE token = p_token
+  FOR UPDATE;
 
-CREATE TABLE IF NOT EXISTS public.document_waiver_participants (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  document_id uuid NOT NULL REFERENCES public.documents(id) ON DELETE CASCADE,
-  full_name text NOT NULL,
-  date_of_birth date NOT NULL,
-  sort_order int NOT NULL DEFAULT 0,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'not found');
+  END IF;
 
-CREATE INDEX IF NOT EXISTS document_waiver_participants_doc_idx
-  ON public.document_waiver_participants (document_id);
+  IF v_row.document_type IS DISTINCT FROM 'boat_waiver'
+     OR COALESCE(v_row.document_type_custom, '') = 'boat-waiver-signed-copy' THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'not a shared boat waiver');
+  END IF;
 
-ALTER TABLE public.document_waiver_participants ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON TABLE public.document_waiver_participants FROM PUBLIC, anon, authenticated;
-GRANT ALL ON TABLE public.document_waiver_participants TO service_role;
+  IF v_row.status IN ('signed', 'paid', 'declined') THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'this link is not open');
+  END IF;
 
-DROP FUNCTION IF EXISTS public.record_document_event(text, text, text, text, text, text, text, text, text);
+  IF v_row.otp_verified THEN
+    RETURN jsonb_build_object('ok', true, 'already_verified', true);
+  END IF;
+
+  UPDATE public.documents
+  SET
+    recipient_phone = v_phone,
+    otp_code = NULL,
+    otp_expires_at = NULL,
+    otp_issued_at = NULL,
+    otp_attempts = 0
+  WHERE token = p_token;
+
+  RETURN jsonb_build_object('ok', true);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.set_boat_signer_phone(text, text) TO anon, authenticated;
 
 CREATE OR REPLACE FUNCTION public.record_document_event(
   p_token text,
@@ -260,80 +291,85 @@ $$;
 GRANT EXECUTE ON FUNCTION public.record_document_event(text, text, text, text, text, text, text, text, text, text, text, text, jsonb)
   TO anon, authenticated;
 
--- Older app builds call the 9-argument version. Keep that path working.
-CREATE OR REPLACE FUNCTION public.record_document_event(
-  p_token text,
-  p_action text,
-  p_signature_data text,
-  p_ip text,
-  p_user_agent text,
-  p_esign_consent_text text,
-  p_document_snapshot_text text,
-  p_document_sha256 text,
-  p_timezone text
-)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  RETURN public.record_document_event(
-    p_token,
-    p_action,
-    p_signature_data,
-    p_ip,
-    p_user_agent,
-    p_esign_consent_text,
-    p_document_snapshot_text,
-    p_document_sha256,
-    p_timezone,
-    NULL,
-    NULL,
-    NULL,
-    NULL
-  );
-END;
-$$;
 
-GRANT EXECUTE ON FUNCTION public.record_document_event(text, text, text, text, text, text, text, text, text)
-  TO anon, authenticated;
+UPDATE public.documents
+SET verification_required = true
+WHERE document_type = 'boat_waiver'
+  AND COALESCE(document_type_custom, '') IS DISTINCT FROM 'boat-waiver-signed-copy'
+  AND status IN ('pending', 'viewed');
 
-CREATE OR REPLACE FUNCTION public.get_document_waiver_participants(p_document_id uuid)
+CREATE OR REPLACE FUNCTION public.issue_document_otp(p_token text, p_force boolean DEFAULT false)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_sender uuid;
-  v_out jsonb;
+  v_row public.documents%ROWTYPE;
+  v_code text;
+  v_name text;
 BEGIN
-  IF auth.uid() IS NULL THEN
-    RETURN '[]'::jsonb;
+  IF p_token IS NULL OR btrim(p_token) = '' THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'token required');
   END IF;
 
-  SELECT sender_id INTO v_sender
+  SELECT * INTO v_row
   FROM public.documents
-  WHERE id = p_document_id;
+  WHERE token = p_token
+  FOR UPDATE;
 
-  IF v_sender IS NULL OR v_sender IS DISTINCT FROM auth.uid() THEN
-    RETURN '[]'::jsonb;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'not found');
   END IF;
 
-  SELECT COALESCE(jsonb_agg(jsonb_build_object(
-    'full_name', full_name,
-    'date_of_birth', date_of_birth,
-    'sort_order', sort_order
-  ) ORDER BY sort_order), '[]'::jsonb)
-  INTO v_out
-  FROM public.document_waiver_participants
-  WHERE document_id = p_document_id;
+  IF COALESCE(v_row.verification_required, false) IS NOT TRUE THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'SMS verification is not required for this document', 'send', false);
+  END IF;
 
-  RETURN v_out;
+  IF v_row.status = 'signed' OR v_row.status = 'paid' OR v_row.otp_verified THEN
+    RETURN jsonb_build_object('ok', true, 'already_verified', true, 'send', false);
+  END IF;
+
+  IF p_force AND v_row.otp_issued_at IS NOT NULL AND v_row.otp_issued_at > now() - interval '30 seconds' THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'Please wait a few seconds before requesting a new code');
+  END IF;
+
+  IF NOT p_force
+     AND v_row.otp_code IS NOT NULL
+     AND v_row.otp_expires_at IS NOT NULL
+     AND v_row.otp_expires_at > now() THEN
+    RETURN jsonb_build_object(
+      'ok', true,
+      'already_verified', false,
+      'send', false,
+      'recipient_name', v_row.recipient_name
+    );
+  END IF;
+
+  v_code := lpad(floor(random() * 1000000)::int::text, 6, '0');
+
+  UPDATE public.documents
+  SET
+    otp_code = v_code,
+    otp_expires_at = now() + interval '10 minutes',
+    otp_issued_at = now(),
+    otp_attempts = 0
+  WHERE token = p_token;
+
+  v_name := NULLIF(btrim(COALESCE(v_row.recipient_name, '')), '');
+  IF v_name = 'Anyone with the link' THEN
+    v_name := NULL;
+  END IF;
+
+  RETURN jsonb_build_object(
+    'ok', true,
+    'already_verified', false,
+    'send', true,
+    'code', v_code,
+    'recipient_name', v_name,
+    'recipient_phone', v_row.recipient_phone
+  );
 END;
 $$;
-
-GRANT EXECUTE ON FUNCTION public.get_document_waiver_participants(uuid) TO authenticated;
 
 NOTIFY pgrst, 'reload schema';
