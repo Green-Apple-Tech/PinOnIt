@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { clearClientOnboardingState, clearStaleOnboardingLocalState, markOnboardingCompletedLocal, clearWizardLocal } from '../lib/onboardingState';
 import { storageGet, storageRemove } from '../lib/safeStorage';
 import { persistSignupAttribution } from '../lib/campaignAttribution';
+import { recordSessionActivity } from '../lib/sessionTimeout';
 import {
   clearOauthInflight,
   isConsumedOauthCodeError,
@@ -101,6 +102,7 @@ export function AuthCallback() {
     let cancelled = false;
 
     const handleSession = async (userId: string) => {
+      recordSessionActivity();
       void persistSignupAttribution(userId).catch(() => undefined);
       let completed = true;
       let wizardActive = false;

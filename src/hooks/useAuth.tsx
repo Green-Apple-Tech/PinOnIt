@@ -8,6 +8,7 @@ import { pickBestSubscription } from '../lib/plan';
 import type { Profile, Subscription } from '../lib/types';
 import { persistSignupAttribution } from '../lib/campaignAttribution';
 import { storageSet } from '../lib/safeStorage';
+import { recordSessionActivity } from '../lib/sessionTimeout';
 import { clearOauthStart, claimOauthStart, oauthCallbackRedirect } from '../lib/oauthLogin';
 
 interface AuthContextType {
@@ -127,6 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (!error) recordSessionActivity();
     return { error: error?.message ?? null };
   };
 

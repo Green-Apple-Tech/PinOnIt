@@ -40,10 +40,9 @@ export default defineConfig({
         // Static hashed assets only. Never precache HTML (SPA shell, seo-static, guest pages).
         globPatterns: ['assets/**/*.{js,css}', 'pinonit_logo.png'],
         globIgnores: ['**/seo-static/**', '**/embed.js', '**/screenshots/**', '**/Screenshot*'],
-        // Plugin defaults navigateFallback to index.html; deny every navigation so
-        // /d /q /r /c /s /poll, prerendered intent pages, and API/Supabase stay on the network.
-        navigateFallback: 'index.html',
-        navigateFallbackDenylist: [/.*/],
+        // Plugin defaults navigateFallback to index.html. That file is not precached,
+        // so the service worker throws and reloads login in the middle of Google sign-in.
+        navigateFallback: null,
         runtimeCaching: [],
         cleanupOutdatedCaches: true,
         skipWaiting: true,

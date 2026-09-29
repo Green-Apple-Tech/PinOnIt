@@ -4,6 +4,7 @@ import {
   inactivitySignOutDestination,
   resolveSessionTimeoutMinutes,
   sessionTimeoutOptionValue,
+  signedInTooRecently,
 } from './sessionTimeout';
 
 describe('session timeout', () => {
@@ -20,6 +21,17 @@ describe('session timeout', () => {
   it('leaves a guest waiver link open when the host session times out', () => {
     expect(inactivitySignOutDestination('/d/abc')).toBeNull();
     expect(inactivitySignOutDestination('/dashboard/documents')).toBe('/login?signed_out=inactivity');
+  });
+
+  it('does not sign out a session that is still on the login or Google callback page', () => {
+    expect(inactivitySignOutDestination('/login')).toBeNull();
+    expect(inactivitySignOutDestination('/auth/callback')).toBeNull();
+  });
+
+  it('treats a sign-in from the last two minutes as active', () => {
+    const now = Date.parse('2026-09-29T18:00:00.000Z');
+    expect(signedInTooRecently(new Date(now - 30_000).toISOString(), now)).toBe(true);
+    expect(signedInTooRecently(new Date(now - 20 * 60_000).toISOString(), now)).toBe(false);
   });
 
   it('keeps an explicit saved timeout', () => {

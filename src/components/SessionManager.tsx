@@ -1,8 +1,8 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
-import { inactivitySignOutDestination, resolveSessionTimeoutMinutes } from '../lib/sessionTimeout';
-import { storageGet, storageRemove, storageSet } from '../lib/safeStorage';
+import { inactivitySignOutDestination, recordSessionActivity, resolveSessionTimeoutMinutes, signedInTooRecently } from '../lib/sessionTimeout';
+import { storageGet, storageRemove } from '../lib/safeStorage';
 
 const LAST_ACTIVITY_KEY = 'pinonit_last_activity';
 
@@ -12,10 +12,6 @@ function readLastActivity(): number {
   return Number.isFinite(parsed) ? parsed : Date.now();
 }
 
-function touchActivity() {
-  storageSet(LAST_ACTIVITY_KEY, String(Date.now()));
-}
-
 export function SessionManager() {
   const { user, profile, loading } = useAuth();
   const timeoutMinutes = resolveSessionTimeoutMinutes(profile?.session_timeout_minutes);
@@ -23,19 +19,20 @@ export function SessionManager() {
 
   const signOutForInactivity = useCallback(async () => {
     if (signingOut.current) return;
+    const next = inactivitySignOutDestination(window.location.pathname);
+    if (!next) return;
     signingOut.current = true;
     storageRemove(LAST_ACTIVITY_KEY);
     await supabase.auth.signOut();
-    const next = inactivitySignOutDestination(window.location.pathname);
-    if (!next) {
-      signingOut.current = false;
-      return;
-    }
     window.location.href = next;
   }, []);
 
   const checkInactivity = useCallback(() => {
     if (!user || loading || !timeoutMinutes || timeoutMinutes <= 0) return;
+    if (signedInTooRecently(user.last_sign_in_at)) {
+      recordSessionActivity();
+      return;
+    }
     const elapsed = Date.now() - readLastActivity();
     if (elapsed > timeoutMinutes * 60 * 1000) {
       void signOutForInactivity();
@@ -46,7 +43,7 @@ export function SessionManager() {
     if (!user || loading) return;
 
     if (!storageGet(LAST_ACTIVITY_KEY)) {
-      touchActivity();
+      recordSessionActivity();
     }
 
     checkInactivity();
@@ -58,7 +55,7 @@ export function SessionManager() {
       const now = Date.now();
       if (now - lastTouchWrite < 5000) return;
       lastTouchWrite = now;
-      touchActivity();
+      recordSessionActivity(now);
     };
 
     for (const evt of events) {
