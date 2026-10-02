@@ -258,7 +258,7 @@ export function SignNowSendPage() {
         <main className="p-4 md:p-8 max-w-2xl pb-28 md:pb-8">
           <Link to="/sign-now" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 dark:text-slate-400 dark:hover:text-white">
             <ArrowLeft className="h-4 w-4" />
-            Sign one page by text
+            Sign your doc by text
           </Link>
           <h1 className="mt-4 text-2xl font-bold text-gray-900 dark:text-white">Sign a document now</h1>
           <p className="mt-2 text-sm text-gray-600 dark:text-slate-300">

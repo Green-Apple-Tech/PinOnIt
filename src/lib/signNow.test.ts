@@ -70,7 +70,7 @@ describe('SignNowPage', () => {
     const html = renderToStaticMarkup(
       createElement(MemoryRouter, null, createElement(SignNowPage)),
     );
-    expect(html).toContain('Sign one page by text');
+    expect(html).toContain('Sign your doc by text');
     expect(html).toContain('Sign a document now');
     expect(html).toContain(`/signup?next=${encodeURIComponent(SIGN_NOW_SEND_PATH)}`);
     expect(html).toContain('the way Calendly does');

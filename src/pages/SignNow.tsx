@@ -20,7 +20,7 @@ export function SignNowPage() {
   const ctaTo = user ? SIGN_NOW_SEND_PATH : signNowSignupHref();
 
   usePageMeta({
-    title: 'Sign one page by text | PinOnIt',
+    title: 'Sign your doc by text | PinOnIt',
     description:
       'Text a one-page document. They tap the link, enter a code, and sign. No app and no account for them. PinOnIt also books appointments from a link.',
     url: 'https://pinonit.com/sign-now',
@@ -64,7 +64,7 @@ export function SignNowPage() {
             Sign it now
           </p>
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight leading-[1.08] mb-6">
-            Sign one page by text
+            Sign your doc by text
           </h1>
           <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed mb-8">
             They tap the link, enter a code, and sign with a finger. No app and no account on their end. Simple documents can be signed in as little as 10 seconds.

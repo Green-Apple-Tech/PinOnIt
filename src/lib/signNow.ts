@@ -1,4 +1,4 @@
-/** Public page for “sign one page by text.” */
+/** Public page for “sign your doc by text.” */
 export const SIGN_NOW_PATH = '/sign-now';
 
 /** Signed-in send screen. One page, one signer. */
