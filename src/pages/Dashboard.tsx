@@ -27,6 +27,7 @@ import {
   EXAMPLE_PAID_CONSULTATION_NAME,
   isExamplePaidConsultation,
 } from '../lib/eventTypes';
+import { isSignNowSendPath } from '../lib/signNow';
 type NavItem = {
   to: string;
   icon: typeof LayoutGrid;
@@ -505,6 +506,10 @@ export function Dashboard() {
   // Auto-show wizard only for genuinely new users — runs once after ALL data has loaded
   useEffect(() => {
     if (wizardChecked || !profile || loading || !subscriptionLoaded) return;
+    if (isSignNowSendPath(location.pathname, location.search)) {
+      if (showWizard) setShowWizard(false);
+      return;
+    }
     setWizardChecked(true);
 
     const isActivePro = isActivePlan(effectivePlan(subscription, profile));
@@ -538,7 +543,7 @@ export function Dashboard() {
     }
 
     setShowWizard(true);
-  }, [profile, subscription, subscriptionLoaded, loading, wizardChecked, showWizard, wizardUserRequested, calendarCount, services]);
+  }, [profile, subscription, subscriptionLoaded, loading, wizardChecked, showWizard, wizardUserRequested, calendarCount, services, location.pathname, location.search]);
 
   // Hide setup checklist and mark onboarding complete when all steps are done
   useEffect(() => {

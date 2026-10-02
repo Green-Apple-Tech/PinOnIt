@@ -258,6 +258,7 @@ const extraSitemap: Array<{ loc: string; changefreq: string; priority: string }>
   ...BLOG_POSTS.map((p) => ({ loc: p.canonical, changefreq: 'monthly', priority: '0.5' })),
   { loc: `${PINONIT_ORG.url}/why-pinonit`, changefreq: 'monthly', priority: '0.7' },
   { loc: `${PINONIT_ORG.url}/legal-templates`, changefreq: 'monthly', priority: '0.6' },
+  { loc: `${PINONIT_ORG.url}/sign-now`, changefreq: 'monthly', priority: '0.8' },
   { loc: `${PINONIT_ORG.url}/nda`, changefreq: 'monthly', priority: '0.6' },
   { loc: `${PINONIT_ORG.url}/reminders`, changefreq: 'monthly', priority: '0.6' },
   { loc: `${PINONIT_ORG.url}/terms`, changefreq: 'yearly', priority: '0.3' },

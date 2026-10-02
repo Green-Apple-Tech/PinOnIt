@@ -186,6 +186,10 @@
   to = "/seo-static/blog/collecting-a-waiver-on-a-phone-at-check-in.html"
   status = 200
 [[redirects]]
+  from = "/sign-now"
+  to = "/index.html"
+  status = 200
+[[redirects]]
   from = "/nda"
   to = "/index.html"
   status = 200

@@ -18,6 +18,7 @@ import { StatusPage } from './pages/Status';
 import { NotFoundPage } from './pages/NotFound';
 import { SessionManager } from './components/SessionManager';
 import { CampaignLandingPage } from './pages/CampaignLandingPage';
+import { SignNowPage } from './pages/SignNow';
 import { captureCampaignParams } from './lib/campaignAttribution';
 import { logMarketingVisit } from './lib/marketingVisits';
 import { GuestNoIndex } from './components/GuestNoIndex';
@@ -76,6 +77,15 @@ const DocumentsPage = lazy(() =>
 const CreateDocumentPage = lazy(() =>
   import('./pages/CreateDocument').then((m) => ({ default: m.CreateDocumentPage })),
 );
+const SignNowSendPage = lazy(() =>
+  import('./pages/SignNowSend').then((m) => ({ default: m.SignNowSendPage })),
+);
+
+function DocumentsNewRoute() {
+  const [params] = useSearchParams();
+  const page = params.get('signNow') === '1' ? <SignNowSendPage /> : <CreateDocumentPage />;
+  return <Suspense fallback={<DashboardFallback />}>{page}</Suspense>;
+}
 const DocumentConfirmPage = lazy(() =>
   import('./pages/DocumentConfirm').then((m) => ({ default: m.DocumentConfirmPage })),
 );
@@ -174,6 +184,7 @@ function App() {
               <Route key={page.path} path={page.path} element={<SeoIntentPage />} />
             ))}
             <Route path="/calendly-alternative-for-small-business" element={<Navigate to="/calendly-alternative" replace />} />
+            <Route path="/sign-now" element={<SignNowPage />} />
             <Route path="/nda" element={<CampaignLandingPage slug="nda" />} />
             <Route path="/reminders" element={<CampaignLandingPage slug="reminders" />} />
             <Route path="/why-pinonit" element={<WhyPinOnItPage />} />
@@ -250,7 +261,7 @@ function App() {
               <Route path="quotes" element={<Navigate to="/dashboard/documents" replace />} />
               <Route path="quotes/new" element={<Navigate to="/dashboard/documents/new?type=quote" replace />} />
               <Route path="documents" element={<DocumentsPage />} />
-              <Route path="documents/new" element={<CreateDocumentPage />} />
+              <Route path="documents/new" element={<DocumentsNewRoute />} />
               <Route path="marketing-traffic" element={<MarketingTrafficPage />} />
             </Route>
             <Route path="/documents" element={<PreserveSearchRedirect to="/dashboard/documents" />} />

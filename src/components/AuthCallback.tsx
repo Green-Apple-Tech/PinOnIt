@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { clearClientOnboardingState, clearStaleOnboardingLocalState, markOnboardingCompletedLocal, clearWizardLocal } from '../lib/onboardingState';
 import { storageGet, storageRemove } from '../lib/safeStorage';
 import { persistSignupAttribution } from '../lib/campaignAttribution';
+import { postLoginDestination } from '../lib/signNow';
 import { recordSessionActivity } from '../lib/sessionTimeout';
 import {
   clearOauthInflight,
@@ -120,9 +121,7 @@ export function AuthCallback() {
       }
       if (cancelled) return;
       const redirect = getPostLoginRedirect();
-      const next = !completed
-        ? '/dashboard?onboarding=1'
-        : redirect;
+      const next = postLoginDestination(redirect, completed);
       if (!completed) {
         if (wizardActive) {
           clearStaleOnboardingLocalState();
