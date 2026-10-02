@@ -6,7 +6,6 @@ import { usePageMeta } from '../lib/pageMeta';
 import { PINONIT_PRICE_MONTHLY } from '../lib/seoIdentity';
 import { SIGN_NOW_SEND_PATH, signNowLoginHref, signNowSignupHref } from '../lib/signNow';
 import { TRIAL_FRICTION_LINE } from '../lib/marketingLanding';
-import { MarketingStickyHeader } from '../components/landing/MarketingAnnouncementBar';
 
 const STEPS = [
   'Create your account.',
@@ -29,7 +28,7 @@ export function SignNowPage() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white">
-      <MarketingStickyHeader>
+      <header className="sticky top-0 z-50">
         <nav className="bg-white/95 dark:bg-slate-950/95 backdrop-blur border-b border-slate-200 dark:border-slate-800">
           <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
             <Link to="/" className="shrink-0" aria-label="PinOnIt home">
@@ -53,7 +52,7 @@ export function SignNowPage() {
             </div>
           </div>
         </nav>
-      </MarketingStickyHeader>
+      </header>
 
       <section className="relative overflow-hidden pt-16 pb-20 px-6">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">

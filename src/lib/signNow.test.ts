@@ -74,6 +74,7 @@ describe('SignNowPage', () => {
     expect(html).toContain('Sign a document now');
     expect(html).toContain(`/signup?next=${encodeURIComponent(SIGN_NOW_SEND_PATH)}`);
     expect(html).toContain('the way Calendly does');
+    expect(html).not.toContain('Switching from Calendly');
     expect(html).toContain('href="/calendly-alternative"');
   });
 });
