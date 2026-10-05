@@ -5,8 +5,10 @@ import {
   isConsumedOauthCodeError,
   isIosIsolatedWebView,
   isOauthReturnUrl,
+  cleanProviderAuthUrl,
   oauthAccountPickerParams,
   oauthCallbackRedirect,
+  resolveProviderAuthUrl,
 } from './oauthLogin';
 
 describe('isOauthReturnUrl', () => {
@@ -36,6 +38,39 @@ describe('oauthAccountPickerParams', () => {
       login_hint: 'a@b.com',
       prompt: 'select_account',
     });
+  });
+});
+
+describe('cleanProviderAuthUrl', () => {
+  it('drops the leaked return address that makes iPhone Google return 400', () => {
+    const raw =
+      'https://accounts.google.com/o/oauth2/v2/auth?client_id=client&redirect_to=https%3A%2F%2Fpinonit.com%2Fauth%2Fcallback&redirect_uri=https%3A%2F%2Fexample.supabase.co%2Fauth%2Fv1%2Fcallback&response_type=code&scope=email+profile&state=abc';
+    const cleaned = new URL(cleanProviderAuthUrl(raw));
+    expect(cleaned.searchParams.get('redirect_to')).toBeNull();
+    expect(cleaned.searchParams.get('prompt')).toBe('select_account');
+    expect(cleaned.searchParams.get('state')).toBe('abc');
+    expect(cleaned.searchParams.get('redirect_uri')).toBe('https://example.supabase.co/auth/v1/callback');
+  });
+
+  it('rejects anything that is not the Google or Microsoft sign-in host', () => {
+    expect(() => cleanProviderAuthUrl('https://evil.example/o/oauth2/v2/auth?client_id=x')).toThrow(
+      'Sign-in link was invalid.',
+    );
+  });
+});
+
+describe('resolveProviderAuthUrl', () => {
+  it('uses the cleaned link from the sign-in function', async () => {
+    const fetchImpl = (async () =>
+      new Response(
+        JSON.stringify({
+          url: 'https://accounts.google.com/o/oauth2/v2/auth?client_id=client&redirect_to=https%3A%2F%2Fpinonit.com%2Fauth%2Fcallback&state=abc',
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      )) as typeof fetch;
+    const cleaned = new URL(await resolveProviderAuthUrl('https://example.supabase.co/auth/v1/authorize?provider=google', fetchImpl));
+    expect(cleaned.searchParams.get('redirect_to')).toBeNull();
+    expect(cleaned.searchParams.get('prompt')).toBe('select_account');
   });
 });
 

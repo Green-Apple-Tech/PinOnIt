@@ -33,6 +33,55 @@ export function oauthAccountPickerParams(extra?: Record<string, string>): Record
   return { ...extra, prompt: 'select_account' };
 }
 
+/** Same-origin function that strips params Supabase leaks onto the provider link. */
+export const OAUTH_PROVIDER_URL_PATH = '/.netlify/functions/oauth-provider-url';
+
+const LEAKED_PROVIDER_PARAMS = ['redirect_to', 'skip_http_redirect', 'provider', 'scopes', 'apikey'];
+
+function isProviderAuthHost(hostname: string): boolean {
+  return (
+    hostname === 'accounts.google.com' ||
+    hostname === 'login.microsoftonline.com' ||
+    hostname.endsWith('.microsoftonline.com')
+  );
+}
+
+/**
+ * Supabase copies redirect_to onto the Google link. iPhone Chrome then builds a
+ * broken accounts.google.com URL and shows "400. That's an error."
+ * Drop the leaked params and force the account list.
+ */
+export function cleanProviderAuthUrl(raw: string): string {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new Error('Sign-in link was invalid.');
+  }
+  if (url.protocol !== 'https:' || !isProviderAuthHost(url.hostname)) {
+    throw new Error('Sign-in link was invalid.');
+  }
+  for (const key of LEAKED_PROVIDER_PARAMS) url.searchParams.delete(key);
+  url.searchParams.set('prompt', 'select_account');
+  return url.toString();
+}
+
+export async function resolveProviderAuthUrl(
+  authorizeUrl: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<string> {
+  const res = await fetchImpl(OAUTH_PROVIDER_URL_PATH, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ authorizeUrl }),
+  });
+  const json = (await res.json().catch(() => ({}))) as { url?: unknown };
+  if (!res.ok || typeof json.url !== 'string') {
+    throw new Error('Could not start sign-in. Try again.');
+  }
+  return cleanProviderAuthUrl(json.url);
+}
+
 export const IOS_OAUTH_SAFARI_MESSAGE =
   'Google sign-in does not work from the home-screen app or inside Instagram / Messages / Gmail. Open pinonit.com/login in Safari or Chrome, then tap Sign in with Google.';
 
