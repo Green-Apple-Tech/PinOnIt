@@ -9,7 +9,7 @@ import type { Profile, Subscription } from '../lib/types';
 import { persistSignupAttribution } from '../lib/campaignAttribution';
 import { storageSet } from '../lib/safeStorage';
 import { recordSessionActivity } from '../lib/sessionTimeout';
-import { clearOauthStart, claimOauthStart, oauthCallbackRedirect } from '../lib/oauthLogin';
+import { clearOauthStart, claimOauthStart, oauthAccountPickerParams, oauthCallbackRedirect } from '../lib/oauthLogin';
 
 interface AuthContextType {
   user: User | null;
@@ -136,16 +136,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     provider: 'google' | 'azure',
     options: { redirectTo: string; scopes?: string; queryParams?: Record<string, string> },
   ) => {
-    const { data: existing } = await supabase.auth.getSession();
-    if (existing.session?.user) {
-      window.location.replace('/dashboard');
-      return { error: null };
-    }
     // Claim before signInWithOAuth — a second call overwrites the PKCE verifier and Google asks again
     if (!claimOauthStart()) return { error: null };
+    // A saved phone session used to skip the provider and reopen the last account.
+    const { data: existing } = await supabase.auth.getSession();
+    if (existing.session) {
+      await supabase.auth.signOut({ scope: 'local' });
+    }
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { ...options, skipBrowserRedirect: true },
+      options: {
+        ...options,
+        queryParams: oauthAccountPickerParams(options.queryParams),
+        skipBrowserRedirect: true,
+      },
     });
     if (error) {
       clearOauthStart();
@@ -172,7 +176,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return startOAuthRedirect('azure', {
       redirectTo: oauthCallbackRedirect(),
       scopes: 'email profile openid User.Read',
-      queryParams: { prompt: 'select_account' },
     });
   };
 

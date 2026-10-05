@@ -5,6 +5,7 @@ import {
   isConsumedOauthCodeError,
   isIosIsolatedWebView,
   isOauthReturnUrl,
+  oauthAccountPickerParams,
   oauthCallbackRedirect,
 } from './oauthLogin';
 
@@ -25,6 +26,16 @@ describe('oauthCallbackRedirect', () => {
   it('stays on the page origin so the PKCE verifier is in the same storage', () => {
     expect(oauthCallbackRedirect('https://pinonit.com')).toBe('https://pinonit.com/auth/callback');
     expect(oauthCallbackRedirect('https://www.pinonit.com/')).toBe('https://www.pinonit.com/auth/callback');
+  });
+});
+
+describe('oauthAccountPickerParams', () => {
+  it('asks Google and Microsoft to show the account list', () => {
+    expect(oauthAccountPickerParams()).toEqual({ prompt: 'select_account' });
+    expect(oauthAccountPickerParams({ login_hint: 'a@b.com' })).toEqual({
+      login_hint: 'a@b.com',
+      prompt: 'select_account',
+    });
   });
 });
 

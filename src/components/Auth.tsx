@@ -51,6 +51,7 @@ export function AuthForm() {
   );
 
   useEffect(() => {
+    if (oauthInFlight.current || pendingOauth.current) return;
     if (user) navigate(redirectTo, { replace: true });
   }, [user, navigate, redirectTo]);
 
@@ -151,10 +152,6 @@ export function AuthForm() {
       setError(IOS_OAUTH_SAFARI_MESSAGE);
       return;
     }
-    if (user) {
-      navigate(redirectTo, { replace: true });
-      return;
-    }
     if (oauthInFlight.current || oauthLoading) return;
     oauthInFlight.current = true;
     setOauthLoading(provider);
@@ -167,12 +164,6 @@ export function AuthForm() {
 
   useEffect(() => {
     if (loading) return;
-    if (user) {
-      pendingOauth.current = null;
-      resetOauthLoading();
-      navigate(redirectTo, { replace: true });
-      return;
-    }
     if (!pendingOauth.current) return;
     const pending = pendingOauth.current;
     pendingOauth.current = null;

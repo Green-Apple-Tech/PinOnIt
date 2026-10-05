@@ -28,6 +28,11 @@ export function oauthCallbackRedirect(origin = typeof window !== 'undefined' ? w
   return `${origin.replace(/\/$/, '')}/auth/callback`;
 }
 
+/** Always show the Google or Microsoft account list. A phone browser otherwise reuses the last account. */
+export function oauthAccountPickerParams(extra?: Record<string, string>): Record<string, string> {
+  return { ...extra, prompt: 'select_account' };
+}
+
 export const IOS_OAUTH_SAFARI_MESSAGE =
   'Google sign-in does not work from the home-screen app or inside Instagram / Messages / Gmail. Open pinonit.com/login in Safari or Chrome, then tap Sign in with Google.';
 
