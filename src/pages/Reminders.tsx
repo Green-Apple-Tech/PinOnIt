@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 import { PageChecklist } from '../components/PageChecklist';
 import type { MessageTemplate, ReminderRule, Service } from '../lib/types';
 import { SUPPORTED_LANGUAGES, TEMPLATE_VARIABLES } from '../lib/types';
-import { formatErrorMessage } from '../lib/errors';
+import { formatErrorMessage, formatFunctionError } from '../lib/errors';
 import { toast } from '../components/Toast';
 import { backfillMissingReminderRules, ensureDefaultGuestEmailReminders } from '../lib/reminderSetup';
 import {
@@ -231,26 +231,34 @@ export function RemindersPage({
     setTestingCall(true);
     setTestCallMsg('');
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+      const access = refreshed.session?.access_token;
+      if (refreshError || !access) {
+        setTestCallMsg('Sign in again, then retry the test. The previous sign-in had expired.');
+        setTestingCall(false);
+        return;
+      }
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/test-critical-call`,
         {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${session?.access_token ?? ''}`,
+            Authorization: `Bearer ${access}`,
             Apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
             'Content-Type': 'application/json',
           },
         }
       );
-      const json = await res.json();
-      if (json.error) setTestCallMsg(`Error: ${json.error}`);
-      else setTestCallMsg('Test call initiated! You should receive a call shortly.');
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json.error || json.message) {
+        setTestCallMsg(formatFunctionError(json, `Test call failed (${res.status}).`));
+      } else {
+        setTestCallMsg('Test call started. Answer the phone to hear it.');
+      }
     } catch (e) {
       setTestCallMsg(`Error: ${String(e)}`);
     }
     setTestingCall(false);
-    setTimeout(() => setTestCallMsg(''), 6000);
   };
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
   const [rules, setRules] = useState<(ReminderRule & { template?: MessageTemplate; service?: Service })[]>([]);

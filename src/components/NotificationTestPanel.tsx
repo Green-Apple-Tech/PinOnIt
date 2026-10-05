@@ -36,7 +36,10 @@ export function NotificationTestPanel() {
     setResult(null);
     if (channel !== 'email') {
       const to = normalizePhoneE164(phone);
-      if (!to) return;
+      if (!to) {
+        setResult({ ok: false, message: 'Enter a mobile number first.' });
+        return;
+      }
     } else if (!profileEmail) {
       setResult({ ok: false, message: 'Add an email on your profile to send a test email.' });
       return;
@@ -44,7 +47,13 @@ export function NotificationTestPanel() {
 
     setSending(channel);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+      const access = refreshed.session?.access_token;
+      if (refreshError || !access) {
+        setResult({ ok: false, message: 'Sign in again, then retry the test. The previous sign-in had expired.' });
+        setSending(null);
+        return;
+      }
       const now = new Date();
       const body: Record<string, unknown> = {
         guest_name: 'Test Guest',
@@ -68,7 +77,7 @@ export function NotificationTestPanel() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${session?.access_token ?? ''}`,
+            Authorization: `Bearer ${access}`,
             Apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
           },
           body: JSON.stringify(body),

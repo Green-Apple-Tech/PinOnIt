@@ -11,10 +11,11 @@ export function formatErrorMessage(err: unknown): string {
   return 'Something went wrong. Please try again.';
 }
 
-/** Edge-function JSON error, including raw Twilio blobs. */
+/** Edge-function JSON error, including raw Twilio blobs and gateway JWT messages. */
 export function formatFunctionError(json: unknown, fallback: string): string {
   if (!json || typeof json !== 'object') return fallback;
-  const err = (json as { error?: unknown }).error;
+  const record = json as { error?: unknown; message?: unknown; msg?: unknown };
+  const err = record.error ?? record.message ?? record.msg;
   if (typeof err === 'string' && err.trim()) {
     try {
       const parsed = JSON.parse(err) as { message?: unknown; code?: unknown };
