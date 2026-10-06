@@ -48,6 +48,9 @@ deploy booking-reply
 deploy complete-reschedule
 deploy write-calendar-event
 deploy sms-inbound --no-verify-jwt
+deploy reddit-opportunity-search
+deploy reddit-oauth-start
+deploy reddit-oauth-callback --no-verify-jwt
 
 echo ""
 echo "Done. OAuth callbacks deployed with --no-verify-jwt (Google + Microsoft + Calendly + Zoom + Stripe webhook)."

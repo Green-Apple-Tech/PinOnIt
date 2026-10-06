@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { FINDER_QUERIES, scoreOpportunity } from "../../../src/lib/redditFinder.ts";
+import { FINDER_QUERIES, classifyOpportunity, scoreOpportunity } from "../../../src/lib/redditFinder.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,6 +29,21 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function mailStaff(subject: string, text: string) {
+  const key = Deno.env.get("RESEND_API_KEY");
+  if (!key) return;
+  await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: Deno.env.get("RESEND_FROM_EMAIL") ?? "PinOnIt <noreply@pinonit.com>",
+      to: ["stebbins.peter@gmail.com"],
+      subject,
+      text,
+    }),
+  }).catch(() => undefined);
+}
+
 type RedditPost = {
   id?: string;
   name?: string;
@@ -44,14 +59,17 @@ type RedditPost = {
   over_18?: boolean;
 };
 
-async function redditToken(ua: string): Promise<string> {
+async function redditToken(admin: ReturnType<typeof createClient>, ua: string): Promise<string> {
+  const { data: row } = await admin.from("reddit_oauth_tokens").select("refresh_token, access_token, expires_at").eq("id", 1).maybeSingle();
+  if (!row?.refresh_token) {
+    throw new Error("Reddit is not connected. Use Connect Reddit on the finder page. Password login is not used.");
+  }
+  const expires = row.expires_at ? Date.parse(row.expires_at) : 0;
+  if (row.access_token && expires - Date.now() > 60_000) return row.access_token;
+
   const id = Deno.env.get("REDDIT_CLIENT_ID") ?? "";
   const secret = Deno.env.get("REDDIT_CLIENT_SECRET") ?? "";
-  if (!id || !secret) {
-    throw new Error(
-      "Add REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET in Supabase. Create a web app at reddit.com/prefs/apps. Do not send a Reddit password.",
-    );
-  }
+  if (!id || !secret) throw new Error("REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET are missing.");
   const res = await fetch("https://www.reddit.com/api/v1/access_token", {
     method: "POST",
     headers: {
@@ -59,12 +77,17 @@ async function redditToken(ua: string): Promise<string> {
       "Content-Type": "application/x-www-form-urlencoded",
       "User-Agent": ua,
     },
-    body: new URLSearchParams({ grant_type: "client_credentials" }),
+    body: new URLSearchParams({ grant_type: "refresh_token", refresh_token: row.refresh_token }),
   });
   const payload = await res.json().catch(() => ({}));
   if (!res.ok || typeof payload.access_token !== "string") {
-    throw new Error("Reddit declined the app token. Check the client id and secret. Password login is not used.");
+    throw new Error("Reddit declined the refresh. Connect Reddit again. Password login is not used.");
   }
+  await admin.from("reddit_oauth_tokens").update({
+    access_token: payload.access_token,
+    expires_at: new Date(Date.now() + Number(payload.expires_in ?? 3600) * 1000).toISOString(),
+    updated_at: new Date().toISOString(),
+  }).eq("id", 1);
   return payload.access_token;
 }
 
@@ -87,7 +110,7 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ ok: false, error: "Method not allowed" }, 405);
 
-  let body: { action?: string } = {};
+  let body: { action?: string; scheduled?: boolean } = {};
   try {
     body = await req.json();
   } catch {
@@ -103,18 +126,36 @@ Deno.serve(async (req: Request) => {
   const authHeader = req.headers.get("Authorization") ?? "";
   if (!supabaseUrl || !anonKey || !serviceKey) return json({ ok: false, error: "Server is not configured" }, 500);
 
+  const tokenOnly = authHeader.replace(/^Bearer\s+/i, "").trim();
+  const scheduled = body.scheduled === true && tokenOnly === serviceKey;
   const userClient = createClient(supabaseUrl, anonKey, {
     global: { headers: { Authorization: authHeader } },
   });
-  const { data: userData } = await userClient.auth.getUser();
+  const { data: userData } = scheduled ? { data: { user: null } } : await userClient.auth.getUser();
   const email = userData.user?.email?.toLowerCase() ?? "";
-  if (!STAFF.has(email)) return json({ ok: false, error: "Staff only" }, 403);
+  if (!scheduled && !STAFF.has(email)) return json({ ok: false, error: "Staff only" }, 403);
 
   const admin = createClient(supabaseUrl, serviceKey);
   const ua = userAgent();
 
   try {
-    const token = await redditToken(ua);
+    const token = await redditToken(admin, ua);
+    const { data: settingsRow } = await admin.from("reddit_finder_settings").select("*").eq("id", 1).maybeSingle();
+    const settings = {
+      minGreenScore: settingsRow?.min_green_score ?? 80,
+      minKeepScore: settingsRow?.min_keep_score ?? 45,
+      maxCommentsPerDay: settingsRow?.max_comments_per_day ?? 3,
+      maxMentionsPerDay: settingsRow?.max_mentions_per_day ?? 2,
+      maxPerSubredditPerDay: settingsRow?.max_per_subreddit_per_day ?? 1,
+      cooldownHours: settingsRow?.cooldown_hours ?? 8,
+      allowSubreddits: settingsRow?.allow_subreddits ?? [],
+      blockSubreddits: settingsRow?.block_subreddits ?? [],
+      allowKeywords: settingsRow?.allow_keywords ?? [],
+      blockKeywords: settingsRow?.block_keywords ?? [],
+    };
+    const since = new Date(Date.now() - settings.cooldownHours * 60 * 60 * 1000).toISOString();
+    const { data: recent } = await admin.from("reddit_opportunities").select("subreddit, mention, feature, created_at").gte("created_at", since);
+    const mentionsToday = (recent ?? []).filter((row) => row.mention === "yes").length;
     const { data: cursorRow } = await admin.from("reddit_finder_cursor").select("next_query_index").eq("id", 1).maybeSingle();
     const start = Number(cursorRow?.next_query_index ?? 0) % FINDER_QUERIES.length;
     const chosen = Array.from({ length: QUERIES_PER_RUN }, (_, i) => FINDER_QUERIES[(start + i) % FINDER_QUERIES.length]);
@@ -170,16 +211,36 @@ Deno.serve(async (req: Request) => {
           rulesBySub.set(post.subreddit, rulesText);
         }
 
+        const bodyText = (post.selftext ?? "").slice(0, 2000);
         const scored = scoreOpportunity({
           title: post.title,
-          body: (post.selftext ?? "").slice(0, 2000),
+          body: bodyText,
           createdUtc: post.created_utc ?? Math.floor(Date.now() / 1000),
           numComments: post.num_comments ?? 0,
           archived: Boolean(post.archived),
           query,
           rulesText,
         });
+        const subredditToday = (recent ?? []).filter((row) => row.subreddit === post.subreddit).length
+          + found.filter((row) => row.subreddit === post.subreddit).length;
+        const duplicate = (recent ?? []).some((row) => row.subreddit === post.subreddit && row.feature === query.feature);
+        const rulesBan = /no self-?promo|no advertising|no solicitation/i.test(rulesText);
+        const band = classifyOpportunity({
+          score: scored.score,
+          mention: scored.mention,
+          rulesBan,
+          text: `${post.title}\n${bodyText}`,
+          subreddit: post.subreddit,
+          settings,
+          duplicate,
+          mentionsToday: mentionsToday + found.filter((row) => row.mention === "yes").length,
+          subredditToday,
+        });
+        const status = band.band === "red" ? "skip" : band.band === "green" ? "approved" : "review";
         found.push({
+          band: band.band,
+          band_reason: band.reason,
+          status,
           reddit_fullname: post.name,
           title: post.title.slice(0, 300),
           subreddit: post.subreddit,
@@ -230,6 +291,23 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    const queued = inserts.filter((row) => row.band === "green" || row.band === "yellow");
+    if (queued.length) {
+      const greens = queued.filter((row) => row.band === "green").length;
+      const message = `${queued.length} new threads are waiting. ${greens} are strong matches. Nothing was posted.`;
+      await admin.from("reddit_alerts").insert({
+        kind: greens ? "green_ready" : "yellow_review",
+        message,
+      });
+      await mailStaff("Reddit finder has threads to review", message);
+    }
+    if (settingsRow?.auto_post_enabled) {
+      await admin.from("reddit_alerts").insert({
+        kind: "posting_blocked",
+        message: "Auto-post is switched on, but Reddit does not allow this app to post commercial comments. Nothing was posted.",
+      });
+    }
+
     await admin.from("reddit_finder_cursor").upsert({ id: 1, next_query_index: nextIndex });
     await admin.from("reddit_search_runs").insert({
       started_by: userData.user?.id ?? null,
@@ -247,6 +325,8 @@ Deno.serve(async (req: Request) => {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Search failed";
+    await admin.from("reddit_alerts").insert({ kind: "automation_error", message: message.slice(0, 500) });
+    await mailStaff("Reddit finder stopped", message.slice(0, 500));
     await admin.from("reddit_search_runs").insert({
       started_by: userData.user?.id ?? null,
       error: message.slice(0, 500),

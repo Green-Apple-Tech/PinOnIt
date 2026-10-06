@@ -6,6 +6,7 @@ import { redditPostUrl } from '../lib/redditFinder';
 
 type Status = 'new' | 'review' | 'approved' | 'responded' | 'skip';
 type Mention = 'yes' | 'maybe' | 'no';
+type Band = 'green' | 'yellow' | 'red';
 type WindowKey = '24h' | '7d' | '30d' | 'all';
 
 type Opportunity = {
@@ -20,6 +21,8 @@ type Opportunity = {
   problem: string;
   why_relevant: string;
   score: number;
+  band: Band;
+  band_reason: string | null;
   mention: Mention;
   mention_reason: string;
   suggested_response: string;
@@ -52,7 +55,17 @@ export function RedditOpportunitiesPage() {
   const [feature, setFeature] = useState('all');
   const [subreddit, setSubreddit] = useState('all');
   const [minScore, setMinScore] = useState(0);
-  const [learning, setLearning] = useState({ visits: 0, signups: 0 });
+  const [learning, setLearning] = useState({ visits: 0, signups: 0, trials: 0, paid: 0 });
+  const [connected, setConnected] = useState<string | null>(null);
+  const [alerts, setAlerts] = useState<Array<{ id: string; message: string; created_at: string }>>([]);
+  const [settings, setSettings] = useState({
+    min_green_score: 80,
+    min_keep_score: 45,
+    max_comments_per_day: 3,
+    max_mentions_per_day: 2,
+    max_per_subreddit_per_day: 1,
+    cooldown_hours: 8,
+  });
 
   const load = async () => {
     const { data, error: err } = await supabase
@@ -70,8 +83,33 @@ export function RedditOpportunitiesPage() {
       setLearning({
         visits: Number(first.reddit_visits ?? 0),
         signups: Number(first.reddit_signups ?? 0),
+        trials: Number(first.reddit_trials ?? 0),
+        paid: Number(first.reddit_paid ?? 0),
       });
     }
+    const connection = await supabase.rpc('reddit_connection_status');
+    const link = Array.isArray(connection.data) ? connection.data[0] : null;
+    setConnected(link?.connected ? (link.reddit_username || 'connected') : null);
+    const alertRows = await supabase.from('reddit_alerts').select('id, message, created_at').order('created_at', { ascending: false }).limit(8);
+    setAlerts((alertRows.data as Array<{ id: string; message: string; created_at: string }>) ?? []);
+    const saved = await supabase.from('reddit_finder_settings').select('min_green_score, min_keep_score, max_comments_per_day, max_mentions_per_day, max_per_subreddit_per_day, cooldown_hours').eq('id', 1).maybeSingle();
+    if (saved.data) setSettings(saved.data);
+  };
+
+  const connectReddit = async () => {
+    setError('');
+    const { data, error: err } = await supabase.functions.invoke('reddit-oauth-start', { body: {} });
+    if (err || !data?.url) {
+      setError(data?.error || err?.message || 'Could not start Reddit sign-in');
+      return;
+    }
+    window.location.assign(data.url);
+  };
+
+  const saveSettings = async () => {
+    const { error: err } = await supabase.from('reddit_finder_settings').update({ ...settings, auto_post_enabled: false, updated_at: new Date().toISOString() }).eq('id', 1);
+    setError(err?.message ?? '');
+    if (!err) setNotice('Limits saved. Auto-post stays off.');
   };
 
   useEffect(() => {
@@ -131,28 +169,73 @@ export function RedditOpportunitiesPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Reddit Opportunity Finder</h1>
           <p className="mt-1 text-sm text-slate-500 max-w-2xl">
-            Finds public threads where PinOnIt fits. You review and post them yourself. This page never posts to Reddit.
+            A scheduled job searches Reddit with your connected account, scores each thread, and drafts a reply. It does not post. Reddit’s current rules require written approval before a business can use the API commercially, and they prohibit automated promotional comments.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => void search()}
-          disabled={loading}
-          className="px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold disabled:opacity-60"
-        >
-          {loading ? 'Searching…' : 'Search Reddit'}
-        </button>
+        <div className="flex gap-2">
+          <button type="button" onClick={() => void connectReddit()} className="px-4 py-2 rounded-xl border border-slate-300 text-sm font-semibold">
+            {connected ? `Reddit: u/${connected}` : 'Connect Reddit'}
+          </button>
+          <button
+            type="button"
+            onClick={() => void search()}
+            disabled={loading}
+            className="px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold disabled:opacity-60"
+          >
+            {loading ? 'Searching…' : 'Search now'}
+          </button>
+        </div>
       </div>
+
+      <section className="rounded-2xl border border-slate-200 dark:border-slate-800 p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-semibold">Auto-post</h2>
+          <span className="text-sm font-semibold text-slate-500">OFF</span>
+        </div>
+        <p className="text-sm text-slate-500">
+          The switch stays off. Turning it on would not send comments. Posting waits until Reddit approves this commercial use in writing.
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
+          {([
+            ['min_green_score', 'Green score'],
+            ['min_keep_score', 'Skip below'],
+            ['max_comments_per_day', 'Comments / day'],
+            ['max_mentions_per_day', 'Mentions / day'],
+            ['max_per_subreddit_per_day', 'Per subreddit'],
+            ['cooldown_hours', 'Cooldown hours'],
+          ] as const).map(([key, label]) => (
+            <label key={key} className="text-xs text-slate-500">
+              {label}
+              <input
+                type="number"
+                value={settings[key]}
+                onChange={(event) => setSettings((current) => ({ ...current, [key]: Number(event.target.value) }))}
+                className="mt-1 w-full px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent"
+              />
+            </label>
+          ))}
+        </div>
+        <button type="button" onClick={() => void saveSettings()} className={btn}>Save limits</button>
+      </section>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
       {notice && <p className="text-sm text-emerald-700 dark:text-emerald-400">{notice}</p>}
 
       <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Stat label="Threads found" value={rows.length} />
-        <Stat label="Responses marked" value={responded.length} />
+        <Stat label="Found today" value={rows.filter((row) => inWindow(row.posted_at, '24h')).length} />
+        <Stat label="Ready (green)" value={rows.filter((row) => row.band === 'green' && row.status !== 'responded' && row.status !== 'skip').length} />
+        <Stat label="Needs review" value={rows.filter((row) => row.band === 'yellow' && row.status === 'review').length} />
+        <Stat label="Skipped" value={rows.filter((row) => row.band === 'red' || row.status === 'skip').length} />
+        <Stat label="You posted" value={responded.length} />
         <Stat label="Reddit visits" value={learning.visits} />
-        <Stat label="Reddit signups" value={learning.signups} />
+        <Stat label="Signups" value={learning.signups} />
+        <Stat label="Trials / paid" value={`${learning.trials} / ${learning.paid}`} />
       </section>
+      {alerts.length > 0 && (
+        <ul className="text-sm text-slate-600 dark:text-slate-300 space-y-1">
+          {alerts.map((alert) => <li key={alert.id}>{new Date(alert.created_at).toLocaleString()}: {alert.message}</li>)}
+        </ul>
+      )}
       <p className="text-xs text-slate-400">
         Visits and signups count people who arrived with utm_source=reddit. Record upvotes, replies, and signups on each thread after you post.
       </p>
@@ -186,6 +269,7 @@ export function RedditOpportunitiesPage() {
               <span className="px-2 py-1 rounded-full bg-slate-900 text-white dark:bg-white dark:text-slate-900">{row.score}</span>
               <span className="text-slate-500">r/{row.subreddit}</span>
               <span className="text-slate-400">{row.posted_at ? new Date(row.posted_at).toLocaleDateString() : ''}</span>
+              <span className={`px-2 py-1 rounded-full ${row.band === 'green' ? 'bg-emerald-100 text-emerald-900' : row.band === 'red' ? 'bg-rose-100 text-rose-900' : 'bg-amber-100 text-amber-900'}`}>{(row.band ?? 'yellow').toUpperCase()}</span>
               <span className="px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-900">{STATUS_LABEL[row.status]}</span>
               <span className="px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-900">MENTION {row.mention.toUpperCase()}</span>
               {row.high_seo_value && (
@@ -239,7 +323,7 @@ export function RedditOpportunitiesPage() {
 
 const btn = 'px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-900';
 
-function Stat({ label, value }: { label: string; value: number }) {
+function Stat({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-3">
       <div className="text-2xl font-bold text-slate-900 dark:text-white">{value}</div>

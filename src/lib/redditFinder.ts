@@ -3,6 +3,33 @@
 export const PINONIT_PRICE = '$8.99/mo';
 
 export type Mention = 'yes' | 'maybe' | 'no';
+export type Band = 'green' | 'yellow' | 'red';
+
+export type FinderSettings = {
+  minGreenScore: number;
+  minKeepScore: number;
+  maxCommentsPerDay: number;
+  maxMentionsPerDay: number;
+  maxPerSubredditPerDay: number;
+  cooldownHours: number;
+  allowSubreddits: string[];
+  blockSubreddits: string[];
+  allowKeywords: string[];
+  blockKeywords: string[];
+};
+
+export const DEFAULT_FINDER_SETTINGS: FinderSettings = {
+  minGreenScore: 80,
+  minKeepScore: 45,
+  maxCommentsPerDay: 3,
+  maxMentionsPerDay: 2,
+  maxPerSubredditPerDay: 1,
+  cooldownHours: 8,
+  allowSubreddits: [],
+  blockSubreddits: [],
+  allowKeywords: [],
+  blockKeywords: ['notary', 'hipaa', 'election', 'suicide'],
+};
 
 export type FinderQuery = {
   q: string;
@@ -61,6 +88,9 @@ const BAD_FIT_RE =
 
 const PROMO_BAN_RE =
   /\b(no self-?promo\w*|no advertising|no solicitation|no vendor|don'?t (advertise|promote|pitch)|no spam)\b/i;
+
+const SENSITIVE_RE =
+  /\b(suicide|self-harm|election|democrat|republican|abortion|overdose|obituary|funeral)\b/i;
 
 const FEATURE_LINE: Record<string, string> = {
   scheduling: 'a booking link where the customer picks a time',
@@ -159,6 +189,7 @@ export function scoreOpportunity(input: ScoreInput): ScoreResult {
     title: input.title,
     problem,
     feature,
+    subreddit: input.query.industry,
   });
 
   return {
@@ -177,20 +208,78 @@ export function scoreOpportunity(input: ScoreInput): ScoreResult {
   };
 }
 
+const DISCLOSURES = [
+  'Full disclosure, I built PinOnIt.',
+  'I should say I made PinOnIt.',
+  'Disclosure: PinOnIt is my product.',
+  'I’m the person who built PinOnIt, so weigh that.',
+];
+
+function pick(seed: string, options: string[]): string {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) hash = (hash + seed.charCodeAt(i) * (i + 1)) % 997;
+  return options[hash % options.length];
+}
+
 export function draftResponse(input: {
   mention: Mention;
   title: string;
   problem: string;
   feature: string;
+  subreddit?: string;
 }): string {
   const title = input.title.replace(/\s+/g, ' ').trim();
   if (input.mention === 'no') {
-    return `On “${title}”: answer their question directly and do not mention PinOnIt. ${input.problem}`;
+    return `Answer “${title}” directly and do not mention PinOnIt. ${input.problem}`;
   }
-  const hedge = input.mention === 'maybe'
-    ? 'Only post this if your reply is actually useful after you read the whole thread. '
+  const disclosure = pick(title, DISCLOSURES);
+  const link = input.subreddit
+    ? ` https://pinonit.com/?utm_source=reddit&utm_medium=founder&utm_campaign=${encodeURIComponent(input.subreddit)}`
     : '';
-  return `${hedge}For “${title}”, you probably don't need a pile of separate apps. ${input.problem} Full disclosure, I built PinOnIt partly for this. It includes ${input.feature}. It's ${PINONIT_PRICE}. Happy to answer anything about how it works.`;
+  const shapes = [
+    `On “${title}”: ${input.problem} ${disclosure} For this, it includes ${input.feature}. ${PINONIT_PRICE}.${link}`,
+    `The short version for “${title}”: ${input.problem} ${disclosure} It includes ${input.feature} and costs ${PINONIT_PRICE}.${link}`,
+    `“${title}” — ${disclosure} ${input.problem} The piece that matches this thread is ${input.feature}. ${PINONIT_PRICE}.${link}`,
+  ];
+  const body = pick(`${title}:${input.feature}`, shapes);
+  if (input.mention === 'maybe') {
+    return `Read the whole thread before posting. ${body}`;
+  }
+  return body;
+}
+
+export function classifyOpportunity(input: {
+  score: number;
+  mention: Mention;
+  rulesBan: boolean;
+  text: string;
+  subreddit: string;
+  settings?: Partial<FinderSettings>;
+  duplicate: boolean;
+  mentionsToday: number;
+  subredditToday: number;
+}): { band: Band; reason: string } {
+  const settings = { ...DEFAULT_FINDER_SETTINGS, ...input.settings };
+  const sub = input.subreddit.toLowerCase();
+  const blockedSub = settings.blockSubreddits.some((name) => name.toLowerCase() === sub);
+  const allowList = settings.allowSubreddits.map((name) => name.toLowerCase()).filter(Boolean);
+  const notAllowed = allowList.length > 0 && !allowList.includes(sub);
+  const blockedWord = settings.blockKeywords.some((word) => word && input.text.toLowerCase().includes(word.toLowerCase()));
+  const allowedWord = settings.allowKeywords.filter(Boolean);
+  const missingAllowedWord = allowedWord.length > 0 && !allowedWord.some((word) => input.text.toLowerCase().includes(word.toLowerCase()));
+
+  if (input.rulesBan || SENSITIVE_RE.test(input.text) || blockedSub || notAllowed || blockedWord || missingAllowedWord || input.duplicate || input.score < settings.minKeepScore || input.mention === 'no') {
+    return { band: 'red', reason: 'Skip. The thread is off-topic, blocked, duplicate, sensitive, or PinOnIt would not genuinely help.' };
+  }
+  if (
+    input.mention === 'yes'
+    && input.score >= settings.minGreenScore
+    && input.mentionsToday < settings.maxMentionsPerDay
+    && input.subredditToday < settings.maxPerSubredditPerDay
+  ) {
+    return { band: 'green', reason: 'Strong match. Ready for you to post. Reddit does not allow this app to post it automatically.' };
+  }
+  return { band: 'yellow', reason: 'Possibly useful, but it needs your review before anyone replies.' };
 }
 
 export function redditPostUrl(permalink: string): string {

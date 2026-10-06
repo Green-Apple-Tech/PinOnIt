@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { draftResponse, scoreOpportunity, type FinderQuery } from './redditFinder';
+import { classifyOpportunity, draftResponse, scoreOpportunity, type FinderQuery } from './redditFinder';
 
 const query: FinderQuery = {
   q: 'Calendly alternative',
@@ -26,8 +26,8 @@ describe('scoreOpportunity', () => {
     expect(result.score).toBeGreaterThan(70);
     expect(result.mention).toBe('yes');
     expect(result.highSeoValue).toBe(true);
-    expect(result.suggestedResponse).toContain('cleaning business');
-    expect(result.suggestedResponse).toContain('Full disclosure');
+    expect(result.suggestedResponse.toLowerCase()).toContain('calendly');
+    expect(result.suggestedResponse.toLowerCase()).toContain('pinonit');
   });
 
   it('does not recommend PinOnIt when the subreddit bans promotion', () => {
@@ -75,7 +75,36 @@ describe('scoreOpportunity', () => {
       feature: 'text reminders',
     });
     expect(a).not.toBe(b);
-    expect(a).toContain('boat rentals');
-    expect(b).toContain('HVAC');
+    expect(a).toContain('Waiver for boat rentals');
+    expect(b).toContain('HVAC no-shows');
+  });
+});
+
+describe('classifyOpportunity', () => {
+  const base = {
+    score: 90,
+    mention: 'yes' as const,
+    rulesBan: false,
+    text: 'Looking for a Calendly alternative for my cleaning business',
+    subreddit: 'smallbusiness',
+    duplicate: false,
+    mentionsToday: 0,
+    subredditToday: 0,
+  };
+
+  it('marks a direct fit green', () => {
+    expect(classifyOpportunity(base).band).toBe('green');
+  });
+
+  it('marks a promotion ban red and never a posting candidate', () => {
+    expect(classifyOpportunity({ ...base, rulesBan: true }).band).toBe('red');
+  });
+
+  it('holds a borderline thread for review', () => {
+    expect(classifyOpportunity({ ...base, score: 60, mention: 'maybe' }).band).toBe('yellow');
+  });
+
+  it('stops extra mentions after the daily cap', () => {
+    expect(classifyOpportunity({ ...base, mentionsToday: 2 }).band).toBe('yellow');
   });
 });
