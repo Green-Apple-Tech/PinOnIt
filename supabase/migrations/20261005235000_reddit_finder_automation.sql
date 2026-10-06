@@ -154,18 +154,18 @@ SELECT cron.schedule(
   'reddit-opportunity-finder',
   '15 */6 * * *',
   $$
-    SELECT extensions.http_post(
+    SELECT net.http_post(
       url := (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'supabase_url' LIMIT 1)
              || '/functions/v1/reddit-opportunity-search',
-      headers := json_build_object(
+      headers := jsonb_build_object(
         'Content-Type', 'application/json',
         'Authorization', 'Bearer ' || COALESCE(
-          (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'service_role_key' LIMIT 1),
-          'anon'
+          (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'reddit_finder_cron' LIMIT 1),
+          ''
         )
-      )::text,
-      content := '{"scheduled":true}',
-      content_type := 'application/json'
+      ),
+      body := '{"scheduled":true}'::jsonb,
+      timeout_milliseconds := 120000
     );
   $$
 );

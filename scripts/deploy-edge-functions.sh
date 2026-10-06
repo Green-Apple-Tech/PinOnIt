@@ -48,7 +48,9 @@ deploy booking-reply
 deploy complete-reschedule
 deploy write-calendar-event
 deploy sms-inbound --no-verify-jwt
-deploy reddit-opportunity-search
+# Scheduled discovery calls this with a shared secret, not a user JWT.
+# The function still rejects anyone who is not staff and does not have that secret.
+deploy reddit-opportunity-search --no-verify-jwt
 deploy reddit-oauth-start
 deploy reddit-oauth-callback --no-verify-jwt
 

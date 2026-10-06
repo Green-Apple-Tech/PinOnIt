@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { FINDER_QUERIES, classifyOpportunity, scoreOpportunity } from "../../../src/lib/redditFinder.ts";
+import { FINDER_QUERIES, classifyOpportunity, opportunityKinds, parsePublicSearchResults, redditThreadFromUrl, scoreOpportunity } from "../../../src/lib/redditFinder.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -56,6 +56,68 @@ type RedditPost = {
   archived?: boolean;
   over_18?: boolean;
 };
+
+async function redditApiReady(admin: ReturnType<typeof createClient>): Promise<boolean> {
+  const clientId = Deno.env.get("REDDIT_CLIENT_ID") ?? "";
+  const clientSecret = Deno.env.get("REDDIT_CLIENT_SECRET") ?? "";
+  if (!clientId || !clientSecret) return false;
+  const { data } = await admin.from("reddit_oauth_tokens").select("refresh_token").eq("id", 1).maybeSingle();
+  return Boolean(data?.refresh_token);
+}
+
+function parseIndexedDate(raw: string | null): number | null {
+  if (!raw) return null;
+  const relative = raw.match(/(\d+)\s+(minute|hour|day|week|month|year)/i);
+  if (relative) {
+    const amount = Number(relative[1]);
+    const unit = relative[2].toLowerCase();
+    const ms = unit.startsWith("min") ? amount * 60_000
+      : unit.startsWith("hour") ? amount * 3_600_000
+      : unit.startsWith("day") ? amount * 86_400_000
+      : unit.startsWith("week") ? amount * 7 * 86_400_000
+      : unit.startsWith("month") ? amount * 30 * 86_400_000
+      : amount * 365 * 86_400_000;
+    return Date.now() - ms;
+  }
+  const parsed = Date.parse(raw);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+async function searchIndexedReddit(query: string): Promise<Array<{ title: string; link: string; snippet: string; date: string | null; position: number }>> {
+  const key = Deno.env.get("SCALESERP_KEY") ?? "";
+  if (key) {
+    const url = new URL("https://api.scaleserp.com/search");
+    url.searchParams.set("api_key", key);
+    url.searchParams.set("q", `site:reddit.com ${query}`);
+    url.searchParams.set("num", "10");
+    url.searchParams.set("fields", "organic_results");
+    url.searchParams.set("gl", "us");
+    url.searchParams.set("hl", "en");
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = await res.json() as { organic_results?: Array<Record<string, unknown>> };
+      const rows = (data.organic_results ?? []).map((item, index) => ({
+        title: String(item.title ?? "").replace(/\s*:\s*r\/\S+.*$/, "").trim(),
+        link: String(item.link ?? ""),
+        snippet: String(item.snippet ?? ""),
+        date: item.date ? String(item.date) : null,
+        position: Number(item.position ?? index + 1),
+      })).filter((row) => row.link.includes("reddit.com"));
+      if (rows.length) return rows;
+    }
+  }
+  const body = new URLSearchParams({ q: `site:reddit.com ${query}`, kl: "us-en" });
+  const res = await fetch("https://lite.duckduckgo.com/lite/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "User-Agent": "PinOnItOpportunityFinder/1.0 (+https://pinonit.com)",
+    },
+    body,
+  });
+  if (!res.ok) throw new Error(`Public search returned ${res.status}.`);
+  return parsePublicSearchResults(await res.text()).map((row) => ({ ...row, date: null }));
+}
 
 async function redditToken(admin: ReturnType<typeof createClient>, ua: string): Promise<string> {
   const { data: row } = await admin.from("reddit_oauth_tokens").select("refresh_token, access_token, expires_at").eq("id", 1).maybeSingle();
@@ -125,7 +187,10 @@ Deno.serve(async (req: Request) => {
   if (!supabaseUrl || !anonKey || !serviceKey) return json({ ok: false, error: "Server is not configured" }, 500);
 
   const tokenOnly = authHeader.replace(/^Bearer\s+/i, "").trim();
-  const scheduled = body.scheduled === true && tokenOnly === serviceKey;
+  const cronSecret = Deno.env.get("REDDIT_FINDER_CRON_SECRET") ?? "";
+  const scheduled = body.scheduled === true && (
+    (cronSecret.length > 0 && tokenOnly === cronSecret) || tokenOnly === serviceKey
+  );
   const userClient = createClient(supabaseUrl, anonKey, {
     global: { headers: { Authorization: authHeader } },
   });
@@ -137,7 +202,8 @@ Deno.serve(async (req: Request) => {
   const ua = userAgent();
 
   try {
-    const token = await redditToken(admin, ua);
+    const apiReady = await redditApiReady(admin);
+    const token = apiReady ? await redditToken(admin, ua) : "";
     const { data: settingsRow } = await admin.from("reddit_finder_settings").select("*").eq("id", 1).maybeSingle();
     const settings = {
       minGreenScore: settingsRow?.min_green_score ?? 80,
@@ -165,7 +231,89 @@ Deno.serve(async (req: Request) => {
     let ruleFetches = 0;
     let remaining: number | null = null;
 
+    if (!apiReady) {
+      for (const query of chosen) {
+        await sleep(400);
+        const results = await searchIndexedReddit(query.q);
+        for (const result of results) {
+          const thread = redditThreadFromUrl(result.link);
+          if (!thread || !result.title || seen.has(thread.fullname)) continue;
+          seen.add(thread.fullname);
+          const dated = parseIndexedDate(result.date);
+          const createdUtc = dated != null
+            ? Math.floor(dated / 1000)
+            : Math.floor((Date.now() - 5 * 24 * 60 * 60 * 1000) / 1000);
+          const scored = scoreOpportunity({
+            title: result.title,
+            body: result.snippet,
+            createdUtc,
+            numComments: 0,
+            archived: false,
+            query,
+            rulesText: "",
+            searchRank: result.position,
+            dateUnknown: dated == null,
+          });
+          const ageDays = dated == null ? null : Math.max(0, (Date.now() - dated) / 86_400_000);
+          const subredditToday = (recent ?? []).filter((row) => row.subreddit === thread.subreddit).length
+            + found.filter((row) => row.subreddit === thread.subreddit).length;
+          const duplicate = (recent ?? []).some((row) => row.subreddit === thread.subreddit && row.feature === query.feature);
+          const band = classifyOpportunity({
+            score: scored.score,
+            mention: scored.mention,
+            rulesBan: false,
+            text: `${result.title}\n${result.snippet}`,
+            subreddit: thread.subreddit,
+            settings,
+            duplicate,
+            mentionsToday: mentionsToday + found.filter((row) => row.mention === "yes").length,
+            subredditToday,
+          });
+          const kinds = opportunityKinds({
+            seoQuery: query.seo,
+            searchRank: result.position,
+            ageDays,
+            mention: scored.mention,
+            band: band.band,
+            intent: query.intent,
+          });
+          const status = band.band === "red" ? "skip" : band.band === "green" ? "approved" : "review";
+          found.push({
+            band: band.band,
+            band_reason: band.reason,
+            status,
+            reddit_fullname: thread.fullname,
+            title: result.title.slice(0, 300),
+            subreddit: thread.subreddit,
+            permalink: thread.permalink,
+            author: null,
+            posted_at: dated ? new Date(dated).toISOString() : null,
+            snippet: result.snippet.replace(/\s+/g, " ").trim().slice(0, 500),
+            search_query: query.q,
+            industry: query.industry,
+            feature: query.feature,
+            problem: scored.problem,
+            why_relevant: scored.whyRelevant,
+            score: scored.score,
+            mention: scored.mention,
+            mention_reason: scored.mentionReason,
+            suggested_response: scored.suggestedResponse,
+            high_seo_value: kinds.seo || scored.highSeoValue,
+            rules_note: "Subreddit rules were not loaded. Read the sidebar before you post.",
+            num_comments: 0,
+            reddit_score: 0,
+            last_seen_at: new Date().toISOString(),
+            customer_opportunity: kinds.customer,
+            seo_opportunity: kinds.seo,
+            discovery_mode: "fallback",
+            search_rank: result.position,
+          });
+        }
+      }
+    }
+
     for (const query of chosen) {
+      if (!apiReady) break;
       if (remaining != null && remaining < 2) break;
       await sleep(1100);
       const search = await redditGet(
@@ -260,6 +408,10 @@ Deno.serve(async (req: Request) => {
           num_comments: post.num_comments ?? 0,
           reddit_score: post.score ?? 0,
           last_seen_at: new Date().toISOString(),
+          customer_opportunity: band.band !== "red" && scored.mention !== "no",
+          seo_opportunity: scored.highSeoValue,
+          discovery_mode: "api",
+          search_rank: null,
         });
       }
     }
@@ -289,15 +441,19 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const queued = inserts.filter((row) => row.band === "green" || row.band === "yellow");
-    if (queued.length) {
-      const greens = queued.filter((row) => row.band === "green").length;
-      const message = `${queued.length} new threads are waiting. ${greens} are strong matches. Nothing was posted.`;
+    const worthwhile = inserts.filter((row) => row.band === "green" || row.customer_opportunity || row.seo_opportunity);
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+    if (scheduled && worthwhile.length && settingsRow?.last_digest_on !== today) {
+      const greens = worthwhile.filter((row) => row.band === "green").length;
+      const customers = worthwhile.filter((row) => row.customer_opportunity).length;
+      const seo = worthwhile.filter((row) => row.seo_opportunity).length;
+      const message = `PinOnIt found ${worthwhile.length} good Reddit opportunities today.\n${customers} are high-intent customer opportunities.\n${seo} also have high AI/SEO value.\n\nNext one: https://pinonit.com/dashboard/reddit-opportunities`;
       await admin.from("reddit_alerts").insert({
         kind: greens ? "green_ready" : "yellow_review",
         message,
       });
-      await mailStaff("Reddit finder has threads to review", message);
+      await mailStaff("PinOnIt found Reddit opportunities", message);
+      await admin.from("reddit_finder_settings").update({ last_digest_on: today }).eq("id", 1);
     }
     if (settingsRow?.auto_post_enabled) {
       await admin.from("reddit_alerts").insert({
@@ -317,6 +473,7 @@ Deno.serve(async (req: Request) => {
     return json({
       ok: true,
       posting: false,
+      discovery: apiReady ? "api" : "fallback",
       queries: chosen.map((query) => query.q),
       found: found.length,
       saved: inserts.length,
@@ -324,7 +481,6 @@ Deno.serve(async (req: Request) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Search failed";
     await admin.from("reddit_alerts").insert({ kind: "automation_error", message: message.slice(0, 500) });
-    await mailStaff("Reddit finder stopped", message.slice(0, 500));
     await admin.from("reddit_search_runs").insert({
       started_by: userData.user?.id ?? null,
       error: message.slice(0, 500),

@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { isStaffEmail } from '../lib/staff';
 import { redditPostUrl } from '../lib/redditFinder';
 
-type Status = 'new' | 'review' | 'approved' | 'responded' | 'skip';
+type Status = 'new' | 'review' | 'approved' | 'responded' | 'skip' | 'opened';
 type Mention = 'yes' | 'maybe' | 'no';
 type Band = 'green' | 'yellow' | 'red';
 type WindowKey = '24h' | '7d' | '30d' | 'all';
@@ -33,6 +33,11 @@ type Opportunity = {
   outcome_replies: number | null;
   outcome_signups: number | null;
   outcome_notes: string | null;
+  created_at?: string;
+  responded_at?: string | null;
+  opened_at?: string | null;
+  customer_opportunity?: boolean;
+  seo_opportunity?: boolean;
 };
 
 const STATUS_LABEL: Record<Status, string> = {
@@ -41,6 +46,7 @@ const STATUS_LABEL: Record<Status, string> = {
   approved: 'APPROVED',
   responded: 'RESPONDED',
   skip: 'SKIP',
+  opened: 'OPENED',
 };
 
 export function RedditOpportunitiesPage() {
@@ -58,6 +64,8 @@ export function RedditOpportunitiesPage() {
   const [learning, setLearning] = useState({ visits: 0, signups: 0, trials: 0, paid: 0 });
   const [connected, setConnected] = useState<string | null>(null);
   const [alerts, setAlerts] = useState<Array<{ id: string; message: string; created_at: string }>>([]);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
   const [settings, setSettings] = useState({
     min_green_score: 80,
     min_keep_score: 45,
@@ -129,8 +137,6 @@ export function RedditOpportunitiesPage() {
     return true;
   });
 
-  const responded = rows.filter((row) => row.status === 'responded');
-
   const search = async () => {
     setLoading(true);
     setError('');
@@ -169,7 +175,7 @@ export function RedditOpportunitiesPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Reddit Opportunity Finder</h1>
           <p className="mt-1 text-sm text-slate-500 max-w-2xl">
-            A scheduled job searches Reddit with your connected account, scores each thread, and drafts a reply. It does not post. Reddit’s current rules require written approval before a business can use the API commercially, and they prohibit automated promotional comments.
+            Until Reddit approves API access, a scheduled job finds public Reddit discussions through search results and drafts a reply. You paste and submit it yourself. Nothing is posted automatically.
           </p>
         </div>
         <div className="flex gap-2">
@@ -222,15 +228,52 @@ export function RedditOpportunitiesPage() {
       {notice && <p className="text-sm text-emerald-700 dark:text-emerald-400">{notice}</p>}
 
       <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Stat label="Found today" value={rows.filter((row) => inWindow(row.posted_at, '24h')).length} />
-        <Stat label="Ready (green)" value={rows.filter((row) => row.band === 'green' && row.status !== 'responded' && row.status !== 'skip').length} />
-        <Stat label="Needs review" value={rows.filter((row) => row.band === 'yellow' && row.status === 'review').length} />
-        <Stat label="Skipped" value={rows.filter((row) => row.band === 'red' || row.status === 'skip').length} />
-        <Stat label="You posted" value={responded.length} />
+        <Stat label="New opportunities" value={rows.filter((row) => row.status === 'new' || row.status === 'approved' || row.status === 'review').length} />
+        <Stat label="Green opportunities" value={rows.filter((row) => row.band === 'green' && row.status !== 'responded' && row.status !== 'skip').length} />
+        <Stat label="Posted today" value={rows.filter((row) => row.status === 'responded' && sameDay(row.responded_at)).length} />
+        <Stat label="Waiting for me" value={rows.filter((row) => row.status === 'opened').length} />
         <Stat label="Reddit visits" value={learning.visits} />
         <Stat label="Signups" value={learning.signups} />
-        <Stat label="Trials / paid" value={`${learning.trials} / ${learning.paid}`} />
+        <Stat label="Paid conversions" value={learning.paid} />
       </section>
+
+      <NextOpportunity
+        row={nextOpportunity(rows)}
+        editing={editing}
+        draft={draft}
+        onEdit={() => {
+          const current = nextOpportunity(rows);
+          if (!current) return;
+          setDraft(current.suggested_response);
+          setEditing(true);
+        }}
+        onDraft={setDraft}
+        onSaveEdit={() => {
+          const current = nextOpportunity(rows);
+          if (!current) return;
+          setEditing(false);
+          void patch(current.id, { suggested_response: draft });
+        }}
+        onOpen={() => {
+          const current = nextOpportunity(rows);
+          if (!current) return;
+          void navigator.clipboard.writeText(editing ? draft : current.suggested_response);
+          window.open(redditPostUrl(current.permalink), '_blank', 'noopener');
+          void patch(current.id, { status: 'opened', opened_at: new Date().toISOString() });
+        }}
+        onPosted={() => {
+          const current = nextOpportunity(rows);
+          if (!current) return;
+          setEditing(false);
+          void patch(current.id, { status: 'responded', responded_at: new Date().toISOString() });
+        }}
+        onSkip={() => {
+          const current = nextOpportunity(rows);
+          if (!current) return;
+          setEditing(false);
+          void patch(current.id, { status: 'skip' });
+        }}
+      />
       {alerts.length > 0 && (
         <ul className="text-sm text-slate-600 dark:text-slate-300 space-y-1">
           {alerts.map((alert) => <li key={alert.id}>{new Date(alert.created_at).toLocaleString()}: {alert.message}</li>)}
@@ -259,7 +302,7 @@ export function RedditOpportunitiesPage() {
       </div>
 
       {visible.length === 0 && (
-        <p className="text-sm text-slate-400">No threads yet. Search Reddit after the database migration and Reddit app credentials are in place.</p>
+        <p className="text-sm text-slate-400">No threads in this filter. The next opportunity above is the one to handle.</p>
       )}
 
       <div className="space-y-4">
@@ -318,6 +361,81 @@ export function RedditOpportunitiesPage() {
         ))}
       </div>
     </div>
+  );
+}
+
+function nextOpportunity(rows: Opportunity[]): Opportunity | null {
+  const open = rows.filter((row) => row.status !== 'skip' && row.status !== 'responded' && row.band !== 'red');
+  const rank = (a: Opportunity, b: Opportunity) =>
+    Number(Boolean(b.customer_opportunity)) - Number(Boolean(a.customer_opportunity)) || b.score - a.score;
+  const waiting = open.filter((row) => row.status === 'opened').sort(rank);
+  if (waiting[0]) return waiting[0];
+  const green = open.filter((row) => row.band === 'green').sort(rank);
+  if (green[0]) return green[0];
+  return open.sort(rank)[0] ?? null;
+}
+
+function sameDay(value: string | null | undefined): boolean {
+  if (!value) return false;
+  return new Date(value).toDateString() === new Date().toDateString();
+}
+
+function NextOpportunity({
+  row,
+  editing,
+  draft,
+  onEdit,
+  onDraft,
+  onSaveEdit,
+  onOpen,
+  onPosted,
+  onSkip,
+}: {
+  row: Opportunity | null;
+  editing: boolean;
+  draft: string;
+  onEdit: () => void;
+  onDraft: (value: string) => void;
+  onSaveEdit: () => void;
+  onOpen: () => void;
+  onPosted: () => void;
+  onSkip: () => void;
+}) {
+  if (!row) {
+    return <p className="text-sm text-slate-500">No opportunity is waiting. The next search will add one here when it finds a worthwhile thread.</p>;
+  }
+  return (
+    <section className="rounded-2xl border border-slate-200 dark:border-slate-800 p-4 space-y-3">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Next best opportunity</h2>
+      <div className="flex flex-wrap gap-2 text-xs font-semibold">
+        <span className="px-2 py-1 rounded-full bg-slate-900 text-white">{row.score}</span>
+        <span className="text-slate-500">r/{row.subreddit}</span>
+        {row.customer_opportunity && <span className="px-2 py-1 rounded-full bg-emerald-100 text-emerald-900">Customer</span>}
+        {(row.seo_opportunity || row.high_seo_value) && <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-900">AI/SEO</span>}
+        <span className="px-2 py-1 rounded-full bg-slate-100">{STATUS_LABEL[row.status]}</span>
+      </div>
+      <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{row.title}</h3>
+      <p className="text-sm text-slate-600 dark:text-slate-300">{row.problem}</p>
+      <p className="text-sm text-slate-500">{row.why_relevant}</p>
+      {editing ? (
+        <textarea value={draft} onChange={(event) => onDraft(event.target.value)} className="w-full min-h-36 text-sm rounded-xl border border-slate-200 dark:border-slate-800 p-3 bg-transparent" />
+      ) : (
+        <textarea readOnly value={row.suggested_response} className="w-full min-h-36 text-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-3" />
+      )}
+      {row.status === 'opened' ? (
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className="px-4 py-3 rounded-xl bg-brand-600 text-white text-sm font-semibold" onClick={onPosted}>Mark posted</button>
+          <button type="button" className={btn} onClick={onSkip}>Skip</button>
+          {editing
+            ? <button type="button" className={btn} onClick={onSaveEdit}>Save edit</button>
+            : <button type="button" className={btn} onClick={onEdit}>Edit response</button>}
+        </div>
+      ) : (
+        <button type="button" className="w-full px-4 py-4 rounded-xl bg-brand-600 text-white text-base font-semibold" onClick={onOpen}>
+          Copy response + open Reddit
+        </button>
+      )}
+    </section>
   );
 }
 

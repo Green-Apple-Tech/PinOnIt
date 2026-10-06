@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classifyOpportunity, draftResponse, scoreOpportunity, type FinderQuery } from './redditFinder';
+import { classifyOpportunity, draftResponse, opportunityKinds, parsePublicSearchResults, redditThreadFromUrl, scoreOpportunity, type FinderQuery } from './redditFinder';
 
 const query: FinderQuery = {
   q: 'Calendly alternative',
@@ -106,5 +106,37 @@ describe('classifyOpportunity', () => {
 
   it('stops extra mentions after the daily cap', () => {
     expect(classifyOpportunity({ ...base, mentionsToday: 2 }).band).toBe('yellow');
+  });
+});
+
+describe('fallback search helpers', () => {
+  it('keeps a public reddit thread url and drops other pages', () => {
+    expect(redditThreadFromUrl('https://www.reddit.com/r/smallbusiness/comments/abc123/calendly_alternative/')).toEqual({
+      fullname: 't3_abc123',
+      permalink: '/r/smallbusiness/comments/abc123/calendly_alternative/',
+      subreddit: 'smallbusiness',
+    });
+    expect(redditThreadFromUrl('https://www.reddit.com/r/smallbusiness/')).toBeNull();
+  });
+
+  it('reads a public search result for a reddit thread', () => {
+    const html = `<a href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fwww.reddit.com%2Fr%2FSaaS%2Fcomments%2F14gubm3%2Flooking_for_a_free_alternative_to_calendly_that%2F&amp;rut=abc" class='result-link'>Looking for a free alternative to Calendly - Reddit</a><td class='result-snippet'>I was seeking a free alternative.</td>`;
+    expect(parsePublicSearchResults(html)).toEqual([{
+      title: 'Looking for a free alternative to Calendly',
+      link: 'https://www.reddit.com/r/SaaS/comments/14gubm3/looking_for_a_free_alternative_to_calendly_that/',
+      snippet: 'I was seeking a free alternative.',
+      position: 1,
+    }]);
+  });
+
+  it('lets one thread be both a customer lead and an SEO result', () => {
+    expect(opportunityKinds({
+      seoQuery: true,
+      searchRank: 2,
+      ageDays: 3,
+      mention: 'yes',
+      band: 'green',
+      intent: 36,
+    })).toEqual({ customer: true, seo: true });
   });
 });

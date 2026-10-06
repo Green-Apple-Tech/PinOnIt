@@ -42,7 +42,19 @@ export type FinderQuery = {
 };
 
 export const FINDER_QUERIES: FinderQuery[] = [
+  { q: 'Calendly alternatives', industry: 'general', feature: 'scheduling', intent: 36, seo: true },
   { q: 'Calendly alternative', industry: 'general', feature: 'scheduling', intent: 36, seo: true },
+  { q: 'electronic signature alternatives', industry: 'general', feature: 'sign-by-text', intent: 36, seo: true },
+  { q: 'send document by text', industry: 'general', feature: 'sign-by-text', intent: 34, seo: true },
+  { q: 'digital waiver', industry: 'general', feature: 'waivers', intent: 30, seo: true },
+  { q: 'customer no-shows', industry: 'general', feature: 'sms-reminders', intent: 28, seo: true },
+  { q: 'scheduling software for small business', industry: 'general', feature: 'scheduling', intent: 32, seo: true },
+  { q: 'cleaning business software', industry: 'cleaners', feature: 'scheduling', intent: 28, seo: true },
+  { q: 'mobile detailing software', industry: 'detailers', feature: 'scheduling', intent: 28, seo: true },
+  { q: 'landscaping software', industry: 'landscapers', feature: 'scheduling', intent: 26, seo: true },
+  { q: 'handyman software', industry: 'handyman', feature: 'scheduling', intent: 26, seo: true },
+  { q: 'small business CRM', industry: 'general', feature: 'scheduling', intent: 22, seo: true },
+  { q: 'client scheduling app', industry: 'general', feature: 'scheduling', intent: 30, seo: true },
   { q: 'DocuSign alternative', industry: 'general', feature: 'sign-by-text', intent: 36, seo: true },
   { q: 'cheap DocuSign alternative', industry: 'general', feature: 'sign-by-text', intent: 38, seo: true },
   { q: 'appointment scheduling software small business', industry: 'general', feature: 'scheduling', intent: 32, seo: true },
@@ -114,6 +126,9 @@ export type ScoreInput = {
   query: FinderQuery;
   rulesText: string;
   nowMs?: number;
+  /** 1 is the first search result. Omitted when discovery did not come from a search engine. */
+  searchRank?: number | null;
+  dateUnknown?: boolean;
 };
 
 export type ScoreResult = {
@@ -150,10 +165,13 @@ export function scoreOpportunity(input: ScoreInput): ScoreResult {
   const problem = problemSentence(input.title, input.body);
 
   let score = input.query.intent;
-  if (ageMs <= day) score += 22;
+  if (input.dateUnknown) score += 6;
+  else if (ageMs <= day) score += 22;
   else if (ageMs <= 7 * day) score += 14;
   else if (ageMs <= 30 * day) score += 6;
   else score -= 8;
+  if (input.searchRank != null && input.searchRank <= 3) score += 14;
+  else if (input.searchRank != null && input.searchRank <= 10) score += 8;
   if (asking) score += 16;
   if (/\b(calendly|docusign|hellosign|jotform|square appointments|jobber|housecall)\b/i.test(text)) score += 8;
   if (NO_SHOW_RE.test(text) || NO_APP_RE.test(text)) score += 8;
@@ -280,6 +298,66 @@ export function classifyOpportunity(input: {
     return { band: 'green', reason: 'Strong match. Ready for you to post. Reddit does not allow this app to post it automatically.' };
   }
   return { band: 'yellow', reason: 'Possibly useful, but it needs your review before anyone replies.' };
+}
+
+export function parsePublicSearchResults(html: string): Array<{ title: string; link: string; snippet: string; position: number }> {
+  const results: Array<{ title: string; link: string; snippet: string; position: number }> = [];
+  const row = /uddg=([^&"']+)[^>]*class='result-link'>([^<]*)<\/a>[\s\S]*?class='result-snippet'>([\s\S]*?)<\/td>/g;
+  let match: RegExpExecArray | null;
+  while ((match = row.exec(html))) {
+    const link = decodeURIComponent(match[1].replace(/&amp;/g, '&'));
+    if (!link.includes('reddit.com')) continue;
+    results.push({
+      title: decodeSearchText(match[2]).replace(/\s*-\s*Reddit\s*$/i, '').trim(),
+      link,
+      snippet: decodeSearchText(match[3]).replace(/\s+/g, ' ').trim(),
+      position: results.length + 1,
+    });
+    if (results.length >= 8) break;
+  }
+  return results;
+}
+
+function decodeSearchText(value: string): string {
+  return value
+    .replace(/<[^>]+>/g, '')
+    .replace(/&#x27;|&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}
+
+export function redditThreadFromUrl(raw: string): { fullname: string; permalink: string; subreddit: string } | null {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return null;
+  }
+  const host = url.hostname.replace(/^www\./, '').replace(/^old\./, '');
+  if (host !== 'reddit.com' && !host.endsWith('.reddit.com')) return null;
+  const parts = url.pathname.split('/').filter(Boolean);
+  if (parts[0] !== 'r' || parts[2] !== 'comments' || !parts[1] || !parts[3]) return null;
+  const subreddit = parts[1];
+  const id = parts[3];
+  if (!/^[a-z0-9]+$/i.test(id)) return null;
+  const slug = parts[4] ? `${parts[4]}/` : '';
+  return { fullname: `t3_${id}`, permalink: `/r/${subreddit}/comments/${id}/${slug}`, subreddit };
+}
+
+export function opportunityKinds(input: {
+  seoQuery: boolean;
+  searchRank: number | null;
+  ageDays: number | null;
+  mention: Mention;
+  band: Band;
+  intent: number;
+}): { customer: boolean; seo: boolean } {
+  const recent = input.ageDays == null || input.ageDays <= 45;
+  const customer = input.band !== 'red' && input.mention !== 'no' && recent && input.intent >= 26;
+  const seo = (input.seoQuery || (input.searchRank != null && input.searchRank <= 5)) && input.band !== 'red';
+  return { customer, seo };
 }
 
 export function redditPostUrl(permalink: string): string {
