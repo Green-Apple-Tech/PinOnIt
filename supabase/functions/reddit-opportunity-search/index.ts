@@ -20,9 +20,7 @@ function json(body: unknown, status = 200) {
 }
 
 function userAgent(): string {
-  const username = (Deno.env.get("REDDIT_USERNAME") ?? "").replace(/^\/?u\//, "").trim();
-  const who = username ? `by /u/${username}` : "contact support@pinonit.com";
-  return `web:pinonit-opportunity-finder:1.0 (${who})`;
+  return "web:pinonit-opportunity-finder:1.0 (contact support@pinonit.com)";
 }
 
 function sleep(ms: number) {

@@ -5,9 +5,7 @@ import { OAUTH_APP_URL, parseOAuthContext } from "../_shared/oauth-state.ts";
 const STAFF = new Set(["support@pinonit.com", "stebbins.peter@gmail.com"]);
 
 function userAgent(): string {
-  const username = (Deno.env.get("REDDIT_USERNAME") ?? "").replace(/^\/?u\//, "").trim();
-  const who = username ? `by /u/${username}` : "contact support@pinonit.com";
-  return `web:pinonit-opportunity-finder:1.0 (${who})`;
+  return "web:pinonit-opportunity-finder:1.0 (contact support@pinonit.com)";
 }
 
 Deno.serve(async (req: Request) => {
