@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
+import { Link } from 'react-router-dom';
 import { SUPPORT_EMAIL } from '../lib/contactEmail';
 
 type Row = { path: string; utm_source: string; visits: number };
@@ -33,7 +34,8 @@ export function MarketingTrafficPage() {
       <p className="text-sm text-slate-500">
         First-party pageviews on public marketing URLs (90 days). ChatGPT search often shows as{' '}
         <code className="text-xs">utm_source=chatgpt.com</code> or referrer host chatgpt.com. Signed in as{' '}
-        {user?.email || 'unknown'}. Report RPC allows {SUPPORT_EMAIL}.
+        {user?.email || 'unknown'}. Report RPC allows {SUPPORT_EMAIL}.{' '}
+        <Link to="/dashboard/reddit-opportunities" className="underline">Reddit Opportunity Finder</Link>
       </p>
       {error && <p className="text-sm text-red-600">{error}</p>}
       <section>

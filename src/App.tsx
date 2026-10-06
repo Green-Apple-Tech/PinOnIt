@@ -107,6 +107,9 @@ const CoordinationVotePage = lazy(() =>
 const MarketingTrafficPage = lazy(() =>
   import('./pages/MarketingTraffic').then((m) => ({ default: m.MarketingTrafficPage })),
 );
+const RedditOpportunitiesPage = lazy(() =>
+  import('./pages/RedditOpportunities').then((m) => ({ default: m.RedditOpportunitiesPage })),
+);
 const StandingJobsPage = lazy(() =>
   import('./pages/StandingJobs').then((m) => ({ default: m.StandingJobsPage })),
 );
@@ -263,6 +266,7 @@ function App() {
               <Route path="documents" element={<DocumentsPage />} />
               <Route path="documents/new" element={<DocumentsNewRoute />} />
               <Route path="marketing-traffic" element={<MarketingTrafficPage />} />
+              <Route path="reddit-opportunities" element={<RedditOpportunitiesPage />} />
             </Route>
             <Route path="/documents" element={<PreserveSearchRedirect to="/dashboard/documents" />} />
             <Route path="/documents/new" element={<PreserveSearchRedirect to="/dashboard/documents/new" />} />

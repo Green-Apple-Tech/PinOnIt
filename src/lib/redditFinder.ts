@@ -1,0 +1,199 @@
+/** Pure scoring and reply drafts for the Reddit Opportunity Finder. No network calls. */
+
+export const PINONIT_PRICE = '$8.99/mo';
+
+export type Mention = 'yes' | 'maybe' | 'no';
+
+export type FinderQuery = {
+  q: string;
+  industry: string;
+  feature: string;
+  /** How strongly this search phrase signals someone is shopping. 0–40. */
+  intent: number;
+  /** Phrase people also type into Google. Not a live rank check. */
+  seo: boolean;
+};
+
+export const FINDER_QUERIES: FinderQuery[] = [
+  { q: 'Calendly alternative', industry: 'general', feature: 'scheduling', intent: 36, seo: true },
+  { q: 'DocuSign alternative', industry: 'general', feature: 'sign-by-text', intent: 36, seo: true },
+  { q: 'cheap DocuSign alternative', industry: 'general', feature: 'sign-by-text', intent: 38, seo: true },
+  { q: 'appointment scheduling software small business', industry: 'general', feature: 'scheduling', intent: 32, seo: true },
+  { q: 'SMS appointment reminders', industry: 'general', feature: 'sms-reminders', intent: 34, seo: true },
+  { q: 'text appointment reminders', industry: 'general', feature: 'sms-reminders', intent: 32, seo: true },
+  { q: 'send contract by text', industry: 'contractors', feature: 'sign-by-text', intent: 36, seo: true },
+  { q: 'send waiver by text', industry: 'general', feature: 'waivers', intent: 36, seo: true },
+  { q: 'electronic waiver app', industry: 'general', feature: 'waivers', intent: 30, seo: true },
+  { q: 'digital waiver software', industry: 'general', feature: 'waivers', intent: 30, seo: true },
+  { q: 'signature by text', industry: 'general', feature: 'sign-by-text', intent: 34, seo: true },
+  { q: 'customer signature without an app', industry: 'general', feature: 'sign-by-text', intent: 34, seo: true },
+  { q: 'customers won\'t download app waiver', industry: 'general', feature: 'sign-by-text', intent: 32, seo: false },
+  { q: 'reduce appointment no shows', industry: 'general', feature: 'sms-reminders', intent: 28, seo: true },
+  { q: 'contractor scheduling software', industry: 'contractors', feature: 'scheduling', intent: 30, seo: true },
+  { q: 'software for small contractors', industry: 'contractors', feature: 'scheduling', intent: 26, seo: true },
+  { q: 'handyman estimate and schedule', industry: 'handyman', feature: 'estimates', intent: 28, seo: false },
+  { q: 'cleaning business scheduling software', industry: 'cleaners', feature: 'scheduling', intent: 28, seo: true },
+  { q: 'mobile detailing booking software', industry: 'detailers', feature: 'scheduling', intent: 28, seo: false },
+  { q: 'landscaping customer reminders', industry: 'landscapers', feature: 'sms-reminders', intent: 26, seo: false },
+  { q: 'pressure washing quote by text', industry: 'pressure-washers', feature: 'estimates', intent: 28, seo: false },
+  { q: 'photographer contract signing', industry: 'photographers', feature: 'sign-by-text', intent: 24, seo: false },
+  { q: 'barber appointment reminder text', industry: 'barbers', feature: 'sms-reminders', intent: 26, seo: false },
+  { q: 'salon no show text reminder', industry: 'salons', feature: 'sms-reminders', intent: 26, seo: false },
+  { q: 'massage intake form text', industry: 'massage', feature: 'consent', intent: 24, seo: false },
+  { q: 'personal trainer waiver', industry: 'trainers', feature: 'waivers', intent: 24, seo: false },
+  { q: 'boat rental waiver', industry: 'marine', feature: 'waivers', intent: 26, seo: false },
+  { q: 'property manager work order signature', industry: 'property-managers', feature: 'work-orders', intent: 24, seo: false },
+  { q: 'home inspector report sign off', industry: 'inspectors', feature: 'inspection', intent: 22, seo: false },
+  { q: 'HVAC service agreement text', industry: 'hvac', feature: 'service-agreements', intent: 26, seo: false },
+  { q: 'plumber estimate approval text', industry: 'plumbers', feature: 'estimates', intent: 26, seo: false },
+  { q: 'pool company service agreement', industry: 'pool', feature: 'service-agreements', intent: 22, seo: false },
+  { q: 'mobile mechanic work approval', industry: 'mechanics', feature: 'job-approvals', intent: 22, seo: false },
+];
+
+const ASK_RE =
+  /\b(looking for|recommend|recommendation|alternative|what do you use|what are you using|switch(ing)? from|too expensive|cheaper|any suggestions|which (app|software|tool))\b/i;
+
+const NO_SHOW_RE = /\b(no[- ]?shows?|forget|forgot|don't show|didn'?t show)\b/i;
+const NO_APP_RE = /\b(won'?t download|dont download|no app|without (an )?account|without downloading|hate apps)\b/i;
+
+const BAD_FIT_RE =
+  /\b(notary|notariz|hipaa|medical record|enterprise|salesforce|payroll|inventory|closing disclosure|multi-?signer|power of attorney|deed|will and testament)\b/i;
+
+const PROMO_BAN_RE =
+  /\b(no self-?promo\w*|no advertising|no solicitation|no vendor|don'?t (advertise|promote|pitch)|no spam)\b/i;
+
+const FEATURE_LINE: Record<string, string> = {
+  scheduling: 'a booking link where the customer picks a time',
+  'sms-reminders': 'text reminders before the appointment',
+  'sign-by-text': 'texting a document the customer can sign in the browser, with no app and no PinOnIt account',
+  waivers: 'texting a waiver the customer signs in the browser, with no app and no account',
+  estimates: 'texting an estimate the customer can approve',
+  consent: 'texting a consent form they can sign on their phone',
+  'work-orders': 'texting a work order for a signature',
+  'service-agreements': 'putting a short service agreement on a text or booking link',
+  inspection: 'sending an inspection sign-off by text',
+  'job-approvals': 'getting a job approval by text before the work starts',
+};
+
+export type ScoreInput = {
+  title: string;
+  body: string;
+  createdUtc: number;
+  numComments: number;
+  archived: boolean;
+  query: FinderQuery;
+  rulesText: string;
+  nowMs?: number;
+};
+
+export type ScoreResult = {
+  score: number;
+  mention: Mention;
+  mentionReason: string;
+  problem: string;
+  whyRelevant: string;
+  suggestedResponse: string;
+  highSeoValue: boolean;
+  rulesNote: string;
+};
+
+function clamp(n: number): number {
+  return Math.max(0, Math.min(100, Math.round(n)));
+}
+
+function problemSentence(title: string, body: string): string {
+  const clean = body.replace(/\s+/g, ' ').trim();
+  const first = clean.split(/(?<=[.!?])\s/)[0] ?? '';
+  if (first.length >= 40 && first.length <= 220) return first;
+  return title.trim();
+}
+
+export function scoreOpportunity(input: ScoreInput): ScoreResult {
+  const now = input.nowMs ?? Date.now();
+  const ageMs = Math.max(0, now - input.createdUtc * 1000);
+  const day = 24 * 60 * 60 * 1000;
+  const text = `${input.title}\n${input.body}`;
+  const rulesBan = PROMO_BAN_RE.test(input.rulesText);
+  const badFit = BAD_FIT_RE.test(text);
+  const asking = ASK_RE.test(text);
+  const feature = FEATURE_LINE[input.query.feature] ?? 'scheduling plus a document the customer can sign from a text';
+  const problem = problemSentence(input.title, input.body);
+
+  let score = input.query.intent;
+  if (ageMs <= day) score += 22;
+  else if (ageMs <= 7 * day) score += 14;
+  else if (ageMs <= 30 * day) score += 6;
+  else score -= 8;
+  if (asking) score += 16;
+  if (/\b(calendly|docusign|hellosign|jotform|square appointments|jobber|housecall)\b/i.test(text)) score += 8;
+  if (NO_SHOW_RE.test(text) || NO_APP_RE.test(text)) score += 8;
+  if (input.numComments >= 2 && !input.archived) score += 6;
+  if (input.archived) score -= 12;
+  if (badFit) score -= 28;
+  if (rulesBan) score -= 30;
+
+  let mention: Mention = 'maybe';
+  let mentionReason = 'PinOnIt overlaps the problem, but the thread is not a clear request for a tool.';
+  if (rulesBan) {
+    mention = 'no';
+    mentionReason = 'This subreddit’s rules restrict promotion or solicitation, so a product mention would not be welcome.';
+  } else if (badFit) {
+    mention = 'no';
+    mentionReason = 'The thread is about a job PinOnIt does not do (for example notary, multi-signer closings, or enterprise software).';
+  } else if (asking && input.query.intent >= 28 && ageMs <= 30 * day) {
+    mention = 'yes';
+    mentionReason = 'Someone is asking for a recommendation, the topic matches a PinOnIt feature, and the thread is recent.';
+  } else if (!asking && input.query.intent < 26) {
+    mention = 'no';
+    mentionReason = 'The keyword matched, but nobody is asking what to buy. A product mention would feel dropped in.';
+  }
+
+  if (mention === 'no') score = Math.min(score, rulesBan || badFit ? 24 : 40);
+
+  const why = mention === 'no'
+    ? mentionReason
+    : `They are talking about ${input.query.feature.replace(/-/g, ' ')} for a ${input.query.industry.replace(/-/g, ' ')} workflow. PinOnIt covers ${feature} at ${PINONIT_PRICE}.`;
+
+  const suggestedResponse = draftResponse({
+    mention,
+    title: input.title,
+    problem,
+    feature,
+  });
+
+  return {
+    score: clamp(score),
+    mention,
+    mentionReason,
+    problem,
+    whyRelevant: why,
+    suggestedResponse,
+    highSeoValue: input.query.seo && mention !== 'no',
+    rulesNote: rulesBan
+      ? 'Subreddit rules look like they limit promotion.'
+      : input.rulesText.trim()
+        ? 'Rules were checked and did not show a clear promotion ban.'
+        : 'Subreddit rules were not loaded yet.',
+  };
+}
+
+export function draftResponse(input: {
+  mention: Mention;
+  title: string;
+  problem: string;
+  feature: string;
+}): string {
+  const title = input.title.replace(/\s+/g, ' ').trim();
+  if (input.mention === 'no') {
+    return `On “${title}”: answer their question directly and do not mention PinOnIt. ${input.problem}`;
+  }
+  const hedge = input.mention === 'maybe'
+    ? 'Only post this if your reply is actually useful after you read the whole thread. '
+    : '';
+  return `${hedge}For “${title}”, you probably don't need a pile of separate apps. ${input.problem} Full disclosure, I built PinOnIt partly for this. It includes ${input.feature}. It's ${PINONIT_PRICE}. Happy to answer anything about how it works.`;
+}
+
+export function redditPostUrl(permalink: string): string {
+  if (permalink.startsWith('http')) return permalink;
+  return `https://www.reddit.com${permalink.startsWith('/') ? '' : '/'}${permalink}`;
+}
