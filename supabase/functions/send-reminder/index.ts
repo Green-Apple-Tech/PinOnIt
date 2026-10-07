@@ -656,11 +656,13 @@ async function fireServiceReminder(opts: {
 
 async function dispatchPersonalReminders(supabase: SupabaseClient): Promise<number> {
   const now = Date.now();
-  const fromIso = new Date(now - 25 * 60 * 1000).toISOString();
+  // Catch a missed day-before email if the dispatcher was down, but not old jobs
+  // whose event already ended.
+  const fromIso = new Date(now - 26 * 60 * 60 * 1000).toISOString();
   const toIso = new Date(now + 2 * 60 * 1000).toISOString();
   const { data: jobs, error } = await supabase
     .from('personal_reminder_jobs')
-    .select('id, host_id, fire_at, channel, reminder_id, personal_reminders(title, due_at, status)')
+    .select('id, host_id, fire_at, channel, reminder_id, personal_reminders(title, transcript, due_at, status)')
     .is('sent_at', null)
     .gte('fire_at', fromIso)
     .lte('fire_at', toIso);
@@ -675,18 +677,31 @@ async function dispatchPersonalReminders(supabase: SupabaseClient): Promise<numb
   let sent = 0;
   for (const job of jobs ?? []) {
     if (!activeHosts.has(job.host_id as string)) continue;
-    const reminder = job.personal_reminders as { title?: string; due_at?: string; status?: string } | null;
+    const reminder = job.personal_reminders as {
+      title?: string;
+      transcript?: string | null;
+      due_at?: string;
+      status?: string;
+    } | null;
     if (!reminder || reminder.status !== 'active') continue;
+    if (reminder.due_at) {
+      const dueMs = new Date(reminder.due_at).getTime();
+      if (!Number.isNaN(dueMs) && dueMs < now - 30 * 60 * 1000) continue;
+    }
     const { data: hostProfile } = await supabase
       .from('profiles')
       .select('full_name, email, notification_email, phone, whatsapp_number, reminder_also')
       .eq('id', job.host_id)
       .maybeSingle();
     const title = (reminder.title || 'your reminder').trim();
+    const details = (reminder.transcript || '').trim();
     const when = reminder.due_at
-      ? new Date(reminder.due_at).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+      ? new Date(reminder.due_at).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })
       : '';
-    const msg = `Reminder: ${title}${when ? ` — ${when}` : ''}`;
+    const headline = `Reminder: ${title}${when ? ` — ${when}` : ''}`;
+    const msg = details && details.toLowerCase() !== title.toLowerCase()
+      ? `${headline}\n\n${details}`
+      : headline;
     let ok = false;
     let recipient = '(none)';
     let err: string | undefined;
@@ -712,10 +727,10 @@ async function dispatchPersonalReminders(supabase: SupabaseClient): Promise<numb
       else {
         const result = await sendTwilioWhatsapp(supabase, to, {
           guest_name: hostProfile?.full_name || 'there',
-          host_name: 'PinOnIt',
+          host_name: title,
           service_name: title,
           date: when || 'your scheduled time',
-          time: when || '',
+          time: details ? details.slice(0, 240) : (when || title),
           duration: '',
         });
         ok = result.ok;
@@ -726,7 +741,8 @@ async function dispatchPersonalReminders(supabase: SupabaseClient): Promise<numb
       recipient = to || '(none)';
       if (!to) err = 'no phone';
       else {
-        const twiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="Polly.Joanna">This is a PinOnIt reminder. ${title.replace(/[<>&]/g, ' ')}. ${when ? `Scheduled for ${when}.` : ''}</Say></Response>`;
+        const spoken = `${title}. ${when ? `Scheduled for ${when}.` : ''} ${details && details.toLowerCase() !== title.toLowerCase() ? details : ''}`.replace(/[<>&]/g, ' ').slice(0, 800);
+        const twiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="Polly.Joanna">This is a PinOnIt reminder. ${spoken}</Say></Response>`;
         const result = await sendTwilioVoice(to, twiml);
         ok = result.ok;
         err = result.error;

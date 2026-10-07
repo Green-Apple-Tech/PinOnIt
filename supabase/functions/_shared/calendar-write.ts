@@ -351,15 +351,19 @@ export function personalReminderPayload(reminder: {
   title: string;
   due_at: string;
   location?: string | null;
+  transcript?: string | null;
 }): CalendarEventPayload {
   const start = new Date(reminder.due_at);
   const end = new Date(start.getTime() + 30 * 60 * 1000);
   const where = reminder.location?.trim() || '';
+  const details = (reminder.transcript || '').trim();
+  const description = [
+    details,
+    where ? `Where: ${where}` : '',
+  ].filter(Boolean).join('\n\n') || 'Personal reminder from PinOnIt';
   return {
     title: reminder.title,
-    description: where
-      ? `Personal reminder from PinOnIt\nWhere: ${where}`
-      : 'Personal reminder from PinOnIt',
+    description,
     start_time: start.toISOString(),
     end_time: end.toISOString(),
     location: where || null,

@@ -233,13 +233,14 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
     setSaving(true);
     setError('');
     try {
-      const fullTitle = notes.trim() ? `${title.trim()} — ${notes.trim()}` : title.trim();
+      const subject = title.trim();
+      const details = [transcript.trim(), notes.trim()].filter(Boolean).join('\n\n');
       const { data: reminder, error: remErr } = await supabase
         .from('personal_reminders')
         .insert({
           host_id: user.id,
-          title: fullTitle,
-          transcript: transcript || null,
+          title: subject,
+          transcript: details || null,
           location: location.trim() || null,
           due_at: dueAt.toISOString(),
           status: 'active',
