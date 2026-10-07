@@ -10,6 +10,7 @@ import {
   expandPersonalJobs,
   formatChannelList,
   groupPersonalJobs,
+  isSoonReminder,
   mergePersonalPlans,
   normalizePersonalDefaults,
   type PersonalChannel,
@@ -62,6 +63,7 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
   const [plan, setPlan] = useState<PersonalReminderDefaults>(defaults);
   const [relative, setRelative] = useState(false);
   const [explicitChannels, setExplicitChannels] = useState<PersonalChannel[]>([]);
+  const [soonChannels, setSoonChannels] = useState<PersonalChannel[]>(['sms', 'voice']);
   const [addToCalendar, setAddToCalendar] = useState(profileAddToCalendar);
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -103,6 +105,7 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
     setPlan(defaults);
     setRelative(false);
     setExplicitChannels([]);
+    setSoonChannels(['sms', 'voice']);
     setAddToCalendar(profileAddToCalendar);
     setError('');
     setModalOpen(true);
@@ -118,6 +121,13 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
     setPlan(mergePersonalPlans(defaults, parsed.extras));
     setRelative(parsed.relative);
     setExplicitChannels(parsed.explicitChannels);
+    if (parsed.dueAt && isSoonReminder(parsed.dueAt)) {
+      const next: PersonalChannel[] = ['sms', 'voice'];
+      for (const channel of parsed.explicitChannels) {
+        if (!next.includes(channel)) next.push(channel);
+      }
+      setSoonChannels(next);
+    }
     setAddToCalendar(profileAddToCalendar);
     setError(parsed.dueAt ? '' : 'Pick a day and time — I heard the task but not when.');
     setModalOpen(true);
@@ -233,9 +243,11 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
       setError('Pick a time in the future.');
       return;
     }
-    const jobs = expandPersonalJobs(dueAt, chosen, {
+    const soon = isSoonReminder(dueAt);
+    const jobs = expandPersonalJobs(dueAt, soon ? { day_before: [], hour_before: [], ten_min: [] } : chosen, {
       atTime: relative,
       explicitChannels,
+      soonChannels: soon ? (useDefaults ? ['sms', 'voice'] : soonChannels) : undefined,
     });
     if (jobs.length === 0) {
       setError('Choose at least one reminder (or skip to use the defaults).');
@@ -313,10 +325,12 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
   };
 
   const previewDue = dueLocal ? new Date(dueLocal) : null;
+  const previewSoon = Boolean(previewDue && !Number.isNaN(previewDue.getTime()) && isSoonReminder(previewDue));
   const previewGroups = previewDue && !Number.isNaN(previewDue.getTime())
-    ? groupPersonalJobs(expandPersonalJobs(previewDue, plan, {
+    ? groupPersonalJobs(expandPersonalJobs(previewDue, previewSoon ? { day_before: [], hour_before: [], ten_min: [] } : plan, {
       atTime: relative,
       explicitChannels,
+      soonChannels: previewSoon ? soonChannels : undefined,
     }))
     : [];
 
@@ -326,7 +340,7 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
         <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-white">Remind me…</h2>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Say when and what, like “remind me in 25 minutes that the stove is on.” You confirm the time and channels first. It uses your usual reminders — email the day before, a text 1 hour before, and a text 10 minutes before — and also sends at the time you named. Anything else you ask for is added.
+            Say when and what, like “remind me in 15 minutes.” If it is within the next hour and a half, you get a text and a call then. Later reminders keep email the day before, a text 1 hour before, and a text 10 minutes before.
           </p>
         </div>
 
@@ -504,8 +518,41 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
               </div>
 
               <p className="text-xs font-medium text-slate-500 pt-1">
-                Starts as email the day before, a text 1 hour before, and a text 10 minutes before. Anything you asked for out loud is added. Turn a box off if you do not want it.
+                {previewSoon
+                  ? 'This one is soon, so it is a text and a call at that time. The day-before email and the hour-before text stay off.'
+                  : 'Starts as email the day before, a text 1 hour before, and a text 10 minutes before. Anything you asked for out loud is added. Turn a box off if you do not want it.'}
               </p>
+              {previewSoon ? (
+                <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-3">
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-2">At that time</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {CHANNELS.map((ch) => {
+                      const on = soonChannels.includes(ch.id);
+                      const Icon = ch.icon || Mail;
+                      return (
+                        <button
+                          key={ch.id}
+                          type="button"
+                          onClick={() => {
+                            userEdited.current = true;
+                            setSoonChannels((prev) => (
+                              prev.includes(ch.id) ? prev.filter((channel) => channel !== ch.id) : [...prev, ch.id]
+                            ));
+                          }}
+                          className={`min-h-11 rounded-xl border text-xs font-semibold px-2 py-2 inline-flex items-center justify-center gap-1 ${
+                            on
+                              ? 'border-brand-600 bg-brand-50 dark:bg-brand-500/10 text-brand-700'
+                              : 'border-slate-200 dark:border-slate-700 text-slate-500'
+                          }`}
+                        >
+                          <Icon className="h-3.5 w-3.5" />
+                          {ch.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
               <div className="space-y-2">
                 {TIMINGS.map((timing) => (
                   <div key={timing} className="rounded-xl border border-slate-200 dark:border-slate-800 p-3">
@@ -536,6 +583,7 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
                   </div>
                 ))}
               </div>
+              )}
 
               {error && <p className="text-sm text-red-600">{error}</p>}
 

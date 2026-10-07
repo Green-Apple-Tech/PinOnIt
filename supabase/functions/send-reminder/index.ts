@@ -697,7 +697,9 @@ async function dispatchPersonalReminders(supabase: SupabaseClient): Promise<numb
     const escalate = job.kind === 'escalate';
     if (!escalate && reminder.due_at) {
       const dueMs = new Date(reminder.due_at).getTime();
-      if (!Number.isNaN(dueMs) && dueMs < now - 30 * 60 * 1000) continue;
+      // A down dispatcher used to miss the send forever after 30 minutes.
+      // Still send a personal reminder that is only a few hours late.
+      if (!Number.isNaN(dueMs) && dueMs < now - 6 * 60 * 60 * 1000) continue;
     }
     const { data: hostProfile } = await supabase
       .from('profiles')

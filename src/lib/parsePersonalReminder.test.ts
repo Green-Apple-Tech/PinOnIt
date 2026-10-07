@@ -31,40 +31,34 @@ describe('parsePersonalReminder', () => {
 describe('relative reminders', () => {
   const now = new Date(2026, 9, 7, 15, 0, 0);
 
-  it('reminds at the time they named, plus the usual text 10 minutes before', () => {
-    const parsed = parsePersonalReminder('remind me in 20 minutes that the stove is on', now);
-    expect(parsed.title).toBe('Stove is on');
-    expect(parsed.relative).toBe(true);
-    expect(parsed.dueAt?.getHours()).toBe(15);
-    expect(parsed.dueAt?.getMinutes()).toBe(20);
-
+  it('sends a text and a call at 15 minutes, and skips the day-before and hour-before plan', () => {
+    const parsed = parsePersonalReminder('remind me in 15 minutes with a voice reminder', now);
+    expect(parsed.dueAt?.getMinutes()).toBe(15);
     const jobs = expandPersonalJobs(parsed.dueAt!, DEFAULT_PERSONAL_REMINDER, {
       now,
-      atTime: parsed.relative,
       explicitChannels: parsed.explicitChannels,
     });
-    const channelsAt = (min: number) =>
-      jobs.filter((job) => job.fireAt.getMinutes() === min).map((job) => job.channel).sort();
-    expect(channelsAt(10)).toEqual(['sms']);
-    expect(channelsAt(20)).toEqual(['email', 'sms']);
-    expect(jobs.some((job) => job.kind === 'escalate')).toBe(false);
-    expect(jobs.some((job) => job.channel === 'voice' || job.channel === 'whatsapp')).toBe(false);
+    expect(jobs.map((job) => job.channel).sort()).toEqual(['sms', 'voice']);
+    expect(jobs.every((job) => job.fireAt.getMinutes() === 15)).toBe(true);
   });
 
-  it('uses a named channel at the time they asked, and still sends the usual text 10 minutes before', () => {
+  it('keeps a short stove reminder to a text and a call at that time', () => {
+    const parsed = parsePersonalReminder('remind me in 20 minutes that the stove is on', now);
+    expect(parsed.title).toBe('Stove is on');
+    const jobs = expandPersonalJobs(parsed.dueAt!, DEFAULT_PERSONAL_REMINDER, { now });
+    expect(jobs.map((job) => job.channel).sort()).toEqual(['sms', 'voice']);
+    expect(jobs.every((job) => job.fireAt.getTime() === parsed.dueAt!.getTime())).toBe(true);
+  });
+
+  it('adds a named channel onto the text and call', () => {
     const parsed = parsePersonalReminder('remind me in 25 minutes to call mom and email me', now);
     expect(parsed.explicitChannels).toEqual(['email']);
     const jobs = expandPersonalJobs(parsed.dueAt!, DEFAULT_PERSONAL_REMINDER, {
       now,
-      atTime: true,
       explicitChannels: parsed.explicitChannels,
     });
-    const channelsAt = (min: number) =>
-      jobs.filter((job) => job.fireAt.getMinutes() === min).map((job) => job.channel).sort();
-    expect(parsed.dueAt?.getMinutes()).toBe(25);
-    expect(channelsAt(15)).toEqual(['sms']);
-    expect(channelsAt(25)).toEqual(['email']);
-    expect(jobs.some((job) => job.kind === 'escalate')).toBe(false);
+    expect(jobs.map((job) => job.channel).sort()).toEqual(['email', 'sms', 'voice']);
+    expect(jobs.every((job) => job.fireAt.getMinutes() === 25)).toBe(true);
   });
 
   it('leaves a clock-time visit on the usual before-reminders', () => {

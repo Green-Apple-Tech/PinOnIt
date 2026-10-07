@@ -100,6 +100,14 @@ function addJobs(
   }
 }
 
+/** Same-day pings this close skip the day-before and hour-before plan. */
+export const SOON_REMINDER_MS = 90 * 60 * 1000;
+
+export function isSoonReminder(dueAt: Date, now = new Date()): boolean {
+  const lead = dueAt.getTime() - now.getTime();
+  return lead > 0 && lead <= SOON_REMINDER_MS;
+}
+
 export function expandPersonalJobs(
   dueAt: Date,
   plan: PersonalReminderDefaults,
@@ -108,12 +116,24 @@ export function expandPersonalJobs(
     /** Relative request ("in 20 minutes") also fires at the due time. */
     atTime?: boolean;
     explicitChannels?: PersonalChannel[];
+    /** Channels for a short same-day reminder. Defaults to text and a call. */
+    soonChannels?: PersonalChannel[];
   },
 ): PersonalJob[] {
+  const nowDate = opts?.now ?? new Date();
   const dueMs = dueAt.getTime();
-  const nowMs = (opts?.now ?? new Date()).getTime();
+  const nowMs = nowDate.getTime();
   const jobs: PersonalJob[] = [];
   const seen = new Set<string>();
+
+  if (isSoonReminder(dueAt, nowDate)) {
+    const named = opts?.explicitChannels ?? [];
+    const picked = (opts?.soonChannels?.length ? opts.soonChannels : ['sms', 'voice' as PersonalChannel]).concat(named);
+    const channels = ALL_PERSONAL_CHANNELS.filter((channel) => picked.includes(channel));
+    addJobs(jobs, seen, dueAt, channels.length ? channels : ['sms', 'voice'], 'remind', nowMs);
+    return jobs;
+  }
+
   (Object.keys(PERSONAL_TIMING_OFFSETS) as PersonalTiming[]).forEach((timing) => {
     const offsetMin = PERSONAL_TIMING_OFFSETS[timing];
     addJobs(jobs, seen, new Date(dueMs + offsetMin * 60 * 1000), plan[timing], 'remind', nowMs);

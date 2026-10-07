@@ -707,26 +707,6 @@ export function RemindersPage({
         </button>
       </div>
 
-      <p className="text-sm text-slate-500 dark:text-slate-400">
-        <span className="inline-flex items-center gap-1 mr-1.5 align-middle">
-          <ChannelIcon channel="sms" className="h-3.5 w-3.5 text-amber-500" />
-          <ChannelIcon channel="whatsapp" className="h-3.5 w-3.5" style={{ color: '#25D366' }} />
-        </span>
-        Test SMS, WhatsApp, email, or Slack in{' '}
-        <Link to="/dashboard/settings?tab=integrations" className="font-semibold text-[#5864C6] hover:underline">
-          Settings → Integrations
-        </Link>
-        .
-      </p>
-
-      <Link
-        to="/dashboard/settings?tab=activity"
-        className="flex items-center justify-between gap-3 px-5 py-4 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900/50"
-      >
-        <span>Message, test, and document activity lives in Settings → Activity</span>
-        <ArrowRight className="h-4 w-4 text-slate-400 shrink-0" />
-      </Link>
-
       {/* First-time setup when no reminders exist yet */}
       {!hasAnyReminders && !showAddForm && (
         <div className="rounded-2xl border-2 border-dashed border-[#5864C6]/30 dark:border-[#5864C6]/20 bg-[#5864C6]/5 dark:bg-[#5864C6]/5 p-8 text-center">
@@ -1041,16 +1021,6 @@ export function RemindersPage({
       {/* ── ACTIVE REMINDERS GRID ── */}
       {hasAnyReminders && !showAddForm && (
         <div>
-          <div className="mb-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 px-5 py-4">
-            <p className="text-sm font-bold text-slate-900 dark:text-white">What is this for?</p>
-            <p className="text-sm text-slate-600 dark:text-slate-300 mt-1.5 leading-relaxed">
-              After someone books, PinOnIt can remind them so they actually show up. Each row is a time. Each column is email, text, WhatsApp, or a phone call. A checkmark means that reminder is on.
-            </p>
-            <p className="text-sm text-slate-600 dark:text-slate-300 mt-1.5 leading-relaxed">
-              Guests get an email <strong className="font-semibold">24 hours before</strong> and <strong className="font-semibold">1 hour before</strong> unless you turn those off. Add SMS or WhatsApp the same way if you want a text too.
-            </p>
-          </div>
-
           <div className="mb-3">
             <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
               What guests get
