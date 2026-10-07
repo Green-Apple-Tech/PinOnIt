@@ -14,13 +14,7 @@ Python 3.9+ works (3.12 ideal). Finds small US businesses that use **Calendly** 
 - Weekday launchd plist via `--schedule` (10:00am Mon–Fri) — **you** load it; weekends do not run
 
 ### Next
-```bash
-cd ~/Projects/PinOnIt && ./batch.sh landscaping
-# or: scoutbatch landscaping
-python -m scout2.cli batches --niche landscaping
-```
-- Load launchd when ready (see Ramp automation below)
-- Outreach from a **separate warmed domain** (not pinonit.com); CAN-SPAM basics
+Daily `send-today` staging is **off**. Nights at 10:00pm search chambers and the other directories for businesses that need a one-page waiver, NDA, quote approval, or quick contract. **All emails** is the sent list. New addresses fill `new-001` up to 1,000, then `new-002`, and so on.
 
 ### Do not
 - Reverse Common Crawl “who links to Calendly” via CDX (not supported cheaply)

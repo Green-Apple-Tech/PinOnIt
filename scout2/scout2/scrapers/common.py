@@ -381,7 +381,7 @@ async def fetch_tool_pages(fetcher: PoliteFetcher, domain: str) -> list[str]:
     return pages
 
 
-async def scan_calendly(fetcher: PoliteFetcher, domain: str) -> tuple[str, Optional[str], dict]:
+async def scan_calendly(fetcher: PoliteFetcher, domain: str) -> tuple[str, Optional[str], dict, str | None]:
     """Homepage plus booking pages. Returns calendly yes/no, url, and tool flags."""
     from ..tool_detect import merge_tool_flags
 
@@ -389,7 +389,13 @@ async def scan_calendly(fetcher: PoliteFetcher, domain: str) -> tuple[str, Optio
     flags = merge_tool_flags(pages)
     yes = flags.get("uses_calendly") == "Y"
     url = flags.get("detected_url") if yes else None
-    return ("yes" if yes else "no", url, flags)
+    site_email = None
+    found: list[str] = []
+    for html in pages:
+        found.extend(emails_from_html(html))
+    if found:
+        site_email, _rank = pick_best(found, domain)
+    return ("yes" if yes else "no", url, flags, site_email)
 
 
 def commit_lead(
@@ -453,11 +459,13 @@ async def ingest_website(
     if known.is_dupe(domain, rec.get("email")):
         stats.dupes += 1
         return
-    detected, booking, flags = await scan_calendly(fetcher, domain)
+    detected, booking, flags, site_email = await scan_calendly(fetcher, domain)
     flags["_domain"] = domain
     from ..tool_detect import note_flags
 
     note_flags(stats, flags)
+    if not (rec.get("email") or "").strip() and site_email:
+        rec = {**rec, "email": site_email}
     commit_lead(
         source=source,
         category=category,

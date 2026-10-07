@@ -17,11 +17,29 @@ from ..politeness import domain_of
 
 N_THERAPY = ("therapist", "life coach", "chiropractor", "nutritionist")
 N_WEDDING = ("photographer",)
-N_COACH = ("life coach", "consultant", "personal trainer")
-N_HOME = ("landscaping", "plumbing", "hvac", "handyman", "house cleaning")
-N_LEGAL = ("attorney",)
-N_LICENSE = ("contractor", "barber", "notary", "insurance agent")
-N_CALENDLY = ("therapist", "photographer", "consultant", "real estate agent", "attorney")
+N_COACH = ("life coach", "consultant", "personal trainer", "marketing agency")
+N_HOME = (
+    "trampoline park",
+    "climbing gym",
+    "escape room",
+    "tattoo",
+    "kayak rental",
+    "contractor",
+    "painter",
+    "cleaning service",
+)
+N_LEGAL = ("tattoo",)
+N_LICENSE = ("personal trainer", "massage", "photographer", "yoga studio")
+N_CALENDLY = (
+    "photographer",
+    "videographer",
+    "personal trainer",
+    "yoga studio",
+    "tattoo",
+    "tour company",
+    "event planner",
+    "consultant",
+)
 
 SKIP_BITS = (
     "/blog",

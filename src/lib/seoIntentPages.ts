@@ -48,6 +48,15 @@ export type IntentPage = {
   faq: IntentFaq[];
   cta: string;
   ctaTo: string;
+  /** Optional hero lines. Only rendered when set, so other landings stay as they are. */
+  subhead?: string;
+  heroNote?: string;
+  heroExtra?: string;
+  heroCta?: boolean;
+  checklist?: boolean;
+  featuresTitle?: string;
+  compareLead?: string;
+  compareSteps?: string;
   metaTitle: string;
   metaDescription: string;
   canonical: string;
@@ -62,27 +71,38 @@ const CORE_INTENT_PAGES: IntentPage[] = [
   {
     slug: 'calendly-alternative',
     path: '/calendly-alternative',
-    eyebrow: 'For contractors, venues, and local services',
-    h1: 'Calendly alternative for small business',
+    eyebrow: 'Calendly alternative for small business',
+    h1: 'More than scheduling. Make sure they actually show up.',
+    subhead: 'A Calendly alternative with SMS, WhatsApp & voice reminders.',
+    heroNote: 'Let customers book online, then automatically remind them about their appointment by text, WhatsApp, or voice.',
+    heroExtra: 'Plus, send waivers, agreements and other documents for signature by text — no app or customer account required.',
+    heroCta: true,
     opening: PINONIT_CORE_SENTENCE,
     body: [
-      'Calendly is built around a booking page for meetings. That is useful if your work is a Zoom slot on a laptop. Most small businesses are not that: a painter quoting from the driveway, a trampoline park collecting a waiver, a lawn crew that no-shows if the reminder is an email.',
-      'Someone running a small service company may use Calendly primarily for appointment booking and reminders. For that specific workflow, PinOnIt still gives you a booking link and Google / Outlook / Apple busy times — then it keeps going. NeverMiss reminds them by text, WhatsApp, email, or a voice call, and they can reply 1 to cancel or 2 to reschedule.',
-      'PinOnIt is not a full Calendly replacement. It does not try to match every Calendly feature, workflow, or integration. If you only need a prettier Calendly clone, stay on Calendly. If the job after they pick a time is a quote, a waiver, or a text reminder, that is this product.',
+      'PinOnIt is not a full Calendly replacement. It does not try to match every Calendly feature, workflow, or integration. If you only need a booking link, another scheduling tool may be enough. If you also need them to remember the appointment and sign a waiver or agreement, that is this product.',
+      'A small service business can share one booking link, block busy times on Google, Outlook, or Apple, and send appointment reminders by SMS, WhatsApp, or a voice call. The same plan includes Sign-by-Text.',
     ],
     audience:
       'Independent operators and small crews who book jobs on a phone — contractors, venues, lawn and pool routes — not teams whose whole day is video meetings.',
+    checklist: true,
+    featuresTitle: 'Scheduling, reminders, and the signature',
     features: [
-      'Booking link with calendar busy times',
-      'SMS reminders, plus WhatsApp, email, and voice',
-      'Guest reply 1 to cancel or 2 to reschedule',
-      'Quote-by-Text and Sign-by-Text in the same plan',
-      `One Pro plan at ${PINONIT_PRICE_MONTHLY} after a 14-day trial`,
+      'Online scheduling',
+      'SMS appointment reminders',
+      'WhatsApp appointment reminders',
+      'Voice appointment reminders',
+      'Sign-by-Text',
+      'Waivers and agreements by text',
+      'No app required for customers',
+      'No customer account required',
     ],
     workflow:
-      'Share your booking link in the same text that confirms the address. They pick a slot. You turn on NeverMiss so a text goes out before the visit. If they cannot make it, they reply 1 or 2 instead of calling the shop.',
+      'They book a time. PinOnIt reminds them before the appointment. You send the waiver or agreement by text, and they sign in the phone browser.',
     sections: [
-      { h2: 'What is PinOnIt?', text: PINONIT_CORE_SENTENCE },
+      {
+        h2: 'What is PinOnIt?',
+        text: 'PinOnIt is appointment scheduling software for a small business, with reminders built in. Customers book online. You remind them by text, WhatsApp, or voice, then send what they need to sign. They do not download an app or create a PinOnIt account.',
+      },
       { h2: 'Who is PinOnIt for?', text: PINONIT_WHO },
       { h2: 'How booking works', text: PINONIT_BOOKING_HOW },
       { h2: 'What does PinOnIt cost?', text: PINONIT_COST },
@@ -94,22 +114,24 @@ const CORE_INTENT_PAGES: IntentPage[] = [
       { path: '/contractor-booking-app', label: 'Contractor booking app' },
       { path: '/sms-appointment-reminders', label: 'SMS appointment reminders' },
     ],
-    compareTitle: 'PinOnIt vs Calendly for field and venue work',
+    compareTitle: 'Scheduling is just the beginning.',
+    compareLead: 'Other scheduling tools help people book you. PinOnIt helps them book, remember, show up, and sign what you need.',
+    compareSteps: 'Schedule → Remind → Sign → Get the job done',
     compareOther: 'Calendly',
     compareRows: [
-      { feature: 'Paid plan (typical small-business seat)', pinonit: PINONIT_PRICE_MO, other: '$16/mo Teams-class plans' },
       { feature: 'Booking link + calendar busy times', pinonit: 'Yes', other: 'Yes' },
-      { feature: 'Quote a job by SMS', pinonit: 'Yes', other: 'No' },
-      { feature: 'Waiver / NDA / invoice by text', pinonit: 'Yes', other: 'No' },
       { feature: 'SMS reminders', pinonit: 'Included on Pro', other: 'Limited; paid add-on on higher plans' },
       { feature: 'WhatsApp + voice reminders', pinonit: 'Yes', other: 'No' },
+      { feature: 'Waiver / NDA / invoice by text', pinonit: 'Yes', other: 'No' },
+      { feature: 'Quote a job by SMS', pinonit: 'Yes', other: 'No' },
       { feature: 'Guest replies 1 cancel / 2 reschedule', pinonit: 'Yes', other: 'No two-way SMS like this' },
+      { feature: 'Paid plan (typical small-business seat)', pinonit: PINONIT_PRICE_MO, other: '$16/mo Teams-class plans' },
     ],
     compareNote: COMPARE_NOTE,
     faq: [
       {
-        q: 'What is a cheap Calendly alternative with text reminders?',
-        a: `PinOnIt is ${PINONIT_PRICE_MONTHLY} after trial and includes booking plus SMS reminders on Pro. It is built for field and venue work, not as a feature-for-feature Calendly clone.`,
+        q: 'Why use PinOnIt instead of a basic scheduling tool?',
+        a: 'A booking link gets the appointment on the calendar. PinOnIt also reminds them by SMS, WhatsApp, or voice, and can send a waiver or agreement by text for them to sign without an app or an account.',
       },
       {
         q: 'Does PinOnIt replace every Calendly feature?',
@@ -126,8 +148,8 @@ const CORE_INTENT_PAGES: IntentPage[] = [
     ],
     cta: 'Start 14-day trial',
     ctaTo: '/signup',
-    metaTitle: 'Calendly alternative for small business | PinOnIt',
-    metaDescription: `PinOnIt is a Calendly alternative for small business: quote, sign, book, and remind by SMS for ${PINONIT_PRICE_MONTHLY}. Built for contractors and venues, not just Zoom meetings.`,
+    metaTitle: 'Calendly Alternative with SMS, WhatsApp & Voice Reminders | PinOnIt',
+    metaDescription: `Looking for a Calendly alternative? PinOnIt combines online scheduling with SMS, WhatsApp and voice reminders, plus Sign-by-Text tools for ${PINONIT_PRICE_MONTHLY}.`,
     canonical: intentCanonical('/calendly-alternative'),
   },
   {

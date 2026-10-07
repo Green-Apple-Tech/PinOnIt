@@ -350,14 +350,19 @@ export function bookingCalendarPayload(booking: {
 export function personalReminderPayload(reminder: {
   title: string;
   due_at: string;
+  location?: string | null;
 }): CalendarEventPayload {
   const start = new Date(reminder.due_at);
   const end = new Date(start.getTime() + 30 * 60 * 1000);
+  const where = reminder.location?.trim() || '';
   return {
     title: reminder.title,
-    description: 'Personal reminder from PinOnIt',
+    description: where
+      ? `Personal reminder from PinOnIt\nWhere: ${where}`
+      : 'Personal reminder from PinOnIt',
     start_time: start.toISOString(),
     end_time: end.toISOString(),
+    location: where || null,
   };
 }
 

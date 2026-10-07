@@ -1,5 +1,6 @@
-# Google Places query niches (appended with metro name at runtime).
-# Waiver / Sign-by-Text first — liability forms, not just booking.
+# Google Places queries (city is appended at runtime).
+# One-page paperwork: waiver, NDA, quote approval, quick contract.
+# Not landscaping. Not multi-signer real-estate or law closings.
 niches:
   - trampoline park
   - bounce house rental
@@ -11,45 +12,43 @@ niches:
   - tour company
   - boat rental
   - kayak rental
+  - jet ski rental
   - escape room
   - axe throwing
   - paintball
   - laser tag
   - go kart
-  - event venue
   - horseback riding
   - dance studio
   - crossfit gym
   - gymnastics
   - swim school
   - skate park
-  # Booking / other SMBs after waivers
-  - landscaping
-  - pool service
-  - plumbing
-  - electrical
-  - hvac
-  - handyman
-  - pressure washing
-  - pest control
-  - mobile detailing
-  - house cleaning
-  - barber
-  - salon suite
-  - lash tech
-  - massage therapy
+  - tattoo studio
+  - piercing studio
+  - surf school
+  - scuba diving
+  - skydiving
+  - zipline
+  - rage room
   - personal training
-  - tattoo
-  - mobile notary
+  - massage therapy
   - photography
-  - pet grooming
-  - solo attorney
-  - tax preparer
-  - insurance agent
-  - real estate agent
-  - tutoring
-  - music lessons
-  - private practice therapist
-  - chiropractor
+  - videographer
+  - event planner
+  - daycare
+  - summer camp
   - med spa
-  - dietitian
+  - salon
+  - DJ
+  - catering
+  - contractor
+  - painter
+  - house cleaning
+  - moving company
+  - consultant
+  - marketing agency
+  - web designer
+  - life coach
+  - pet boarding
+  - music lessons

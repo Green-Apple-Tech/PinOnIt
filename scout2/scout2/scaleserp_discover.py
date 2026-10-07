@@ -20,6 +20,7 @@ WAIVER_BITS = (
     "gym",
     "trampoline",
     "tattoo",
+    "pierc",
     "massage",
     "climbing",
     "rental",
@@ -34,6 +35,19 @@ WAIVER_BITS = (
     "kayak",
     "boat",
     "horse",
+    "martial",
+    "laser",
+    "kart",
+    "gymnastic",
+    "swim",
+    "skate",
+    "surf",
+    "scuba",
+    "skydiv",
+    "zipline",
+    "zip line",
+    "rage",
+    "waiver",
 )
 
 
@@ -80,6 +94,8 @@ def discovery_queries(niches: list[str]) -> list[tuple[str, str]]:
             continue
         out.append(("web", f"{name} book online calendly"))
         out.append(("web", f"{name} sign waiver online"))
+        out.append(("web", f"{name} NDA"))
+        out.append(("web", f"{name} quote approval"))
         if is_waiver_niche(name):
             out.append(("web", f"{name} online waiver"))
         out.append(("site", f'site:calendly.com "{name}"'))

@@ -1,5 +1,5 @@
 import { Link, Navigate, useLocation } from 'react-router-dom';
-import { ArrowRight, Moon, Sun } from 'lucide-react';
+import { ArrowRight, Check, Moon, Sun } from 'lucide-react';
 import { Footer } from '../components/Footer';
 import { JsonLd } from '../components/JsonLd';
 import { useTheme } from '../hooks/useTheme';
@@ -75,7 +75,27 @@ export function SeoIntentPage() {
         <article className="max-w-3xl mx-auto">
           <p className="text-xs font-bold uppercase tracking-widest text-brand-600 dark:text-brand-400 mb-3">{page.eyebrow}</p>
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight leading-tight">{page.h1}</h1>
-          <p className="mt-5 text-lg text-slate-700 dark:text-slate-200 leading-relaxed">{page.opening}</p>
+          {page.subhead && (
+            <p className="mt-4 text-xl font-semibold text-slate-800 dark:text-slate-100 leading-snug">{page.subhead}</p>
+          )}
+          {page.heroNote && (
+            <p className="mt-4 text-slate-600 dark:text-slate-300 leading-relaxed">{page.heroNote}</p>
+          )}
+          {page.heroExtra && (
+            <p className="mt-3 text-slate-600 dark:text-slate-300 leading-relaxed">{page.heroExtra}</p>
+          )}
+          {page.heroCta && (
+            <div className="mt-6 flex flex-col sm:flex-row sm:items-center gap-3">
+              <Link
+                to={page.ctaTo === '/signup' ? signup : page.ctaTo}
+                className="inline-flex items-center justify-center gap-2 w-full sm:w-auto min-h-11 px-6 py-3 rounded-full bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold"
+              >
+                {page.cta} <ArrowRight className="h-4 w-4" />
+              </Link>
+              <p className="text-lg font-bold text-slate-900 dark:text-white">{PINONIT_PRICE_MONTHLY}</p>
+            </div>
+          )}
+          <p className={`${page.subhead ? 'mt-6' : 'mt-5'} text-lg text-slate-700 dark:text-slate-200 leading-relaxed`}>{page.opening}</p>
           {page.body.map((para) => (
             <p key={para.slice(0, 48)} className="mt-4 text-slate-600 dark:text-slate-300 leading-relaxed">
               {para}
@@ -91,12 +111,23 @@ export function SeoIntentPage() {
 
           {page.features && page.features.length > 0 && (
             <section className="mt-12">
-              <h2 className="text-lg font-bold">Relevant features</h2>
-              <ul className="mt-3 list-disc pl-5 space-y-1 text-slate-600 dark:text-slate-300">
-                {page.features.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
+              <h2 className="text-lg font-bold">{page.featuresTitle || 'Relevant features'}</h2>
+              {page.checklist ? (
+                <ul className="mt-4 grid sm:grid-cols-2 gap-2">
+                  {page.features.map((item) => (
+                    <li key={item} className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-200">
+                      <Check className="h-4 w-4 shrink-0 mt-0.5 text-brand-600" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <ul className="mt-3 list-disc pl-5 space-y-1 text-slate-600 dark:text-slate-300">
+                  {page.features.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              )}
             </section>
           )}
 
@@ -117,6 +148,12 @@ export function SeoIntentPage() {
           {page.compareRows && page.compareRows.length > 0 && (
             <section className="mt-12">
               <h2 className="text-lg font-bold">{page.compareTitle}</h2>
+              {page.compareLead && (
+                <p className="mt-3 text-slate-600 dark:text-slate-300 leading-relaxed">{page.compareLead}</p>
+              )}
+              {page.compareSteps && (
+                <p className="mt-2 font-semibold text-slate-900 dark:text-white">{page.compareSteps}</p>
+              )}
               <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
                 <table className="w-full text-sm">
                   <thead className="bg-slate-50 dark:bg-slate-900">

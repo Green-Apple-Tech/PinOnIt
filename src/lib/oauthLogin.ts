@@ -36,7 +36,23 @@ export function oauthAccountPickerParams(extra?: Record<string, string>): Record
 /** Same-origin function that strips params Supabase leaks onto the provider link. */
 export const OAUTH_PROVIDER_URL_PATH = '/.netlify/functions/oauth-provider-url';
 
-const LEAKED_PROVIDER_PARAMS = ['redirect_to', 'skip_http_redirect', 'provider', 'scopes', 'apikey'];
+/** Params Google and Microsoft actually accept. Anything else (redirect_to) is dropped. */
+const PROVIDER_AUTH_PARAMS = [
+  'client_id',
+  'redirect_uri',
+  'response_type',
+  'scope',
+  'state',
+  'nonce',
+  'code_challenge',
+  'code_challenge_method',
+  'access_type',
+  'include_granted_scopes',
+  'hd',
+  'login_hint',
+] as const;
+
+const REQUIRED_PROVIDER_AUTH_PARAMS = ['client_id', 'redirect_uri', 'response_type', 'scope', 'state'] as const;
 
 function isProviderAuthHost(hostname: string): boolean {
   return (
@@ -46,10 +62,20 @@ function isProviderAuthHost(hostname: string): boolean {
   );
 }
 
+function dedupedScope(scope: string): string {
+  const seen: string[] = [];
+  for (const part of scope.split(/\s+/)) {
+    if (!part || seen.includes(part)) continue;
+    seen.push(part);
+  }
+  return seen.join(' ');
+}
+
 /**
- * Supabase copies redirect_to onto the Google link. iPhone Chrome then builds a
- * broken accounts.google.com URL and shows "400. That's an error."
- * Drop the leaked params and force the account list.
+ * Rebuild the provider link from an allowlist.
+ * URLSearchParams uses "+" for spaces. iPhone Chrome turns those pluses into raw
+ * spaces, the request line becomes illegal, and Google shows "400. That's an error."
+ * Encode spaces as %20 and let the browser follow a server redirect, not a script.
  */
 export function cleanProviderAuthUrl(raw: string): string {
   let url: URL;
@@ -61,9 +87,33 @@ export function cleanProviderAuthUrl(raw: string): string {
   if (url.protocol !== 'https:' || !isProviderAuthHost(url.hostname)) {
     throw new Error('Sign-in link was invalid.');
   }
-  for (const key of LEAKED_PROVIDER_PARAMS) url.searchParams.delete(key);
-  url.searchParams.set('prompt', 'select_account');
-  return url.toString();
+  const params = new URLSearchParams();
+  for (const key of PROVIDER_AUTH_PARAMS) {
+    const value = url.searchParams.get(key);
+    if (!value) continue;
+    params.set(key, key === 'scope' ? dedupedScope(value) : value);
+  }
+  params.set('prompt', 'select_account');
+  for (const key of REQUIRED_PROVIDER_AUTH_PARAMS) {
+    if (!params.get(key)) throw new Error('Sign-in link was invalid.');
+  }
+  const query = params.toString().replace(/\+/g, '%20');
+  return `${url.origin}${url.pathname}?${query}`;
+}
+
+/** Full-page POST so the phone follows our redirect instead of opening a script-built Google URL. */
+export function redirectViaProviderBounce(authorizeUrl: string) {
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = OAUTH_PROVIDER_URL_PATH;
+  form.acceptCharset = 'UTF-8';
+  const input = document.createElement('input');
+  input.type = 'hidden';
+  input.name = 'authorizeUrl';
+  input.value = authorizeUrl;
+  form.appendChild(input);
+  document.body.appendChild(form);
+  form.submit();
 }
 
 export async function resolveProviderAuthUrl(

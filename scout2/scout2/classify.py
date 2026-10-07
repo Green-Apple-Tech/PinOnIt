@@ -48,8 +48,10 @@ SOLO_RE = re.compile(
 DR_RE = re.compile(r"\bdr\.?\s+[A-Z]", re.I)
 
 SYSTEM = """You classify small US service businesses for B2B outreach.
+The businesses we want have customers sign a same-day, one-signature liability waiver
+(gym, rental, tour, tattoo, activity). Still label other businesses accurately.
 Return ONLY valid JSON with keys:
-  niche (short string, e.g. "real estate", "photography", "landscaping")
+  niche (short string, e.g. "trampoline park", "tattoo", "photography", "landscaping", "real estate")
   est_employees_bucket: one of "1", "2-10", "11+"
   us_based: boolean
   practice_type: null, or for medical/wellness only "solo_practitioner" or "clinic"

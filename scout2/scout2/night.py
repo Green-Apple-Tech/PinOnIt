@@ -184,6 +184,13 @@ class NightSession:
 
     def finish(self) -> None:
         flush_pending_sheets()
+        try:
+            from .campaign_tabs import append_forward_emails
+
+            added = append_forward_emails()
+            print(f"Campaign tabs: {added}", flush=True)
+        except Exception as exc:
+            print(f"Campaign tab append failed: {exc}", flush=True)
         write_log(
             self.path,
             self.deadline,

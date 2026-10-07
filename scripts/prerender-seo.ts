@@ -39,8 +39,12 @@ function pageHtml(page: (typeof INTENT_PAGES)[number]) {
         `<tr><td>${esc(r.feature)}</td><td>${esc(r.pinonit)}</td><td>${esc(r.other)}</td></tr>`,
     )
     .join('');
+  const compareIntro = [
+    page.compareLead ? `<p>${esc(page.compareLead)}</p>` : '',
+    page.compareSteps ? `<p><strong>${esc(page.compareSteps)}</strong></p>` : '',
+  ].filter(Boolean).join('');
   const table = page.compareRows?.length
-    ? `<h2>${esc(page.compareTitle || 'Compare')}</h2>
+    ? `<h2>${esc(page.compareTitle || 'Compare')}</h2>${compareIntro}
       <table><thead><tr><th>Feature</th><th>PinOnIt</th><th>${esc(page.compareOther || '')}</th></tr></thead>
       <tbody>${rows}</tbody></table>
       <p class="note">${esc(page.compareNote || '')}</p>`
@@ -49,7 +53,7 @@ function pageHtml(page: (typeof INTENT_PAGES)[number]) {
     ? `<h2>Who this is for</h2><p>${esc(page.audience)}</p>`
     : '';
   const features = page.features?.length
-    ? `<h2>Relevant features</h2><ul>${page.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>`
+    ? `<h2>${esc(page.featuresTitle || 'Relevant features')}</h2><ul>${page.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>`
     : '';
   const workflow = page.workflow
     ? `<h2>Example workflow</h2><p>${esc(page.workflow)}</p>`
@@ -70,6 +74,12 @@ function pageHtml(page: (typeof INTENT_PAGES)[number]) {
     ? `<h2>FAQ</h2>${page.faq.map((f) => `<h3>${esc(f.q)}</h3><p>${esc(f.a)}</p>`).join('')}`
     : '';
   const body = page.body.map((p) => `<p>${esc(p)}</p>`).join('');
+  const hero = [
+    page.subhead ? `<p><strong>${esc(page.subhead)}</strong></p>` : '',
+    page.heroNote ? `<p>${esc(page.heroNote)}</p>` : '',
+    page.heroExtra ? `<p>${esc(page.heroExtra)}</p>` : '',
+    page.heroCta ? `<p><a class="btn" href="/signup">${esc(page.cta)}</a> <strong>${esc(PINONIT_PRICE_MONTHLY)}</strong></p>` : '',
+  ].filter(Boolean).join('\n    ');
 
   return `<!doctype html>
 <html lang="en">
@@ -115,7 +125,7 @@ function pageHtml(page: (typeof INTENT_PAGES)[number]) {
   <main class="wrap">
     <p class="eyebrow">${esc(page.eyebrow)}</p>
     <h1>${esc(page.h1)}</h1>
-    <p><strong>${esc(page.opening)}</strong></p>
+    ${hero ? `${hero}\n    ` : ''}<p><strong>${esc(page.opening)}</strong></p>
     ${body}
     ${audience}
     ${features}

@@ -11,6 +11,7 @@ from .db import TABLE, get_client, now_iso
 from .derived import CAMPAIGN_HEADERS, campaign_row, city_state_from_html, sheet_tab_name, title_from_html
 from .exclude import is_excluded_domain, load_exclude_hosts
 from .settings import ROOT, settings
+from .target import is_landscaper, is_out_of_scope, lead_text
 
 BATCHES = "scout2_export_batches"
 TAKEN_STATUSES = (
@@ -142,6 +143,8 @@ def select_export_rows(
                 excluded_ids.append(lead["id"])
             continue
         if not is_exportable_lead(lead, hosts):
+            continue
+        if is_out_of_scope(*lead_text(lead), email):
             continue
         if email in taken or email in seen_email:
             continue
@@ -361,30 +364,30 @@ def _rewrite_campaign_tab(sh, tab_name: str, rows: list[dict]) -> int:
             sh.reorder_worksheets([ws] + [w for w in sh.worksheets() if w.id != ws.id])
         except Exception:
             pass
-    _ensure_header(ws)
     ws.resize(rows=max(200, len(values) + 10), cols=len(CAMPAIGN_HEADERS))
-    if len(ws.get_all_values()) > 1:
-        ws.batch_clear(["A2:Z"])
-    if values:
-        ws.update(
-            "A2",
-            values,
-            value_input_option="USER_ENTERED",
-        )
+    ws.clear()
+    ws.update(
+        "A1",
+        [CAMPAIGN_HEADERS, *values],
+        value_input_option="USER_ENTERED",
+    )
     return len(values)
 
 
 def sync_campaign_inventory() -> dict:
     """Write every lead-with-email onto Campaigns → All emails. Does not mark exported.
 
-    Scout2 Campaigns was GMass-only and landscaping-only (export-sheet / export-batch
-    --niche landscaping). The working Scout2 sheet still has the full mix; this puts
-    that mix back on the campaign spreadsheet without touching send-batch tabs.
+    Writes lead emails from the database onto Campaigns → All emails.
+    Landscapers are left off. Does not touch send-batch tabs and does not send.
     """
     from .db import fetch_all
 
     sb = get_client()
-    rows = leads_with_email(fetch_all(sb))
+    rows = [
+        lead
+        for lead in leads_with_email(fetch_all(sb))
+        if not is_landscaper(*lead_text(lead), lead.get("email"))
+    ]
     sh, url = _open_campaign_spreadsheet()
     written = _rewrite_campaign_tab(sh, INVENTORY_TAB, rows)
     niches = {}

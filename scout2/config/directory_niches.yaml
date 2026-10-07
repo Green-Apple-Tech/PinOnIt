@@ -1,5 +1,6 @@
-# Niches for free directory scrapers (chamber / thumbtack / bark / night SERP).
-# Waiver-first, then booking SMBs. Separate from config/niches.yaml (Google Places).
+# Chamber, Thumbtack, Bark, and the other night scrapers.
+# One-page paperwork: waiver, NDA, quote approval, quick contract.
+# Not landscaping. Not multi-signer real-estate or law closings.
 niches:
   - trampoline park
   - bounce house rental
@@ -11,38 +12,46 @@ niches:
   - tour company
   - boat rental
   - kayak rental
+  - jet ski rental
   - escape room
   - axe throwing
   - paintball
   - laser tag
   - go kart
-  - event venue
   - horseback riding
   - dance studio
   - gymnastics
   - swim school
+  - skate park
+  - tattoo
+  - piercing
+  - surf school
+  - scuba
+  - skydiving
+  - zipline
+  - rage room
+  - personal trainer
+  - massage
+  - photographer
+  - videographer
+  - event planner
+  - daycare
+  - summer camp
+  - med spa
+  - salon
+  - DJ
+  - catering
+  - contractor
+  - painter
+  - cleaning service
+  - moving company
+  - consultant
+  - marketing agency
+  - web designer
+  - life coach
+  - pet boarding
+  - music lessons
   - waiver
   - liability waiver
-  - therapist
-  - life coach
-  - real estate agent
-  - consultant
-  - financial advisor
-  - personal trainer
-  - attorney
-  - accountant
-  - photographer
-  - nutritionist
-  - chiropractor
-  - dentist
-  - mortgage broker
-  - tutor
-  - interior designer
-  - contractor
-  - barber
-  - notary
-  - landscaping
-  - plumbing
-  - hvac
-  - handyman
-  - house cleaning
+  - NDA
+  - quote approval

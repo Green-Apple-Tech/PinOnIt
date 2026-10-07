@@ -1,6 +1,8 @@
-"""ScaleSerp organic search for Calendly-using SMBs (night-session SERP pass)."""
+"""Organic search for businesses that need a one-page waiver, NDA, quote, or contract."""
 
 from __future__ import annotations
+
+from datetime import date
 
 import httpx
 
@@ -19,6 +21,12 @@ from .common import (
     is_skipped_host,
     load_directory_niches,
 )
+
+DOC_PHRASES = ("waiver", "NDA", "quote approval", "one-page contract")
+
+
+def doc_phrase(index: int) -> str:
+    return DOC_PHRASES[index % len(DOC_PHRASES)]
 
 
 def _usable_result(url: str) -> bool:
@@ -46,11 +54,13 @@ async def run_serp(
 ) -> ScrapeStats:
     niches = niches or load_directory_niches()
     loc = (location or "USA").strip() or "USA"
+    day_offset = date.today().toordinal()
     async with httpx.AsyncClient() as client, PoliteFetcher() as fetcher:
-        for niche in niches:
+        for index, niche in enumerate(niches):
             if deadline and deadline.expired():
                 break
-            q = f'"{niche}" calendly {loc}'
+            phrase = doc_phrase(index + day_offset)
+            q = f'"{niche}" {phrase} {loc}'
             links = await organic_links(
                 client,
                 q,

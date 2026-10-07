@@ -17,7 +17,7 @@ export const PERSONAL_TIMING_LABELS: Record<PersonalTiming, string> = {
 
 export const DEFAULT_PERSONAL_REMINDER: PersonalReminderDefaults = {
   day_before: ['email'],
-  hour_before: ['email'],
+  hour_before: ['sms'],
   ten_min: ['sms'],
 };
 
@@ -34,6 +34,21 @@ export function normalizePersonalDefaults(raw: unknown): PersonalReminderDefault
     hour_before: pick('hour_before'),
     ten_min: pick('ten_min'),
   };
+}
+
+/** Account defaults, plus any extra pings they asked for out loud. Never drops a default. */
+export function mergePersonalPlans(
+  base: PersonalReminderDefaults,
+  extra?: Partial<PersonalReminderDefaults> | null,
+): PersonalReminderDefaults {
+  const out = normalizePersonalDefaults(base);
+  if (!extra) return out;
+  (Object.keys(PERSONAL_TIMING_OFFSETS) as PersonalTiming[]).forEach((timing) => {
+    for (const channel of extra[timing] ?? []) {
+      if (!out[timing].includes(channel)) out[timing].push(channel);
+    }
+  });
+  return out;
 }
 
 export function expandPersonalJobs(dueAt: Date, plan: PersonalReminderDefaults) {

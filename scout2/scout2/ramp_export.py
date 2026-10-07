@@ -110,6 +110,18 @@ def _write_new_tab(sh, tab_name: str, rows: list[dict]) -> None:
         lead["_sheet_tab"] = title
 
 
+def clear_send_today() -> dict:
+    """Empty the tab Mailmeteor reads each day so the daily send has no recipients."""
+    sh, url = _open_campaign_spreadsheet()
+    existing = {ws.title: ws for ws in sh.worksheets()}
+    ws = existing.get(SEND_TODAY_TAB)
+    if ws is None:
+        return {"tab": SEND_TODAY_TAB, "cleared": False, "sheet_url": url}
+    ws.clear()
+    ws.update("A1", [CAMPAIGN_HEADERS], value_input_option="USER_ENTERED")
+    return {"tab": SEND_TODAY_TAB, "cleared": True, "rows": 0, "sheet_url": url}
+
+
 def replace_send_today(source_tab: str) -> dict:
     """Overwrite the fixed send-today tab. Mailmeteor's daily schedule reads this tab."""
     sh, url = _open_campaign_spreadsheet()

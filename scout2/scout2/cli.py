@@ -260,8 +260,16 @@ def sheets_sync_cmd() -> None:
 
 @app.command("campaign-inventory")
 def campaign_inventory_cmd() -> None:
-    """Rewrite Campaigns → All emails with every lead that has an email (all niches)."""
+    """Rewrite Campaigns → All emails from the database, without landscapers."""
     rprint(sync_campaign_inventory())
+
+
+@app.command("combine-emails")
+def combine_emails_cmd() -> None:
+    """One All emails tab from every connected sheet, landscapers removed. Does not send."""
+    from .combine_sheets import combine_sheet_emails
+
+    rprint(combine_sheet_emails())
 
 
 @app.command("export-sheet")
@@ -339,29 +347,15 @@ def morning_send_cmd(
         None, "--count", "-n", help="Override the ramp size for today"
     ),
 ) -> None:
-    """Export today's ramp batch (unless it exists) and copy it onto the send-today tab."""
-    from datetime import date
-
-    from .ramp_export import existing_batch_for_date, export_batch, replace_send_today, today_local
-
-    send_date: date = today_local()
-    sb = get_client()
-    existing = existing_batch_for_date(sb, "mixed", send_date)
-    if existing and existing.get("tab_name"):
-        staged = {
-            "exported": 0,
-            "already": True,
-            "tab_name": existing["tab_name"],
-            "send_date": send_date.isoformat(),
+    """Stopped. Does not export a batch and does not fill the send-today tab."""
+    rprint(
+        {
+            "stopped": True,
+            "staged": False,
+            "count_ignored": count,
+            "reason": "Daily send-today staging is off. Scout2 is not filling that tab.",
         }
-    else:
-        staged = export_batch(niche="all", send_date=send_date, count=count)
-    tab = staged.get("tab_name")
-    if not tab:
-        rprint(staged)
-        raise typer.Exit(1)
-    staged["send_today"] = replace_send_today(tab)
-    rprint(staged)
+    )
 
 
 @app.command("batches")

@@ -1,12 +1,14 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Mic, Square, Loader2, Check, Mail, MessageSquare, PhoneCall, X, PenLine, CalendarDays } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { syncPersonalReminderToExternalCalendars } from '../lib/writeCalendarEvent';
 import { parsePersonalReminder } from '../lib/parsePersonalReminder';
+import { refinePersonalReminder } from '../lib/refinePersonalReminder';
 import {
   PERSONAL_TIMING_LABELS,
   expandPersonalJobs,
+  mergePersonalPlans,
   normalizePersonalDefaults,
   type PersonalChannel,
   type PersonalReminderDefaults,
@@ -45,15 +47,18 @@ function toLocalInput(d: Date) {
 export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(function VoicePersonalReminder(_props, ref) {
   const { user, profile, refreshProfile } = useAuth();
   const defaults = normalizePersonalDefaults(profile?.personal_reminder_defaults);
-  const profileAddToCalendar = profile?.personal_reminder_add_to_calendar ?? false;
+  const profileAddToCalendar = profile?.personal_reminder_add_to_calendar !== false;
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [title, setTitle] = useState('');
   const [dueLocal, setDueLocal] = useState('');
+  const [location, setLocation] = useState('');
   const [notes, setNotes] = useState('');
+  const [parsing, setParsing] = useState(false);
+  const recognizerRef = useRef<SpeechRec | null>(null);
+  const heardRef = useRef('');
   const [plan, setPlan] = useState<PersonalReminderDefaults>(defaults);
   const [addToCalendar, setAddToCalendar] = useState(profileAddToCalendar);
-  const [rememberCalendarDefault, setRememberCalendarDefault] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -89,29 +94,51 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
     setTranscript('');
     setTitle('');
     setNotes('');
+    setLocation('');
     setDueLocal('');
     setPlan(defaults);
     setAddToCalendar(profileAddToCalendar);
-    setRememberCalendarDefault(false);
     setError('');
     setModalOpen(true);
   }, [defaults, profileAddToCalendar]);
 
   useImperativeHandle(ref, () => ({ openTypeModal }), [openTypeModal]);
 
-  const applySpeech = (spoken: string) => {
-    const parsed = parsePersonalReminder(spoken);
+  const fillFromParse = (spoken: string, parsed: ReturnType<typeof parsePersonalReminder>) => {
     setTranscript(spoken);
     setTitle(parsed.title);
+    setLocation(parsed.location);
     setDueLocal(parsed.dueAt ? toLocalInput(parsed.dueAt) : '');
-    setPlan(defaults);
+    setPlan(mergePersonalPlans(defaults, parsed.extras));
     setAddToCalendar(profileAddToCalendar);
-    setRememberCalendarDefault(false);
     setError(parsed.dueAt ? '' : 'Pick a day and time — I heard the task but not when.');
     setModalOpen(true);
   };
 
+  const parseTicket = useRef(0);
+  const userEdited = useRef(false);
+
+  const applySpeech = (spoken: string) => {
+    const ticket = ++parseTicket.current;
+    userEdited.current = false;
+    const local = parsePersonalReminder(spoken);
+    fillFromParse(spoken, local);
+    setParsing(true);
+    void refinePersonalReminder(spoken)
+      .then((parsed) => {
+        if (parseTicket.current !== ticket || userEdited.current) return;
+        fillFromParse(spoken, parsed);
+      })
+      .finally(() => {
+        if (parseTicket.current === ticket) setParsing(false);
+      });
+  };
+
   const startListening = () => {
+    if (listening) {
+      recognizerRef.current?.stop();
+      return;
+    }
     setError('');
     const SR = (window as unknown as {
       SpeechRecognition?: new () => SpeechRec;
@@ -121,26 +148,49 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
     if (!SR) {
       setTranscript('');
       setTitle('');
+      setLocation('');
       setDueLocal('');
       setError('Voice is not available in this browser. Type it instead.');
       setModalOpen(true);
       return;
     }
     const rec = new SR();
+    recognizerRef.current = rec;
+    heardRef.current = '';
     rec.lang = 'en-US';
-    rec.interimResults = false;
-    rec.continuous = false;
-    rec.onresult = (ev) => {
-      const spoken = ev.results[0]?.[0]?.transcript ?? '';
-      if (spoken) applySpeech(spoken);
-    };
-    rec.onerror = () => {
+    rec.interimResults = true;
+    rec.continuous = true;
+    let interimHeld = '';
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
       setListening(false);
-      setError('Could not hear that. Try again or type it.');
-      setModalOpen(true);
+      const spoken = `${heardRef.current} ${interimHeld}`.trim();
+      if (spoken) applySpeech(spoken);
+      else {
+        setError('Could not hear that. Try again or type it.');
+        setModalOpen(true);
+      }
     };
-    rec.onend = () => setListening(false);
+    rec.onresult = (ev) => {
+      const results = ev.results as unknown as ArrayLike<{ isFinal?: boolean; 0?: { transcript?: string } }>;
+      let finalText = '';
+      let interim = '';
+      for (let i = 0; i < results.length; i++) {
+        const piece = results[i]?.[0]?.transcript ?? '';
+        if (results[i]?.isFinal) finalText += `${piece} `;
+        else interim += piece;
+      }
+      interimHeld = interim;
+      if (finalText.trim()) heardRef.current = finalText.trim();
+      const live = `${heardRef.current} ${interim}`.trim();
+      if (live) setTranscript(live);
+    };
+    rec.onerror = () => finish();
+    rec.onend = () => finish();
     setListening(true);
+    setTranscript('');
     rec.start();
   };
 
@@ -151,6 +201,7 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
   };
 
   const toggleChannel = (timing: PersonalTiming, channel: PersonalChannel) => {
+    userEdited.current = true;
     setPlan((prev) => {
       const has = prev[timing].includes(channel);
       const next = has ? prev[timing].filter((c) => c !== channel) : [...prev[timing], channel];
@@ -189,6 +240,7 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
           host_id: user.id,
           title: fullTitle,
           transcript: transcript || null,
+          location: location.trim() || null,
           due_at: dueAt.toISOString(),
           status: 'active',
         })
@@ -216,7 +268,7 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
         }
       }
 
-      if (rememberCalendarDefault && profile?.id) {
+      if (profile?.id) {
         await supabase
           .from('profiles')
           .update({ personal_reminder_add_to_calendar: addToCalendar })
@@ -228,6 +280,7 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
       setTranscript('');
       setTitle('');
       setNotes('');
+      setLocation('');
       setDueLocal('');
       await loadUpcoming();
     } catch (e) {
@@ -242,7 +295,7 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
         <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-white">Remind me…</h2>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Type or record a personal reminder (call someone, pick up a prescription, etc.). It lands on your Calendar and pings you on the channels you pick.
+            Say it in one sentence, like “remind me about my call today with the dentist at 7pm, and text me 10 minutes before.” We pull out the subject, place, and time, put it on your calendar, and keep the usual reminders: email the day before, a text 1 hour before, and a text 10 minutes before. Anything else you ask for is added on top.
           </p>
         </div>
 
@@ -258,13 +311,12 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
           <button
             type="button"
             onClick={startListening}
-            disabled={listening}
             className={`w-full min-h-14 inline-flex items-center justify-center gap-2 rounded-2xl text-white text-base font-semibold ${
               listening ? 'bg-red-500' : 'bg-brand-600 hover:bg-brand-700'
             }`}
           >
             {listening ? <Square className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-            {listening ? 'Listening…' : 'Record'}
+            {listening ? 'Tap to finish' : 'Record'}
           </button>
         </div>
 
@@ -314,15 +366,36 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
               {transcript ? (
                 <p className="text-xs text-slate-400 italic">Heard: “{transcript}”</p>
               ) : null}
+              {parsing ? (
+                <p className="text-xs text-slate-500 inline-flex items-center gap-1.5">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Sorting subject, place, and time…
+                </p>
+              ) : null}
 
               <label className="block">
-                <span className="text-xs font-medium text-slate-500">Topic</span>
+                <span className="text-xs font-medium text-slate-500">Subject</span>
                 <input
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => {
+                    userEdited.current = true;
+                    setTitle(e.target.value);
+                  }}
                   autoFocus
                   className="mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-3 text-base"
-                  placeholder="Call Jennifer Smith"
+                  placeholder="Dentist reminder"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-xs font-medium text-slate-500">Place (optional)</span>
+                <input
+                  value={location}
+                  onChange={(e) => {
+                    userEdited.current = true;
+                    setLocation(e.target.value);
+                  }}
+                  className="mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-3 text-base"
+                  placeholder="Downtown office"
                 />
               </label>
 
@@ -331,7 +404,10 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
                 <input
                   type="datetime-local"
                   value={dueLocal}
-                  onChange={(e) => setDueLocal(e.target.value)}
+                  onChange={(e) => {
+                    userEdited.current = true;
+                    setDueLocal(e.target.value);
+                  }}
                   className="mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-3 text-base"
                 />
               </label>
@@ -351,7 +427,10 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
                   <input
                     type="checkbox"
                     checked={addToCalendar}
-                    onChange={(e) => setAddToCalendar(e.target.checked)}
+                    onChange={(e) => {
+                      userEdited.current = true;
+                      setAddToCalendar(e.target.checked);
+                    }}
                     className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
                   />
                   <span className="text-sm text-slate-700 dark:text-slate-200">
@@ -360,24 +439,15 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
                       Also add to Google / Outlook calendar
                     </span>
                     <span className="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      Uses calendars marked for reminders in Settings.
+                      On by default. Uncheck it to skip Google and Outlook, and the next reminder will start unchecked too.
                     </span>
                   </span>
                 </label>
-                {addToCalendar ? (
-                  <label className="flex items-center gap-2 pl-7 cursor-pointer text-xs text-slate-500">
-                    <input
-                      type="checkbox"
-                      checked={rememberCalendarDefault}
-                      onChange={(e) => setRememberCalendarDefault(e.target.checked)}
-                      className="h-3.5 w-3.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-                    />
-                    Remember this as my default
-                  </label>
-                ) : null}
               </div>
 
-              <p className="text-xs font-medium text-slate-500 pt-1">Reminder options (skip = defaults)</p>
+              <p className="text-xs font-medium text-slate-500 pt-1">
+                Starts as email the day before, a text 1 hour before, and a text 10 minutes before. Anything you asked for out loud is added. Turn a box off if you do not want it.
+              </p>
               <div className="space-y-2">
                 {TIMINGS.map((timing) => (
                   <div key={timing} className="rounded-xl border border-slate-200 dark:border-slate-800 p-3">
@@ -471,7 +541,7 @@ export function PersonalReminderDefaultsEditor() {
   return (
     <div className="space-y-3">
       <p className="text-sm text-slate-500 dark:text-slate-400">
-        Used when you skip the checkboxes after adding a personal reminder. Default: email day before, email hour before, SMS 10 minutes before.
+        Used when you skip the checkboxes after adding a personal reminder. Default: email the day before, a text 1 hour before, and a text 10 minutes before.
       </p>
       {TIMINGS.map((timing) => (
         <div key={timing}>

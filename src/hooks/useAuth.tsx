@@ -9,7 +9,7 @@ import type { Profile, Subscription } from '../lib/types';
 import { persistSignupAttribution } from '../lib/campaignAttribution';
 import { storageSet } from '../lib/safeStorage';
 import { recordSessionActivity } from '../lib/sessionTimeout';
-import { clearOauthStart, claimOauthStart, oauthCallbackRedirect, resolveProviderAuthUrl } from '../lib/oauthLogin';
+import { clearOauthStart, claimOauthStart, oauthCallbackRedirect, redirectViaProviderBounce } from '../lib/oauthLogin';
 
 interface AuthContextType {
   user: User | null;
@@ -155,16 +155,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearOauthStart();
       return { error: `Could not start ${provider === 'google' ? 'Google' : 'Microsoft'} sign-in. Try again.` };
     }
-    let providerUrl: string;
-    try {
-      providerUrl = await resolveProviderAuthUrl(data.url);
-    } catch (err) {
-      clearOauthStart();
-      const message = err instanceof Error ? err.message : 'Could not start sign-in. Try again.';
-      return { error: message };
-    }
-    // replace() so Back from the dashboard does not reopen Google and prompt again
-    window.location.replace(providerUrl);
+    // Server redirects to Google. Do not assign the provider URL from script —
+    // iPhone Chrome corrupts "+" in that URL and Google returns 400.
+    redirectViaProviderBounce(data.url);
     return { error: null };
   };
 

@@ -69,7 +69,8 @@ Deno.serve(async (req: Request) => {
       state,
     });
 
-    const url = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+    // "+" for spaces makes iPhone Chrome send a broken request and Google returns 400.
+    const url = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString().replace(/\+/g, "%20")}`;
 
     return new Response(
       JSON.stringify({ url }),
