@@ -48,6 +48,7 @@ deploy booking-reply
 deploy complete-reschedule
 deploy write-calendar-event
 deploy parse-personal-reminder
+deploy ack-personal-reminder --no-verify-jwt
 deploy sms-inbound --no-verify-jwt
 # Scheduled discovery calls this with a shared secret, not a user JWT.
 # The function still rejects anyone who is not staff and does not have that secret.

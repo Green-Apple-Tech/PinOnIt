@@ -11,6 +11,9 @@ export type ParsedPersonalReminder = {
   dueAt: Date | null;
   location: string;
   extras: Partial<PersonalReminderDefaults>;
+  /** "in 20 minutes" — the due time is when to remind them, not a calendar appointment. */
+  relative: boolean;
+  explicitChannels: PersonalChannel[];
 };
 
 function nextWeekday(from: Date, weekday: number, nextWeekIfSame: boolean) {
@@ -42,12 +45,45 @@ function parseClock(text: string): { hours: number; minutes: number } | null {
   return { hours, minutes };
 }
 
+const SMALL_WORDS = new Set(['a', 'an', 'the', 'is', 'on', 'of', 'to', 'and', 'or', 'in']);
+
 function titleCase(value: string) {
   return value
     .split(/\s+/)
     .filter(Boolean)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .map((word, index) => {
+      const lower = word.toLowerCase();
+      if (index > 0 && SMALL_WORDS.has(lower)) return lower;
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
     .join(' ');
+}
+
+/** Channels they named. "Remind me" itself is not a channel. */
+export function spokenChannels(raw: string): PersonalChannel[] {
+  const found: PersonalChannel[] = [];
+  for (const chunk of raw.split(/\band\b|,/i)) {
+    const channel = channelOf(chunk);
+    if (channel && !found.includes(channel)) found.push(channel);
+  }
+  return found;
+}
+
+export function relativeMinutes(raw: string): number | null {
+  const text = raw.toLowerCase();
+  const minutes = text.match(/\bin\s+(\d+)\s*-?\s*(min|mins|minutes)\b/);
+  if (minutes) return clampLead(Number(minutes[1]));
+  const hours = text.match(/\bin\s+(\d+)\s*-?\s*hours?\b/);
+  if (hours) return clampLead(Number(hours[1]) * 60);
+  if (/\bin\s+half\s+an?\s+hour\b/.test(text)) return 30;
+  if (/\bin\s+(a|an|one)\s+hour\b/.test(text)) return 60;
+  if (/\bin\s+(a|an|one)\s+minute\b/.test(text)) return 1;
+  return null;
+}
+
+function clampLead(minutes: number): number | null {
+  if (!Number.isFinite(minutes) || minutes < 1 || minutes > 24 * 60) return null;
+  return Math.round(minutes);
 }
 
 function channelOf(chunk: string): PersonalChannel | null {
@@ -82,6 +118,9 @@ export function spokenReminderExtras(raw: string): Partial<PersonalReminderDefau
 
 function stripScheduleWords(text: string) {
   return text
+    .replace(/\bin\s+\d+\s*-?\s*(?:min|mins|minutes|hours?)\b/gi, '')
+    .replace(/\bin\s+(?:a|an|one)\s+(?:minute|hour)\b/gi, '')
+    .replace(/\bin\s+half\s+an?\s+hour\b/gi, '')
     .replace(/\b(?:and\s+)?(?:also\s+)?(?:please\s+)?(?:send|text|email|call|whatsapp|message)\s+me\b.*$/i, '')
     .replace(/\b(?:and\s+)?(?:a\s+)?(?:quick\s+)?reminder\b.*$/i, '')
     .replace(/\bnext\s+(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/gi, '')
@@ -124,36 +163,42 @@ export function parsePersonalReminder(raw: string, now = new Date()): ParsedPers
   text = text.replace(/^(hey |ok |okay |please )?/i, '');
   text = text.replace(/^remind me (to |about |that i (need to |have to |should )?)?/i, '');
 
+  const lead = relativeMinutes(text);
   const clock = parseClock(text) ?? { hours: 9, minutes: 0 };
   const lower = text.toLowerCase();
   let day: Date | null = null;
   let saidToday = false;
+  let dueAt: Date | null = null;
 
-  if (/\btomorrow\b/.test(lower)) {
-    day = new Date(now.getTime());
-    day.setDate(day.getDate() + 1);
-  } else if (/\btoday\b/.test(lower)) {
-    day = new Date(now.getTime());
-    saidToday = true;
+  if (lead != null) {
+    dueAt = new Date(now.getTime() + lead * 60 * 1000);
   } else {
-    for (let i = 0; i < WEEKDAYS.length; i++) {
-      const name = WEEKDAYS[i];
-      const next = new RegExp(`\\bnext\\s+${name}\\b`);
-      const plain = new RegExp(`\\b${name}\\b`);
-      if (next.test(lower)) {
-        day = nextWeekday(now, i, true);
-        break;
-      }
-      if (plain.test(lower)) {
-        day = nextWeekday(now, i, false);
-        break;
+    if (/\btomorrow\b/.test(lower)) {
+      day = new Date(now.getTime());
+      day.setDate(day.getDate() + 1);
+    } else if (/\btoday\b/.test(lower)) {
+      day = new Date(now.getTime());
+      saidToday = true;
+    } else {
+      for (let i = 0; i < WEEKDAYS.length; i++) {
+        const name = WEEKDAYS[i];
+        const next = new RegExp(`\\bnext\\s+${name}\\b`);
+        const plain = new RegExp(`\\b${name}\\b`);
+        if (next.test(lower)) {
+          day = nextWeekday(now, i, true);
+          break;
+        }
+        if (plain.test(lower)) {
+          day = nextWeekday(now, i, false);
+          break;
+        }
       }
     }
-  }
 
-  const dueAt = day ? applyTime(day, clock.hours, clock.minutes) : null;
-  if (dueAt && dueAt.getTime() <= now.getTime()) {
-    dueAt.setDate(dueAt.getDate() + (saidToday ? 1 : 7));
+    dueAt = day ? applyTime(day, clock.hours, clock.minutes) : null;
+    if (dueAt && dueAt.getTime() <= now.getTime()) {
+      dueAt.setDate(dueAt.getDate() + (saidToday ? 1 : 7));
+    }
   }
 
   return {
@@ -161,5 +206,7 @@ export function parsePersonalReminder(raw: string, now = new Date()): ParsedPers
     dueAt,
     location: placeFrom(text),
     extras: spokenReminderExtras(raw),
+    relative: lead != null,
+    explicitChannels: spokenChannels(raw),
   };
 }

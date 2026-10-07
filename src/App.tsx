@@ -15,6 +15,7 @@ import { SmsConsentPage } from './pages/SmsConsent';
 import { AcceptableUsePage } from './pages/AcceptableUse';
 import { LeaderboardPage } from './pages/Leaderboard';
 import { StatusPage } from './pages/Status';
+import { ReminderDonePage } from './pages/ReminderDone';
 import { NotFoundPage } from './pages/NotFound';
 import { SessionManager } from './components/SessionManager';
 import { CampaignLandingPage } from './pages/CampaignLandingPage';
@@ -200,6 +201,7 @@ function App() {
             <Route path="/acceptable-use" element={<AcceptableUsePage />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/status" element={<StatusPage />} />
+            <Route path="/reminder-done/:token" element={<ReminderDonePage />} />
             <Route path="/login" element={<AuthForm />} />
             <Route path="/signup" element={<AuthForm />} />
             <Route path="/ref/:code" element={<RefRedirect />} />

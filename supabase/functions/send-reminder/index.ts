@@ -662,7 +662,7 @@ async function dispatchPersonalReminders(supabase: SupabaseClient): Promise<numb
   const toIso = new Date(now + 2 * 60 * 1000).toISOString();
   const { data: jobs, error } = await supabase
     .from('personal_reminder_jobs')
-    .select('id, host_id, fire_at, channel, reminder_id, personal_reminders(title, transcript, due_at, status)')
+    .select('id, host_id, fire_at, channel, kind, reminder_id, personal_reminders(title, transcript, due_at, status, urgent, acknowledged_at, ack_token)')
     .is('sent_at', null)
     .gte('fire_at', fromIso)
     .lte('fire_at', toIso);
@@ -682,9 +682,20 @@ async function dispatchPersonalReminders(supabase: SupabaseClient): Promise<numb
       transcript?: string | null;
       due_at?: string;
       status?: string;
+      urgent?: boolean;
+      acknowledged_at?: string | null;
+      ack_token?: string | null;
     } | null;
-    if (!reminder || reminder.status !== 'active') continue;
-    if (reminder.due_at) {
+    if (!reminder) continue;
+    if (reminder.status !== 'active' || reminder.acknowledged_at) {
+      await supabase
+        .from('personal_reminder_jobs')
+        .update({ sent_at: new Date().toISOString(), error: 'acknowledged' })
+        .eq('id', job.id);
+      continue;
+    }
+    const escalate = job.kind === 'escalate';
+    if (!escalate && reminder.due_at) {
       const dueMs = new Date(reminder.due_at).getTime();
       if (!Number.isNaN(dueMs) && dueMs < now - 30 * 60 * 1000) continue;
     }
@@ -698,10 +709,18 @@ async function dispatchPersonalReminders(supabase: SupabaseClient): Promise<numb
     const when = reminder.due_at
       ? new Date(reminder.due_at).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })
       : '';
-    const headline = `Reminder: ${title}${when ? ` — ${when}` : ''}`;
-    const msg = details && details.toLowerCase() !== title.toLowerCase()
-      ? `${headline}\n\n${details}`
-      : headline;
+    const ackUrl = reminder.ack_token ? `https://pinonit.com/reminder-done/${reminder.ack_token}` : '';
+    const disclaimer = 'PinOnIt is reminding you because you asked. It is not checking whether this is still true.';
+    const headline = reminder.urgent
+      ? `${escalate ? 'Still reminding you' : 'Reminder you asked for'}: ${title}${when ? ` — ${when}` : ''}`
+      : `Reminder: ${title}${when ? ` — ${when}` : ''}`;
+    const bodyParts = [headline];
+    if (details && details.toLowerCase() !== title.toLowerCase()) bodyParts.push(details);
+    if (reminder.urgent) {
+      bodyParts.push(disclaimer);
+      if (ackUrl) bodyParts.push(`Mark it done so the extra reminders stop: ${ackUrl}`);
+    }
+    const msg = bodyParts.join('\n\n');
     let ok = false;
     let recipient = '(none)';
     let err: string | undefined;
@@ -710,7 +729,7 @@ async function dispatchPersonalReminders(supabase: SupabaseClient): Promise<numb
       const to = (hostProfile?.notification_email || hostProfile?.email || '').trim();
       recipient = to || '(none)';
       if (!resendKey || !to) err = 'no email';
-      else ok = await sendResendEmail([to], `Reminder: ${title}`, msg, resendKey);
+      else ok = await sendResendEmail([to], headline, msg, resendKey);
     } else if (job.channel === 'sms') {
       const to = (hostProfile?.phone || '').trim();
       recipient = to || '(none)';
@@ -730,7 +749,10 @@ async function dispatchPersonalReminders(supabase: SupabaseClient): Promise<numb
           host_name: title,
           service_name: title,
           date: when || 'your scheduled time',
-          time: details ? details.slice(0, 240) : (when || title),
+          time: (reminder.urgent
+            ? `${escalate ? 'Still reminding you. ' : ''}${disclaimer} ${ackUrl}`.trim()
+            : (details || when || title)
+          ).slice(0, 240),
           duration: '',
         });
         ok = result.ok;
@@ -741,8 +763,11 @@ async function dispatchPersonalReminders(supabase: SupabaseClient): Promise<numb
       recipient = to || '(none)';
       if (!to) err = 'no phone';
       else {
-        const spoken = `${title}. ${when ? `Scheduled for ${when}.` : ''} ${details && details.toLowerCase() !== title.toLowerCase() ? details : ''}`.replace(/[<>&]/g, ' ').slice(0, 800);
-        const twiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="Polly.Joanna">This is a PinOnIt reminder. ${spoken}</Say></Response>`;
+        const spokenRaw = reminder.urgent
+          ? `${escalate ? 'This is PinOnIt, still reminding you because you have not marked this done.' : 'This is a PinOnIt reminder you asked for.'} ${title}. ${when ? `Scheduled for ${when}.` : ''} PinOnIt is not checking whether this is still true. ${ackUrl ? 'A text has a link to mark this done.' : ''}`
+          : `This is a PinOnIt reminder. ${title}. ${when ? `Scheduled for ${when}.` : ''} ${details && details.toLowerCase() !== title.toLowerCase() ? details : ''}`;
+        const spoken = spokenRaw.replace(/[<>&]/g, ' ').slice(0, 800);
+        const twiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="Polly.Joanna">${spoken}</Say></Response>`;
         const result = await sendTwilioVoice(to, twiml);
         ok = result.ok;
         err = result.error;

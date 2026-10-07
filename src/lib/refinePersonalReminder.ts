@@ -29,12 +29,17 @@ export async function refinePersonalReminder(spoken: string, now = new Date()): 
       location?: unknown;
       date?: unknown;
       time?: unknown;
+      in_minutes?: unknown;
       extras?: Partial<Record<PersonalTiming, unknown>>;
     };
     const title = typeof row.title === 'string' ? row.title.trim() : '';
     const location = typeof row.location === 'string' ? row.location.trim() : local.location;
     let dueAt = local.dueAt;
-    if (typeof row.date === 'string' && typeof row.time === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(row.date) && /^\d{2}:\d{2}$/.test(row.time)) {
+    let relative = local.relative;
+    if (!local.relative && typeof row.in_minutes === 'number' && row.in_minutes >= 1 && row.in_minutes <= 24 * 60) {
+      dueAt = new Date(now.getTime() + Math.round(row.in_minutes) * 60 * 1000);
+      relative = true;
+    } else if (!local.relative && typeof row.date === 'string' && typeof row.time === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(row.date) && /^\d{2}:\d{2}$/.test(row.time)) {
       const parsed = new Date(`${row.date}T${row.time}`);
       if (!Number.isNaN(parsed.getTime())) dueAt = parsed;
     }
@@ -49,6 +54,8 @@ export async function refinePersonalReminder(spoken: string, now = new Date()): 
       location,
       dueAt,
       extras: Object.keys(extras).length ? extras : local.extras,
+      relative,
+      explicitChannels: local.explicitChannels,
     };
   } catch {
     return local;

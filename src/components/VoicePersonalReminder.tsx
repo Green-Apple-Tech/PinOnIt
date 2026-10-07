@@ -8,6 +8,8 @@ import { refinePersonalReminder } from '../lib/refinePersonalReminder';
 import {
   PERSONAL_TIMING_LABELS,
   expandPersonalJobs,
+  formatChannelList,
+  groupPersonalJobs,
   mergePersonalPlans,
   normalizePersonalDefaults,
   type PersonalChannel,
@@ -58,6 +60,8 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
   const recognizerRef = useRef<SpeechRec | null>(null);
   const heardRef = useRef('');
   const [plan, setPlan] = useState<PersonalReminderDefaults>(defaults);
+  const [relative, setRelative] = useState(false);
+  const [explicitChannels, setExplicitChannels] = useState<PersonalChannel[]>([]);
   const [addToCalendar, setAddToCalendar] = useState(profileAddToCalendar);
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -97,6 +101,8 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
     setLocation('');
     setDueLocal('');
     setPlan(defaults);
+    setRelative(false);
+    setExplicitChannels([]);
     setAddToCalendar(profileAddToCalendar);
     setError('');
     setModalOpen(true);
@@ -110,6 +116,8 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
     setLocation(parsed.location);
     setDueLocal(parsed.dueAt ? toLocalInput(parsed.dueAt) : '');
     setPlan(mergePersonalPlans(defaults, parsed.extras));
+    setRelative(parsed.relative);
+    setExplicitChannels(parsed.explicitChannels);
     setAddToCalendar(profileAddToCalendar);
     setError(parsed.dueAt ? '' : 'Pick a day and time — I heard the task but not when.');
     setModalOpen(true);
@@ -225,7 +233,10 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
       setError('Pick a time in the future.');
       return;
     }
-    const jobs = expandPersonalJobs(dueAt, chosen);
+    const jobs = expandPersonalJobs(dueAt, chosen, {
+      atTime: relative,
+      explicitChannels,
+    });
     if (jobs.length === 0) {
       setError('Choose at least one reminder (or skip to use the defaults).');
       return;
@@ -254,6 +265,7 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
           host_id: user.id,
           fire_at: j.fireAt.toISOString(),
           channel: j.channel,
+          kind: j.kind,
         })),
       );
       if (jobErr) throw jobErr;
@@ -290,13 +302,31 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
     setSaving(false);
   };
 
+  const markDone = async (id: string) => {
+    if (!user?.id) return;
+    await supabase
+      .from('personal_reminders')
+      .update({ status: 'done', acknowledged_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('host_id', user.id);
+    await loadUpcoming();
+  };
+
+  const previewDue = dueLocal ? new Date(dueLocal) : null;
+  const previewGroups = previewDue && !Number.isNaN(previewDue.getTime())
+    ? groupPersonalJobs(expandPersonalJobs(previewDue, plan, {
+      atTime: relative,
+      explicitChannels,
+    }))
+    : [];
+
   return (
     <>
       <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 p-4 md:p-5 space-y-4">
         <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-white">Remind me…</h2>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Say it in one sentence, like “remind me about my call today with the dentist at 7pm, and text me 10 minutes before.” We pull out the subject, place, and time, put it on your calendar, and keep the usual reminders: email the day before, a text 1 hour before, and a text 10 minutes before. Anything else you ask for is added on top.
+            Say when and what, like “remind me in 25 minutes that the stove is on.” You confirm the time and channels first. It uses your usual reminders — email the day before, a text 1 hour before, and a text 10 minutes before — and also sends at the time you named. Anything else you ask for is added.
           </p>
         </div>
 
@@ -328,9 +358,18 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Coming up</p>
             <ul className="space-y-1.5">
               {upcoming.map((r) => (
-                <li key={r.id} className="text-sm text-slate-700 dark:text-slate-300">
-                  <span className="font-medium">{r.title}</span>
-                  <span className="text-slate-400"> · {new Date(r.due_at).toLocaleString()}</span>
+                <li key={r.id} className="flex items-center justify-between gap-3 text-sm text-slate-700 dark:text-slate-300">
+                  <span>
+                    <span className="font-medium">{r.title}</span>
+                    <span className="text-slate-400"> · {new Date(r.due_at).toLocaleString()}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => void markDone(r.id)}
+                    className="shrink-0 text-xs font-semibold text-brand-700 hover:underline"
+                  >
+                    Done
+                  </button>
                 </li>
               ))}
             </ul>
@@ -372,6 +411,24 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
                   <Loader2 className="h-3.5 w-3.5 animate-spin" /> Sorting subject, place, and time…
                 </p>
               ) : null}
+
+              {previewGroups.length > 0 && (
+                <div className="rounded-xl border border-brand-200 dark:border-brand-500/30 bg-brand-50/60 dark:bg-brand-500/10 p-3 space-y-2">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                    Confirm: {title.trim() || 'this reminder'}
+                    {previewDue ? ` · ${previewDue.toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : ''}
+                  </p>
+                  <ul className="space-y-1 text-sm text-slate-700 dark:text-slate-200">
+                    {previewGroups.map((group) => (
+                      <li key={`${group.kind}-${group.fireAt.toISOString()}`}>
+                        {group.fireAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+                        {' · '}
+                        {formatChannelList(group.channels)}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               <label className="block">
                 <span className="text-xs font-medium text-slate-500">Subject</span>
@@ -498,7 +555,7 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
                   className="flex-1 min-h-12 rounded-xl bg-brand-600 text-white text-sm font-semibold inline-flex items-center justify-center gap-2"
                 >
                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                  Save to calendar
+                  Confirm and schedule
                 </button>
               </div>
             </div>

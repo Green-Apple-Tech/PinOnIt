@@ -51,17 +51,89 @@ export function mergePersonalPlans(
   return out;
 }
 
-export function expandPersonalJobs(dueAt: Date, plan: PersonalReminderDefaults) {
+export type PersonalJobKind = 'remind' | 'escalate';
+
+export type PersonalJob = {
+  fireAt: Date;
+  channel: PersonalChannel;
+  kind: PersonalJobKind;
+};
+
+export const ALL_PERSONAL_CHANNELS: PersonalChannel[] = ['email', 'sms', 'whatsapp', 'voice'];
+
+const CHANNEL_LABEL: Record<PersonalChannel, string> = {
+  email: 'email',
+  sms: 'text',
+  whatsapp: 'WhatsApp',
+  voice: 'a call',
+};
+
+export function channelsInPlan(plan: PersonalReminderDefaults): PersonalChannel[] {
+  const seen = new Set<PersonalChannel>();
+  (Object.keys(PERSONAL_TIMING_OFFSETS) as PersonalTiming[]).forEach((timing) => {
+    for (const channel of plan[timing]) seen.add(channel);
+  });
+  return ALL_PERSONAL_CHANNELS.filter((channel) => seen.has(channel));
+}
+
+export function formatChannelList(channels: PersonalChannel[]): string {
+  const names = channels.map((channel) => CHANNEL_LABEL[channel]);
+  if (names.length === 0) return 'a reminder';
+  if (names.length === 1) return names[0];
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+
+function addJobs(
+  jobs: PersonalJob[],
+  seen: Set<string>,
+  fireAt: Date,
+  channels: PersonalChannel[],
+  kind: PersonalJobKind,
+  nowMs: number,
+) {
+  if (fireAt.getTime() < nowMs - 2 * 60 * 1000) return;
+  for (const channel of channels) {
+    const key = `${kind}|${channel}|${Math.round(fireAt.getTime() / 1000)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    jobs.push({ fireAt, channel, kind });
+  }
+}
+
+export function expandPersonalJobs(
+  dueAt: Date,
+  plan: PersonalReminderDefaults,
+  opts?: {
+    now?: Date;
+    /** Relative request ("in 20 minutes") also fires at the due time. */
+    atTime?: boolean;
+    explicitChannels?: PersonalChannel[];
+  },
+): PersonalJob[] {
   const dueMs = dueAt.getTime();
-  const now = Date.now();
-  const jobs: { fireAt: Date; channel: PersonalChannel }[] = [];
+  const nowMs = (opts?.now ?? new Date()).getTime();
+  const jobs: PersonalJob[] = [];
+  const seen = new Set<string>();
   (Object.keys(PERSONAL_TIMING_OFFSETS) as PersonalTiming[]).forEach((timing) => {
     const offsetMin = PERSONAL_TIMING_OFFSETS[timing];
-    const fireAt = new Date(dueMs + offsetMin * 60 * 1000);
-    if (fireAt.getTime() < now - 2 * 60 * 1000) return;
-    for (const channel of plan[timing]) {
-      jobs.push({ fireAt, channel });
-    }
+    addJobs(jobs, seen, new Date(dueMs + offsetMin * 60 * 1000), plan[timing], 'remind', nowMs);
   });
+
+  if (opts?.atTime) {
+    const named = (opts.explicitChannels ?? []).filter((channel) => ALL_PERSONAL_CHANNELS.includes(channel));
+    const channels = named.length ? named : channelsInPlan(plan);
+    addJobs(jobs, seen, dueAt, channels.length ? channels : ['sms'], 'remind', nowMs);
+  }
   return jobs;
+}
+
+export function groupPersonalJobs(jobs: PersonalJob[]): { fireAt: Date; kind: PersonalJobKind; channels: PersonalChannel[] }[] {
+  const map = new Map<string, { fireAt: Date; kind: PersonalJobKind; channels: PersonalChannel[] }>();
+  for (const job of jobs) {
+    const key = `${job.kind}|${job.fireAt.getTime()}`;
+    const row = map.get(key) ?? { fireAt: job.fireAt, kind: job.kind, channels: [] };
+    if (!row.channels.includes(job.channel)) row.channels.push(job.channel);
+    map.set(key, row);
+  }
+  return [...map.values()].sort((a, b) => a.fireAt.getTime() - b.fireAt.getTime());
 }

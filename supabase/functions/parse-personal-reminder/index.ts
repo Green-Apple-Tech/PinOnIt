@@ -49,11 +49,12 @@ Deno.serve(async (req: Request) => {
     const system = `You split a spoken personal reminder into JSON only. No markdown.
 The speaker's current time is ${now}. Time zone: ${timeZone}.
 Return exactly:
-{"title":"short subject","location":"","date":"YYYY-MM-DD","time":"HH:MM","extras":{"day_before":[],"hour_before":[],"ten_min":[]}}
+{"title":"short subject","location":"","date":"YYYY-MM-DD","time":"HH:MM","in_minutes":null,"extras":{"day_before":[],"hour_before":[],"ten_min":[]}}
 Rules:
-- title is a short subject such as "Dentist reminder", not the whole sentence.
+- title is a short subject such as "Dentist reminder" or "Stove is on", not the whole sentence.
 - location is a place they named (office, address, clinic). Leave "" when they did not name a place. "with the dentist" is the subject, not a place.
 - date and time are when the event happens, in the speaker's time zone. "today" is that calendar date. Use 24-hour HH:MM.
+- "in 20 minutes" means the reminder is due 20 minutes after the current time. Set in_minutes to 20 and set date and time to that moment. Do not move it earlier.
 - extras lists ONLY extra pings they asked to receive, on top of the usual ones. Do not repeat the usual plan.
 - Usual plan (do not put these in extras unless they asked for a different channel at that time): email the day before, text 1 hour before, text 10 minutes before.
 - "send me a quick reminder 10 min before" with no channel means ten_min sms.

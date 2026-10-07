@@ -148,7 +148,13 @@ Deno.serve(async (req: Request) => {
         return json({ success: true, deleted: existingRefs.length });
       }
 
-      const payload = personalReminderPayload({ title: reminder.title, due_at: reminder.due_at });
+      const payload = personalReminderPayload({
+        title: reminder.title,
+        due_at: reminder.due_at,
+        location: reminder.location,
+        transcript: reminder.transcript,
+        urgent: reminder.urgent,
+      });
       const cals = await loadWritableCalendars(supabase, jwtUser, null, 'reminders');
       const calendarIds = cals.map((c) => c.id);
 
