@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_SESSION_TIMEOUT_MINUTES,
   inactivitySignOutDestination,
+  isPublicBookingPath,
   resolveSessionTimeoutMinutes,
   sessionTimeoutOptionValue,
   signedInTooRecently,
@@ -21,6 +22,14 @@ describe('session timeout', () => {
   it('leaves a guest waiver link open when the host session times out', () => {
     expect(inactivitySignOutDestination('/d/abc')).toBeNull();
     expect(inactivitySignOutDestination('/dashboard/documents')).toBe('/login?signed_out=inactivity');
+  });
+
+  it('leaves a public booking page open when the host session is idle', () => {
+    expect(isPublicBookingPath('/peter-stebbins')).toBe(true);
+    expect(isPublicBookingPath('/peter-stebbins/services')).toBe(true);
+    expect(inactivitySignOutDestination('/peter-stebbins')).toBeNull();
+    expect(inactivitySignOutDestination('/peter-stebbins/services')).toBeNull();
+    expect(inactivitySignOutDestination('/dashboard')).toBe('/login?signed_out=inactivity');
   });
 
   it('does not sign out a session that is still on the login or Google callback page', () => {

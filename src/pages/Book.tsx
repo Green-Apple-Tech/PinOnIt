@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useSearchParams, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { supabase } from '../lib/supabase';
+import { publicReadSupabase, supabase } from '../lib/supabase';
 import type { Profile, Service, AvailabilitySlot, Booking, BookingQuestion, DateOverride, PaidBookingSettings, CalendarConflictSettings, RecurrenceFrequency } from '../lib/types';
 import { LOCATION_TYPES, TIMEZONES, DEFAULT_CALENDAR_CONFLICT_SETTINGS } from '../lib/types';
 import {
@@ -463,6 +463,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
   const [calendarBusyTimes, setCalendarBusyTimes] = useState<BusyPeriod[]>([]);
   const [questions, setQuestions] = useState<BookingQuestion[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [singleUseLink, setSingleUseLink] = useState<SingleUseLinkRecord | null>(null);
   const [singleUseLinkInvalid, setSingleUseLinkInvalid] = useState(false);
 
@@ -588,9 +589,9 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
     (async () => {
       const { from, to } = publicBusyWindow();
       const [availRes, busyRes, ovRes] = await Promise.all([
-        supabase.from('availability').select('*').eq('host_id', hostId).eq('is_active', true),
-        supabase.rpc('get_public_busy_times', { p_host_id: hostId, p_from: from, p_to: to }),
-        supabase.from('date_overrides').select('*').eq('host_id', hostId),
+        publicReadSupabase.from('availability').select('*').eq('host_id', hostId).eq('is_active', true),
+        publicReadSupabase.rpc('get_public_busy_times', { p_host_id: hostId, p_from: from, p_to: to }),
+        publicReadSupabase.from('date_overrides').select('*').eq('host_id', hostId),
       ]);
       const busy = (busyRes.data ?? {}) as PublicBusyPayload;
       setAvailability(availRes.data ?? []);
@@ -624,31 +625,36 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
       let hostId: string;
       let serviceId: string | null = null;
       let loadedProfile: Profile | null = null;
+      setLoadError(false);
 
+      try {
       if (token) {
-        const { data: linkRows } = await supabase.rpc('get_single_use_link', { p_token: token });
+        const { data: linkRows, error: linkError } = await publicReadSupabase.rpc('get_single_use_link', { p_token: token });
+        if (linkError) throw linkError;
         const link = Array.isArray(linkRows) ? linkRows[0] : linkRows;
 
-        if (!link) { setSingleUseLinkInvalid(true); setLoading(false); return; }
+        if (!link) { setSingleUseLinkInvalid(true); return; }
 
         const linkRecord = link as SingleUseLinkRecord;
 
-        if (linkRecord.used) { setSingleUseLinkInvalid(true); setLoading(false); return; }
+        if (linkRecord.used) { setSingleUseLinkInvalid(true); return; }
         if (isUnusedSingleUseExpired(linkRecord.expires_at ?? null, linkRecord.created_at ?? null)) {
-          setSingleUseLinkInvalid(true); setLoading(false); return;
+          setSingleUseLinkInvalid(true); return;
         }
 
         setSingleUseLink(linkRecord);
         hostId = linkRecord.host_id;
         serviceId = linkRecord.service_id;
 
-        const { data: profile } = await supabase.from('public_host_profiles').select('*').eq('id', hostId).maybeSingle();
-        if (!profile) { setLoading(false); return; }
+        const { data: profile, error: profileError } = await publicReadSupabase.from('public_host_profiles').select('*').eq('id', hostId).maybeSingle();
+        if (profileError) throw profileError;
+        if (!profile) return;
         loadedProfile = profile as Profile;
         setHost(loadedProfile);
       } else {
-        const { data: profile } = await supabase.from('public_host_profiles').select('*').eq('slug', slug!).maybeSingle();
-        if (!profile) { setLoading(false); return; }
+        const { data: profile, error: profileError } = await publicReadSupabase.from('public_host_profiles').select('*').eq('slug', slug!).maybeSingle();
+        if (profileError) throw profileError;
+        if (!profile) return;
         loadedProfile = profile as Profile;
         setHost(loadedProfile);
         hostId = profile.id;
@@ -657,12 +663,13 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
       const { from, to } = publicBusyWindow();
       const [svcRes, availRes, busyRes, ovRes] = await Promise.all([
         serviceId
-          ? supabase.from('services').select(SERVICE_SELECT).eq('id', serviceId).eq('is_active', true)
-          : supabase.from('services').select(SERVICE_SELECT).eq('host_id', hostId).eq('is_active', true),
-        supabase.from('availability').select('*').eq('host_id', hostId).eq('is_active', true),
-        supabase.rpc('get_public_busy_times', { p_host_id: hostId, p_from: from, p_to: to }),
-        supabase.from('date_overrides').select('*').eq('host_id', hostId),
+          ? publicReadSupabase.from('services').select(SERVICE_SELECT).eq('id', serviceId).eq('is_active', true)
+          : publicReadSupabase.from('services').select(SERVICE_SELECT).eq('host_id', hostId).eq('is_active', true),
+        publicReadSupabase.from('availability').select('*').eq('host_id', hostId).eq('is_active', true),
+        publicReadSupabase.rpc('get_public_busy_times', { p_host_id: hostId, p_from: from, p_to: to }),
+        publicReadSupabase.from('date_overrides').select('*').eq('host_id', hostId),
       ]);
+      if (svcRes.error) throw svcRes.error;
       const busy = (busyRes.data ?? {}) as PublicBusyPayload;
 
       const allServices = (svcRes.data as Service[]) ?? [];
@@ -700,7 +707,11 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
         ...(loadedProfile?.calendar_conflict_settings ?? {}),
       };
       setCalendarBusyTimes(busyPeriodsFromEvents(busy.events ?? [], conflictSettings));
-      setLoading(false);
+      } catch {
+        setLoadError(true);
+      } finally {
+        setLoading(false);
+      }
     })();
   }, [slug, token, searchParams]);
 
@@ -1257,6 +1268,23 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
     (!requiresAgreement || ndaAgreed) &&
     !requiresPayment;
 
+  if (loadError) return (
+    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950 text-slate-900 dark:text-white transition-colors">
+      <div className="text-center max-w-sm px-6">
+        <h1 className="text-xl font-bold mb-2">This page didn’t load</h1>
+        <p className="text-slate-500 dark:text-slate-400 text-sm">The booking list is still here. Try again without leaving this page.</p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="mt-6 inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold text-white"
+          style={{ backgroundColor: '#5864C6' }}
+        >
+          Try again
+        </button>
+      </div>
+    </div>
+  );
+
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950 transition-colors">
       <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
@@ -1463,7 +1491,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                       <Link
                         to={`/dashboard/settings?tab=event-types&edit=${svc.id}`}
                         onClick={(e) => e.stopPropagation()}
-                        className="absolute top-2 right-2 z-10 inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold border bg-white/90 dark:bg-slate-900/90"
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border bg-white/90 dark:bg-slate-900/90"
                         style={{ borderColor: pageBorderColor, color: pageTextColor }}
                       >
                         <Pencil className="h-3 w-3" /> Edit
@@ -1471,11 +1499,9 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                     ) : null;
                     if (pageLayout === 'grid') {
                       return (
-                        <div key={svc.id} className="relative">
-                          {editLink}
+                        <div key={svc.id} className="flex flex-col rounded-xl overflow-hidden shadow-sm border" style={{ backgroundColor: pageSurfaceColor, borderColor: pageBorderColor }}>
                           <button type="button" onClick={() => handleSelectService(svc)}
-                          className="w-full flex flex-col rounded-xl overflow-hidden transition-all text-left shadow-sm border"
-                          style={{ backgroundColor: pageSurfaceColor, borderColor: pageBorderColor }}>
+                          className="w-full flex flex-col transition-all text-left flex-1"
                           {pageShowImages && ext.banner_image_url
                             ? <img src={ext.banner_image_url} alt={svc.name} width={112} height={112} loading="lazy" className="w-full h-28 object-cover" />
                             : pageShowImages && <div className="w-full h-20 flex items-center justify-center" style={{ backgroundColor: pageBorderColor }}><span className="h-3 w-3 rounded-full" style={{ backgroundColor: svc.color }} /></div>
@@ -1492,15 +1518,14 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                             </div>
                           </div>
                         </button>
+                          {editLink ? <div className="px-3.5 pb-3">{editLink}</div> : null}
                         </div>
                       );
                     }
                     return (
-                      <div key={svc.id} className="relative">
-                        {editLink}
+                      <div key={svc.id} className={`rounded-xl border ${isBoldTheme ? 'shadow-none' : 'shadow-sm'}`} style={{ backgroundColor: pageSurfaceColor, borderColor: pageBorderColor }}>
                         <button type="button" onClick={() => handleSelectService(svc)}
-                        className={`w-full p-4 rounded-xl transition-all text-left border ${isBoldTheme ? 'shadow-none' : 'shadow-sm'}`}
-                        style={{ backgroundColor: pageSurfaceColor, borderColor: pageBorderColor }}>
+                        className="w-full p-4 transition-all text-left">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-start gap-3 flex-1 min-w-0">
                             {pageShowImages && (ext.banner_image_url
@@ -1525,6 +1550,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                           <span style={{ backgroundColor: pageBtnColor, color: pageTheme.btnText }} className="shrink-0 px-3 py-1.5 text-xs font-semibold rounded-lg whitespace-nowrap self-center">{pageBtnLabel}</span>
                         </div>
                       </button>
+                        {editLink ? <div className="px-4 pb-3 -mt-1">{editLink}</div> : null}
                       </div>
                     );
                   };

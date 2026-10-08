@@ -32,9 +32,41 @@ export function resolveSessionTimeoutMinutes(
 /** Guest waiver and booking links stay open. Sign-in pages must not sign the new session out. */
 export function inactivitySignOutDestination(pathname: string) {
   if (isGuestNoIndexPath(pathname)) return null;
+  if (isPublicBookingPath(pathname)) return null;
   if (pathname === '/login' || pathname === '/signup' || pathname.startsWith('/auth/')) return null;
   return '/login?signed_out=inactivity';
 }
+
+/** /:slug and /:slug/services. Idle timeout must not dump the host off their own booking page. */
+export function isPublicBookingPath(pathname: string) {
+  const path = (pathname.split('?')[0] || '/').replace(/\/$/, '') || '/';
+  const parts = path.split('/').filter(Boolean);
+  if (parts.length === 2 && parts[1] === 'services') return true;
+  if (parts.length !== 1) return false;
+  return !PUBLIC_APP_ROOTS.has(parts[0]);
+}
+
+const PUBLIC_APP_ROOTS = new Set([
+  'acceptable-use',
+  'blog',
+  'calendly-alternative',
+  'calendly-alternative-for-small-business',
+  'dashboard',
+  'documents',
+  'leaderboard',
+  'legal-templates',
+  'login',
+  'nda',
+  'onboarding',
+  'privacy',
+  'reminders',
+  'sign-now',
+  'signup',
+  'sms-consent',
+  'status',
+  'terms',
+  'why-pinonit',
+]);
 
 export function recordSessionActivity(now = Date.now()) {
   storageSet(LAST_ACTIVITY_KEY, String(now));
