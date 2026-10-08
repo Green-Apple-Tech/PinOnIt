@@ -8,61 +8,61 @@ const GROUPS: ShotGroup[] = [
     id: 'sign',
     title: 'Sign by text',
     shots: [
-      { src: '/shots/sign-sms.png', alt: 'Text message with a waiver link', caption: 'The text a guest gets, with the link to review.' },
-      { src: '/shots/sign-waiver.png', alt: 'Waiver on a phone with a short summary', caption: 'The waiver on the phone, with a short summary above the full text.' },
-      { src: '/shots/sign-verify.png', alt: 'Six-digit phone verification code', caption: 'They confirm the phone number on the document.' },
-      { src: '/shots/sign-submit.png', alt: 'Drawn signature and sign button', caption: 'Signature, consent, and Sign & submit.' },
-      { src: '/shots/sign-confirmed.png', alt: 'Waiver confirmed screen', caption: 'Confirmed after they sign.' },
+      { src: '/shots/phone/waiver%20text.png', alt: 'Text message with a waiver link', caption: 'The text a guest gets, with the link to review.' },
+      { src: '/shots/phone/send%20waiver.png', alt: 'Waiver on a phone with a short summary', caption: 'The waiver on the phone, with a short summary above the full text.' },
+      { src: '/shots/phone/verify%20phone.png', alt: 'Six-digit phone verification code', caption: 'They confirm the phone number on the document.' },
+      { src: '/shots/phone/sign%20and%20submit.png', alt: 'Drawn signature and sign button', caption: 'Signature, consent, and Sign & submit.' },
+      { src: '/shots/phone/waiver%20confirmed.png', alt: 'Waiver confirmed screen', caption: 'Confirmed after they sign.' },
     ],
   },
   {
     id: 'docs',
     title: 'Send docs',
     shots: [
-      { src: '/shots/send-docs.png', alt: 'Send docs screen with document counts', caption: 'Quotes, waivers, invoices, and how many are sent, pending, viewed, or confirmed.' },
+      { src: '/shots/phone/send%20docs.png', alt: 'Send docs screen with document counts', caption: 'Quotes, waivers, invoices, and how many are sent, pending, viewed, or confirmed.' },
     ],
   },
   {
     id: 'reminders',
     title: 'NeverMiss reminders',
     shots: [
-      { src: '/shots/reminders.png', alt: 'Reminder channel options on a phone', caption: 'Exact time, 15 minutes, and 30 minutes, with email, text, WhatsApp, and voice.' },
-      { src: '/shots/reminder-add.png', alt: 'Speak or type a reminder', caption: 'Add a reminder by speaking it or typing it.' },
+      { src: '/shots/phone/reminders.png', alt: 'Reminder channel options on a phone', caption: 'Exact time, 15 minutes, and 30 minutes, with email, text, WhatsApp, and voice.' },
+      { src: '/shots/phone/add%20reminder.png', alt: 'Speak or type a reminder', caption: 'Add a reminder by speaking it or typing it.' },
     ],
   },
   {
     id: 'booking',
     title: 'Booking and prices',
     shots: [
-      { src: '/shots/price-list.png', alt: 'Price list a client can book from', caption: 'A price list on the phone, with Book and Edit on each option.' },
+      { src: '/shots/phone/price%20list.png', alt: 'Price list a client can book from', caption: 'A price list on the phone, with Book and Edit on each option.' },
     ],
   },
   {
     id: 'signature',
     title: 'Email signature',
     shots: [
-      { src: '/shots/email-signature.png', alt: 'Email signature editor on a phone', caption: 'The signature editor, with copy and download.' },
+      { src: '/shots/phone/email%20signature.png', alt: 'Email signature editor on a phone', caption: 'The signature editor, with copy and download.' },
     ],
   },
   {
     id: 'qr',
     title: 'QR code',
     shots: [
-      { src: '/shots/qr-code.png', alt: 'QR code creator on a phone', caption: 'Turn a link into a QR code.' },
+      { src: '/shots/phone/qr%20code.png', alt: 'QR code creator on a phone', caption: 'Turn a link into a QR code.' },
     ],
   },
   {
     id: 'home',
     title: 'Home',
     shots: [
-      { src: '/shots/home-tools.png', alt: 'Home screen with the main tools', caption: 'Send docs, calendar, booking, and NeverMiss from the home screen.' },
+      { src: '/shots/phone/home.png', alt: 'Home screen with the main tools', caption: 'Send docs, calendar, booking, and NeverMiss from the home screen.' },
     ],
   },
   {
     id: 'compare',
     title: 'Calendly comparison',
     shots: [
-      { src: '/shots/calendly.png', alt: 'What Calendly does not include', caption: 'WhatsApp, voice, and personal reminders, shown on a phone.' },
+      { src: '/shots/phone/calendly.png', alt: 'What Calendly does not include', caption: 'WhatsApp, voice, and personal reminders, shown on a phone.' },
     ],
   },
 ];
@@ -113,7 +113,10 @@ export function PhoneShotsPage() {
                     loading="lazy"
                     className="w-full rounded-2xl border border-slate-200 bg-white shadow-sm"
                   />
-                  <figcaption className="mt-2 text-xs text-slate-500 leading-snug">{shot.caption}</figcaption>
+                  <figcaption className="mt-2 text-xs text-slate-500 leading-snug">
+                    <p>{shot.caption}</p>
+                    <a href={shot.src} className="mt-1 block break-all text-slate-400 hover:text-slate-600">{shot.src}</a>
+                  </figcaption>
                 </figure>
               ))}
             </div>

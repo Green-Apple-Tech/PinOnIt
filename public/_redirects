@@ -54,6 +54,8 @@
 /acceptable-use  /index.html  200
 /leaderboard  /index.html  200
 /status  /index.html  200
+# Gallery only. PNG files in /shots/phone/ are real files and must not be rewritten.
+/shots/phone  /index.html  200
 /poll  /index.html  200
 /poll/*  /index.html  200
 /c  /index.html  200
