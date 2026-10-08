@@ -10,7 +10,6 @@ import {
   expandPersonalJobs,
   formatChannelList,
   groupPersonalJobs,
-  isSoonReminder,
   mergePersonalPlans,
   normalizePersonalDefaults,
   type PersonalChannel,
@@ -61,7 +60,6 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
   const recognizerRef = useRef<SpeechRec | null>(null);
   const heardRef = useRef('');
   const [plan, setPlan] = useState<PersonalReminderDefaults>(defaults);
-  const [relative, setRelative] = useState(false);
   const [explicitChannels, setExplicitChannels] = useState<PersonalChannel[]>([]);
   const [soonChannels, setSoonChannels] = useState<PersonalChannel[]>(['sms', 'voice']);
   const [addToCalendar, setAddToCalendar] = useState(profileAddToCalendar);
@@ -103,7 +101,6 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
     setLocation('');
     setDueLocal('');
     setPlan(defaults);
-    setRelative(false);
     setExplicitChannels([]);
     setSoonChannels(['sms', 'voice']);
     setAddToCalendar(profileAddToCalendar);
@@ -119,15 +116,12 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
     setLocation(parsed.location);
     setDueLocal(parsed.dueAt ? toLocalInput(parsed.dueAt) : '');
     setPlan(mergePersonalPlans(defaults, parsed.extras));
-    setRelative(parsed.relative);
     setExplicitChannels(parsed.explicitChannels);
-    if (parsed.dueAt && isSoonReminder(parsed.dueAt)) {
-      const next: PersonalChannel[] = ['sms', 'voice'];
-      for (const channel of parsed.explicitChannels) {
-        if (!next.includes(channel)) next.push(channel);
-      }
-      setSoonChannels(next);
+    const next: PersonalChannel[] = ['sms', 'voice'];
+    for (const channel of parsed.explicitChannels) {
+      if (!next.includes(channel)) next.push(channel);
     }
+    setSoonChannels(next);
     setAddToCalendar(profileAddToCalendar);
     setError(parsed.dueAt ? '' : 'Pick a day and time — I heard the task but not when.');
     setModalOpen(true);
@@ -243,12 +237,12 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
       setError('Pick a time in the future.');
       return;
     }
-    const soon = isSoonReminder(dueAt);
-    const jobs = expandPersonalJobs(dueAt, soon ? { day_before: [], hour_before: [], ten_min: [] } : chosen, {
-      atTime: relative,
-      explicitChannels,
-      soonChannels: soon ? (useDefaults ? ['sms', 'voice'] : soonChannels) : undefined,
-    });
+    const jobs = addToCalendar
+      ? expandPersonalJobs(dueAt, chosen)
+      : expandPersonalJobs(dueAt, { day_before: [], hour_before: [], ten_min: [] }, {
+        atDueOnly: true,
+        soonChannels: useDefaults ? ['sms', 'voice'] : soonChannels,
+      });
     if (jobs.length === 0) {
       setError('Choose at least one reminder (or skip to use the defaults).');
       return;
@@ -325,13 +319,13 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
   };
 
   const previewDue = dueLocal ? new Date(dueLocal) : null;
-  const previewSoon = Boolean(previewDue && !Number.isNaN(previewDue.getTime()) && isSoonReminder(previewDue));
   const previewGroups = previewDue && !Number.isNaN(previewDue.getTime())
-    ? groupPersonalJobs(expandPersonalJobs(previewDue, previewSoon ? { day_before: [], hour_before: [], ten_min: [] } : plan, {
-      atTime: relative,
-      explicitChannels,
-      soonChannels: previewSoon ? soonChannels : undefined,
-    }))
+    ? groupPersonalJobs(addToCalendar
+      ? expandPersonalJobs(previewDue, plan)
+      : expandPersonalJobs(previewDue, { day_before: [], hour_before: [], ten_min: [] }, {
+        atDueOnly: true,
+        soonChannels,
+      }))
     : [];
 
   return (
@@ -340,7 +334,7 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
         <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-white">Remind me…</h2>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Say when and what, like “remind me in 15 minutes.” If it is within the next hour and a half, you get a text and a call then. Later reminders keep email the day before, a text 1 hour before, and a text 10 minutes before.
+            Add a reminder, then pick how this one reaches you. On the calendar, it starts with your saved reminders and you can add more. Off the calendar, it is a text and a call at the time you set, and you can add email or WhatsApp.
           </p>
         </div>
 
@@ -500,8 +494,18 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
                     type="checkbox"
                     checked={addToCalendar}
                     onChange={(e) => {
+                      const on = e.target.checked;
                       userEdited.current = true;
-                      setAddToCalendar(e.target.checked);
+                      setAddToCalendar(on);
+                      if (on) {
+                        setPlan(mergePersonalPlans(defaults));
+                      } else {
+                        const next: PersonalChannel[] = ['sms', 'voice'];
+                        for (const channel of explicitChannels) {
+                          if (!next.includes(channel)) next.push(channel);
+                        }
+                        setSoonChannels(next);
+                      }
                     }}
                     className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
                   />
@@ -511,18 +515,18 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
                       Also add to Google / Outlook calendar
                     </span>
                     <span className="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      On by default. Uncheck it to skip Google and Outlook, and the next reminder will start unchecked too.
+                      Checked: starts with your saved reminders, and you can add channels. Unchecked: a text and a call at the time you set, and you can add the others.
                     </span>
                   </span>
                 </label>
               </div>
 
               <p className="text-xs font-medium text-slate-500 pt-1">
-                {previewSoon
-                  ? 'This one is soon, so it is a text and a call at that time. The day-before email and the hour-before text stay off.'
-                  : 'Starts as email the day before, a text 1 hour before, and a text 10 minutes before. Anything you asked for out loud is added. Turn a box off if you do not want it.'}
+                {addToCalendar
+                  ? 'These are your saved reminders for this one. Turn on any other channel you want.'
+                  : 'This stays off the calendar. It is a text and a call at that time. Turn on email or WhatsApp if you want those too.'}
               </p>
-              {previewSoon ? (
+              {!addToCalendar ? (
                 <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-3">
                   <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-2">At that time</p>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -594,7 +598,7 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
                   disabled={saving}
                   className="flex-1 min-h-12 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-semibold"
                 >
-                  Skip — use defaults
+                  {addToCalendar ? 'Use saved defaults' : 'Text and call only'}
                 </button>
                 <button
                   type="button"

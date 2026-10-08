@@ -31,30 +31,33 @@ describe('parsePersonalReminder', () => {
 describe('relative reminders', () => {
   const now = new Date(2026, 9, 7, 15, 0, 0);
 
-  it('sends a text and a call at 15 minutes, and skips the day-before and hour-before plan', () => {
+  it('without a calendar, sends a text and a call at the time they asked', () => {
     const parsed = parsePersonalReminder('remind me in 15 minutes with a voice reminder', now);
     expect(parsed.dueAt?.getMinutes()).toBe(15);
     const jobs = expandPersonalJobs(parsed.dueAt!, DEFAULT_PERSONAL_REMINDER, {
       now,
-      explicitChannels: parsed.explicitChannels,
+      atDueOnly: true,
+      soonChannels: ['sms', 'voice'],
     });
     expect(jobs.map((job) => job.channel).sort()).toEqual(['sms', 'voice']);
     expect(jobs.every((job) => job.fireAt.getMinutes() === 15)).toBe(true);
   });
 
-  it('keeps a short stove reminder to a text and a call at that time', () => {
+  it('with a calendar, keeps the saved reminders that are still ahead', () => {
     const parsed = parsePersonalReminder('remind me in 20 minutes that the stove is on', now);
     expect(parsed.title).toBe('Stove is on');
     const jobs = expandPersonalJobs(parsed.dueAt!, DEFAULT_PERSONAL_REMINDER, { now });
-    expect(jobs.map((job) => job.channel).sort()).toEqual(['sms', 'voice']);
-    expect(jobs.every((job) => job.fireAt.getTime() === parsed.dueAt!.getTime())).toBe(true);
+    expect(jobs.map((job) => job.channel)).toEqual(['sms']);
+    expect(jobs[0]?.fireAt.getMinutes()).toBe(10);
   });
 
-  it('adds a named channel onto the text and call', () => {
+  it('adds a named channel onto the text and call when it stays off the calendar', () => {
     const parsed = parsePersonalReminder('remind me in 25 minutes to call mom and email me', now);
     expect(parsed.explicitChannels).toEqual(['email']);
     const jobs = expandPersonalJobs(parsed.dueAt!, DEFAULT_PERSONAL_REMINDER, {
       now,
+      atDueOnly: true,
+      soonChannels: ['sms', 'voice'],
       explicitChannels: parsed.explicitChannels,
     });
     expect(jobs.map((job) => job.channel).sort()).toEqual(['email', 'sms', 'voice']);

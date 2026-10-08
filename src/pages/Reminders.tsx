@@ -1022,8 +1022,8 @@ export function RemindersPage({
       {hasAnyReminders && !showAddForm && (
         <div>
           <div className="mb-3">
-            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-              What guests get
+            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-wide">
+              Reminder options
               <span className="ml-2 px-1.5 py-0.5 text-white rounded-full text-[10px]" style={{ backgroundColor: '#5864C6' }}>{activeCount}</span>
             </p>
           </div>
