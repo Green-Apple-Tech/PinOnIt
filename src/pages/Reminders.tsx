@@ -53,7 +53,7 @@ function formatOffset(minutes: number): string {
 type Channel = 'email' | 'sms' | 'whatsapp' | 'voice';
 
 const REMINDER_SLOTS = [
-  { key: 'confirmation', label: 'Booking Confirmation', sublabel: 'Sent immediately when someone books', offset: 0, type: 'confirmation' as const },
+  { key: 'confirmation', label: 'Reminder options', sublabel: 'Sent immediately when someone books', offset: 0, type: 'confirmation' as const },
   { key: 'reminder_15m', label: '15 Min Reminder', sublabel: '15 minutes before the event', offset: -15, type: 'reminder' as const },
   { key: 'reminder_30m', label: '30 Min Reminder', sublabel: '30 minutes before the event', offset: -30, type: 'reminder' as const },
   { key: 'reminder_60m', label: '1 Hour Reminder', sublabel: '60 minutes before the event', offset: -60, type: 'reminder' as const },

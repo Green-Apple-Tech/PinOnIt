@@ -3,7 +3,7 @@ import { Check, Loader2, Mail, MessageSquare, PhoneCall, Smartphone } from 'luci
 export type ReminderChannelKey = 'email' | 'sms' | 'whatsapp' | 'voice';
 
 export const REMINDER_GRID_SLOTS = [
-  { key: 'confirmation', label: 'Booking Confirmation', sublabel: 'Sent immediately when someone books', offset: 0 },
+  { key: 'confirmation', label: 'Reminder options', sublabel: 'Sent immediately when someone books', offset: 0 },
   { key: 'reminder_15m', label: '15 Min Reminder', sublabel: '15 minutes before the event', offset: -15 },
   { key: 'reminder_30m', label: '30 Min Reminder', sublabel: '30 minutes before the event', offset: -30 },
   { key: 'reminder_60m', label: '1 Hour Reminder', sublabel: '60 minutes before the event', offset: -60 },
