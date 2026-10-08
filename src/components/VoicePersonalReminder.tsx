@@ -49,7 +49,6 @@ function toLocalInput(d: Date) {
 export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(function VoicePersonalReminder(_props, ref) {
   const { user, profile, refreshProfile } = useAuth();
   const defaults = normalizePersonalDefaults(profile?.personal_reminder_defaults);
-  const profileAddToCalendar = profile?.personal_reminder_add_to_calendar !== false;
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [title, setTitle] = useState('');
@@ -62,8 +61,9 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
   const [plan, setPlan] = useState<PersonalReminderDefaults>(defaults);
   const [explicitChannels, setExplicitChannels] = useState<PersonalChannel[]>([]);
   const [soonChannels, setSoonChannels] = useState<PersonalChannel[]>(['sms', 'voice']);
-  const [addToCalendar, setAddToCalendar] = useState(profileAddToCalendar);
+  const [addToCalendar, setAddToCalendar] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [chooserOpen, setChooserOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [upcoming, setUpcoming] = useState<{ id: string; title: string; due_at: string }[]>([]);
@@ -89,11 +89,9 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
     setPlan(defaults);
   }, [profile?.personal_reminder_defaults]);
 
-  useEffect(() => {
-    setAddToCalendar(profileAddToCalendar);
-  }, [profileAddToCalendar]);
-
   const openTypeModal = useCallback(() => {
+    recognizerRef.current?.stop();
+    setChooserOpen(false);
     setListening(false);
     setTranscript('');
     setTitle('');
@@ -103,12 +101,20 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
     setPlan(defaults);
     setExplicitChannels([]);
     setSoonChannels(['sms', 'voice']);
-    setAddToCalendar(profileAddToCalendar);
+    setAddToCalendar(true);
     setError('');
     setModalOpen(true);
-  }, [defaults, profileAddToCalendar]);
+  }, [defaults]);
 
-  useImperativeHandle(ref, () => ({ openTypeModal }), [openTypeModal]);
+  const openChooser = useCallback(() => {
+    recognizerRef.current?.stop();
+    setListening(false);
+    setError('');
+    setModalOpen(false);
+    setChooserOpen(true);
+  }, []);
+
+  useImperativeHandle(ref, () => ({ openTypeModal: openChooser }), [openChooser]);
 
   const fillFromParse = (spoken: string, parsed: ReturnType<typeof parsePersonalReminder>) => {
     setTranscript(spoken);
@@ -122,8 +128,9 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
       if (!next.includes(channel)) next.push(channel);
     }
     setSoonChannels(next);
-    setAddToCalendar(profileAddToCalendar);
+    setAddToCalendar(true);
     setError(parsed.dueAt ? '' : 'Pick a day and time — I heard the task but not when.');
+    setChooserOpen(false);
     setModalOpen(true);
   };
 
@@ -163,6 +170,7 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
       setLocation('');
       setDueLocal('');
       setError('Voice is not available in this browser. Type it instead.');
+      setChooserOpen(false);
       setModalOpen(true);
       return;
     }
@@ -182,6 +190,7 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
       if (spoken) applySpeech(spoken);
       else {
         setError('Could not hear that. Try again or type it.');
+        setChooserOpen(false);
         setModalOpen(true);
       }
     };
@@ -290,7 +299,7 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
       if (profile?.id) {
         await supabase
           .from('profiles')
-          .update({ personal_reminder_add_to_calendar: addToCalendar })
+          .update({ personal_reminder_add_to_calendar: true })
           .eq('id', profile.id);
         await refreshProfile();
       }
@@ -328,62 +337,82 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
       }))
     : [];
 
+  const closeChooser = () => {
+    recognizerRef.current?.stop();
+    setListening(false);
+    setChooserOpen(false);
+    setError('');
+  };
+
   return (
     <>
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 p-4 md:p-5 space-y-4">
-        <div>
-          <h2 className="text-base font-bold text-slate-900 dark:text-white">Remind me…</h2>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Add a reminder, then pick how this one reaches you. On the calendar, it starts with your saved reminders and you can add more. Off the calendar, it is a text and a call at the time you set, and you can add email or WhatsApp.
-          </p>
+      {upcoming.length > 0 && (
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 p-4 md:p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Coming up</p>
+          <ul className="space-y-1.5">
+            {upcoming.map((r) => (
+              <li key={r.id} className="flex items-center justify-between gap-3 text-sm text-slate-700 dark:text-slate-300">
+                <span>
+                  <span className="font-medium">{r.title}</span>
+                  <span className="text-slate-400"> · {new Date(r.due_at).toLocaleString()}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void markDone(r.id)}
+                  className="shrink-0 text-xs font-semibold text-brand-700 hover:underline"
+                >
+                  Done
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
+      )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={openTypeModal}
-            className="w-full min-h-14 inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white text-base font-semibold"
+      {chooserOpen && (
+        <div
+          className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-4 bg-black/40 backdrop-blur-[2px]"
+          onClick={closeChooser}
+        >
+          <div
+            role="dialog"
+            aria-labelledby="reminder-choice-title"
+            className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xl p-5 space-y-3"
+            onClick={(e) => e.stopPropagation()}
           >
-            <PenLine className="h-5 w-5" />
-            Type it
-          </button>
-          <button
-            type="button"
-            onClick={startListening}
-            className={`w-full min-h-14 inline-flex items-center justify-center gap-2 rounded-2xl text-white text-base font-semibold ${
-              listening ? 'bg-red-500' : 'bg-brand-600 hover:bg-brand-700'
-            }`}
-          >
-            {listening ? <Square className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-            {listening ? 'Tap to finish' : 'Record'}
-          </button>
-        </div>
-
-        {!modalOpen && error && <p className="text-sm text-red-600">{error}</p>}
-
-        {upcoming.length > 0 && (
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Coming up</p>
-            <ul className="space-y-1.5">
-              {upcoming.map((r) => (
-                <li key={r.id} className="flex items-center justify-between gap-3 text-sm text-slate-700 dark:text-slate-300">
-                  <span>
-                    <span className="font-medium">{r.title}</span>
-                    <span className="text-slate-400"> · {new Date(r.due_at).toLocaleString()}</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => void markDone(r.id)}
-                    className="shrink-0 text-xs font-semibold text-brand-700 hover:underline"
-                  >
-                    Done
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <div className="flex items-start justify-between gap-3">
+              <h3 id="reminder-choice-title" className="text-base font-bold text-slate-900 dark:text-white">
+                Add a reminder
+              </h3>
+              <button type="button" onClick={closeChooser} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white" aria-label="Close">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            {listening && transcript ? (
+              <p className="text-sm text-slate-500 dark:text-slate-400 italic">“{transcript}”</p>
+            ) : null}
+            {error ? <p className="text-sm text-red-600">{error}</p> : null}
+            <button
+              type="button"
+              onClick={startListening}
+              className={`w-full min-h-14 inline-flex items-center justify-center gap-2 rounded-2xl text-white text-base font-semibold ${
+                listening ? 'bg-red-500' : 'bg-brand-600 hover:bg-brand-700'
+              }`}
+            >
+              {listening ? <Square className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+              {listening ? 'Tap to finish' : 'Speak your AI Reminder'}
+            </button>
+            <button
+              type="button"
+              onClick={openTypeModal}
+              className="w-full min-h-14 inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white text-base font-semibold"
+            >
+              <PenLine className="h-5 w-5" />
+              Type Reminder
+            </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {modalOpen && (
         <div
@@ -401,9 +430,6 @@ export const VoicePersonalReminder = forwardRef<VoicePersonalReminderHandle>(fun
                 <h3 id="personal-reminder-title" className="text-base font-bold text-slate-900 dark:text-white">
                   New reminder
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Topic, date, and how to ping you — then it shows on Calendar.
-                </p>
               </div>
               <button type="button" onClick={closeModal} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white" aria-label="Close">
                 <X className="h-4 w-4" />

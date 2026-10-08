@@ -50,14 +50,35 @@ export async function enableConfirmationSms(hostId: string): Promise<void> {
   });
 }
 
+/**
+ * Starting NeverMiss channels. Host-level only (service_id null).
+ * Event types keep their own reminder grid.
+ * Exact time: email, SMS, voice. One hour before: email and WhatsApp.
+ */
 export const DEFAULT_GUEST_EMAIL_REMINDERS = [
   {
-    name: '24 Hour Reminder — Email',
-    type: 'reminder' as const,
+    name: 'Exact reminder Time — Email',
+    type: 'confirmation' as const,
     channel: 'email' as const,
-    timing_offset_minutes: -1440,
-    subject: 'Reminder: {{service_name}} tomorrow at {{time}}',
-    body: 'Hi {{guest_name}},\n\nJust a reminder that your {{service_name}} with {{host_name}} is tomorrow at {{time}} ({{timezone}}).\n\n{{location}}\n\nSee you then!\n— {{host_name}}',
+    timing_offset_minutes: 0,
+    subject: 'Your {{service_name}} is confirmed',
+    body: 'Hi {{guest_name}},\n\nYour {{service_name}} with {{host_name}} is confirmed.\n\nDate: {{date}} at {{time}} ({{timezone}})\nDuration: {{duration}}\n\n{{location}}\n\nNeed to change this? {{reschedule_link}}\n\n— {{host_name}}',
+  },
+  {
+    name: 'Exact reminder Time — SMS',
+    type: 'confirmation' as const,
+    channel: 'sms' as const,
+    timing_offset_minutes: 0,
+    subject: null as string | null,
+    body: CONFIRMATION_SMS_BODY,
+  },
+  {
+    name: 'Exact reminder Time — Voice',
+    type: 'confirmation' as const,
+    channel: 'voice' as const,
+    timing_offset_minutes: 0,
+    subject: null as string | null,
+    body: 'Hi, this is a reminder from {{host_name}} that you have a {{service_name}} scheduled for {{date}} at {{time}}. We look forward to speaking with you.',
   },
   {
     name: '1 Hour Reminder — Email',
@@ -66,6 +87,14 @@ export const DEFAULT_GUEST_EMAIL_REMINDERS = [
     timing_offset_minutes: -60,
     subject: 'Reminder: {{service_name}} starts in 1 hour',
     body: 'Hi {{guest_name}},\n\nYour {{service_name}} with {{host_name}} starts in 1 hour.\n\n{{location}}\n\n— {{host_name}}',
+  },
+  {
+    name: '1 Hour Reminder — WhatsApp',
+    type: 'reminder' as const,
+    channel: 'whatsapp' as const,
+    timing_offset_minutes: -60,
+    subject: null as string | null,
+    body: `Hi {{guest_name}}! Your {{service_name}} with {{host_name}} starts in 1 hour. {{location}} ${SMS_OPT_OUT_FOOTER}`,
   },
 ];
 
@@ -89,7 +118,7 @@ export function missingDefaultGuestEmailSlots(existing: GuestReminderTemplate[])
   );
 }
 
-/** Turn on 24-hour and 1-hour guest emails if this host has never had them. Safe to call twice. */
+/** Turn on the NeverMiss defaults this host has never had. Does not touch event reminders. Safe to call twice. */
 export async function ensureDefaultGuestEmailReminders(
   hostId: string,
   existingTemplates: GuestReminderTemplate[],

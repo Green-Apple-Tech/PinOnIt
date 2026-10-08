@@ -3,7 +3,7 @@ import { Check, Loader2, Mail, MessageSquare, PhoneCall, Smartphone } from 'luci
 export type ReminderChannelKey = 'email' | 'sms' | 'whatsapp' | 'voice';
 
 export const REMINDER_GRID_SLOTS = [
-  { key: 'confirmation', label: 'Reminder options', sublabel: 'Sent immediately when someone books', offset: 0 },
+  { key: 'confirmation', label: 'Exact reminder Time', sublabel: '', offset: 0 },
   { key: 'reminder_15m', label: '15 Min Reminder', sublabel: '15 minutes before the event', offset: -15 },
   { key: 'reminder_30m', label: '30 Min Reminder', sublabel: '30 minutes before the event', offset: -30 },
   { key: 'reminder_60m', label: '1 Hour Reminder', sublabel: '60 minutes before the event', offset: -60 },
@@ -87,7 +87,7 @@ export function ReminderChannelGrid({ isChecked, onToggle, savingKey, locked }: 
             >
               <div className="mb-3">
                 <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 leading-snug">{slot.label}</p>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{slot.sublabel}</p>
+                {slot.sublabel ? <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{slot.sublabel}</p> : null}
               </div>
               <div className="grid grid-cols-4 gap-1.5">
                 {REMINDER_GRID_CHANNELS.map((ch) => (
@@ -125,7 +125,7 @@ export function ReminderChannelGrid({ isChecked, onToggle, savingKey, locked }: 
                 >
                   <div className="min-w-0 pr-1">
                     <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{slot.label}</p>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{slot.sublabel}</p>
+                    {slot.sublabel ? <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{slot.sublabel}</p> : null}
                   </div>
                   {REMINDER_GRID_CHANNELS.map((ch) => box(slot.offset, ch, slot.label))}
                 </div>
