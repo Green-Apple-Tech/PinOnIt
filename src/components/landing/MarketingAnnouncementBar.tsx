@@ -13,7 +13,7 @@ function isDismissed() {
   return storageGet(MARKETING_ANNOUNCEMENT_STORAGE_KEY) === '1';
 }
 
-/** Slim Calendly-switcher bar. Marketing pages only. */
+/** Slim switcher bar for Calendly and DocuSign. Marketing pages only. */
 export function MarketingAnnouncementBar() {
   const [hidden, setHidden] = useState(isDismissed);
 

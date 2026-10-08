@@ -8,8 +8,8 @@ describe('marketing landing copy', () => {
     expect(TRIAL_FRICTION_LINE).toBe('14-day free trial. No credit card required.');
   });
 
-  it('links the announcement to the Calendly alternative page', () => {
-    expect(MARKETING_ANNOUNCEMENT_HREF).toBe('/calendly-alternative');
+  it('links the announcement to the Calendly and DocuSign page', () => {
+    expect(MARKETING_ANNOUNCEMENT_HREF).toBe('/calendly-docusign-alternative');
   });
 
   it('keeps how-it-works scenes to one line each', () => {

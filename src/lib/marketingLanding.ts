@@ -1,13 +1,13 @@
 /** Dismissible marketing-bar copy. Change here only. */
 export const MARKETING_ANNOUNCEMENT_TEXT =
-  'Switching from Calendly? Import in one click, 60-day free trial.';
+  'Switching from Calendly or DocuSign? 60-day free trial.';
 export const MARKETING_ANNOUNCEMENT_CTA = 'Learn more';
-export const MARKETING_ANNOUNCEMENT_HREF = '/calendly-alternative';
-export const MARKETING_ANNOUNCEMENT_STORAGE_KEY = 'pinonit_dismiss_calendly_announce_v1';
+export const MARKETING_ANNOUNCEMENT_HREF = '/calendly-docusign-alternative';
+export const MARKETING_ANNOUNCEMENT_STORAGE_KEY = 'pinonit_dismiss_switch_announce_v2';
 
 /**
  * 14-day Pro trial is started with start_local_trial (no Stripe customer / no card).
- * The 60-day Calendly switcher trial is a separate checkout with a card on file.
+ * The 60-day Calendly or DocuSign switcher trial is a separate checkout with a card on file.
  */
 export const TRIAL_FRICTION_LINE = '14-day free trial. No credit card required.';
 
