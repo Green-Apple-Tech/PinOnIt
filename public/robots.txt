@@ -18,6 +18,7 @@ Disallow: /r/
 Disallow: /d/
 Disallow: /c/
 Disallow: /poll/
+Disallow: /shots
 
 User-agent: Googlebot
 User-agent: Bingbot
@@ -48,5 +49,6 @@ Disallow: /r/
 Disallow: /d/
 Disallow: /c/
 Disallow: /poll/
+Disallow: /shots
 
 Sitemap: https://pinonit.com/sitemap.xml

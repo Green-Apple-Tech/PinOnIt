@@ -26,6 +26,7 @@ import { GuestNoIndex } from './components/GuestNoIndex';
 import { SeoIntentPage } from './pages/SeoIntentPage';
 import { INTENT_PAGES } from './lib/seoIntentPages';
 import { BlogIndexPage, BlogPostPage } from './pages/Blog';
+import { PhoneShotsPage } from './pages/PhoneShots';
 
 function CampaignParamCapture() {
   const { search, pathname } = useLocation();
@@ -201,6 +202,7 @@ function App() {
             <Route path="/acceptable-use" element={<AcceptableUsePage />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/status" element={<StatusPage />} />
+            <Route path="/shots/phone" element={<PhoneShotsPage />} />
             <Route path="/reminder-done/:token" element={<ReminderDonePage />} />
             <Route path="/login" element={<AuthForm />} />
             <Route path="/signup" element={<AuthForm />} />
