@@ -9,18 +9,49 @@ import {
 } from '../../lib/marketingLanding';
 import { storageGet, storageSet } from '../../lib/safeStorage';
 
-function isDismissed() {
-  return storageGet(MARKETING_ANNOUNCEMENT_STORAGE_KEY) === '1';
+const SEEN_KEY = 'pinonit_switch_announce_seen_v1';
+const VISIT_KEY = 'pinonit_switch_announce_visit';
+
+function sessionGet(key: string) {
+  try {
+    return sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function sessionSet(key: string, value: string) {
+  try {
+    sessionStorage.setItem(key, value);
+  } catch {
+    /* blocked iframe */
+  }
+}
+
+/** First visit only. Stays up while they click around that visit, then stays hidden. */
+function shouldShowAnnouncement() {
+  const seen = storageGet(SEEN_KEY) === '1' || storageGet(MARKETING_ANNOUNCEMENT_STORAGE_KEY) === '1';
+  const thisVisit = sessionGet(VISIT_KEY) === '1';
+  if (seen && !thisVisit) return false;
+  storageSet(SEEN_KEY, '1');
+  sessionSet(VISIT_KEY, '1');
+  return true;
 }
 
 /** Slim switcher bar for Calendly and DocuSign. Marketing pages only. */
 export function MarketingAnnouncementBar() {
-  const [hidden, setHidden] = useState(isDismissed);
+  const [hidden, setHidden] = useState(() => !shouldShowAnnouncement());
 
   if (hidden) return null;
 
   const dismiss = () => {
+    storageSet(SEEN_KEY, '1');
     storageSet(MARKETING_ANNOUNCEMENT_STORAGE_KEY, '1');
+    try {
+      sessionStorage.removeItem(VISIT_KEY);
+    } catch {
+      /* ignore */
+    }
     setHidden(true);
   };
 

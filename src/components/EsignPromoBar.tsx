@@ -1,5 +1,6 @@
 import { Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { MARKETING_ANNOUNCEMENT_HREF } from '../lib/marketingLanding';
 
 const BAR_CLASS =
   'flex items-center justify-center gap-2 px-4 py-2 text-white text-center transition-colors hover:brightness-110';
@@ -19,8 +20,27 @@ function PromoCopy() {
 }
 
 /** Top promo for Sign-by-Text. Use a hash for the public landing, a route for the app. */
-export function EsignPromoBar({ to }: { to: string }) {
+export function EsignPromoBar({ to, switchOffer = false }: { to: string; switchOffer?: boolean }) {
   const label = 'eSignature via Text. Get something signed in seconds.';
+  if (switchOffer) {
+    return (
+      <div className={BAR_CLASS} style={BAR_STYLE}>
+        <Sparkles className="h-3.5 w-3.5 shrink-0 text-white/80" aria-hidden="true" />
+        <p className="text-sm font-medium leading-snug">
+          <a href={to} className="hover:underline">
+            <strong className="font-bold">eSignature via Text</strong>
+            <span className="hidden sm:inline"> — signed in seconds.</span>
+            <span className="sm:hidden"> — signed in seconds.</span>
+          </a>
+          {' '}Switching from Calendly or DocuSign? Booking, reminders, and signatures in one place.{' '}
+          <Link to={MARKETING_ANNOUNCEMENT_HREF} className="underline underline-offset-2 font-semibold">
+            60-day free trial
+          </Link>
+          .
+        </p>
+      </div>
+    );
+  }
   if (to.startsWith('#')) {
     return (
       <a href={to} aria-label={label} className={BAR_CLASS} style={BAR_STYLE}>
