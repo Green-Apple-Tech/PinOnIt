@@ -14,6 +14,13 @@ describe('quote / receipt SMS server gates', () => {
     expect(sms).toMatch(/opted_out/);
   });
 
+  it('requires the sender identity acknowledgment before an SMS signature', () => {
+    expect(sms).toMatch(/sms_signature_identity_acks/);
+    expect(sms).toMatch(/sms_signature_identity_ack_required/);
+    const ackAt = sms.indexOf('sms_signature_identity_acks');
+    expect(ackAt).toBeLessThan(sms.indexOf('await sendTwilioSmsGuarded'));
+  });
+
   it('uses quote and receipt copy helpers', () => {
     expect(sms).toMatch(/quoteLinkSms/);
     expect(sms).toMatch(/receiptLinkSms/);

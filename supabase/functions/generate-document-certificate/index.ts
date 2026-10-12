@@ -160,7 +160,7 @@ Deno.serve(async (req: Request) => {
     `  Link sent to: ${doc.recipient_phone || '—'}`,
     `  Opened:    ${fmt(doc.viewed_at, tz)} (${tz})`,
     doc.verification_required
-      ? `  SMS one-time code: Performed at ${fmt(doc.otp_verified_at, tz)} (${tz})${doc.otp_verified ? '' : ' — required but not recorded'}`
+      ? `  Phone access verified (SMS one-time code): Performed at ${fmt(doc.otp_verified_at, tz)} (${tz})${doc.otp_verified ? '' : ' — required but not recorded'}`
       : '  SMS one-time code: Not performed. The recipient received this document as a text to the number above; opening that link is recorded. Do not treat this as SMS-code verification.',
     `  Consented: ${fmt(doc.esign_consent_at, tz)} (${tz})`,
     `  Signed:    ${fmt(doc.signed_at, tz)} (${tz})`,

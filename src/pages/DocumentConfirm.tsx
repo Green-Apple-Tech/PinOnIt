@@ -235,7 +235,7 @@ export function DocumentConfirmPage() {
       return;
     }
     setOtpVerified(true);
-    setOtpNotice('Phone verified.');
+    setOtpNotice('Phone access verified.');
     setOtpBusy(false);
   }
 
@@ -725,7 +725,7 @@ export function DocumentConfirmPage() {
           : 'bg-white rounded-2xl border border-slate-200 p-5'}>
           <h2 className={boatDoc && !otpVerified ? 'text-base font-bold text-orange-800' : 'text-sm font-semibold'}>Verify your phone</h2>
           {otpVerified ? (
-            <p className="mt-2 text-sm text-emerald-700">Phone verified. You can continue below.</p>
+            <p className="mt-2 text-sm text-emerald-700">Phone access verified. You can continue below.</p>
           ) : boatNeedsCode && !boatCodeSent ? (
             <form
               onSubmit={(e) => {

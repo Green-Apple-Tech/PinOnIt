@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { SmsSignatureIdentityModal } from '../components/SmsSignatureIdentityModal';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, Copy, Loader2, MessageSquare, Plus } from 'lucide-react';
 import { SigningQr } from '../components/SigningQr';
@@ -8,6 +9,11 @@ import { splitContactName, type ContactPickerSelection } from '../lib/contactPic
 import { supabase } from '../lib/supabase';
 import { PHONE_HINT, PHONE_PLACEHOLDER, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import { revealTool } from '../lib/progressiveDisclosure';
+import {
+  acknowledgeSmsSignatureIdentity,
+  senderHasSmsSignatureIdentityAck,
+  smsSignatureSendNeedsIdentityAck,
+} from '../lib/smsSignatureIdentity';
 import { quoteTotals } from '../lib/quoteMath';
 import {
   validUntilFromDays,
@@ -139,6 +145,12 @@ export function CreateDocumentPage() {
   const quoteDefaultsApplied = useRef(false);
   const payDefaultsApplied = useRef(false);
   const [submitting, setSubmitting] = useState(false);
+  const [identityOpen, setIdentityOpen] = useState(false);
+  const [identityBusy, setIdentityBusy] = useState(false);
+  const [identityError, setIdentityError] = useState('');
+  const identityAckedRef = useRef(false);
+  const identityBusyRef = useRef(false);
+  const submitLock = useRef(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState<{
     token: string;
@@ -467,6 +479,9 @@ export function CreateDocumentPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (submitLock.current) return;
+    submitLock.current = true;
+    try {
     if (!user?.id) return;
     if (!selectedTemplate) {
       setError('This document type is not ready yet. Reload the page and choose it again.');
@@ -544,6 +559,19 @@ export function CreateDocumentPage() {
     if (isQuote && payMode === 'deposit' && depositCents <= 0) {
       setError('Enter a deposit amount.');
       return;
+    }
+    const willSmsSign = smsSignatureSendNeedsIdentityAck(
+      documentType === 'boat_waiver' || verificationRequired,
+      Boolean(phone),
+    );
+    if (willSmsSign && !identityAckedRef.current) {
+      const acked = await senderHasSmsSignatureIdentityAck(user.id);
+      identityAckedRef.current = acked;
+      if (!acked) {
+        setIdentityError('');
+        setIdentityOpen(true);
+        return;
+      }
     }
     setError('');
     setSubmitting(true);
@@ -709,11 +737,39 @@ export function CreateDocumentPage() {
         phone: recipientPhone || undefined,
       });
     }
+    } finally {
+      submitLock.current = false;
+    }
+  };
+
+  const confirmIdentityAndSend = async () => {
+    if (identityBusyRef.current || !user?.id) return;
+    identityBusyRef.current = true;
+    setIdentityBusy(true);
+    const saved = await acknowledgeSmsSignatureIdentity();
+    if (!saved.ok) {
+      identityBusyRef.current = false;
+      setIdentityBusy(false);
+      setIdentityError(saved.error || 'Could not save that acknowledgment.');
+      return;
+    }
+    identityAckedRef.current = true;
+    setIdentityOpen(false);
+    setIdentityBusy(false);
+    identityBusyRef.current = false;
+    await handleSubmit({ preventDefault() {} } as FormEvent);
   };
 
   const link = success ? documentViewUrl(success.token) : '';
   return (
     <>
+      <SmsSignatureIdentityModal
+        open={identityOpen}
+        busy={identityBusy}
+        error={identityError}
+        onCancel={() => { if (!identityBusy) setIdentityOpen(false); }}
+        onConfirm={() => { void confirmIdentityAndSend(); }}
+      />
       {success ? (
       <main className="p-4 md:p-8 max-w-lg">
         <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 text-center">

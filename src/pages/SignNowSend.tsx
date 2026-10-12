@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Copy, Loader2 } from 'lucide-react';
+import { SmsSignatureIdentityModal } from '../components/SmsSignatureIdentityModal';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import {
@@ -21,6 +22,10 @@ import {
   countPdfFilePages,
   signNowTopic,
 } from '../lib/signNow';
+import {
+  acknowledgeSmsSignatureIdentity,
+  senderHasSmsSignatureIdentityAck,
+} from '../lib/smsSignatureIdentity';
 
 const fieldClass =
   'mt-1 w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-3 text-base text-gray-900 dark:text-white';
@@ -41,6 +46,12 @@ export function SignNowSendPage() {
   const [templateIds, setTemplateIds] = useState<{ paste: string | null; pdf: string | null }>({ paste: null, pdf: null });
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [identityOpen, setIdentityOpen] = useState(false);
+  const [identityBusy, setIdentityBusy] = useState(false);
+  const [identityError, setIdentityError] = useState('');
+  const identityAckedRef = useRef(false);
+  const identityBusyRef = useRef(false);
+  const submitLock = useRef(false);
   const [success, setSuccess] = useState<{ link: string; sms: 'sent' | 'failed'; smsError?: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -99,6 +110,9 @@ export function SignNowSendPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (submitLock.current) return;
+    submitLock.current = true;
+    try {
     if (!user?.id) return;
     setError('');
     const name = theirName.trim();
@@ -132,6 +146,15 @@ export function SignNowSendPage() {
     if (mode === 'pdf' && !file) {
       setError('Choose a one-page PDF.');
       return;
+    }
+    if (!identityAckedRef.current) {
+      const acked = await senderHasSmsSignatureIdentityAck(user.id);
+      identityAckedRef.current = acked;
+      if (!acked) {
+        setIdentityError('');
+        setIdentityOpen(true);
+        return;
+      }
     }
     const templateId = mode === 'paste' ? templateIds.paste : templateIds.pdf;
     if (!templateId) {
@@ -217,10 +240,38 @@ export function SignNowSendPage() {
     const sms = await sendDocumentLink(token, link, 'link');
     setSuccess({ link, sms: sms.ok ? 'sent' : 'failed', smsError: sms.ok ? undefined : sms.error });
     setSubmitting(false);
+    } finally {
+      submitLock.current = false;
+    }
+  };
+
+  const confirmIdentityAndSend = async () => {
+    if (identityBusyRef.current || !user?.id) return;
+    identityBusyRef.current = true;
+    setIdentityBusy(true);
+    const saved = await acknowledgeSmsSignatureIdentity();
+    if (!saved.ok) {
+      identityBusyRef.current = false;
+      setIdentityBusy(false);
+      setIdentityError(saved.error || 'Could not save that acknowledgment.');
+      return;
+    }
+    identityAckedRef.current = true;
+    setIdentityOpen(false);
+    setIdentityBusy(false);
+    identityBusyRef.current = false;
+    await handleSubmit({ preventDefault() {} } as FormEvent);
   };
 
   return (
     <>
+      <SmsSignatureIdentityModal
+        open={identityOpen}
+        busy={identityBusy}
+        error={identityError}
+        onCancel={() => { if (!identityBusy) setIdentityOpen(false); }}
+        onConfirm={() => { void confirmIdentityAndSend(); }}
+      />
       {success && (
         <main className="p-4 md:p-8 max-w-2xl pb-28 md:pb-8">
           <div className="rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6">

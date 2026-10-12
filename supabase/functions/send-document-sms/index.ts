@@ -79,6 +79,25 @@ Deno.serve(async (req: Request) => {
 
   if (error || !doc) return json({ ok: false, error: 'Document not found' }, 404);
 
+  const signatureSms = doc.verification_required === true
+    && purpose !== 'receipt'
+    && purpose !== 'payment_reminder'
+    && doc.document_type !== 'receipt';
+  if (signatureSms) {
+    const { data: ack } = await admin
+      .from('sms_signature_identity_acks')
+      .select('notice_version')
+      .eq('user_id', hostId)
+      .maybeSingle();
+    if (!ack || Number(ack.notice_version) < 1) {
+      return json({
+        ok: false,
+        error: 'Acknowledge the signer phone notice before sending.',
+        code: 'sms_signature_identity_ack_required',
+      }, 403);
+    }
+  }
+
   if (purpose === 'payment_reminder') {
     if (doc.document_type !== 'quote') return json({ ok: false, error: 'Not a quote' }, 400);
     if (doc.status === 'paid') return json({ ok: false, error: 'Already marked paid' }, 400);
@@ -144,7 +163,18 @@ Deno.serve(async (req: Request) => {
     body = `Hi ${doc.recipient_name}, you have a ${kind}${topicBit} to review: ${signingUrl}${payBit}`;
   }
 
+  if (signatureSms) {
+    const { data: claimed, error: claimError } = await admin.rpc('claim_document_sms_signature_send', {
+      p_document_id: doc.id,
+    });
+    if (claimError) return json({ ok: false, error: 'Could not send right now. Try again.' }, 500);
+    if (claimed !== true) return json({ ok: true, duplicate: true });
+  }
+
   const sms = await sendTwilioSmsGuarded(admin, to, body);
+  if (!sms.ok && signatureSms) {
+    await admin.from('document_sms_signature_send_claims').delete().eq('document_id', doc.id);
+  }
   if (!sms.ok) {
     if (sms.skipped === 'opted_out') {
       return json({ ok: false, error: 'Recipient opted out of SMS (STOP).' }, 403);

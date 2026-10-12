@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowLeft, FileText, Zap, CreditCard, Users, Ban, AlertTriangle, Scale, Mail, Gift, Gavel, ShieldAlert, Umbrella, Plug, BookOpen, HardDrive, Globe, MessageSquare, ClipboardSignature, Bell, Sparkles } from 'lucide-react';
+import { ArrowLeft, FileText, Zap, CreditCard, Users, Ban, AlertTriangle, Scale, Mail, Gift, Gavel, ShieldAlert, Umbrella, Plug, BookOpen, HardDrive, Globe, MessageSquare, ClipboardSignature, Bell, Sparkles, Phone } from 'lucide-react';
 import { Footer } from '../components/Footer';
 import { SMS_BOOKING_CONSENT_CTA, SMS_OPTIONAL_POLICY_SENTENCE } from '../lib/smsCompliance';
 import { SUPPORT_EMAIL } from '../lib/contactEmail';
@@ -150,6 +150,36 @@ const sections: Section[] = [
         </ul>
         <p className="text-xs text-slate-500 dark:text-slate-400">
           Consult a qualified attorney before relying on any template or electronic signature workflow for high-risk or regulated transactions.
+        </p>
+      </div>
+    ),
+  },
+  // ATTORNEY REVIEW REQUIRED before this section is published to production.
+  {
+    icon: Phone,
+    title: 'Electronic Signature Identity Verification and Sender Responsibility',
+    content: (
+      <div className="space-y-3" data-attorney-review="required">
+        <p>
+          PinOnIt provides electronic document delivery, electronic signature collection, SMS verification, and related audit-trail services.
+        </p>
+        <p>
+          SMS two-factor authentication verifies access to a phone number but does not conclusively establish the legal identity of the individual signing a document.
+        </p>
+        <p>
+          Users sending signature requests are responsible for taking reasonable steps to ensure that the recipient&apos;s phone number belongs to the intended signer or is a company phone authorized for their use.
+        </p>
+        <p>
+          Users acknowledge that electronic signatures may be subject to impersonation, unauthorized device access, shared phone numbers, or other fraudulent activity.
+        </p>
+        <p>
+          PinOnIt does not guarantee that every electronic signature was completed by the intended individual or that every signature will be legally enforceable.
+        </p>
+        <p>
+          To the extent permitted by applicable law, PinOnIt disclaims liability for disputes arising from inaccurate recipient information or unauthorized signing activity not caused by PinOnIt&apos;s own wrongful conduct.
+        </p>
+        <p>
+          Nothing in this section excludes liability that cannot legally be limited.
         </p>
       </div>
     ),
@@ -377,7 +407,7 @@ export function TermsPage() {
               Terms of Service
             </h1>
           </div>
-          <p className="text-sm text-slate-400 dark:text-slate-500">Last updated: September 2, 2026</p>
+          <p className="text-sm text-slate-400 dark:text-slate-500">Last updated: October 12, 2026</p>
           <p className="mt-4 text-sm leading-relaxed text-slate-600 dark:text-slate-400 p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl">
             These Terms govern the PinOnIt platform, a DBA of Miami Expeditions LLC.
           </p>
