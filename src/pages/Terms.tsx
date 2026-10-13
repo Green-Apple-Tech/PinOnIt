@@ -154,12 +154,11 @@ const sections: Section[] = [
       </div>
     ),
   },
-  // ATTORNEY REVIEW REQUIRED before this section is published to production.
   {
     icon: Phone,
     title: 'Electronic Signature Identity Verification and Sender Responsibility',
     content: (
-      <div className="space-y-3" data-attorney-review="required">
+      <div className="space-y-3">
         <p>
           PinOnIt provides electronic document delivery, electronic signature collection, SMS verification, and related audit-trail services.
         </p>

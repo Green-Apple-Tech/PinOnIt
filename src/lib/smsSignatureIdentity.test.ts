@@ -64,7 +64,7 @@ describe('SMS signature identity notice', () => {
     expect(terms).toContain('Electronic Signature Identity Verification and Sender Responsibility');
     expect(terms).toContain('does not conclusively establish the legal identity');
     expect(terms).toContain('Nothing in this section excludes liability that cannot legally be limited.');
-    expect(terms).toContain('data-attorney-review="required"');
+    expect(terms).not.toContain('data-attorney-review');
     expect(terms).toContain('Acceptance of Terms');
     expect(terms).toContain('Limitation of Liability');
     expect(terms).toContain('Doc Center — Waivers, NDAs, Contracts & Invoices');
