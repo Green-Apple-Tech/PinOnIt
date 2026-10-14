@@ -34,7 +34,7 @@ import { DocsTemplateLibrary } from '../components/DocsTemplateLibrary';
 import { PaymentLinkFields } from '../components/PaymentLinkFields';
 import { SmsBookingConsent } from '../components/SmsConsentText';
 import { SESSION_TIMEOUT_OPTIONS, sessionTimeoutOptionValue } from '../lib/sessionTimeout';
-import { REFERRALS_TO_COVER_PLAN } from '../lib/pricing';
+import { PRO_PRICE_LABEL, REFERRALS_TO_COVER_PLAN } from '../lib/pricing';
 
 const AnalyticsPage = lazy(() => import('./Analytics').then((m) => ({ default: m.AnalyticsPage })));
 const BillingPage = lazy(() => import('./Billing').then((m) => ({ default: m.BillingPage })));
@@ -2083,7 +2083,7 @@ function ReferralsTab({ userId, profile }: { userId: string | null; profile: imp
       <div className="bg-gradient-to-r from-indigo-600 to-indigo-500 p-px rounded-2xl shadow-lg shadow-indigo-500/10">
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-6">
           <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Your referral program</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Share your link. Earn $1 off for each person who upgrades to Pro.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Share your link. Earn $1 off for each person who upgrades to Pro. {REFERRALS_TO_COVER_PLAN} credits cover a {PRO_PRICE_LABEL} subscription.</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 text-center">
               <div className="flex items-center justify-center gap-1 mb-1"><Gift className="h-4 w-4 text-indigo-600" /></div>

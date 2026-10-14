@@ -19,7 +19,7 @@ import { DocTypeShortcutRow } from '../components/CampaignLanding';
 import { usePageMeta } from '../lib/pageMeta';
 import { MarketingStickyHeader } from '../components/landing/MarketingAnnouncementBar';
 import { MarketingShotFrame } from '../components/landing/MarketingShotFrame';
-import { PRO_PRICE, REFERRALS_TO_COVER_PLAN } from '../lib/pricing';
+import { PRO_PRICE, PRO_PRICE_LABEL, REFERRALS_TO_COVER_PLAN } from '../lib/pricing';
 
 // ── Animated counter hook ────────────────────────────────────────────────────
 function useCounter(target: number, duration = 1800, start = false) {
@@ -836,7 +836,7 @@ export function CalendlyAlternative() {
           </div>
 
           <p className="mt-6 text-center text-sm text-slate-400 dark:text-slate-500">
-            <span className="font-semibold text-indigo-600 dark:text-indigo-500">Refer 6 people → enough credits to cover Pro.</span>{' '}
+            <span className="font-semibold text-indigo-600 dark:text-indigo-500">Refer {REFERRALS_TO_COVER_PLAN} people → $1 credits cover your {PRO_PRICE_LABEL}/month plan.</span>{' '}
             Refer more → PinOnIt pays you $1/mo per person.
           </p>
         </div>

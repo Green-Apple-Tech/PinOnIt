@@ -1,3 +1,5 @@
+import { PRO_PRICE_LABEL, REFERRALS_TO_COVER_PLAN } from './pricing';
+
 export type CompareValue = boolean | string;
 
 export type WhyFeature = {
@@ -120,7 +122,7 @@ export const CALENDLY_EXCLUSIVES: ExclusiveFeature[] = [
     id: 'referral',
     icon: '💵',
     title: 'Referral program: $1/mo credit',
-    desc: 'Refer 9 people and Pro is covered. Refer more and PinOnIt pays you $1/month per person.',
+    desc: `Refer ${REFERRALS_TO_COVER_PLAN} people and Pro at ${PRO_PRICE_LABEL}/month is covered. Refer more and PinOnIt pays you $1/month per person.`,
     tag: 'Not on Calendly',
   },
 ];

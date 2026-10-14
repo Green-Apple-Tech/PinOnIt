@@ -4,7 +4,8 @@ import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 export type AdminClient = ReturnType<typeof createClient>;
 
 export const PLAN_MAP: Record<string, 'pro'> = {
-  price_1TZHhhIVv38UYFOXMXT2EV8v: 'pro', // current Pro checkout price id
+  price_1UBerwIVv38UYFOXg43WzEWL: 'pro', // new checkout: $9.99/month
+  price_1TZHhhIVv38UYFOXMXT2EV8v: 'pro', // existing subscriptions only; do not use for new checkout
   price_pro_monthly: 'pro',
 };
 

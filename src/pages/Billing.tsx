@@ -5,7 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { syncStripeSubscription } from '../lib/stripe';
 import { effectivePlan, isActivePlan, isComplimentaryPro } from '../lib/plan';
-import { PRO_PRICE, STRIPE_PRO_PRICE_ID } from '../lib/pricing';
+import { PRO_PRICE, PRO_PRICE_LABEL, REFERRALS_TO_COVER_PLAN, STRIPE_PRO_PRICE_ID } from '../lib/pricing';
 import { recordPlatformTermsAcceptance } from '../lib/platformLegal';
 import { TrialTermsNotice } from '../components/TrialTermsNotice';
 import {
@@ -440,7 +440,7 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
                   </button>
                 </div>
                 <p className="mt-2 text-xs text-gray-400">
-                  Refer 6 Pro users and earn enough credits to cover your bill. Refer more and we pay you.{' '}
+                  Refer {REFERRALS_TO_COVER_PLAN} people and those $1 credits cover your {PRO_PRICE_LABEL}/month plan. Refer more and we pay you.{' '}
                   <Link to="/leaderboard" className="text-indigo-600 hover:underline">View leaderboard</Link>
                 </p>
               </div>

@@ -9,10 +9,10 @@ export const PRO_PRICE_PER_MO = '$9.99/mo';
 export const REFERRALS_TO_COVER_PLAN = 10;
 
 /**
- * Checkout Price ID. Fallback is the existing $8.99 Price until the $9.99 Price is created
- * and saved here. Existing subscriptions stay on the old Price.
- * Set VITE_STRIPE_PRO_PRICE_ID (app) and STRIPE_PRICE_ID (edge functions) to the $9.99 Price.
+ * New Pro checkout Price: active, $9.99 USD, billed monthly.
+ * Existing subscriptions stay on price_1TZHhhIVv38UYFOXMXT2EV8v.
+ * VITE_STRIPE_PRO_PRICE_ID overrides this fallback when set.
  */
 export const STRIPE_PRO_PRICE_ID =
   (import.meta.env.VITE_STRIPE_PRO_PRICE_ID as string | undefined)?.trim() ||
-  'price_1TZHhhIVv38UYFOXMXT2EV8v';
+  'price_1UBerwIVv38UYFOXg43WzEWL';
