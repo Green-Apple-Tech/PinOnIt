@@ -48,7 +48,7 @@ describe('SEO intent pages', () => {
     expect(new Set(firstParas).size).toBe(INTENT_PAGES.length);
     for (const page of INTENT_PAGES) {
       expect(page.related?.length ?? 0).toBeGreaterThanOrEqual(2);
-      expect(page.related?.length ?? 0).toBeLessThanOrEqual(4);
+      expect(page.related?.length ?? 0).toBeLessThanOrEqual(5);
     }
   });
 

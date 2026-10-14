@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { INTENT_PAGES } from '../src/lib/seoIntentPages.ts';
@@ -13,6 +13,7 @@ import {
   softwareApplicationJsonLd,
   websiteJsonLd,
 } from '../src/lib/jsonLd.ts';
+import { injectSeoShell, SEO_SHELLS } from '../src/lib/seoShells.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = join(root, 'public', 'seo-static');
@@ -257,7 +258,16 @@ for (const post of BLOG_POSTS) {
   console.log('wrote', file);
 }
 
-const extraSitemap: Array<{ loc: string; changefreq: string; priority: string }> = [
+const CONTENT_CHANGED = '2026-10-14';
+const changedLastmod = new Set([
+  `${PINONIT_ORG.url}/`,
+  `${PINONIT_ORG.url}/docusign-alternative`,
+  `${PINONIT_ORG.url}/calendly-alternative`,
+  `${PINONIT_ORG.url}/sign-by-text`,
+  ...SEO_SHELLS.map((s) => s.canonical),
+]);
+
+const extraSitemap: Array<{ loc: string; changefreq: string; priority: string; lastmod?: string }> = [
   { loc: `${PINONIT_ORG.url}/`, changefreq: 'weekly', priority: '1.0' },
   ...INTENT_PAGES.map((p) => ({
     loc: p.canonical,
@@ -277,14 +287,35 @@ const extraSitemap: Array<{ loc: string; changefreq: string; priority: string }>
   { loc: `${PINONIT_ORG.url}/acceptable-use`, changefreq: 'yearly', priority: '0.3' },
   { loc: `${PINONIT_ORG.url}/status`, changefreq: 'weekly', priority: '0.2' },
   { loc: `${PINONIT_ORG.url}/leaderboard`, changefreq: 'weekly', priority: '0.2' },
-];
+].map((u) => (changedLastmod.has(u.loc) ? { ...u, lastmod: CONTENT_CHANGED } : u));
 
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${extraSitemap.map((u) => `  <url><loc>${u.loc}</loc><changefreq>${u.changefreq}</changefreq><priority>${u.priority}</priority></url>`).join('\n')}
+${extraSitemap
+  .map((u) => {
+    const lastmod = u.lastmod ? `<lastmod>${u.lastmod}</lastmod>` : '';
+    return `  <url><loc>${u.loc}</loc>${lastmod}<changefreq>${u.changefreq}</changefreq><priority>${u.priority}</priority></url>`;
+  })
+  .join('\n')}
 </urlset>
 `;
 const sitemapPath = join(root, 'public', 'sitemap.xml');
 writeFileSync(sitemapPath, sitemap);
 console.log('wrote', sitemapPath);
+
+const dist = join(root, 'dist');
+if (existsSync(dist)) {
+  cpSync(outDir, join(dist, 'seo-static'), { recursive: true });
+  cpSync(sitemapPath, join(dist, 'sitemap.xml'));
+  const indexHtml = readFileSync(join(dist, 'index.html'), 'utf8');
+  if (!indexHtml.includes('<!--seo-snapshot-->')) {
+    throw new Error('dist/index.html is missing seo-snapshot markers. Run vite build before prerender.');
+  }
+  const shellDir = join(dist, 'seo-shell');
+  mkdirSync(shellDir, { recursive: true });
+  for (const shell of SEO_SHELLS) {
+    writeFileSync(join(shellDir, shell.file), injectSeoShell(indexHtml, shell));
+    console.log('wrote', join(shellDir, shell.file));
+  }
+}
 

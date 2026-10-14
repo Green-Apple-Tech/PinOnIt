@@ -24,7 +24,7 @@ const HOME_META = {
   title: 'Run your business by text | PinOnIt',
   ogTitle: 'Run your business by text | PinOnIt',
   description:
-    'Quote a job in the driveway. Get it approved, signed, scheduled and paid before you drive away. Booking, Sign-by-Text, and reminders by SMS, WhatsApp, email, or voice. $8.99/month.',
+    'PinOnIt helps small businesses send documents for signature by text, create quotes, schedule appointments, and send reminders. Customers pay you on your own Zelle, Cash App, Venmo, or PayPal link. $8.99/month.',
   url: 'https://pinonit.com/',
   image: 'https://pinonit.com/og-why-pinonit.png',
   twitterCard: 'summary_large_image' as const,
@@ -254,7 +254,10 @@ export function Landing() {
           <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-slate-500 dark:text-slate-400">
             <Link to="/why-pinonit" className="hover:text-slate-900 dark:hover:text-white transition-colors">Why PinOnIt</Link>
             <Link to="/solutions" className="hover:text-slate-900 dark:hover:text-white transition-colors">Solutions</Link>
-            <Link to="/calendly-alternative" className="hover:text-slate-900 dark:hover:text-white transition-colors">Calendly alternative</Link>
+            <Link to="/calendly-alternative" className="hover:text-slate-900 dark:hover:text-white transition-colors">Calendly alternative with SMS reminders</Link>
+            <Link to="/docusign-alternative" className="hover:text-slate-900 dark:hover:text-white transition-colors">Affordable DocuSign alternative</Link>
+            <Link to="/sign-by-text" className="hover:text-slate-900 dark:hover:text-white transition-colors">Sign documents by text</Link>
+            <Link to="/blog" className="hover:text-slate-900 dark:hover:text-white transition-colors">Field notes</Link>
             <a href="#pricing" className="hover:text-slate-900 dark:hover:text-white transition-colors">Pricing</a>
             <a href="#faq" className="hover:text-slate-900 dark:hover:text-white transition-colors">FAQ</a>
           </div>

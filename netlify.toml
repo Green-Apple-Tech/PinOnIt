@@ -63,27 +63,27 @@
   status = 200
 [[redirects]]
   from = "/terms"
-  to = "/index.html"
+  to = "/seo-shell/terms.html"
   status = 200
 [[redirects]]
   from = "/privacy"
-  to = "/index.html"
+  to = "/seo-shell/privacy.html"
   status = 200
 [[redirects]]
   from = "/sms-consent"
-  to = "/index.html"
+  to = "/seo-shell/sms-consent.html"
   status = 200
 [[redirects]]
   from = "/acceptable-use"
-  to = "/index.html"
+  to = "/seo-shell/acceptable-use.html"
   status = 200
 [[redirects]]
   from = "/status"
-  to = "/index.html"
+  to = "/seo-shell/status.html"
   status = 200
 [[redirects]]
   from = "/leaderboard"
-  to = "/index.html"
+  to = "/seo-shell/leaderboard.html"
   status = 200
 [[redirects]]
   from = "/calendly-alternative-for-small-business"
@@ -95,11 +95,11 @@
   status = 200
 [[redirects]]
   from = "/why-pinonit"
-  to = "/index.html"
+  to = "/seo-shell/why-pinonit.html"
   status = 200
 [[redirects]]
   from = "/legal-templates"
-  to = "/index.html"
+  to = "/seo-shell/legal-templates.html"
   status = 200
 [[redirects]]
   from = "/docusign-alternative-simple-signatures"
@@ -187,15 +187,15 @@
   status = 200
 [[redirects]]
   from = "/sign-now"
-  to = "/index.html"
+  to = "/seo-shell/sign-now.html"
   status = 200
 [[redirects]]
   from = "/nda"
-  to = "/index.html"
+  to = "/seo-shell/nda.html"
   status = 200
 [[redirects]]
   from = "/reminders"
-  to = "/index.html"
+  to = "/seo-shell/reminders.html"
   status = 200
 [[redirects]]
   from = "/poll"

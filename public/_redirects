@@ -22,11 +22,11 @@
 /documents/*  /index.html  200
 /calendly-alternative-for-small-business  /calendly-alternative  301
 /calendly-alternative  /seo-static/calendly-alternative.html  200
-/sign-now  /index.html  200
-/nda  /index.html  200
-/reminders  /index.html  200
-/why-pinonit  /index.html  200
-/legal-templates  /index.html  200
+/sign-now  /seo-shell/sign-now.html  200
+/nda  /seo-shell/nda.html  200
+/reminders  /seo-shell/reminders.html  200
+/why-pinonit  /seo-shell/why-pinonit.html  200
+/legal-templates  /seo-shell/legal-templates.html  200
 /docusign-alternative-simple-signatures  /seo-static/docusign-alternative-simple-signatures.html  200
 /docusign-alternative  /seo-static/docusign-alternative.html  200
 /sign-by-text  /seo-static/sign-by-text.html  200
@@ -48,12 +48,12 @@
 /blog/pricing-the-job-before-you-leave-the-driveway  /seo-static/blog/pricing-the-job-before-you-leave-the-driveway.html  200
 /blog/why-email-reminders-still-leave-empty-chairs  /seo-static/blog/why-email-reminders-still-leave-empty-chairs.html  200
 /blog/collecting-a-waiver-on-a-phone-at-check-in  /seo-static/blog/collecting-a-waiver-on-a-phone-at-check-in.html  200
-/terms  /index.html  200
-/privacy  /index.html  200
-/sms-consent  /index.html  200
-/acceptable-use  /index.html  200
-/leaderboard  /index.html  200
-/status  /index.html  200
+/terms  /seo-shell/terms.html  200
+/privacy  /seo-shell/privacy.html  200
+/sms-consent  /seo-shell/sms-consent.html  200
+/acceptable-use  /seo-shell/acceptable-use.html  200
+/leaderboard  /seo-shell/leaderboard.html  200
+/status  /seo-shell/status.html  200
 # Gallery only. PNG files in /shots/phone/ are real files and must not be rewritten.
 /shots/phone  /index.html  200
 /poll  /index.html  200

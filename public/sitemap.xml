@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://pinonit.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
-  <url><loc>https://pinonit.com/calendly-alternative</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://pinonit.com/</loc><lastmod>2026-10-14</lastmod><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://pinonit.com/calendly-alternative</loc><lastmod>2026-10-14</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
   <url><loc>https://pinonit.com/docusign-alternative-simple-signatures</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
   <url><loc>https://pinonit.com/send-quote-by-text</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
   <url><loc>https://pinonit.com/sms-appointment-reminders</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
   <url><loc>https://pinonit.com/esignature-by-text</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
-  <url><loc>https://pinonit.com/docusign-alternative</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
-  <url><loc>https://pinonit.com/sign-by-text</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://pinonit.com/docusign-alternative</loc><lastmod>2026-10-14</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://pinonit.com/sign-by-text</loc><lastmod>2026-10-14</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
   <url><loc>https://pinonit.com/electronic-signature-by-text</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
   <url><loc>https://pinonit.com/booking-with-sms-reminders</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
   <url><loc>https://pinonit.com/send-estimate-by-text</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
@@ -23,15 +23,15 @@
   <url><loc>https://pinonit.com/blog/pricing-the-job-before-you-leave-the-driveway</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
   <url><loc>https://pinonit.com/blog/why-email-reminders-still-leave-empty-chairs</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
   <url><loc>https://pinonit.com/blog/collecting-a-waiver-on-a-phone-at-check-in</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
-  <url><loc>https://pinonit.com/why-pinonit</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://pinonit.com/legal-templates</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://pinonit.com/sign-now</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://pinonit.com/nda</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://pinonit.com/reminders</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://pinonit.com/terms</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
-  <url><loc>https://pinonit.com/privacy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
-  <url><loc>https://pinonit.com/sms-consent</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
-  <url><loc>https://pinonit.com/acceptable-use</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
-  <url><loc>https://pinonit.com/status</loc><changefreq>weekly</changefreq><priority>0.2</priority></url>
-  <url><loc>https://pinonit.com/leaderboard</loc><changefreq>weekly</changefreq><priority>0.2</priority></url>
+  <url><loc>https://pinonit.com/why-pinonit</loc><lastmod>2026-10-14</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://pinonit.com/legal-templates</loc><lastmod>2026-10-14</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://pinonit.com/sign-now</loc><lastmod>2026-10-14</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://pinonit.com/nda</loc><lastmod>2026-10-14</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://pinonit.com/reminders</loc><lastmod>2026-10-14</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://pinonit.com/terms</loc><lastmod>2026-10-14</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://pinonit.com/privacy</loc><lastmod>2026-10-14</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://pinonit.com/sms-consent</loc><lastmod>2026-10-14</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://pinonit.com/acceptable-use</loc><lastmod>2026-10-14</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://pinonit.com/status</loc><lastmod>2026-10-14</lastmod><changefreq>weekly</changefreq><priority>0.2</priority></url>
+  <url><loc>https://pinonit.com/leaderboard</loc><lastmod>2026-10-14</lastmod><changefreq>weekly</changefreq><priority>0.2</priority></url>
 </urlset>

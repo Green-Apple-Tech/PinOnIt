@@ -4,8 +4,8 @@ import { useEffect } from 'react';
 export const SITE_OG = {
   title: 'Run your business by text | PinOnIt',
   description:
-    'Quote a job in the driveway. Get it approved, signed, scheduled and paid before you drive away. Booking, Sign-by-Text, and reminders by SMS, WhatsApp, email, or voice. $8.99/month.',
-  url: 'https://pinonit.com',
+    'PinOnIt helps small businesses send documents for signature by text, create quotes, schedule appointments, and send reminders. Customers pay you on your own Zelle, Cash App, Venmo, or PayPal link. $8.99/month.',
+  url: 'https://pinonit.com/',
   image: 'https://pinonit.com/og-why-pinonit.png',
   /** Large landscape banner for the marketing site. */
   twitterCard: 'summary_large_image' as const,

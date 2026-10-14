@@ -70,8 +70,8 @@ export const CAMPAIGN_PAGES: Record<string, CampaignCopy> = {
     steps: [
       { icon: FileText, title: 'Type the topic', desc: 'A short line for what the NDA covers — a deal, a hire, a conversation.' },
       { icon: Smartphone, title: 'Enter their number', desc: 'Just a phone. They do not create an account or download anything.' },
-      { icon: MessageSquare, title: 'They verify by text', desc: 'A one-time code confirms it is really them before they can sign.' },
-      { icon: PenLine, title: 'They sign', desc: 'Signature, timestamp, and identity confirmation — from their phone.' },
+      { icon: MessageSquare, title: 'They verify by text', desc: 'A one-time code shows someone can open that phone before they sign.' },
+      { icon: PenLine, title: 'They sign', desc: 'Signature and timestamp from their phone. The text code checks access to that number, not legal identity.' },
     ],
     secondaryUseCase:
       'Also works for liability waivers, contracts, invoices, and receipts — same electronic signature flow and complete audit record.',

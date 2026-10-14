@@ -1502,6 +1502,7 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                         <div key={svc.id} className="flex flex-col rounded-xl overflow-hidden shadow-sm border" style={{ backgroundColor: pageSurfaceColor, borderColor: pageBorderColor }}>
                           <button type="button" onClick={() => handleSelectService(svc)}
                           className="w-full flex flex-col transition-all text-left flex-1"
+                          >
                           {pageShowImages && ext.banner_image_url
                             ? <img src={ext.banner_image_url} alt={svc.name} width={112} height={112} loading="lazy" className="w-full h-28 object-cover" />
                             : pageShowImages && <div className="w-full h-20 flex items-center justify-center" style={{ backgroundColor: pageBorderColor }}><span className="h-3 w-3 rounded-full" style={{ backgroundColor: svc.color }} /></div>
