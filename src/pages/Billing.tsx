@@ -238,7 +238,7 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
             <p className="text-sm font-semibold text-emerald-800">
               {isComplimentaryPro(profile)
                 ? "You're on Pro — complimentary, no payment needed."
-                : "You're on Pro — $8.99/mo, cancel anytime in Billing."}
+                : "You're on Pro — $9.99/mo, cancel anytime in Billing."}
             </p>
             <p className="text-xs text-emerald-600 mt-0.5">All Pro features are now active on your account.</p>
           </div>

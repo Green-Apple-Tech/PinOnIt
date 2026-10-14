@@ -17,7 +17,7 @@ const PAGE_TTL_MS = 5 * 60 * 1000;
 const SITE_OG = {
   title: 'Your mini office by text | PinOnIt',
   description:
-    'Booking + Sign by Text — waivers, NDAs, addendums, quotes, invoices. One simple app. $8.99/mo.',
+    'Booking + Sign by Text — waivers, NDAs, addendums, quotes, invoices. One simple app. $9.99/mo.',
   image: `${APP_ORIGIN}/og-why-pinonit.png`,
   twitterCard: 'summary_large_image',
 };

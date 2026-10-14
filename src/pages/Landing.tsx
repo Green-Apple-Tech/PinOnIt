@@ -24,7 +24,7 @@ const HOME_META = {
   title: 'Run your business by text | PinOnIt',
   ogTitle: 'Run your business by text | PinOnIt',
   description:
-    'PinOnIt helps small businesses send documents for signature by text, create quotes, schedule appointments, and send reminders. Customers pay you on your own Zelle, Cash App, Venmo, or PayPal link. $8.99/month.',
+    'PinOnIt helps small businesses send documents for signature by text, create quotes, schedule appointments, and send reminders. Customers pay you on your own Zelle, Cash App, Venmo, or PayPal link. $9.99/month.',
   url: 'https://pinonit.com/',
   image: 'https://pinonit.com/og-why-pinonit.png',
   twitterCard: 'summary_large_image' as const,

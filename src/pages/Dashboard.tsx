@@ -431,7 +431,7 @@ export function Dashboard() {
         : `🎉 Pro trial active — ${trialDays} days free, no charge until ${firstChargeDate}.`;
       setTrialToast({ message });
     } else {
-      setTrialToast({ message: 'You\'re on Pro — $8.99/mo, cancel anytime in Billing.' });
+      setTrialToast({ message: 'You\'re on Pro — $9.99/mo, cancel anytime in Billing.' });
     }
     setTimeout(() => setTrialToast(null), 8000);
 

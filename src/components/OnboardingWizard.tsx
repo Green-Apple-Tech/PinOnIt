@@ -1259,7 +1259,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep, openCa
                   className="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600"
                 />
                 <span className="text-xs text-slate-600 dark:text-slate-400">
-                  I agree to be charged $8.99/mo after my 60-day trial ends on {firstChargeDate60}, unless I cancel before then.
+                  I agree to be charged $9.99/mo after my 60-day trial ends on {firstChargeDate60}, unless I cancel before then.
                 </span>
               </label>
 

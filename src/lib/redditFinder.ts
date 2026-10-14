@@ -1,6 +1,6 @@
 /** Pure scoring and reply drafts for the Reddit Opportunity Finder. No network calls. */
 
-export const PINONIT_PRICE = '$8.99/mo';
+export const PINONIT_PRICE = '$9.99/mo';
 
 export type Mention = 'yes' | 'maybe' | 'no';
 export type Band = 'green' | 'yellow' | 'red';

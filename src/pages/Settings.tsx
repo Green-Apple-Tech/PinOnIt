@@ -34,6 +34,7 @@ import { DocsTemplateLibrary } from '../components/DocsTemplateLibrary';
 import { PaymentLinkFields } from '../components/PaymentLinkFields';
 import { SmsBookingConsent } from '../components/SmsConsentText';
 import { SESSION_TIMEOUT_OPTIONS, sessionTimeoutOptionValue } from '../lib/sessionTimeout';
+import { REFERRALS_TO_COVER_PLAN } from '../lib/pricing';
 
 const AnalyticsPage = lazy(() => import('./Analytics').then((m) => ({ default: m.AnalyticsPage })));
 const BillingPage = lazy(() => import('./Billing').then((m) => ({ default: m.BillingPage })));
@@ -2064,8 +2065,8 @@ function ReferralsTab({ userId, profile }: { userId: string | null; profile: imp
   const totalSignups = referrals.filter((r) => r.status !== 'pending').length;
   const appliedCreditsCents = credits.filter((c) => c.stripe_credit_applied).reduce((s, c) => s + c.amount_cents, 0);
   const pendingCreditsCents = credits.filter((c) => !c.stripe_credit_applied).reduce((s, c) => s + c.amount_cents, 0);
-  const monthlyDiscount = Math.min(totalConverted, 9);
-  const monthlyEarning = totalConverted > 9 ? (totalConverted - 9) : 0;
+  const monthlyDiscount = Math.min(totalConverted, REFERRALS_TO_COVER_PLAN);
+  const monthlyEarning = totalConverted > REFERRALS_TO_COVER_PLAN ? (totalConverted - REFERRALS_TO_COVER_PLAN) : 0;
 
   const copy = () => {
     navigator.clipboard.writeText(referralLink);
@@ -2107,7 +2108,7 @@ function ReferralsTab({ userId, profile }: { userId: string | null; profile: imp
         </div>
       </div>
 
-      {totalConverted >= 7 && (
+      {totalConverted > REFERRALS_TO_COVER_PLAN && (
         <div className="flex items-start gap-3 p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 rounded-xl success">
           <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
           <div>
@@ -2118,12 +2119,12 @@ function ReferralsTab({ userId, profile }: { userId: string | null; profile: imp
           </div>
         </div>
       )}
-      {totalConverted >= 6 && totalConverted < 7 && (
+      {totalConverted >= REFERRALS_TO_COVER_PLAN && totalConverted <= REFERRALS_TO_COVER_PLAN && (
         <div className="flex items-start gap-3 p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 rounded-xl success">
           <Check className="h-5 w-5 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
           <div>
             <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">Pro is fully covered!</p>
-            <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">9 active referrals fully covers your $8.99/month.</p>
+            <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">{REFERRALS_TO_COVER_PLAN} active referrals fully covers your $9.99/month.</p>
           </div>
         </div>
       )}

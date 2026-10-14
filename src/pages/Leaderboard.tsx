@@ -63,7 +63,7 @@ export function LeaderboardPage() {
             Top referrers
           </h1>
           <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-            Every Pro referral earns $1 off your monthly bill. Refer 9 and your plan is free. Refer 10+ and we pay <em>you</em>.
+            Every Pro referral earns $1 off your monthly bill. Refer 10 and your plan is free. Refer 11 or more and we pay <em>you</em>.
           </p>
         </div>
 
@@ -71,8 +71,8 @@ export function LeaderboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
           {[
             { label: '1 referral', value: '$1 off/mo' },
-            { label: '6 referrals', value: 'Pro covered' },
-            { label: '7+ referrals', value: 'We pay you' },
+            { label: '10 referrals', value: 'Pro covered' },
+            { label: '11+ referrals', value: 'We pay you' },
           ].map((s) => (
             <div key={s.label} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 text-center">
               <p className="text-lg font-bold text-indigo-600 dark:text-indigo-500">{s.value}</p>

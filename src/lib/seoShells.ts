@@ -26,11 +26,11 @@ export const SEO_SHELLS: SeoShell[] = [
     file: 'why-pinonit.html',
     title: 'Calendly alternative for small business | PinOnIt',
     description:
-      'PinOnIt is the Calendly alternative for small business: Sign by Text, easy booking, WhatsApp and voice reminders, two-way SMS, quotes, QR codes — from $8.99/mo.',
+      'PinOnIt is the Calendly alternative for small business: Sign by Text, easy booking, WhatsApp and voice reminders, two-way SMS, quotes, QR codes — from $9.99/mo.',
     canonical: 'https://pinonit.com/why-pinonit',
     h1: 'Calendly books meetings. PinOnIt runs your business.',
     paragraphs: [
-      'Sign by Text, easy booking, WhatsApp reminders, calendar write-back, two-way SMS, and a paid storefront. $8.99/month after trial. PinOnIt does not include every Calendly feature.',
+      'Sign by Text, easy booking, WhatsApp reminders, calendar write-back, two-way SMS, and a paid storefront. $9.99/month after trial. PinOnIt does not include every Calendly feature.',
     ],
     links: LINKS,
   },
@@ -152,7 +152,7 @@ export const SEO_SHELLS: SeoShell[] = [
     canonical: 'https://pinonit.com/leaderboard',
     h1: 'Top referrers',
     paragraphs: [
-      'Every Pro referral earns $1 off your monthly bill. Refer 9 and your plan is free. Refer 10 or more and PinOnIt pays you.',
+      'Every Pro referral earns $1 off your monthly bill. Refer 10 and your plan is free. Refer 11 or more and PinOnIt pays you.',
     ],
     links: [{ href: '/', label: 'PinOnIt home' }],
   },

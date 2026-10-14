@@ -147,7 +147,7 @@ const CORE_INTENT_PAGES: IntentPage[] = [
       },
       {
         q: 'Is PinOnIt a Calendly alternative with SMS reminders?',
-        a: 'Yes for the basic job: a booking link plus SMS, WhatsApp, or voice reminders on the $8.99/month plan. It is not a copy of every Calendly feature.',
+        a: 'Yes for the basic job: a booking link plus SMS, WhatsApp, or voice reminders on the $9.99/month plan. It is not a copy of every Calendly feature.',
       },
     ],
     cta: 'Start 14-day trial',

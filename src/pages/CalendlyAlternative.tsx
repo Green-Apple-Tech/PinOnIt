@@ -19,6 +19,7 @@ import { DocTypeShortcutRow } from '../components/CampaignLanding';
 import { usePageMeta } from '../lib/pageMeta';
 import { MarketingStickyHeader } from '../components/landing/MarketingAnnouncementBar';
 import { MarketingShotFrame } from '../components/landing/MarketingShotFrame';
+import { PRO_PRICE, REFERRALS_TO_COVER_PLAN } from '../lib/pricing';
 
 // ── Animated counter hook ────────────────────────────────────────────────────
 function useCounter(target: number, duration = 1800, start = false) {
@@ -39,23 +40,30 @@ function useCounter(target: number, duration = 1800, start = false) {
 }
 
 // ── Earnings calc ────────────────────────────────────────────────────────────
+function money(n: number) {
+  return (Math.round(n * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 function calcEarnings(refs: number) {
-  const savings = Math.min(refs, 6);
-  const extra = Math.max(0, refs - 6);
+  const credit = refs;
   return {
-    monthlyCost: Math.max(0, 6 - savings),
-    monthlyEarn: extra,
-    yearlyEarn: extra * 12,
-    isFree: refs >= 6,
+    monthlyCost: Math.max(0, Math.round((PRO_PRICE - credit) * 100) / 100),
+    monthlyEarn: Math.max(0, Math.round((credit - PRO_PRICE) * 100) / 100),
+    yearlyEarn: Math.max(0, Math.round((credit - PRO_PRICE) * 12 * 100) / 100),
+    isFree: credit >= PRO_PRICE,
   };
 }
 
-const MILESTONES = [
-  { refs: 6,    label: '6 referrals',    result: 'Pro is FREE',    detail: '$0/mo forever' },
-  { refs: 20,   label: '20 referrals',   result: '+$14/mo',        detail: '$168/yr to you' },
-  { refs: 100,  label: '100 referrals',  result: '+$94/mo',        detail: '$1,128/yr passive' },
-  { refs: 1000, label: '1,000 referrals', result: '+$994/mo',      detail: '$11,928/yr recurring' },
-];
+const MILESTONES = [REFERRALS_TO_COVER_PLAN, 20, 100, 1000].map((refs) => {
+  const extra = Math.max(0, Math.round((refs - PRO_PRICE) * 100) / 100);
+  const covered = refs === REFERRALS_TO_COVER_PLAN;
+  return {
+    refs,
+    label: refs === 1000 ? '1,000 referrals' : `${refs} referrals`,
+    result: covered ? 'Pro is FREE' : `+$${money(extra)}/mo`,
+    detail: covered ? '$0/mo' : `$${money(extra * 12)}/yr to you`,
+  };
+});
 
 // ── 3-column comparison data ─────────────────────────────────────────────────
 type CompRow = { section?: string; feature?: string; pinonit?: boolean | string; calendly?: boolean | string; acuity?: boolean | string };
@@ -63,7 +71,7 @@ type CompRow = { section?: string; feature?: string; pinonit?: boolean | string;
 const COMP_ROWS: CompRow[] = [
   { section: 'Pricing' },
   { feature: 'Starting price',    pinonit: 'Free',        calendly: 'Free',         acuity: '$16/mo' },
-  { feature: 'Pro / Paid plan',   pinonit: '$8.99/mo',       calendly: '$16/mo',       acuity: '$20/mo' },
+  { feature: 'Pro / Paid plan',   pinonit: '$9.99/mo',       calendly: '$16/mo',       acuity: '$20/mo' },
   { feature: 'Referral earnings', pinonit: '$1/mo/user',  calendly: false,          acuity: false },
   { section: 'Calendly does not do this' },
   { feature: 'WhatsApp reminders', pinonit: true, calendly: false, acuity: false },
@@ -618,7 +626,7 @@ export function CalendlyAlternative() {
               <span className="text-indigo-400">Plus What Calendly Doesn&apos;t.</span>
             </h2>
             <p className="text-indigo-200 text-lg max-w-2xl mx-auto">
-              Not “Calendly charges extra.” These are missing. PinOnIt starts at $8.99/month.
+              Not “Calendly charges extra.” These are missing. PinOnIt starts at $9.99/month.
             </p>
           </div>
 
@@ -658,7 +666,7 @@ export function CalendlyAlternative() {
               <ArrowRight className="h-5 w-5" />
             </Link>
             <p className="text-indigo-300/60 text-sm mt-3">
-              14-day Pro trial · $8.99/mo after · Cancel anytime
+              14-day Pro trial · $9.99/mo after · Cancel anytime
             </p>
           </div>
         </div>
@@ -676,7 +684,7 @@ export function CalendlyAlternative() {
             </h2>
             <div className="inline-flex items-center gap-3 px-5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm shadow-sm">
               <span className="line-through text-slate-400">Calendly charges $16/mo.</span>
-              <span className="font-bold text-indigo-600 dark:text-indigo-500">You pay $8.99. Still less than half of Calendly.</span>
+              <span className="font-bold text-indigo-600 dark:text-indigo-500">You pay $9.99. Still less than half of Calendly.</span>
             </div>
           </div>
 
@@ -707,7 +715,7 @@ export function CalendlyAlternative() {
                 <div className="p-4 text-sm font-semibold text-slate-500 dark:text-slate-400">Feature</div>
                 <div className="p-4 text-center">
                   <span className="font-bold text-indigo-600 dark:text-indigo-500 text-sm">PinOnIt</span>
-                  <div className="text-indigo-600 text-xs font-semibold mt-0.5">from $8.99/mo</div>
+                  <div className="text-indigo-600 text-xs font-semibold mt-0.5">from $9.99/mo</div>
                 </div>
                 <div className="p-4 text-center">
                   <span className="font-semibold text-slate-500 dark:text-slate-400 text-sm">Calendly</span>
@@ -798,7 +806,7 @@ export function CalendlyAlternative() {
             <div className="mb-6">
               <h3 className="text-2xl font-extrabold text-white">PinOnIt Pro</h3>
               <div className="mt-2 flex items-baseline gap-1.5">
-                <span className="text-5xl font-extrabold text-white">$8.99</span>
+                <span className="text-5xl font-extrabold text-white">$9.99</span>
                 <span className="line-through text-brand-200 text-sm">$16</span>
                 <span className="text-brand-200 text-sm">/month after trial</span>
               </div>
@@ -951,7 +959,7 @@ export function CalendlyAlternative() {
             >
               Get My Free Referral Link <ArrowRight className="h-5 w-5" />
             </Link>
-            <p className="mt-3 text-slate-500 text-sm">1,000 referrals = $994/mo. Yours. Every month. Forever.</p>
+            <p className="mt-3 text-slate-500 text-sm">1,000 referrals = ${money(1000 - PRO_PRICE)}/mo. Yours. Every month.</p>
           </div>
         </div>
       </section>
@@ -965,7 +973,7 @@ export function CalendlyAlternative() {
               How it works
             </h2>
             <p className="text-slate-500 dark:text-slate-400 text-lg max-w-2xl mx-auto">
-              Three steps. No catch. No expiry. 1,000 referrals = $994/mo. <strong className="text-slate-800 dark:text-slate-200">Yours. Every month.</strong>
+              Three steps. No catch. No expiry. 1,000 referrals = ${money(1000 - PRO_PRICE)}/mo. <strong className="text-slate-800 dark:text-slate-200">Yours. Every month.</strong>
             </p>
           </div>
 
@@ -973,7 +981,7 @@ export function CalendlyAlternative() {
             {[
               { icon: Link2,       n: '01', title: 'Get your unique link',      desc: 'Every account gets a permanent referral link instantly — no approval, no minimum.' },
               { icon: Users,       n: '02', title: 'Share with your network',   desc: 'Post on LinkedIn, add to your email footer, or share directly with colleagues.' },
-              { icon: DollarSign,  n: '03', title: 'Earn $1/mo per subscriber forever', desc: 'Each time someone you referred pays their $8.99/mo, $1 flows to you. Automatically. Every single month.' },
+              { icon: DollarSign,  n: '03', title: 'Earn $1/mo per subscriber forever', desc: 'Each time someone you referred pays their $9.99/mo, $1 flows to you. Automatically. Every single month.' },
             ].map((step) => (
               <div key={step.n} className="relative text-center">
                 <div className="hidden sm:block absolute top-10 left-[calc(50%+28px)] right-[calc(-50%+28px)] h-px bg-gradient-to-r from-indigo-300 to-transparent dark:from-indigo-700 pointer-events-none last:hidden" />
@@ -999,10 +1007,10 @@ export function CalendlyAlternative() {
             </p>
             <div className="relative mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-xl mx-auto text-center">
               {[
-                { n: '6',    label: 'refs = Free Pro' },
-                { n: '20',   label: 'refs = +$14/mo' },
-                { n: '100',  label: 'refs = +$94/mo' },
-                { n: '1,000', label: 'refs = +$994/mo' },
+                { n: String(REFERRALS_TO_COVER_PLAN), label: 'refs = Free Pro' },
+                { n: '20', label: `refs = +$${money(20 - PRO_PRICE)}/mo` },
+                { n: '100', label: `refs = +$${money(100 - PRO_PRICE)}/mo` },
+                { n: '1,000', label: `refs = +$${money(1000 - PRO_PRICE)}/mo` },
               ].map((c) => (
                 <div key={c.n} className="bg-white/10 rounded-xl px-3 py-3">
                   <p className="text-xl font-black text-white">{c.n}</p>
@@ -1029,7 +1037,7 @@ export function CalendlyAlternative() {
           >
             Create Your Free Account <ArrowRight className="h-5 w-5" />
           </Link>
-          <p className="mt-5 text-brand-200 text-sm">14-day trial · $8.99/mo after · Cancel anytime</p>
+          <p className="mt-5 text-brand-200 text-sm">14-day trial · $9.99/mo after · Cancel anytime</p>
         </div>
       </section>
 

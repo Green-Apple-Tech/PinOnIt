@@ -259,13 +259,6 @@ for (const post of BLOG_POSTS) {
 }
 
 const CONTENT_CHANGED = '2026-10-14';
-const changedLastmod = new Set([
-  `${PINONIT_ORG.url}/`,
-  `${PINONIT_ORG.url}/docusign-alternative`,
-  `${PINONIT_ORG.url}/calendly-alternative`,
-  `${PINONIT_ORG.url}/sign-by-text`,
-  ...SEO_SHELLS.map((s) => s.canonical),
-]);
 
 const extraSitemap: Array<{ loc: string; changefreq: string; priority: string; lastmod?: string }> = [
   { loc: `${PINONIT_ORG.url}/`, changefreq: 'weekly', priority: '1.0' },
@@ -287,7 +280,7 @@ const extraSitemap: Array<{ loc: string; changefreq: string; priority: string; l
   { loc: `${PINONIT_ORG.url}/acceptable-use`, changefreq: 'yearly', priority: '0.3' },
   { loc: `${PINONIT_ORG.url}/status`, changefreq: 'weekly', priority: '0.2' },
   { loc: `${PINONIT_ORG.url}/leaderboard`, changefreq: 'weekly', priority: '0.2' },
-].map((u) => (changedLastmod.has(u.loc) ? { ...u, lastmod: CONTENT_CHANGED } : u));
+].map((u) => ({ ...u, lastmod: CONTENT_CHANGED }));
 
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

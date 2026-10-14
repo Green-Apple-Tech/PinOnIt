@@ -27,7 +27,7 @@ const FAQ_ITEMS = [
     a: 'Yes. Google and Outlook stay in sync (including new bookings). Apple Calendar connects with a private iCloud link so busy times are blocked. You can import from Calendly if you’re switching.',
   },
   {
-    q: 'Is it really $8.99 a month?',
+    q: 'Is it really $9.99 a month?',
     a: 'Yes. One plan. Free trial first.',
   },
 ];
