@@ -202,6 +202,7 @@ async function notifyOwner(
   host: Record<string, unknown> | null,
   line: string,
   subject: string,
+  hostId: string,
 ) {
   const hostEmail = (host?.notification_email as string) || (host?.email as string);
   if (hostEmail) await sendResendEmail([hostEmail], subject, line);
@@ -209,7 +210,7 @@ async function notifyOwner(
     sms_opt_in: host?.sms_opt_in as boolean | null,
     default_reminder_channel: host?.default_reminder_channel as string | null,
   }) && host?.phone) {
-    await sendTwilioSmsGuarded(supabase, String(host.phone), line);
+    await sendTwilioSmsGuarded(supabase, String(host.phone), line, { hostId });
   }
   await notifySlackWebhook(host?.slack_webhook_url, line);
 }
@@ -243,7 +244,7 @@ async function cancelBooking(
     body: inviteeMsg,
     booking_id: booking.id,
   });
-  await notifyOwner(supabase, host, hostLine, `Canceled: ${serviceName} with ${guest}`);
+  await notifyOwner(supabase, host, hostLine, `Canceled: ${serviceName} with ${guest}`, booking.host_id);
 
   if (booking.action_token) {
     try {

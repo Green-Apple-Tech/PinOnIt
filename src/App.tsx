@@ -21,17 +21,20 @@ import { SessionManager } from './components/SessionManager';
 import { CampaignLandingPage } from './pages/CampaignLandingPage';
 import { SignNowPage } from './pages/SignNow';
 import { captureCampaignParams } from './lib/campaignAttribution';
+import { captureCreatorParam } from './lib/creatorAttribution';
 import { logMarketingVisit } from './lib/marketingVisits';
 import { GuestNoIndex } from './components/GuestNoIndex';
 import { SeoIntentPage } from './pages/SeoIntentPage';
 import { INTENT_PAGES } from './lib/seoIntentPages';
 import { BlogIndexPage, BlogPostPage } from './pages/Blog';
 import { PhoneShotsPage } from './pages/PhoneShots';
+import { CreatorsPage } from './pages/Creators';
 
 function CampaignParamCapture() {
   const { search, pathname } = useLocation();
   useEffect(() => {
     captureCampaignParams(search, pathname);
+    captureCreatorParam(search);
     void logMarketingVisit(pathname);
   }, [search, pathname]);
   return null;
@@ -108,6 +111,12 @@ const CoordinationVotePage = lazy(() =>
 );
 const MarketingTrafficPage = lazy(() =>
   import('./pages/MarketingTraffic').then((m) => ({ default: m.MarketingTrafficPage })),
+);
+const CreatorDashboardPage = lazy(() =>
+  import('./pages/CreatorDashboard').then((m) => ({ default: m.CreatorDashboardPage })),
+);
+const CreatorAdminPage = lazy(() =>
+  import('./pages/CreatorAdmin').then((m) => ({ default: m.CreatorAdminPage })),
 );
 const RedditOpportunitiesPage = lazy(() =>
   import('./pages/RedditOpportunities').then((m) => ({ default: m.RedditOpportunitiesPage })),
@@ -201,6 +210,7 @@ function App() {
             <Route path="/sms-consent" element={<SmsConsentPage />} />
             <Route path="/acceptable-use" element={<AcceptableUsePage />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
+            <Route path="/creators" element={<CreatorsPage />} />
             <Route path="/status" element={<StatusPage />} />
             <Route path="/shots/phone" element={<PhoneShotsPage />} />
             <Route path="/reminder-done/:token" element={<ReminderDonePage />} />
@@ -271,6 +281,8 @@ function App() {
               <Route path="documents/new" element={<DocumentsNewRoute />} />
               <Route path="marketing-traffic" element={<MarketingTrafficPage />} />
               <Route path="reddit-opportunities" element={<RedditOpportunitiesPage />} />
+              <Route path="creator" element={<CreatorDashboardPage />} />
+              <Route path="creator-admin" element={<CreatorAdminPage />} />
             </Route>
             <Route path="/documents" element={<PreserveSearchRedirect to="/dashboard/documents" />} />
             <Route path="/documents/new" element={<PreserveSearchRedirect to="/dashboard/documents/new" />} />

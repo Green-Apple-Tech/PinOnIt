@@ -57,7 +57,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const { price_id, app_url, trial_period_days, wizard_step } = await req.json();
+    const { price_id, app_url, trial_period_days, wizard_step, creator_code } = await req.json();
     if (!price_id || typeof price_id !== 'string' || !isAllowedCheckoutPriceId(price_id)) {
       return new Response(JSON.stringify({ error: 'Invalid price_id' }), {
         status: 400,
@@ -111,10 +111,23 @@ Deno.serve(async (req: Request) => {
     const stepParam = wizard_step ? `&wizard_step=${wizard_step}` : '';
     const trialParam = trialDays > 0 ? `&trial_days=${trialDays}` : '';
 
+    const sessionMetadata: Record<string, string> = { supabase_user_id: user.id };
+    if (typeof creator_code === 'string' && creator_code.trim()) {
+      const { data: creatorMeta, error: creatorError } = await supabase.rpc('checkout_creator_metadata', {
+        p_user_id: user.id,
+        p_code: creator_code.trim(),
+      });
+      const meta = creatorMeta as { ok?: boolean; creator_id?: string; code?: string } | null;
+      if (!creatorError && meta?.ok && meta.creator_id && meta.code) {
+        sessionMetadata.creator_id = meta.creator_id;
+        sessionMetadata.creator_code = meta.code;
+      }
+    }
+
     const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
       customer: customerId,
       client_reference_id: user.id,
-      metadata: { supabase_user_id: user.id },
+      metadata: sessionMetadata,
       mode: 'subscription',
       line_items: [{ price: resolvedPriceId, quantity: 1 }],
       success_url: wizard_step
@@ -123,7 +136,7 @@ Deno.serve(async (req: Request) => {
       cancel_url: `${origin}/dashboard/settings?tab=billing&checkout=cancelled`,
       payment_method_collection: 'always',
       subscription_data: {
-        metadata: { supabase_user_id: user.id },
+        metadata: sessionMetadata,
       },
     };
 

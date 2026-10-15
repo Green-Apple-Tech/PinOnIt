@@ -7,6 +7,7 @@
 # Proxying them through Supabase booking-og returns text/plain (+ CSP sandbox),
 # so iPhone Chrome shows the raw HTML source instead of the app (breaks Gmail OAuth).
 /login  /index.html  200
+/creators  /index.html  200
 /signup  /index.html  200
 /ref  /index.html  200
 /ref/*  /index.html  200

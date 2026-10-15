@@ -149,7 +149,7 @@ Deno.serve(async (req: Request) => {
       link,
     });
 
-    const sms = await sendTwilioSmsGuarded(admin, to, body);
+    const sms = await sendTwilioSmsGuarded(admin, to, body, { hostId: doc.sender_id as string });
     await logHostSmsUsage(admin, {
       hostId: doc.sender_id as string,
       recipient: to,

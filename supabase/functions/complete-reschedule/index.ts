@@ -183,7 +183,7 @@ Deno.serve(async (req: Request) => {
       sms_opt_in: host?.sms_opt_in as boolean | null,
       default_reminder_channel: host?.default_reminder_channel as string | null,
     }) && host?.phone) {
-      await sendTwilioSmsGuarded(supabase, String(host.phone), hostLine);
+      await sendTwilioSmsGuarded(supabase, String(host.phone), hostLine, { hostId: booking.host_id });
     }
     await notifySlackWebhook(host?.slack_webhook_url, hostLine);
 

@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { appendSmsOptOut } from "../_shared/sms-opt-out.ts";
-import { smsIsOptedOut } from "../_shared/sms-send-gate.ts";
+import { releaseCreatorOutbound, reserveCreatorOutbound, smsIsOptedOut } from "../_shared/sms-send-gate.ts";
 import { normalizePhoneE164 } from "../_shared/phone.ts";
 import { hostIdFromJwt, jsonAuthError } from "../_shared/callerAuth.ts";
 import { expireStaleTrials, hostPlanIsActive } from "../_shared/hostPlan.ts";
@@ -58,41 +58,60 @@ async function sendTwilioMessage(
   return true;
 }
 
-/** Sends via WhatsApp when configured, otherwise SMS. */
-async function sendMessage(to: string, body: string, mediaUrl?: string): Promise<void> {
+/** Sends via WhatsApp when configured, otherwise SMS. One creator slot per delivered message. */
+async function sendMessage(
+  to: string,
+  body: string,
+  mediaUrl?: string,
+  hostId?: string | null,
+): Promise<void> {
   if (await smsIsOptedOut(supabase, to)) {
     console.warn("Skipping coordinate SMS — recipient opted out (STOP):", to);
+    return;
+  }
+
+  const reserved = await reserveCreatorOutbound(supabase, hostId);
+  if (!reserved.ok) {
+    console.warn("Skipping coordinate SMS — creator message limit:", reserved.error);
     return;
   }
 
   const smsFrom = Deno.env.get("TWILIO_PHONE_NUMBER");
   const whatsappFrom = Deno.env.get("TWILIO_WHATSAPP_NUMBER");
   const e164 = normalizePhoneE164(to);
+  let delivered = false;
 
   if (whatsappFrom) {
     const waFrom = whatsappFrom.startsWith("whatsapp:")
       ? whatsappFrom
       : `whatsapp:${whatsappFrom}`;
-    const sent = await sendTwilioMessage(`whatsapp:${e164}`, waFrom, body, mediaUrl);
-    if (sent) return;
-    if (mediaUrl) {
-      const retry = await sendTwilioMessage(`whatsapp:${e164}`, waFrom, body);
-      if (retry) return;
+    delivered = await sendTwilioMessage(`whatsapp:${e164}`, waFrom, body, mediaUrl);
+    if (!delivered && mediaUrl) {
+      delivered = await sendTwilioMessage(`whatsapp:${e164}`, waFrom, body);
     }
+    if (delivered) return;
   }
 
   if (!smsFrom) {
     console.error("Twilio SMS from-number not configured");
+    await releaseCreatorOutbound(supabase, hostId);
     return;
   }
 
-  const smsOk = await sendTwilioMessage(e164, smsFrom, body, mediaUrl);
-  if (smsOk || !mediaUrl) return;
-  await sendTwilioMessage(e164, smsFrom, body);
+  delivered = await sendTwilioMessage(e164, smsFrom, body, mediaUrl);
+  if (!delivered && mediaUrl) {
+    delivered = await sendTwilioMessage(e164, smsFrom, body);
+  }
+  if (!delivered) await releaseCreatorOutbound(supabase, hostId);
 }
 
-async function sendSms(to: string, body: string, mediaUrl?: string): Promise<void> {
-  await sendMessage(to, appendSmsOptOut(body), mediaUrl);
+async function sendSms(
+  to: string,
+  body: string,
+  mediaUrl?: string,
+  hostId?: string | null,
+): Promise<void> {
+  await sendMessage(to, appendSmsOptOut(body), mediaUrl, hostId);
 }
 
 function publicSiteUrl() {
@@ -502,6 +521,7 @@ async function notifyHostBestMatch(
   candidateSlots: string[],
   totalParticipants: number,
   hostPhone: string,
+  hostId: string,
 ): Promise<void> {
   const idx = 0;
   const slot = candidateSlots[idx];
@@ -527,12 +547,15 @@ async function notifyHostBestMatch(
   await sendSms(
     hostPhone,
     `✅ Best match found for "${meeting.title}":\n${day} ${date} at ${time}\n(${totalParticipants} of ${totalParticipants} participants available)\nReply YES to confirm and notify everyone, or NO to see other options.`,
+    undefined,
+    hostId,
   );
 }
 
 async function notifyHostNoOverlap(
   meeting: { id: string; title: string; preferred_times: unknown },
   hostPhone: string,
+  hostId: string,
 ): Promise<void> {
   const pt = getPreferredTimesExtras(meeting.preferred_times);
   await supabase
@@ -545,6 +568,8 @@ async function notifyHostNoOverlap(
   await sendSms(
     hostPhone,
     `No overlap found for "${meeting.title}". Reply EXTEND to try next week, or visit pinonit.com to adjust.`,
+    undefined,
+    hostId,
   );
 }
 
@@ -553,6 +578,7 @@ async function notifyHostNextOption(
   hostPhone: string,
   optionIndex: number,
   totalParticipants: number,
+  hostId: string,
 ): Promise<void> {
   const candidates = candidateSlotsFromPreferred(meeting.preferred_times);
   const slot = candidates[optionIndex];
@@ -560,6 +586,8 @@ async function notifyHostNextOption(
     await sendSms(
       hostPhone,
       `No more options for "${meeting.title}". Visit pinonit.com to adjust or cancel.`,
+      undefined,
+      hostId,
     );
     return;
   }
@@ -575,6 +603,8 @@ async function notifyHostNextOption(
   await sendSms(
     hostPhone,
     `Next best option:\n${day} ${date} at ${time}\n(${totalParticipants} of ${totalParticipants} available)\nReply YES to confirm or NO for more options.`,
+    undefined,
+    hostId,
   );
 }
 
@@ -663,6 +693,8 @@ async function processHostInbound(
     await sendSms(
       hostPhone,
       "Your PinOnIt trial has ended. Reactivate at pinonit.com/billing to keep coordinating meetings.",
+      undefined,
+      hostId,
     );
     return new Response("OK", { status: 200 });
   }
@@ -691,6 +723,8 @@ async function processHostInbound(
       await sendSms(
         hostPhone,
         `Reply with the slot number (${hint}) to lock it, or pick in the dashboard.`,
+        undefined,
+        hostId,
       );
       return new Response("OK", { status: 200 });
     }
@@ -700,6 +734,8 @@ async function processHostInbound(
       locked.ok
         ? `Locked option ${n} for "${title}". Confirmations are on the way.`
         : `Could not lock that time. Try the dashboard.`,
+      undefined,
+      hostId,
     );
     return new Response("OK", { status: 200 });
   }
@@ -709,6 +745,8 @@ async function processHostInbound(
     await sendSms(
       hostPhone,
       `Extended the window for "${title}" by one week. We'll text participants to share new availability.`,
+      undefined,
+      hostId,
     );
     await sendCoordinationInvites(meetingId).catch(() => {});
     return new Response("OK", { status: 200 });
@@ -724,7 +762,7 @@ async function processHostInbound(
   if (/^YES$/i.test(trimmedBody)) {
     const slotIso = candidates[optionIndex];
     if (!slotIso) {
-      await sendSms(hostPhone, `No time slot selected. Visit pinonit.com to confirm "${title}".`);
+      await sendSms(hostPhone, `No time slot selected. Visit pinonit.com to confirm "${title}".`, undefined, hostId);
       return new Response("OK", { status: 200 });
     }
     await finalizeHostConfirmation(meetingId, slotIso);
@@ -737,6 +775,8 @@ async function processHostInbound(
       await sendSms(
         hostPhone,
         `No more options for "${title}". Visit pinonit.com to adjust or cancel.`,
+        undefined,
+        hostId,
       );
       return new Response("OK", { status: 200 });
     }
@@ -745,6 +785,7 @@ async function processHostInbound(
       hostPhone,
       nextIndex,
       totalParticipants,
+      hostId,
     );
     return new Response("OK", { status: 200 });
   }
@@ -801,6 +842,8 @@ async function finalizeHostConfirmation(
         sendSms(
           p.phone,
           `Hi ${p.name}! "${meeting.title}" is confirmed for ${timeLabel}${locationStr} (${meeting.duration_minutes} min). See you then!`,
+          undefined,
+          meeting.host_id,
         )
       ),
     );
@@ -850,11 +893,11 @@ async function checkAndRunOverlap(meetingId: string): Promise<void> {
   if (!hostProfile?.phone) return;
 
   if (overlaps.length === 0) {
-    await notifyHostNoOverlap(meeting, hostProfile.phone);
+    await notifyHostNoOverlap(meeting, hostProfile.phone, meeting.host_id);
     return;
   }
 
-  await notifyHostBestMatch(meeting, overlaps, active.length, hostProfile.phone);
+  await notifyHostBestMatch(meeting, overlaps, active.length, hostProfile.phone, meeting.host_id);
 }
 
 async function ensureCoordinationService(hostId: string): Promise<string | null> {
@@ -943,6 +986,7 @@ async function sendProposedSlotConfirmations(
   startIso: string,
   endIso: string,
   participants: { name: string; phone: string; token: string }[],
+  hostId: string,
 ): Promise<void> {
   const timeLabel = formatSlotLabel(startIso, endIso);
   const loc = meeting.location?.trim() ? ` at ${meeting.location.trim()}` : "";
@@ -954,6 +998,7 @@ async function sendProposedSlotConfirmations(
         p.phone,
         `Confirmed: "${meeting.title || kind}" ${timeLabel}${loc}. Calendar: ${ics}`,
         ics,
+        hostId,
       );
     }),
   );
@@ -993,7 +1038,7 @@ async function finalizeProposedSlotLock(meetingId: string, slotId: string): Prom
 
   const people = (participants ?? []) as { name: string; phone: string; token: string }[];
   await createBookingForLockedMeeting(meeting, startIso, endIso, people);
-  await sendProposedSlotConfirmations(meeting, startIso, endIso, people);
+  await sendProposedSlotConfirmations(meeting, startIso, endIso, people, meeting.host_id);
   await addCoordinatedEventToHostCalendar(
     meeting.host_id,
     meetingId,
@@ -1053,6 +1098,8 @@ async function notifyOrganizerNoOverlap(meetingId: string): Promise<void> {
   await sendSms(
     host.phone,
     `No time worked for everyone on "${meeting.title}". Reply with a slot number to lock it, or pick in the dashboard:\n${lines.join("\n")}`,
+    undefined,
+    meeting.host_id,
   );
 }
 
@@ -1140,6 +1187,8 @@ async function sendCoordinationInvites(meetingId: string): Promise<{ sent: numbe
             slots,
             token: p.token,
           }),
+          undefined,
+          meeting.host_id,
         )
       ),
     );
@@ -1151,7 +1200,7 @@ async function sendCoordinationInvites(meetingId: string): Promise<{ sent: numbe
   await Promise.all(
     toSms.map(async (p) => {
       const body = buildCoordInviteSms(p.name, hostName, meeting, pt, meeting.selected_dates);
-      await sendSms(p.phone, body);
+      await sendSms(p.phone, body, undefined, meeting.host_id);
     }),
   );
   await checkAndRunOverlap(meetingId);
@@ -1256,7 +1305,7 @@ async function processInboundReply(
 
   const { data: meeting } = await supabase
     .from("coordinated_meetings")
-    .select("id, duration_minutes, proposed_window_start, proposed_window_end, status, scheduling_mode")
+    .select("id, host_id, duration_minutes, proposed_window_start, proposed_window_end, status, scheduling_mode")
     .eq("id", participant.meeting_id)
     .maybeSingle();
 
@@ -1272,7 +1321,7 @@ async function processInboundReply(
     const n = parseBareSlotNumber(trimmedBody);
     const slot = slotFromNumber(slots, n);
     if (!slot || !participant.token) {
-      await sendSms(participant.phone, numberedClarifySms(participant.token, slots.length));
+      await sendSms(participant.phone, numberedClarifySms(participant.token, slots.length), undefined, meeting.host_id);
       return new Response("OK", { status: 200 });
     }
     const { data: voteRaw } = await supabase.rpc("submit_coordination_slot_votes", {
@@ -1281,7 +1330,7 @@ async function processInboundReply(
     });
     const voteRes = typeof voteRaw === "string" ? JSON.parse(voteRaw) : voteRaw;
     if (!voteRes?.ok) {
-      await sendSms(participant.phone, numberedClarifySms(participant.token, slots.length));
+      await sendSms(participant.phone, numberedClarifySms(participant.token, slots.length), undefined, meeting.host_id);
       return new Response("OK", { status: 200 });
     }
     await afterProposedSlotVote(participant.token);
@@ -1458,10 +1507,12 @@ async function handleNudge(
         slots,
         token: p.token,
       }),
+      undefined,
+      meeting.host_id,
     );
   } else {
     const pt = meeting.preferred_times as Record<string, unknown> | null;
-    await sendSms(p.phone, buildCoordInviteSms(p.name, hostName, meeting, pt, meeting.selected_dates));
+    await sendSms(p.phone, buildCoordInviteSms(p.name, hostName, meeting, pt, meeting.selected_dates), undefined, meeting.host_id);
   }
   await supabase
     .from("coordinated_meeting_participants")

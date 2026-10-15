@@ -171,7 +171,7 @@ Deno.serve(async (req: Request) => {
     if (claimed !== true) return json({ ok: true, duplicate: true });
   }
 
-  const sms = await sendTwilioSmsGuarded(admin, to, body);
+  const sms = await sendTwilioSmsGuarded(admin, to, body, { hostId });
   if (!sms.ok && signatureSms) {
     await admin.from('document_sms_signature_send_claims').delete().eq('document_id', doc.id);
   }

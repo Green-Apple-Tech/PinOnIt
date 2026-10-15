@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
-import { smsIsOptedOut } from '../_shared/sms-send-gate.ts';
+import { releaseCreatorOutbound, reserveCreatorOutbound, smsIsOptedOut } from '../_shared/sms-send-gate.ts';
+import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -93,9 +94,19 @@ async function makeTwilioCall(to: string, twiml: string): Promise<{ ok: boolean;
   }
 }
 
-async function sendTwilioSms(to: string, body: string): Promise<{ ok: boolean; error?: string }> {
+async function sendTwilioSms(
+  to: string,
+  body: string,
+  supabase: SupabaseClient,
+  hostId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const reserved = await reserveCreatorOutbound(supabase, hostId);
+  if (!reserved.ok) return { ok: false, error: reserved.error };
   const auth = await twilioAuth();
-  if (!auth) return { ok: false, error: 'Twilio credentials not configured' };
+  if (!auth) {
+    await releaseCreatorOutbound(supabase, hostId);
+    return { ok: false, error: 'Twilio credentials not configured' };
+  }
   try {
     const res = await fetch(
       `https://api.twilio.com/2010-04-01/Accounts/${auth.sid}/Messages.json`,
@@ -108,17 +119,31 @@ async function sendTwilioSms(to: string, body: string): Promise<{ ok: boolean; e
         body: new URLSearchParams({ From: auth.from, To: to, Body: body }),
       },
     );
-    if (!res.ok) return { ok: false, error: await res.text() };
+    if (!res.ok) {
+      await releaseCreatorOutbound(supabase, hostId);
+      return { ok: false, error: await res.text() };
+    }
     return { ok: true };
   } catch (e) {
+    await releaseCreatorOutbound(supabase, hostId);
     return { ok: false, error: String(e) };
   }
 }
 
-async function sendTwilioWhatsapp(to: string, body: string): Promise<{ ok: boolean; error?: string }> {
+async function sendTwilioWhatsapp(
+  to: string,
+  body: string,
+  supabase: SupabaseClient,
+  hostId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const reserved = await reserveCreatorOutbound(supabase, hostId);
+  if (!reserved.ok) return { ok: false, error: reserved.error };
   const auth = await twilioAuth();
   const waFromRaw = (Deno.env.get('TWILIO_WHATSAPP_NUMBER') || Deno.env.get('TWILIO_WHATSAPP_FROM') || '').trim();
-  if (!auth || !waFromRaw) return { ok: false, error: 'WhatsApp not configured' };
+  if (!auth || !waFromRaw) {
+    await releaseCreatorOutbound(supabase, hostId);
+    return { ok: false, error: 'WhatsApp not configured' };
+  }
   const waFrom = waFromRaw.startsWith('whatsapp:') ? waFromRaw : `whatsapp:${waFromRaw}`;
   const waTo = to.startsWith('whatsapp:') ? to : `whatsapp:${to}`;
   try {
@@ -133,9 +158,13 @@ async function sendTwilioWhatsapp(to: string, body: string): Promise<{ ok: boole
         body: new URLSearchParams({ From: waFrom, To: waTo, Body: body }),
       },
     );
-    if (!res.ok) return { ok: false, error: await res.text() };
+    if (!res.ok) {
+      await releaseCreatorOutbound(supabase, hostId);
+      return { ok: false, error: await res.text() };
+    }
     return { ok: true };
   } catch (e) {
+    await releaseCreatorOutbound(supabase, hostId);
     return { ok: false, error: String(e) };
   }
 }
@@ -278,7 +307,7 @@ Deno.serve(async (req: Request) => {
           } else if (await smsIsOptedOut(supabase, hostPhone)) {
             err = 'recipient opted out (STOP)';
           } else {
-            const r = await sendTwilioSms(hostPhone, body);
+            const r = await sendTwilioSms(hostPhone, body, supabase, host.id as string);
             ok = r.ok;
             err = r.error;
           }
@@ -288,7 +317,7 @@ Deno.serve(async (req: Request) => {
           } else if (await smsIsOptedOut(supabase, hostWhatsapp)) {
             err = 'recipient opted out (STOP)';
           } else {
-            const r = await sendTwilioWhatsapp(hostWhatsapp, body);
+            const r = await sendTwilioWhatsapp(hostWhatsapp, body, supabase, host.id as string);
             ok = r.ok;
             err = r.error;
           }

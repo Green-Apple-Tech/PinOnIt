@@ -145,7 +145,7 @@ Deno.serve(async (req: Request) => {
         code: 'no_sms_consent',
       }, 403);
     }
-    const sms = await sendTwilioSmsGuarded(admin, booking.guest_phone, body);
+    const sms = await sendTwilioSmsGuarded(admin, booking.guest_phone, body, { hostId });
     if (!sms.ok) {
       if (sms.skipped === 'opted_out') {
         return json({ ok: false, error: 'Recipient opted out of SMS (STOP).', code: 'opted_out' }, 403);

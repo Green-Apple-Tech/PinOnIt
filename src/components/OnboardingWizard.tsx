@@ -857,6 +857,9 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep, openCa
         await supabase.from('profiles').update({ onboarding_step: resumeStep }).eq('id', user.id);
       }
 
+      const creatorTouch = (await import('../lib/creatorAttribution')).readCreatorTouch();
+      if (creatorTouch) await supabase.rpc('claim_creator_attribution', { p_code: creatorTouch.code });
+
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout`,
         {
@@ -867,6 +870,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep, openCa
             app_url: window.location.origin,
             trial_period_days: trialDays,
             wizard_step: resumeStep,
+            creator_code: creatorTouch?.code,
           }),
         }
       );

@@ -137,10 +137,16 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
         return;
       }
       if (user) void recordPlatformTermsAcceptance(user.id);
+      const { readCreatorTouch } = await import('../lib/creatorAttribution');
       const body: Record<string, unknown> = {
         price_id: PRICE_ID,
         app_url: window.location.origin,
       };
+      const creatorTouch = readCreatorTouch();
+      if (creatorTouch) {
+        body.creator_code = creatorTouch.code;
+        await supabase.rpc('claim_creator_attribution', { p_code: creatorTouch.code });
+      }
       if (trialDays) body.trial_period_days = trialDays;
 
       const res = await fetch(

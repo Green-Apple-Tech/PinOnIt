@@ -38,6 +38,17 @@ Deno.serve(async (req: Request) => {
     }
 
     const { referral_code } = await req.json();
+
+    const { data: creatorAttribution, error: creatorLookupError } = await supabase
+      .from('creator_attributions')
+      .select('id')
+      .eq('referred_user_id', user.id)
+      .maybeSingle();
+    if (!creatorLookupError && creatorAttribution) {
+      return new Response(JSON.stringify({ ok: true, skipped: 'creator_attribution' }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     if (!referral_code) {
       return new Response(JSON.stringify({ error: 'Missing referral_code' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },

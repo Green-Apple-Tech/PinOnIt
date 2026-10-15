@@ -102,6 +102,12 @@ export function AuthForm() {
               body: JSON.stringify({ referral_code: refCode }),
             }).catch(() => {/* non-critical */});
           }
+        } else {
+          const { readCreatorTouch } = await import('../lib/creatorAttribution');
+          const creator = readCreatorTouch();
+          if (creator) {
+            void supabase.rpc('claim_creator_attribution', { p_code: creator.code });
+          }
         }
         navigate(postLoginDestination(redirectTo, false));
       }

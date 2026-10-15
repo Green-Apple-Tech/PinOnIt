@@ -212,7 +212,7 @@ Deno.serve(async (req: Request) => {
       } else {
         const payBit = quote.pay_elsewhere_url ? ` Pay: ${quote.pay_elsewhere_url}` : '';
         const msg = `${hostName} sent you a ${kind} for ${money}.${payBit} View: ${viewUrl}`;
-        const result = await sendTwilioSmsGuarded(supabase, to, msg);
+        const result = await sendTwilioSmsGuarded(supabase, to, msg, { hostId });
         if (!result.ok) {
           errors.push(
             result.skipped === 'opted_out'

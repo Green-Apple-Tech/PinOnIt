@@ -72,7 +72,7 @@ async function notifyHostQuoteChannels(
   if (!profile?.sms_opt_in || !profile.phone) return;
   await expireStaleTrials(admin);
   if (!(await hostPlanIsActive(admin, hostId))) return;
-  await sendTwilioSmsGuarded(admin, profile.phone as string, text);
+  await sendTwilioSmsGuarded(admin, profile.phone as string, text, { hostId });
 }
 
 Deno.serve(async (req: Request) => {

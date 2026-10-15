@@ -102,6 +102,7 @@ async function checkService(svc: typeof SERVICES[0]): Promise<{ status: "ok" | "
   }
 }
 
+/** PinOnIt ops alert. Not a host outbound, so it does not use the creator message allowance. */
 async function sendSms(body: string): Promise<void> {
   if (!ALERT_PHONE || !TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_PHONE_NUMBER) return;
   const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;

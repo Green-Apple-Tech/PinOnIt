@@ -10,6 +10,10 @@
   to = "/index.html"
   status = 200
 [[redirects]]
+  from = "/creators"
+  to = "/index.html"
+  status = 200
+[[redirects]]
   from = "/signup"
   to = "/index.html"
   status = 200
@@ -275,6 +279,11 @@
 
 # Never cache the HTML shell. Do not put a year-long cache on /assets/* —
 # a Publish race 404 would be stored as immutable and the page stays blank.
+[[headers]]
+  for = "/creators"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
 [[headers]]
   for = "/"
   [headers.values]

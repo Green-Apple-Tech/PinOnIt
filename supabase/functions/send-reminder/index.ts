@@ -1,6 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { appendSmsOptOut, appendSmsGuestFooters } from '../_shared/sms-opt-out.ts';
-import { smsIsOptedOut } from '../_shared/sms-send-gate.ts';
+import { releaseCreatorOutbound, reserveCreatorOutbound, smsIsOptedOut } from '../_shared/sms-send-gate.ts';
 import { NOREPLY_FROM, SUPPORT_EMAIL } from '../_shared/contact-email.ts';
 import { bookingAllowsGuestSms, bookingAllowsGuestWhatsapp, hostAllowsSms, hostAllowsWhatsapp } from '../_shared/sms-compliance.ts';
 import { isServiceRoleRequest, jsonAuthError, hostIdFromJwt } from '../_shared/callerAuth.ts';
@@ -225,10 +225,14 @@ async function sendTwilioSms(
   to: string,
   body: string,
   kind: 'guest' | 'other' = 'other',
+  hostId?: string | null,
 ): Promise<{ ok: boolean; error?: string }> {
   if (await smsIsOptedOut(supabase, to)) {
     return { ok: false, error: 'recipient opted out (STOP)' };
   }
+
+  const reserved = await reserveCreatorOutbound(supabase, hostId);
+  if (!reserved.ok) return { ok: false, error: reserved.error };
 
   const twilioSid = Deno.env.get('TWILIO_ACCOUNT_SID');
   const twilioToken = Deno.env.get('TWILIO_AUTH_TOKEN');
@@ -236,6 +240,7 @@ async function sendTwilioSms(
 
   if (!twilioSid || !twilioToken || !messagingServiceSid) {
     console.warn('Twilio credentials not configured — skipping SMS send');
+    await releaseCreatorOutbound(supabase, hostId);
     return { ok: false, error: 'Twilio credentials not configured' };
   }
 
@@ -258,11 +263,13 @@ async function sendTwilioSms(
     if (!res.ok) {
       const err = await res.text();
       console.error('Twilio error:', err);
+      await releaseCreatorOutbound(supabase, hostId);
       return { ok: false, error: err };
     }
     return { ok: true };
   } catch (e) {
     console.error('Twilio send error:', e);
+    await releaseCreatorOutbound(supabase, hostId);
     return { ok: false, error: String(e) };
   }
 }
@@ -381,11 +388,14 @@ async function sendTwilioWhatsapp(
   supabase: ReturnType<typeof createClient>,
   to: string,
   vars: WhatsAppVars,
-  options?: { waitForStatus?: boolean },
+  options?: { waitForStatus?: boolean; hostId?: string | null },
 ): Promise<{ ok: boolean; error?: string; sid?: string }> {
   if (await smsIsOptedOut(supabase, to)) {
     return { ok: false, error: 'recipient opted out (STOP)' };
   }
+
+  const reserved = await reserveCreatorOutbound(supabase, options?.hostId);
+  if (!reserved.ok) return { ok: false, error: reserved.error };
 
   const twilioSid = Deno.env.get('TWILIO_ACCOUNT_SID');
   const twilioToken = Deno.env.get('TWILIO_AUTH_TOKEN');
@@ -394,6 +404,7 @@ async function sendTwilioWhatsapp(
 
   if (!twilioSid || !twilioToken || !waFrom) {
     console.warn('Twilio WhatsApp sender not configured — skipping WhatsApp send');
+    await releaseCreatorOutbound(supabase, options?.hostId);
     return {
       ok: false,
       error: 'Twilio WhatsApp sender is not configured. Set TWILIO_WHATSAPP_NUMBER to your WhatsApp-enabled Twilio number.',
@@ -401,6 +412,7 @@ async function sendTwilioWhatsapp(
   }
   if (!contentSid) {
     console.warn('TWILIO_WHATSAPP_CONTENT_SID missing — refusing freeform WhatsApp send');
+    await releaseCreatorOutbound(supabase, options?.hostId);
     return { ok: false, error: WHATSAPP_TEMPLATE_MISSING };
   }
 
@@ -441,6 +453,7 @@ async function sendTwilioWhatsapp(
     if (!res.ok) {
       const err = humanizeTwilioWhatsappError(raw, parsed.code ?? parsed.error_code);
       console.error('Twilio WhatsApp error:', err);
+      await releaseCreatorOutbound(supabase, options?.hostId);
       return { ok: false, error: err, sid: parsed.sid };
     }
 
@@ -448,6 +461,7 @@ async function sendTwilioWhatsapp(
     if (options?.waitForStatus && sid) {
       const outcome = await waitForTwilioMessageOutcome(twilioSid, twilioToken, sid);
       if (outcome.status === 'failed' || outcome.status === 'undelivered') {
+        await releaseCreatorOutbound(supabase, options?.hostId);
         return {
           ok: false,
           error: humanizeTwilioWhatsappError(outcome.error_message || raw, outcome.error_code),
@@ -459,6 +473,7 @@ async function sendTwilioWhatsapp(
     return { ok: true, sid };
   } catch (e) {
     console.error('Twilio WhatsApp send error:', e);
+    await releaseCreatorOutbound(supabase, options?.hostId);
     return { ok: false, error: String(e) };
   }
 }
@@ -737,7 +752,7 @@ async function dispatchPersonalReminders(supabase: SupabaseClient): Promise<numb
       recipient = to || '(none)';
       if (!to) err = 'no phone';
       else {
-        const result = await sendTwilioSms(supabase, to, msg);
+        const result = await sendTwilioSms(supabase, to, msg, 'other', job.host_id as string);
         ok = result.ok;
         err = result.error;
       }
@@ -756,7 +771,7 @@ async function dispatchPersonalReminders(supabase: SupabaseClient): Promise<numb
             : (details || when || title)
           ).slice(0, 240),
           duration: '',
-        });
+        }, { hostId: job.host_id as string });
         ok = result.ok;
         err = result.error;
       }
@@ -915,7 +930,7 @@ async function sendAlsoCopies(opts: {
       recipient = person.phone || '(none)';
       if (!person.phone) err = 'no phone';
       else {
-        const result = await sendTwilioSms(opts.supabase, person.phone, body);
+        const result = await sendTwilioSms(opts.supabase, person.phone, body, 'other', opts.hostId);
         ok = result.ok;
         err = result.error;
       }
@@ -930,7 +945,7 @@ async function sendAlsoCopies(opts: {
           date: opts.date,
           time: opts.time,
           duration: '',
-        });
+        }, { hostId: opts.hostId });
         ok = result.ok;
         err = result.error;
       }
@@ -1288,7 +1303,7 @@ async function deliverChannel(opts: {
       ? (booking.guest_phone as string)
       : null;
     if (!to) return { ok: false, to: null, error: 'no SMS recipient' };
-    const result = await sendTwilioSms(supabase, to, msgBody, 'guest');
+    const result = await sendTwilioSms(supabase, to, msgBody, 'guest', booking.host_id as string);
     return { ok: result.ok, to, error: result.error };
   }
   if (channel === 'whatsapp') {
@@ -1299,7 +1314,7 @@ async function deliverChannel(opts: {
       ? (booking.guest_phone as string)
       : null;
     if (!to) return { ok: false, to: null, error: 'no WhatsApp recipient' };
-    const result = await sendTwilioWhatsapp(supabase, to, whatsappVarsFromBooking(booking, hostProfile));
+    const result = await sendTwilioWhatsapp(supabase, to, whatsappVarsFromBooking(booking, hostProfile), { hostId: booking.host_id as string });
     return { ok: result.ok, to, error: result.error };
   }
   if (channel === 'voice') {
@@ -1395,7 +1410,7 @@ Deno.serve(async (req: Request) => {
         if (!bookingAllowsGuestSms(booking) && !booking.created_by_host) {
           errors.push('Guest did not opt in to SMS');
         } else {
-          const result = await sendTwilioSms(supabase, phone, guestMsg, 'guest');
+          const result = await sendTwilioSms(supabase, phone, guestMsg, 'guest', booking.host_id as string);
           if (result.ok) smsOk = true;
           else errors.push(result.error || 'SMS failed');
         }
@@ -1497,7 +1512,7 @@ Deno.serve(async (req: Request) => {
         });
       }
       if (booking.guest_phone) {
-        await sendTwilioSms(supabase, booking.guest_phone, body.message as string, 'guest');
+        await sendTwilioSms(supabase, booking.guest_phone, body.message as string, 'guest', booking.host_id as string);
       }
       return jsonResponse({ success: true });
     }
@@ -1616,10 +1631,10 @@ Deno.serve(async (req: Request) => {
             date: date ?? 'your scheduled date',
             time: time ?? 'your scheduled time',
             duration: duration ? `${duration} min` : '30 min',
-          }, { waitForStatus: true })
+          }, { waitForStatus: true, hostId })
         : channel === 'voice'
           ? await sendTwilioVoice(to, buildCustomVoiceTwiml(voiceLine))
-          : await sendTwilioSms(supabase, to, msg);
+          : await sendTwilioSms(supabase, to, msg, 'other', hostId);
 
       if (hostId) {
         await insertMessageLog(supabase, {
@@ -1764,7 +1779,7 @@ Deno.serve(async (req: Request) => {
             ? guestPhone
             : null;
           if (recipient) {
-            const result = await sendTwilioSms(supabase, recipient, withLink, 'guest');
+            const result = await sendTwilioSms(supabase, recipient, withLink, 'guest', ov.host_id as string);
             status = result.ok ? 'sent' : 'failed';
             errorText = result.error ?? '';
             if (result.ok) sent++;
@@ -1788,7 +1803,7 @@ Deno.serve(async (req: Request) => {
               time: startOk
                 ? start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
                 : 'your scheduled time',
-            });
+            }, { hostId: ov.host_id as string });
             status = result.ok ? 'sent' : 'failed';
             errorText = result.error ?? '';
             if (result.ok) sent++;
@@ -2073,7 +2088,7 @@ Deno.serve(async (req: Request) => {
         meetLink: booking.meet_link as string | null,
         rescheduleLink,
       });
-      const result = await sendTwilioSms(supabase, booking.guest_phone as string, smsBody, 'guest');
+      const result = await sendTwilioSms(supabase, booking.guest_phone as string, smsBody, 'guest', booking.host_id as string);
       if (result.ok) deliveryStatus = 'sent';
       else console.warn('Host-proxy confirmation SMS failed:', result.error);
     }
@@ -2093,7 +2108,7 @@ Deno.serve(async (req: Request) => {
           '— PinOnIt',
         ].filter(Boolean).join(' ');
 
-        const result = await sendTwilioSms(supabase, smsTo, smsBody, 'guest');
+        const result = await sendTwilioSms(supabase, smsTo, smsBody, 'guest', booking.host_id as string);
         if (!result.ok) {
           console.warn('SMS delivery failed:', result.error);
           deliveryStatus = 'failed';
@@ -2121,7 +2136,7 @@ Deno.serve(async (req: Request) => {
           date: templateData.date,
           time: templateData.time,
           duration: templateData.duration,
-        });
+        }, { hostId: booking.host_id as string });
         if (!result.ok) {
           console.warn('WhatsApp delivery failed:', result.error);
           deliveryStatus = 'failed';
