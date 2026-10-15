@@ -18,6 +18,7 @@ import {
   matureCreatorEntries,
   nextCreatorTouch,
   recordManualPayout,
+  reserveCreatorGrantSlots,
 } from './creatorProgram';
 import { STRIPE_PRO_PRICE_ID, PRO_PRICE_CENTS } from './pricing';
 
@@ -204,6 +205,14 @@ describe('creator attribution and grants', () => {
       customerReferralCode: 'friend',
       applicantEmail: 'guest@example.com',
       creatorEmail: 'ada@example.com',
+      now: new Date('2026-10-14T12:00:00.000Z'),
+    }).reason).toBe('customer_referral_present');
+    expect(creatorClaimDecision({
+      creatorCode: 'ada12',
+      customerReferralCode: 'friend',
+      applicantEmail: 'guest@example.com',
+      creatorEmail: 'ada@example.com',
+      now: new Date('2026-11-15T05:00:00.000Z'),
     }).reason).toBe('claimed');
     expect(creatorClaimDecision({
       creatorCode: 'ada12',
@@ -234,9 +243,10 @@ describe('creator attribution and grants', () => {
     expect(creatorPayoutCsv([{ code: 'ada12', email: 'ada@example.com', payableCents: 400 }])).toContain('ada12,ada@example.com,400');
     const webhook = readFileSync(new URL('../../supabase/functions/stripe-webhook/index.ts', import.meta.url), 'utf8');
     const referral = readFileSync(new URL('../../supabase/functions/referral-signup/index.ts', import.meta.url), 'utf8');
-    expect(webhook).not.toContain('amount_cents: 100');
-    expect(webhook).not.toContain('createBalanceTransaction');
+    expect(webhook).toContain('if (!referralRewardsOpen()) return;');
+    expect(webhook).toContain('amount_cents: 100');
     expect(referral).toContain('program_retired');
+    expect(referral).toContain('referralRewardsOpen()');
     expect(referral).not.toContain('commissionBps');
   });
 
@@ -287,6 +297,183 @@ describe('creator attribution and grants', () => {
     const webhook = read('functions/stripe-webhook/index.ts');
     expect(webhook).toContain('charge.refunded');
     expect(webhook).toContain('charge.dispute.created');
-    expect(webhook).not.toContain('amount_cents: 100');
+    expect(webhook).toContain('referralRewardsOpen()');
+  });
+});
+
+function functionBody(source: string, name: string): string {
+  const start = source.search(new RegExp(`(?:async\\s+)?function\\s+${name}\\s*\\(`));
+  if (start < 0) throw new Error(`missing function ${name}`);
+  const next = source.slice(start + name.length).search(/\n(?:async\s+)?function\s+/);
+  return next < 0 ? source.slice(start) : source.slice(start, start + name.length + next);
+}
+
+describe('creator grant allowance, payouts, and terms', () => {
+  it('counts appointment reminders and every other outbound SMS toward the 200 total', () => {
+    expect(PROPOSED_CREATOR_SETTINGS.proposedOutboundMessageLimit).toBe(200);
+    const root = new URL('../../supabase/', import.meta.url);
+    const read = (path: string) => readFileSync(new URL(path, root), 'utf8');
+    const reminder = read('functions/send-reminder/index.ts');
+    const sms = functionBody(reminder, 'sendTwilioSms');
+    const whatsapp = functionBody(reminder, 'sendTwilioWhatsapp');
+    const voice = functionBody(reminder, 'sendTwilioVoice');
+    const appointment = functionBody(reminder, 'deliverChannel');
+    expect(sms.indexOf('reserveCreatorOutbound')).toBeGreaterThan(-1);
+    expect(sms.indexOf('reserveCreatorOutbound')).toBeLessThan(sms.indexOf('Messages.json'));
+    expect(whatsapp.indexOf('reserveCreatorOutbound')).toBeLessThan(whatsapp.indexOf('Messages.json'));
+    expect(voice).not.toContain('reserveCreatorOutbound');
+    expect(appointment).toContain("sendTwilioSms(supabase, to, msgBody, 'guest', booking.host_id as string)");
+    expect(appointment).toContain('hostId: booking.host_id as string');
+    expect(appointment).toContain('sendTwilioVoice');
+
+    const counted: { file: string; fn: string }[] = [
+      { file: 'functions/send-quote/index.ts', fn: 'sendTwilioSmsGuarded' },
+      { file: 'functions/send-on-my-way/index.ts', fn: 'sendTwilioSmsGuarded' },
+      { file: 'functions/send-document-sms/index.ts', fn: 'sendTwilioSmsGuarded' },
+      { file: 'functions/send-document-otp/index.ts', fn: 'sendTwilioSmsGuarded' },
+      { file: 'functions/dispatch-quote-reminders/index.ts', fn: 'sendTwilioSmsGuarded' },
+      { file: 'functions/generate-document-certificate/index.ts', fn: 'sendTwilioSmsGuarded' },
+      { file: 'functions/complete-reschedule/index.ts', fn: 'sendTwilioSmsGuarded' },
+      { file: 'functions/sms-inbound/index.ts', fn: 'sendTwilioSmsGuarded' },
+    ];
+    for (const path of counted) {
+      const source = read(path.file);
+      expect(source, path.file).toContain(`${path.fn}(`);
+      expect(source, path.file).toMatch(/hostId/);
+    }
+    const gate = read('functions/_shared/sms-send-gate.ts');
+    const guarded = functionBody(gate, 'sendTwilioSmsGuarded');
+    expect(guarded.indexOf('reserveCreatorOutbound')).toBeLessThan(guarded.indexOf('Messages.json'));
+    const coordinate = functionBody(read('functions/coordinate-sms/index.ts'), 'sendMessage');
+    expect(coordinate.indexOf('reserveCreatorOutbound')).toBeLessThan(coordinate.indexOf('sendTwilioMessage'));
+    const alertSms = functionBody(read('functions/critical-alert/index.ts'), 'sendTwilioSms');
+    expect(alertSms.indexOf('reserveCreatorOutbound')).toBeLessThan(alertSms.indexOf('Messages.json'));
+    expect(read('functions/health-monitor/index.ts')).not.toContain('reserveCreatorOutbound');
+
+    const channels = [
+      'appointment_reminder_sms',
+      'appointment_reminder_whatsapp',
+      'quote_sms',
+      'on_my_way_sms',
+      'document_sms',
+      'document_otp_sms',
+      'quote_reminder_sms',
+      'certificate_sms',
+      'reschedule_sms',
+      'inbound_host_sms',
+      'coordinate_sms',
+      'critical_alert_sms',
+      'critical_alert_whatsapp',
+    ];
+    const filling = Array.from({ length: 200 }, (_, i) => channels[i % channels.length]);
+    const full = reserveCreatorGrantSlots(0, 200, filling);
+    expect(full.accepted).toHaveLength(200);
+    expect(full.rejected).toHaveLength(0);
+    expect(full.used).toBe(200);
+    expect(full.accepted.filter((channel) => channel.startsWith('appointment_reminder_')).length).toBeGreaterThan(0);
+  });
+
+  it('lets only one send through when concurrent attempts hit the 200 boundary', () => {
+    const raced = reserveCreatorGrantSlots(199, 200, [
+      'appointment_reminder_sms',
+      'quote_sms',
+      'on_my_way_sms',
+      'document_sms',
+      'coordinate_sms',
+    ]);
+    expect(raced.accepted).toEqual(['appointment_reminder_sms']);
+    expect(raced.rejected).toEqual(['quote_sms', 'on_my_way_sms', 'document_sms', 'coordinate_sms']);
+    expect(raced.used).toBe(200);
+
+    const atCap = reserveCreatorGrantSlots(200, 200, ['appointment_reminder_whatsapp', 'critical_alert_sms']);
+    expect(atCap.accepted).toEqual([]);
+    expect(atCap.rejected).toHaveLength(2);
+    expect(atCap.used).toBe(200);
+
+    const overflow = reserveCreatorGrantSlots(0, 200, Array.from({ length: 201 }, () => 'appointment_reminder_sms'));
+    expect(overflow.accepted).toHaveLength(200);
+    expect(overflow.rejected).toEqual(['appointment_reminder_sms']);
+    const migration = readFileSync(new URL('../../supabase/migrations/20261014190000_creator_program_draft.sql', import.meta.url), 'utf8');
+    expect(migration).toContain('FOR UPDATE');
+    expect(migration).toContain('outbound_messages_used < outbound_message_limit');
+  });
+
+  it('records a partial refund and a later dispute after payout without rewriting the payout', () => {
+    const earned = applyCreatorLedger([], {
+      type: 'invoice_paid', eventId: 'evt_1', invoiceId: 'in_1', amountPaidCents: 999, taxCents: 0, at,
+    }, active);
+    const payable = matureCreatorEntries(earned.entries, '2026-11-13T12:00:00.000Z');
+    const paid = recordManualPayout(payable, [], {
+      paidOn: '2026-11-14', amountCents: 400, reference: 'ach-200', entryIds: ['evt_1'],
+    });
+    const refund = applyCreatorLedger(paid.entries, {
+      type: 'refund', eventId: 'evt_r', invoiceId: 'in_1', refundId: 're_partial', refundCents: 200, chargeCents: 999, at: '2026-11-20T12:00:00.000Z',
+    }, active);
+    const dispute = applyCreatorLedger(refund.entries, {
+      type: 'dispute', eventId: 'evt_d', invoiceId: 'in_1', at: '2026-11-21T12:00:00.000Z',
+    }, active);
+    expect(dispute.entries[0]).toMatchObject({ kind: 'earn', status: 'paid', amountCents: 400 });
+    expect(dispute.entries[1]).toMatchObject({ kind: 'refund', amountCents: -80, status: 'payable', reason: 'recoverable_after_payout' });
+    expect(dispute.entries[2]).toMatchObject({ kind: 'dispute', amountCents: -320, status: 'payable', reason: 'recoverable_after_payout' });
+    expect(paid.payouts).toEqual([{
+      id: 'po_1', paidOn: '2026-11-14', amountCents: 400, reference: 'ach-200', entryIds: ['evt_1'],
+    }]);
+    expect(creatorBalances(dispute.entries).payableCents).toBe(-400);
+    expect(creatorBalances(dispute.entries).recoverableCents).toBe(400);
+    const migration = readFileSync(new URL('../../supabase/migrations/20261014190000_creator_program_draft.sql', import.meta.url), 'utf8');
+    expect(migration).toContain("v_reason := 'recoverable_after_payout'");
+    expect(migration).not.toMatch(/UPDATE public\.creator_payouts/);
+  });
+
+  it('pays one earning once and rejects a second payout that includes it', () => {
+    const first = applyCreatorLedger([], {
+      type: 'invoice_paid', eventId: 'evt_1', invoiceId: 'in_1', amountPaidCents: 999, taxCents: 0, at,
+    }, active);
+    const second = applyCreatorLedger(first.entries, {
+      type: 'renewal', eventId: 'evt_2', invoiceId: 'in_2', amountPaidCents: 999, taxCents: 0, at,
+    }, active);
+    const payable = matureCreatorEntries(second.entries, '2026-11-13T12:00:00.000Z');
+    const before = JSON.stringify(payable);
+    expect(creatorPayoutCsv([{ code: 'ada12', email: 'ada@example.com', payableCents: 800 }])).toContain('800');
+    expect(JSON.stringify(payable)).toBe(before);
+    expect(payable.every((entry) => entry.status === 'payable')).toBe(true);
+
+    const paid = recordManualPayout(payable, [], {
+      paidOn: '2026-11-14', amountCents: 400, reference: 'check-1', entryIds: ['evt_1'],
+    });
+    const overlap = recordManualPayout(paid.entries, paid.payouts, {
+      paidOn: '2026-11-15', amountCents: 800, reference: 'check-2', entryIds: ['evt_1', 'evt_2'],
+    });
+    expect(overlap.outcome).toBe('rejected');
+    expect(overlap.reason).toBe('already_paid');
+    expect(overlap.payouts).toHaveLength(1);
+    expect(overlap.entries.find((entry) => entry.eventId === 'evt_2')?.status).toBe('payable');
+    const other = recordManualPayout(paid.entries, paid.payouts, {
+      paidOn: '2026-11-15', amountCents: 400, reference: 'check-2', entryIds: ['evt_2'],
+    });
+    expect(other.outcome).toBe('recorded');
+    expect(other.payouts.map((payout) => payout.entryIds)).toEqual([['evt_1'], ['evt_2']]);
+    const migration = readFileSync(new URL('../../supabase/migrations/20261014190000_creator_program_draft.sql', import.meta.url), 'utf8');
+    expect(migration).toContain('entry_id uuid NOT NULL UNIQUE');
+    expect(migration).toContain("'already_paid'");
+  });
+
+  it('requires the latest published terms version before a commission is recorded', () => {
+    expect(creatorCommissionGate({ programStatus: 'active', publishedVersion: 2, acceptedVersion: 1 }).reason).toBe('terms_not_accepted');
+    expect(creatorCommissionGate({ programStatus: 'active', publishedVersion: 2, acceptedVersion: 2 }).reason).toBe('terms_accepted');
+    const stale = applyCreatorLedger([], {
+      type: 'invoice_paid', eventId: 'evt_1', invoiceId: 'in_1', amountPaidCents: 999, taxCents: 0, at,
+    }, { ...active, publishedVersion: 2, acceptedVersion: 1 });
+    expect(stale.outcome).toBe('skipped');
+    expect(stale.reason).toBe('terms_not_accepted');
+    expect(stale.entries).toHaveLength(0);
+    const current = applyCreatorLedger([], {
+      type: 'invoice_paid', eventId: 'evt_1', invoiceId: 'in_1', amountPaidCents: 999, taxCents: 0, at,
+    }, { ...active, publishedVersion: 2, acceptedVersion: 2 });
+    expect(current.outcome).toBe('recorded');
+    const migration = readFileSync(new URL('../../supabase/migrations/20261014190000_creator_program_draft.sql', import.meta.url), 'utf8');
+    expect(migration).toContain("'stale_terms'");
+    expect(migration).toContain('terms_not_published');
+    expect(migration).toContain('t.version = (');
   });
 });

@@ -15,6 +15,7 @@ export {
   nextCreatorTouch,
   normalizeCreatorCode,
   recordManualPayout,
+  reserveCreatorGrantSlots,
 } from '../../supabase/functions/_shared/creatorProgram.ts';
 
 export type {

@@ -1,12 +1,14 @@
 /**
  * Creator partner rules. The commercial settings below are approved, but the
  * program stays draft until creator_program_settings.status is set to active.
- * The retired $1 customer referral program is not part of this ledger.
+ * Customer referral credits are a separate ledger and stay open through the published end date.
  *
  * Rounding: half-up to the nearest cent.
  * commission = floor((basisCents * bps + 5000) / 10000)
  * Example: 40% of 999 cents = 400 cents ($4.00).
  */
+
+import { referralRewardsOpen } from './referralRetirement.ts';
 
 export const PROPOSED_CREATOR_SETTINGS = {
   status: 'draft' as const,
@@ -71,8 +73,12 @@ export function creatorClaimDecision(input: {
   creatorEmail: string;
   creatorUserId?: string | null;
   applicantUserId?: string | null;
+  now?: Date;
 }): { ok: boolean; reason: string } {
   if (!normalizeCreatorCode(input.creatorCode)) return { ok: false, reason: 'invalid_code' };
+  if (input.customerReferralCode?.trim() && referralRewardsOpen(input.now)) {
+    return { ok: false, reason: 'customer_referral_present' };
+  }
   const applicant = input.applicantEmail.trim().toLowerCase();
   const creator = input.creatorEmail.trim().toLowerCase();
   if (applicant && creator && applicant === creator) return { ok: false, reason: 'self_referral' };
@@ -299,6 +305,30 @@ export function creatorBalances(entries: LedgerEntry[]): {
   };
 }
 
+/**
+ * Models reserve_creator_outbound_message under its row lock.
+ * Attempts run one at a time against one total. A slot is taken only while used < limit.
+ */
+export function reserveCreatorGrantSlots(
+  used: number,
+  limit: number,
+  attempts: string[],
+): { used: number; accepted: string[]; rejected: string[] } {
+  let current = Math.max(0, used);
+  const cap = Math.max(0, limit);
+  const accepted: string[] = [];
+  const rejected: string[] = [];
+  for (const channel of attempts) {
+    if (current < cap) {
+      current += 1;
+      accepted.push(channel);
+    } else {
+      rejected.push(channel);
+    }
+  }
+  return { used: current, accepted, rejected };
+}
+
 /** One slot at a time. A creator grant cannot go past its total, even if several sends race. */
 export function applyConcurrentReserves(used: number, limit: number, attempts: number): number {
   let current = Math.max(0, used);
@@ -363,7 +393,7 @@ export const CREATOR_TERMS_DRAFT = {
     'No commission is owed on free trials, complimentary accounts, unpaid invoices, or revenue that is later refunded or charged back.',
     'Commission is calculated in whole cents, half-up. Each earning stays pending for 30 days before it can be paid.',
     'The first eligible creator link within 30 days is the one that counts. A later link does not replace it. This browser storage does not follow a person to another device.',
-    'A customer referral code on an old signup link does not create a creator commission. Creator attribution uses ?creator= and stays first-touch for 30 days.',
+    'A customer referral recorded while that program is still open does not also earn a creator commission. After that program ends, a ?ref= code does not block creator attribution. Creator attribution uses ?creator= and stays first-touch for 30 days.',
     'Payouts are manual only. A spreadsheet export does not mark earnings paid. These draft terms do not authorize a transfer, and no commission starts until the creator accepts the published version of these terms.',
     'Creators must disclose their partnership when the program is published. A lawyer should review this draft before it is shown as the live agreement.',
   ],

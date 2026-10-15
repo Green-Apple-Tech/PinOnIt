@@ -43,6 +43,7 @@ const COMP_ROWS: CompRow[] = [
   { section: 'Pricing' },
   { feature: 'Starting price',    pinonit: 'Free',        calendly: 'Free',         acuity: '$16/mo' },
   { feature: 'Pro / Paid plan',   pinonit: '$9.99/mo',       calendly: '$16/mo',       acuity: '$20/mo' },
+  { feature: 'Referral credit',   pinonit: '$1/mo through November 14, 2026', calendly: false, acuity: false },
   { section: 'Calendly does not do this' },
   { feature: 'WhatsApp reminders', pinonit: true, calendly: false, acuity: false },
   { feature: 'Voice reminders & critical alerts', pinonit: true, calendly: false, acuity: false },
@@ -763,6 +764,9 @@ export function CalendlyAlternative() {
             <p className="text-slate-500 dark:text-slate-400 text-lg">
               Every account starts with 14 days of Pro — no card required. Calendly switchers get 60 days with a card on file ($0 today).
             </p>
+            <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+              The $1 referral credit continues through November 14, 2026. After that date, no new credits are issued.
+            </p>
           </div>
 
           <div className="relative rounded-2xl border-2 border-brand-500 bg-brand-500 shadow-xl shadow-brand-200/50 dark:shadow-none p-8 flex flex-col">
@@ -784,6 +788,7 @@ export function CalendlyAlternative() {
                 'Doc Center: NDAs, waivers, invoices, quotes',
                 'Paid Booking storefront',
                 'Calendly import',
+                'Referral credits: $1/month through November 14, 2026',
               ].map((f) => (
                 <li key={f} className="flex items-start gap-2.5">
                   <div className="h-4 w-4 rounded-full bg-white/25 flex items-center justify-center shrink-0 mt-0.5">

@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import { Loader2, Mail, Lock, User, ArrowLeft, Sun, Moon, Eye, EyeOff } from 'lucide-react';
 import { IOS_OAUTH_SAFARI_MESSAGE, clearOauthStart, isIosIsolatedWebView, readIosStandalone } from '../lib/oauthLogin';
 import { postLoginDestination, signNowNextParam } from '../lib/signNow';
+import { REFERRAL_PROGRAM_ENDS_ON_LABEL, referralRewardsOpen } from '../lib/referralRetirement';
 
 type View = 'login' | 'signup' | 'forgot';
 
@@ -88,12 +89,19 @@ export function AuthForm() {
         if (session?.user?.id) {
           const { persistSignupAttribution } = await import('../lib/campaignAttribution');
           const { recordPlatformTermsAcceptance } = await import('../lib/platformLegal');
+          const { referralRewardsOpen, recordCustomerReferral } = await import('../lib/referralRetirement');
           await persistSignupAttribution(session.user.id);
           void recordPlatformTermsAcceptance(session.user.id);
-          const { readCreatorTouch } = await import('../lib/creatorAttribution');
-          const creator = readCreatorTouch();
-          if (creator) {
-            void supabase.rpc('claim_creator_attribution', { p_code: creator.code });
+          const rewardsOpen = referralRewardsOpen();
+          if (refCode && session.access_token && rewardsOpen) {
+            void recordCustomerReferral(session.access_token, refCode);
+          }
+          if (!refCode || !rewardsOpen) {
+            const { readCreatorTouch } = await import('../lib/creatorAttribution');
+            const creator = readCreatorTouch();
+            if (creator) {
+              void supabase.rpc('claim_creator_attribution', { p_code: creator.code });
+            }
           }
         }
         navigate(postLoginDestination(redirectTo, false));
@@ -190,6 +198,13 @@ export function AuthForm() {
               : "Enter your email and we'll send you a reset link"}
           </p>
         </div>
+
+        {refCode && view === 'signup' && referralRewardsOpen() && (
+          <div className="mb-6 flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/40 rounded-xl text-sm text-indigo-700 dark:text-indigo-500">
+            <span className="text-lg">🎁</span>
+            <span>You were referred. Sign up and your friend earns a $1/month credit through {REFERRAL_PROGRAM_ENDS_ON_LABEL}.</span>
+          </div>
+        )}
 
         {isolatedOauth && view !== 'forgot' && (
           <div className="mb-6 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 rounded-xl text-sm text-amber-900 dark:text-amber-200 leading-relaxed">

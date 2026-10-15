@@ -9,6 +9,12 @@ import {
   STRIPE_PRO_PRICE_ID,
 } from './pricing';
 import { PINONIT_SOFTWARE } from './seoIdentity';
+import {
+  REFERRAL_NOTICE_DATE,
+  REFERRAL_PROGRAM_ENDS_AT,
+  REFERRAL_PROGRAM_ENDS_ON,
+  referralRewardsOpen,
+} from './referralRetirement';
 
 const NEW_PRICE_ID = 'price_1UBerwIVv38UYFOXg43WzEWL';
 const OLD_PRICE_ID = 'price_1TZHhhIVv38UYFOXMXT2EV8v';
@@ -69,33 +75,42 @@ describe('new Pro checkout', () => {
     expect(webhook).toContain('stripe.subscriptions.retrieve');
     expect(webhook).toContain('applyStripeSubscription');
     expect(webhook).not.toContain('subscriptions.update');
-    expect(webhook).not.toContain('amount_cents: 100');
-    expect(webhook).not.toContain('createBalanceTransaction');
+    expect(webhook).toContain('referralRewardsOpen()');
+    expect(webhook).toContain('amount_cents: 100');
+    expect(webhook).toContain('createBalanceTransaction');
     expect(webhook).not.toContain('amount_cents: 899');
     expect(webhook).not.toContain('amount_cents: 999');
   });
 
-  it('removes the $1 customer referral promotion and keeps signup links working', () => {
-    const pages = [
-      'src/pages/Landing.tsx',
-      'src/pages/Billing.tsx',
-      'src/pages/Settings.tsx',
-      'src/lib/whyPinonit.ts',
-      'src/pages/CalendlyAlternative.tsx',
-      'src/components/Auth.tsx',
+  it('keeps the $1 credit through the 30-day notice and uses one end date', () => {
+    const notice = new Date(`${REFERRAL_NOTICE_DATE}T12:00:00.000Z`);
+    const end = new Date(REFERRAL_PROGRAM_ENDS_AT);
+    expect(end.getTime() - notice.getTime()).toBeGreaterThanOrEqual(30 * 24 * 60 * 60 * 1000);
+    expect(REFERRAL_PROGRAM_ENDS_ON).toBe('2026-11-14');
+    expect(referralRewardsOpen(new Date('2026-11-14T23:00:00.000-05:00'))).toBe(true);
+    expect(referralRewardsOpen(new Date('2026-11-15T05:00:00.000Z'))).toBe(false);
+
+    for (const page of [
+      'src/pages/Terms.tsx',
+      'src/pages/Leaderboard.tsx',
       'src/components/landing/LandingPricingCard.tsx',
-    ];
-    for (const page of pages) {
-      const source = read(page);
-      expect(source).not.toContain('earn $1');
-      expect(source).not.toContain('$1/month');
-      expect(source).not.toContain('$1/mo');
-      expect(source).not.toContain('Referral Program');
+      'src/pages/CalendlyAlternative.tsx',
+      'src/lib/whyPinonit.ts',
+    ]) {
+      expect(read(page)).toContain('November 14, 2026');
+      expect(read(page)).not.toContain('ended on October 15, 2026');
     }
-    expect(read('src/pages/Terms.tsx')).toContain('ended on October 15, 2026');
-    expect(read('src/pages/Leaderboard.tsx')).toContain('has ended');
+    for (const page of ['src/pages/Billing.tsx', 'src/pages/Settings.tsx', 'src/components/Auth.tsx']) {
+      expect(read(page)).toContain('REFERRAL_PROGRAM_ENDS_ON_LABEL');
+      expect(read(page)).not.toContain('ended on October 15, 2026');
+    }
+    expect(read('src/pages/Terms.tsx')).toContain('notice to existing participants');
     expect(read('src/App.tsx')).toContain('/signup?ref=');
-    expect(read('src/components/Auth.tsx')).not.toContain('referral-signup');
+    expect(read('src/components/Auth.tsx')).toContain('recordCustomerReferral');
+    const referral = read('supabase/functions/referral-signup/index.ts');
+    expect(referral).toContain('referralRewardsOpen()');
+    expect(referral).toContain("from('referrals').insert");
+    expect(referral).toContain('program_retired');
     expect(read('src/lib/pricing.ts')).toContain("price_1UBerwIVv38UYFOXg43WzEWL");
     expect(read('supabase/functions/_shared/stripeSubscription.ts')).toContain(OLD_PRICE_ID);
   });

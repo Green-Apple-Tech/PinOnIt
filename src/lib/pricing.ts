@@ -5,6 +5,9 @@ export const PRO_PRICE_CENTS = 999;
 export const PRO_PRICE_LABEL = '$9.99';
 export const PRO_PRICE_PER_MO = '$9.99/mo';
 
+/** $1 credits needed to offset the monthly plan. Applies only while customer referrals are still open. */
+export const REFERRALS_TO_COVER_PLAN = 10;
+
 
 /**
  * New Pro checkout Price: active, $9.99 USD, billed monthly.

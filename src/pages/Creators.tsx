@@ -56,7 +56,7 @@ export function CreatorsPage() {
         <h1 className="mt-2 text-3xl font-bold">Creator partners</h1>
         <p className="mt-4 text-lg leading-relaxed">{PITCH}</p>
         <p className="mt-3 text-sm text-slate-600">
-          PinOnIt is the text-first office for a one-person shop or a team of a few people: quote a job, book a time, send an invoice, and get a document signed from a phone. Pro is $9.99/month after the trial. This page is for educators who teach that audience. The $1 customer referral program has ended.
+          PinOnIt is the text-first office for a one-person shop or a team of a few people: quote a job, book a time, send an invoice, and get a document signed from a phone. Pro is $9.99/month after the trial. This page is for educators who teach that audience. The $1 customer referral credit continues through November 14, 2026, then ends.
         </p>
 
         <form onSubmit={submit} className="mt-8 bg-white border border-slate-200 rounded-2xl p-6 space-y-4">
@@ -94,7 +94,7 @@ export function CreatorsPage() {
           </p>
         </section>
         <p className="mt-6 text-sm text-slate-500">
-          <Link to="/signup" className="underline">Customer signup</Link> does not pay a referral reward. Creator links, after approval, use <span className="font-mono">?creator=</span>.
+          <Link to="/signup" className="underline">Customer signup</Link> can still use a referral link through November 14, 2026. Creator links, after approval, use <span className="font-mono">?creator=</span>.
         </p>
       </div>
     </main>

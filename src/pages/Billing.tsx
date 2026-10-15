@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { SUPPORT_EMAIL } from '../lib/contactEmail';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { syncStripeSubscription } from '../lib/stripe';
 import { effectivePlan, isActivePlan, isComplimentaryPro } from '../lib/plan';
-import { PRO_PRICE, STRIPE_PRO_PRICE_ID } from '../lib/pricing';
+import { PRO_PRICE, PRO_PRICE_LABEL, REFERRALS_TO_COVER_PLAN, STRIPE_PRO_PRICE_ID } from '../lib/pricing';
+import { REFERRAL_PROGRAM_ENDS_ON_LABEL } from '../lib/referralRetirement';
 import { recordPlatformTermsAcceptance } from '../lib/platformLegal';
 import { TrialTermsNotice } from '../components/TrialTermsNotice';
 import {
   Check, Zap, Loader2, AlertCircle,
+  DollarSign, TrendingUp, Copy, Users, ChevronDown,
   Shield, Info, X,
 } from 'lucide-react';
 
@@ -48,7 +51,16 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [myConverted, setMyConverted] = useState(0);
+  const [myTotalCents, setMyTotalCents] = useState(0);
+  const [thisMonthCents, setThisMonthCents] = useState(0);
+  const [referralOpen, setReferralOpen] = useState(false);
   const [successBanner, setSuccessBanner] = useState(false);
+
+  const referralLink = profile?.referral_code
+    ? `${window.location.origin}/ref/${profile.referral_code}`
+    : '';
 
   // Heal plan from Stripe (webhook can lag or miss) and show success after checkout
   useEffect(() => {
@@ -78,6 +90,42 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
     })();
     return () => { cancelled = true; };
   }, [refreshProfile]);
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    (async () => {
+      const [{ count }, { data: credits }] = await Promise.all([
+        supabase
+          .from('referrals')
+          .select('id', { count: 'exact', head: true })
+          .eq('referrer_id', profile.id)
+          .eq('status', 'converted'),
+        supabase
+          .from('referral_credits')
+          .select('amount_cents, created_at')
+          .eq('user_id', profile.id),
+      ]);
+      const now = new Date();
+      const allC = credits ?? [];
+      setMyConverted(count ?? 0);
+      setMyTotalCents(allC.reduce((s, c) => s + c.amount_cents, 0));
+      setThisMonthCents(
+        allC
+          .filter((c) => {
+            const d = new Date(c.created_at);
+            return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+          })
+          .reduce((s, c) => s + c.amount_cents, 0)
+      );
+    })();
+  }, [profile?.id]);
+
+  const copyLink = () => {
+    if (!referralLink) return;
+    navigator.clipboard.writeText(referralLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handleUpgrade = async (trialDays?: number) => {
     setCheckoutError(null);
@@ -349,6 +397,64 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
               <GuaranteeBadge />
             </div>
           </>
+        )}
+      </div>
+
+      {/* ── Referral program (collapsible) ────────────────────────────────────── */}
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+        <button
+          onClick={() => setReferralOpen((v) => !v)}
+          className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-gray-50 transition-colors"
+        >
+          <div>
+            <p className="text-sm font-semibold text-gray-800">Referral Program</p>
+            <p className="text-xs text-gray-400 mt-0.5">Share PinOnIt and earn $1/month per referral through {REFERRAL_PROGRAM_ENDS_ON_LABEL}</p>
+          </div>
+          <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform shrink-0 ${referralOpen ? 'rotate-180' : ''}`} />
+        </button>
+
+        {referralOpen && (
+          <div className="px-6 pb-6 border-t border-gray-100 pt-4 space-y-4">
+            {myConverted > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[
+                  { label: 'Referrals', value: myConverted, icon: Users, color: 'text-blue-600' },
+                  { label: 'This month', value: `$${(thisMonthCents / 100).toFixed(0)}`, icon: DollarSign, color: 'text-indigo-600' },
+                  { label: 'All time', value: `$${(myTotalCents / 100).toFixed(0)}`, icon: TrendingUp, color: 'text-teal-600' },
+                ].map((s) => (
+                  <div key={s.label} className="bg-gray-50 rounded-xl p-3 text-center">
+                    <s.icon className={`h-4 w-4 mx-auto mb-1 ${s.color}`} />
+                    <p className={`text-lg font-black ${s.color}`}>{s.value}</p>
+                    <p className="text-xs text-gray-400">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {referralLink ? (
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Your referral link</p>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 min-w-0 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl">
+                    <span className="text-sm text-indigo-600 font-mono truncate block">{referralLink}</span>
+                  </div>
+                  <button
+                    onClick={copyLink}
+                    className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 text-white text-sm font-semibold rounded-xl transition-all hover:opacity-90" style={{ backgroundColor: '#5864C6' }}
+                  >
+                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    {copied ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+                <p className="mt-2 text-xs text-gray-400">
+                  Refer {REFERRALS_TO_COVER_PLAN} people and those $1 credits cover your {PRO_PRICE_LABEL}/month plan. Refer more and we pay you. New credits stop after {REFERRAL_PROGRAM_ENDS_ON_LABEL}.{' '}
+                  <Link to="/leaderboard" className="text-indigo-600 hover:underline">View leaderboard</Link>
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400">Your referral link will appear here once your account is set up.</p>
+            )}
+          </div>
         )}
       </div>
 

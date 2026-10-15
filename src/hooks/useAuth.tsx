@@ -7,6 +7,7 @@ import type { User } from '@supabase/supabase-js';
 import { pickBestSubscription } from '../lib/plan';
 import type { Profile, Subscription } from '../lib/types';
 import { persistSignupAttribution } from '../lib/campaignAttribution';
+import { clearPendingReferral, readPendingReferral, recordCustomerReferral, referralRewardsOpen } from '../lib/referralRetirement';
 import { storageSet } from '../lib/safeStorage';
 import { recordSessionActivity } from '../lib/sessionTimeout';
 import { clearOauthStart, claimOauthStart, oauthCallbackRedirect, redirectViaProviderBounce } from '../lib/oauthLogin';
@@ -91,6 +92,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session?.user) {
         fetchProfile(session.user.id);
         fetchSubscription(session.user.id);
+        const pendingRef = readPendingReferral();
+        const createdAt = new Date(session.user.created_at).getTime();
+        const recentSignup = Number.isFinite(createdAt) && Date.now() - createdAt < 48 * 60 * 60 * 1000;
+        if (pendingRef && session.access_token && recentSignup && referralRewardsOpen()) {
+          void recordCustomerReferral(session.access_token, pendingRef)
+            .then((ok) => { if (ok) clearPendingReferral(); })
+            .catch(() => undefined);
+        } else if (pendingRef && !referralRewardsOpen()) {
+          clearPendingReferral();
+        }
       } else {
         setProfile(null);
         clearProfileCache();

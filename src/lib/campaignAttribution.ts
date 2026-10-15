@@ -48,6 +48,13 @@ export function captureCampaignParams(search: string, landingPath?: string): Cam
   if (canStore() && Object.keys(next).length > 0) {
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   }
+  if (next.ref) {
+    try {
+      localStorage.setItem('pinonit_pending_referral_code', next.ref);
+    } catch {
+      /* private mode */
+    }
+  }
   return next;
 }
 

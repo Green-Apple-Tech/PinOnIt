@@ -26,6 +26,7 @@ function keyFromLocation(pathname: string, search: string, hash: string): string
     if (tab === 'docs') return 'settings-docs';
     if (tab === 'branding') return 'settings-branding';
     if (tab === 'integrations') return 'settings-integrations';
+    if (tab === 'referrals') return 'settings-referrals';
     return 'settings';
   }
   if (pathname.startsWith('/dashboard/appointments')) return 'calendar';
@@ -294,7 +295,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
       'General → set your name and booking username.',
       'Embed → copy the snippet, paste it on your site, then tap I\'ve added the code.',
       'Docs → templates and named PDF library.',
-      'Branding and Integrations each have their own tab.',
+      'Branding, Integrations, and Referrals each have their own tab.',
       'Turn on Advanced mode if you want every tool listed in the sidebar.',
     ],
   },
@@ -323,6 +324,14 @@ const GUIDES: Record<string, PageHelpGuide> = {
     steps: [
       'Connect Google or Outlook so busy times block bookings.',
       'Add Slack if you want reminder copies in a channel.',
+    ],
+  },
+  'settings-referrals': {
+    title: 'Referrals',
+    purpose: 'Share PinOnIt and track who signed up from your link. The $1 credit ends November 14, 2026.',
+    steps: [
+      'Copy your referral link.',
+      'Share it with people who might need scheduling and documents.',
     ],
   },
   activity: {
