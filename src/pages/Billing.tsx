@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase';
 import { syncStripeSubscription } from '../lib/stripe';
 import { effectivePlan, isActivePlan, isComplimentaryPro } from '../lib/plan';
 import { PRO_PRICE, PRO_PRICE_LABEL, REFERRALS_TO_COVER_PLAN, STRIPE_PRO_PRICE_ID } from '../lib/pricing';
-import { REFERRAL_PROGRAM_ENDS_ON_LABEL } from '../lib/referralRetirement';
+import { REFERRAL_PROGRAM_ENDS_ON_LABEL, referralRewardsOpen } from '../lib/referralRetirement';
 import { recordPlatformTermsAcceptance } from '../lib/platformLegal';
 import { TrialTermsNotice } from '../components/TrialTermsNotice';
 import {
@@ -400,8 +400,8 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
         )}
       </div>
 
-      {/* ── Referral program (collapsible) ────────────────────────────────────── */}
-      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+      {/* ── Referral program (collapsible). Hidden once the program has ended. ── */}
+      {referralRewardsOpen() && <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
         <button
           onClick={() => setReferralOpen((v) => !v)}
           className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-gray-50 transition-colors"
@@ -456,7 +456,7 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
             )}
           </div>
         )}
-      </div>
+      </div>}
 
     </div>
   );

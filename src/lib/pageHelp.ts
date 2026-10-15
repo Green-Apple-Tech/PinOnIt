@@ -328,7 +328,7 @@ const GUIDES: Record<string, PageHelpGuide> = {
   },
   'settings-referrals': {
     title: 'Referrals',
-    purpose: 'Share PinOnIt and track who signed up from your link. The $1 credit ends November 14, 2026.',
+    purpose: 'The $1 customer referral program ended on October 15, 2026. Old links open ordinary signup.',
     steps: [
       'Copy your referral link.',
       'Share it with people who might need scheduling and documents.',

@@ -147,12 +147,12 @@ export const SEO_SHELLS: SeoShell[] = [
   },
   {
     file: 'leaderboard.html',
-    title: 'Customer referrals end November 14, 2026 | PinOnIt',
-    description: 'The $1 PinOnIt customer referral credit continues through November 14, 2026.',
+    title: 'Customer referrals ended | PinOnIt',
+    description: 'The $1 PinOnIt customer referral program ended on October 15, 2026.',
     canonical: 'https://pinonit.com/leaderboard',
-    h1: 'The $1 customer referral credit continues through November 14, 2026',
+    h1: 'The $1 customer referral program has ended',
     paragraphs: [
-      'New $1 credits are issued through that date. After that, an old referral link still opens ordinary signup and no new credits are issued.',
+      'No new credits are issued. An old referral link still opens ordinary signup.',
     ],
     links: [{ href: '/', label: 'PinOnIt home' }],
   },

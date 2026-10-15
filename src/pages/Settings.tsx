@@ -35,7 +35,7 @@ import { PaymentLinkFields } from '../components/PaymentLinkFields';
 import { SmsBookingConsent } from '../components/SmsConsentText';
 import { SESSION_TIMEOUT_OPTIONS, sessionTimeoutOptionValue } from '../lib/sessionTimeout';
 import { PRO_PRICE_LABEL, REFERRALS_TO_COVER_PLAN } from '../lib/pricing';
-import { REFERRAL_PROGRAM_ENDS_ON_LABEL } from '../lib/referralRetirement';
+import { REFERRAL_PROGRAM_ENDS_ON_LABEL, referralRewardsOpen } from '../lib/referralRetirement';
 
 const AnalyticsPage = lazy(() => import('./Analytics').then((m) => ({ default: m.AnalyticsPage })));
 const BillingPage = lazy(() => import('./Billing').then((m) => ({ default: m.BillingPage })));
@@ -48,7 +48,7 @@ type SettingsSection = 'general' | 'availability' | 'activity' | 'analytics' | '
 type SettingsTab = 'profile' | 'booking_page' | 'embed' | 'coworkers' | 'advanced';
 type QuoteLineDefault = { description: string; amount: number };
 
-const SECTION_TABS: SettingsSection[] = ['availability', 'activity', 'analytics', 'billing', 'event-types', 'contacts', 'docs', 'branding', 'integrations', 'referrals'];
+const SECTION_TABS: SettingsSection[] = ['availability', 'activity', 'analytics', 'billing', 'event-types', 'contacts', 'docs', 'branding', 'integrations', ...(referralRewardsOpen() ? ['referrals' as const] : [])];
 const TOP_LEVEL_SECTIONS: { key: SettingsSection; label: string }[] = [
   { key: 'general', label: 'General' },
   { key: 'availability', label: 'Availability' },
@@ -57,7 +57,7 @@ const TOP_LEVEL_SECTIONS: { key: SettingsSection; label: string }[] = [
   { key: 'docs', label: 'Docs' },
   { key: 'branding', label: 'Branding' },
   { key: 'integrations', label: 'Integrations' },
-  { key: 'referrals', label: 'Referrals' },
+  ...(referralRewardsOpen() ? [{ key: 'referrals' as const, label: 'Referrals' }] : []),
   { key: 'activity', label: 'Activity' },
   { key: 'analytics', label: 'Analytics' },
   { key: 'billing', label: 'Billing' },
@@ -2077,6 +2077,15 @@ function ReferralsTab({ userId, profile }: { userId: string | null; profile: imp
 
   if (loading) {
     return <div className="py-16 text-center text-slate-400 text-sm"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></div>;
+  }
+
+  if (!referralRewardsOpen()) {
+    return (
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6">
+        <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Referral program ended</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400">The $1 customer referral program ended on {REFERRAL_PROGRAM_ENDS_ON_LABEL}. No new credits are issued. An old referral link still opens ordinary signup.</p>
+      </div>
+    );
   }
 
   return (

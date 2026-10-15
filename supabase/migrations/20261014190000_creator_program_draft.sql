@@ -235,8 +235,8 @@ BEGIN
   IF v_creator.user_id = v_user OR lower(v_creator.email) = coalesce(v_email, '') THEN
     RETURN jsonb_build_object('ok', false, 'reason', 'self_referral');
   END IF;
-  -- Customer referral rewards stay open through 2026-11-15 04:59:59.999+00 (end of Nov 14, 2026 US Eastern).
-  IF now() <= '2026-11-15T04:59:59.999Z'::timestamptz
+  -- Customer referral rewards ended at the start of October 15, 2026 US Eastern.
+  IF now() <= '2026-10-15T04:00:00.000Z'::timestamptz
      AND (
        EXISTS (SELECT 1 FROM public.referrals r WHERE r.referred_user_id = v_user)
        OR EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = v_user AND p.referred_by IS NOT NULL)

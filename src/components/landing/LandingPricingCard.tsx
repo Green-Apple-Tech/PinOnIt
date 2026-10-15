@@ -15,7 +15,6 @@ const LEGACY_BULLETS = [
   'Doc Center: NDAs, waivers, invoices, quotes',
   'Paid Booking storefront',
   'Calendly import',
-  'Referral credits: $1/month through November 14, 2026',
 ];
 
 export function LandingPricingCard({ variant }: Props) {

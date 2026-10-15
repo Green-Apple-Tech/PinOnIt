@@ -150,7 +150,6 @@ export const WHY_PINONIT = {
     { id: 'deposits', label: 'Deposits at booking', pinonit: true, calendly: '$16+/mo' },
     { id: 'types', label: 'Unlimited event types', pinonit: true, calendly: '$16+/mo' },
     { id: 'price', label: 'Monthly price', pinonit: '$9.99', calendly: '$16+' },
-    { id: 'referral', label: 'Referral credit', pinonit: '$1/mo through November 14, 2026', calendly: false },
   ] satisfies WhyFeature[],
   scenarios: [
     {

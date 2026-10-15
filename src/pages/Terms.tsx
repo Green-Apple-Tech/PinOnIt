@@ -189,10 +189,7 @@ const sections: Section[] = [
     content: (
       <div className="space-y-3">
         <p>
-          PinOnIt offers a referral program that rewards you when people you refer subscribe to Pro. You earn $1/month in credit for each referred user who becomes and remains an active Pro subscriber. Credits first offset your own Pro subscription cost (up to $9.99/month).
-        </p>
-        <p>
-          <strong>Notice:</strong> We reserve the right to modify or discontinue the referral program at any time with 30 days&apos; notice to existing participants. This notice applies to existing participants: account holders covered by this section, including people who can refer, not only people who already have a referral record. This notice is given when it is published on pinonit.com. The prepared notice date is October 15, 2026. The program ends on November 14, 2026. Until then, new $1 credits continue. After November 14, 2026, a link that contains <span className="font-mono">?ref=</span> opens ordinary signup and no new credits are issued. Historical referral records stay in place.
+          The $1 customer referral program ended on October 15, 2026. No new $1 credits are issued. A link that contains <span className="font-mono">?ref=</span> opens ordinary signup and does not create a reward. Historical referral records stay in place.
         </p>
       </div>
     ),
