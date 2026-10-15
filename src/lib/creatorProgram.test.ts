@@ -191,7 +191,7 @@ describe('creator commission ledger', () => {
 });
 
 describe('creator attribution and grants', () => {
-  it('keeps the first creator code for 30 days and rejects self-referrals and stacked customer referrals', () => {
+  it('keeps the first creator code for 30 days and rejects self-referrals', () => {
     const now = new Date('2026-10-14T12:00:00.000Z');
     const first = nextCreatorTouch(null, 'Ada12', now, 30);
     const second = nextCreatorTouch(first, 'other99', new Date('2026-10-20T12:00:00.000Z'), 30);
@@ -204,7 +204,7 @@ describe('creator attribution and grants', () => {
       customerReferralCode: 'friend',
       applicantEmail: 'guest@example.com',
       creatorEmail: 'ada@example.com',
-    }).reason).toBe('customer_referral_present');
+    }).reason).toBe('claimed');
     expect(creatorClaimDecision({
       creatorCode: 'ada12',
       customerReferralCode: null,
@@ -230,12 +230,13 @@ describe('creator attribution and grants', () => {
     expect(canReadCreatorRecord({ userId: 'staff', staff: true }, 'creator')).toBe(true);
   });
 
-  it('builds a manual payout report and leaves the customer referral credit at $1', () => {
+  it('builds a manual payout report and does not revive the $1 customer credit', () => {
     expect(creatorPayoutCsv([{ code: 'ada12', email: 'ada@example.com', payableCents: 400 }])).toContain('ada12,ada@example.com,400');
     const webhook = readFileSync(new URL('../../supabase/functions/stripe-webhook/index.ts', import.meta.url), 'utf8');
     const referral = readFileSync(new URL('../../supabase/functions/referral-signup/index.ts', import.meta.url), 'utf8');
-    expect(webhook).toContain('amount_cents: 100');
-    expect(referral).toContain('referral_code');
+    expect(webhook).not.toContain('amount_cents: 100');
+    expect(webhook).not.toContain('createBalanceTransaction');
+    expect(referral).toContain('program_retired');
     expect(referral).not.toContain('commissionBps');
   });
 
@@ -286,6 +287,6 @@ describe('creator attribution and grants', () => {
     const webhook = read('functions/stripe-webhook/index.ts');
     expect(webhook).toContain('charge.refunded');
     expect(webhook).toContain('charge.dispute.created');
-    expect(webhook).toContain('amount_cents: 100');
+    expect(webhook).not.toContain('amount_cents: 100');
   });
 });

@@ -90,19 +90,6 @@ export function AuthForm() {
           const { recordPlatformTermsAcceptance } = await import('../lib/platformLegal');
           await persistSignupAttribution(session.user.id);
           void recordPlatformTermsAcceptance(session.user.id);
-        }
-        if (refCode) {
-          if (session?.access_token) {
-            fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/referral-signup`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${session.access_token}`,
-              },
-              body: JSON.stringify({ referral_code: refCode }),
-            }).catch(() => {/* non-critical */});
-          }
-        } else {
           const { readCreatorTouch } = await import('../lib/creatorAttribution');
           const creator = readCreatorTouch();
           if (creator) {
@@ -203,13 +190,6 @@ export function AuthForm() {
               : "Enter your email and we'll send you a reset link"}
           </p>
         </div>
-
-        {refCode && view === 'signup' && (
-          <div className="mb-6 flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/40 rounded-xl text-sm text-indigo-700 dark:text-indigo-500">
-            <span className="text-lg">🎁</span>
-            <span>You were referred! Sign up and your friend earns a $1/month credit.</span>
-          </div>
-        )}
 
         {isolatedOauth && view !== 'forgot' && (
           <div className="mb-6 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 rounded-xl text-sm text-amber-900 dark:text-amber-200 leading-relaxed">

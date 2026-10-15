@@ -54,7 +54,6 @@ Deno.serve(async (req: Request) => {
         clientReferenceId?: string | null;
         metadataUserId?: string | null;
         email?: string | null;
-        applyReferral?: boolean;
       }
     ) => {
       const customerId = typeof subscription.customer === 'string'
@@ -75,20 +74,12 @@ Deno.serve(async (req: Request) => {
         return;
       }
 
-      const { plan } = await applyStripeSubscription({
+      await applyStripeSubscription({
         supabase,
         userId,
         customerId,
         subscription,
       });
-
-      if (
-        extras?.applyReferral &&
-        plan === 'pro' &&
-        (subscription.status === 'active' || subscription.status === 'trialing')
-      ) {
-        await handleConversion(stripe, supabase, userId);
-      }
     };
 
     switch (event.type) {
@@ -111,7 +102,6 @@ Deno.serve(async (req: Request) => {
           clientReferenceId: session.client_reference_id,
           metadataUserId: session.metadata?.supabase_user_id,
           email,
-          applyReferral: true,
         });
         break;
       }
@@ -137,7 +127,6 @@ Deno.serve(async (req: Request) => {
         });
         await syncFromSubscription(subscription, {
           email: invoice.customer_email,
-          applyReferral: true,
         });
         await noteCreatorInvoice(supabase, subscription, invoice, event.id);
         break;
@@ -305,84 +294,3 @@ async function noteCreatorReversal(
   }
 }
 
-const PRO_PRICE_CENTS = 999;
-const PAYOUT_THRESHOLD_CENTS = 1000;
-
-async function handleConversion(
-  stripe: Stripe,
-  supabase: ReturnType<typeof createClient>,
-  userId: string
-) {
-  const { data: referral } = await supabase
-    .from('referrals')
-    .select('id, referrer_id, credit_applied')
-    .eq('referred_user_id', userId)
-    .eq('status', 'signed_up')
-    .maybeSingle();
-
-  if (!referral || referral.credit_applied) return;
-
-  await supabase
-    .from('referrals')
-    .update({ status: 'converted', converted_at: new Date().toISOString(), credit_applied: true })
-    .eq('id', referral.id);
-
-  await supabase.from('referral_credits').insert({
-    user_id: referral.referrer_id,
-    referral_id: referral.id,
-    amount_cents: 100,
-    stripe_credit_applied: false,
-  });
-
-  const { data: referrerSub } = await supabase
-    .from('subscriptions')
-    .select('stripe_customer_id, stripe_subscription_id')
-    .eq('user_id', referral.referrer_id)
-    .maybeSingle();
-
-  if (!isRealStripeCustomerId(referrerSub?.stripe_customer_id)) return;
-
-  const { data: pendingCredits } = await supabase
-    .from('referral_credits')
-    .select('id, amount_cents')
-    .eq('user_id', referral.referrer_id)
-    .eq('stripe_credit_applied', false);
-
-  if (!pendingCredits || pendingCredits.length === 0) return;
-
-  const totalPendingCents = pendingCredits.reduce((sum, c) => sum + c.amount_cents, 0);
-
-  const { count: convertedCount } = await supabase
-    .from('referrals')
-    .select('id', { count: 'exact', head: true })
-    .eq('referrer_id', referral.referrer_id)
-    .eq('status', 'converted');
-
-  const totalConverted = convertedCount ?? 0;
-
-  if (totalConverted >= 7) {
-    await stripe.customers.createBalanceTransaction(referrerSub!.stripe_customer_id, {
-      amount: -totalPendingCents,
-      currency: 'usd',
-      description: `Referral credit: ${pendingCredits.length} referral(s) converted`,
-    });
-
-    const customer = await stripe.customers.retrieve(referrerSub!.stripe_customer_id) as Stripe.Customer;
-    const balanceCredit = -(customer.balance ?? 0);
-    if (balanceCredit >= PRO_PRICE_CENTS + PAYOUT_THRESHOLD_CENTS) {
-      // Excess credit accumulates until Stripe Connect payouts are wired up.
-    }
-  } else {
-    await stripe.customers.createBalanceTransaction(referrerSub!.stripe_customer_id, {
-      amount: -100,
-      currency: 'usd',
-      description: 'Referral credit: 1 referral converted to Pro',
-    });
-  }
-
-  const pendingIds = pendingCredits.map((c) => c.id);
-  await supabase
-    .from('referral_credits')
-    .update({ stripe_credit_applied: true })
-    .in('id', pendingIds);
-}

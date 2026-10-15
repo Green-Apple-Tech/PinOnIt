@@ -1,7 +1,7 @@
 /**
  * Creator partner rules. The commercial settings below are approved, but the
  * program stays draft until creator_program_settings.status is set to active.
- * This is not the $1 customer referral program (/signup?ref=).
+ * The retired $1 customer referral program is not part of this ledger.
  *
  * Rounding: half-up to the nearest cent.
  * commission = floor((basisCents * bps + 5000) / 10000)
@@ -73,7 +73,6 @@ export function creatorClaimDecision(input: {
   applicantUserId?: string | null;
 }): { ok: boolean; reason: string } {
   if (!normalizeCreatorCode(input.creatorCode)) return { ok: false, reason: 'invalid_code' };
-  if (input.customerReferralCode?.trim()) return { ok: false, reason: 'customer_referral_present' };
   const applicant = input.applicantEmail.trim().toLowerCase();
   const creator = input.creatorEmail.trim().toLowerCase();
   if (applicant && creator && applicant === creator) return { ok: false, reason: 'self_referral' };
@@ -364,7 +363,7 @@ export const CREATOR_TERMS_DRAFT = {
     'No commission is owed on free trials, complimentary accounts, unpaid invoices, or revenue that is later refunded or charged back.',
     'Commission is calculated in whole cents, half-up. Each earning stays pending for 30 days before it can be paid.',
     'The first eligible creator link within 30 days is the one that counts. A later link does not replace it. This browser storage does not follow a person to another device.',
-    'A signup that uses the existing customer referral program ($1 credit, /signup?ref=) does not also earn a creator commission.',
+    'A customer referral code on an old signup link does not create a creator commission. Creator attribution uses ?creator= and stays first-touch for 30 days.',
     'Payouts are manual only. A spreadsheet export does not mark earnings paid. These draft terms do not authorize a transfer, and no commission starts until the creator accepts the published version of these terms.',
     'Creators must disclose their partnership when the program is published. A lawyer should review this draft before it is shown as the live agreement.',
   ],

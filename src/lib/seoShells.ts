@@ -147,12 +147,12 @@ export const SEO_SHELLS: SeoShell[] = [
   },
   {
     file: 'leaderboard.html',
-    title: 'Referral leaderboard | PinOnIt',
-    description: 'Public referral leaderboard for PinOnIt Pro.',
+    title: 'Customer referrals ended | PinOnIt',
+    description: 'The $1 PinOnIt customer referral program ended on October 15, 2026.',
     canonical: 'https://pinonit.com/leaderboard',
-    h1: 'Top referrers',
+    h1: 'The $1 customer referral program has ended',
     paragraphs: [
-      'Every Pro referral earns $1 off your monthly bill. Refer 10 and your plan is free. Refer 11 or more and PinOnIt pays you.',
+      'No new credits are issued. An old referral link still opens ordinary signup.',
     ],
     links: [{ href: '/', label: 'PinOnIt home' }],
   },

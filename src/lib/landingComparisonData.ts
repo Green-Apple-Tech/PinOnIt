@@ -10,7 +10,6 @@ export const LANDING_COMP_ROWS: LandingCompRow[] = [
   { section: 'Pricing' },
   { feature: 'Starting price', pinonit: 'Free', calendly: 'Free', acuity: '$16/mo' },
   { feature: 'Pro / Paid plan', pinonit: '$9.99/mo', calendly: '$16/mo', acuity: '$20/mo' },
-  { feature: 'Referral earnings', pinonit: '$1/mo/user', calendly: false, acuity: false },
   { section: 'Calendly does not do this' },
   { feature: 'WhatsApp reminders', pinonit: true, calendly: false, acuity: false },
   { feature: 'Voice reminders & critical alerts', pinonit: true, calendly: false, acuity: false },

@@ -5,8 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import {
   ArrowRight, Check,
-  Sun, Moon, Menu, Zap, X, Link2,
-  DollarSign, Users,
+  Sun, Moon, Menu, Zap, X,
   ChevronRight, Pause, Play,
   Calendar, Bell, Mail, MessageCircle, MessagesSquare, Phone,
   ClipboardSignature, QrCode, ShoppingBag,
@@ -19,8 +18,6 @@ import { DocTypeShortcutRow } from '../components/CampaignLanding';
 import { usePageMeta } from '../lib/pageMeta';
 import { MarketingStickyHeader } from '../components/landing/MarketingAnnouncementBar';
 import { MarketingShotFrame } from '../components/landing/MarketingShotFrame';
-import { PRO_PRICE, PRO_PRICE_LABEL, REFERRALS_TO_COVER_PLAN } from '../lib/pricing';
-
 // ── Animated counter hook ────────────────────────────────────────────────────
 function useCounter(target: number, duration = 1800, start = false) {
   const [val, setVal] = useState(0);
@@ -39,32 +36,6 @@ function useCounter(target: number, duration = 1800, start = false) {
   return val;
 }
 
-// ── Earnings calc ────────────────────────────────────────────────────────────
-function money(n: number) {
-  return (Math.round(n * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function calcEarnings(refs: number) {
-  const credit = refs;
-  return {
-    monthlyCost: Math.max(0, Math.round((PRO_PRICE - credit) * 100) / 100),
-    monthlyEarn: Math.max(0, Math.round((credit - PRO_PRICE) * 100) / 100),
-    yearlyEarn: Math.max(0, Math.round((credit - PRO_PRICE) * 12 * 100) / 100),
-    isFree: credit >= PRO_PRICE,
-  };
-}
-
-const MILESTONES = [REFERRALS_TO_COVER_PLAN, 20, 100, 1000].map((refs) => {
-  const extra = Math.max(0, Math.round((refs - PRO_PRICE) * 100) / 100);
-  const covered = refs === REFERRALS_TO_COVER_PLAN;
-  return {
-    refs,
-    label: refs === 1000 ? '1,000 referrals' : `${refs} referrals`,
-    result: covered ? 'Pro is FREE' : `+$${money(extra)}/mo`,
-    detail: covered ? '$0/mo' : `$${money(extra * 12)}/yr to you`,
-  };
-});
-
 // ── 3-column comparison data ─────────────────────────────────────────────────
 type CompRow = { section?: string; feature?: string; pinonit?: boolean | string; calendly?: boolean | string; acuity?: boolean | string };
 
@@ -72,7 +43,6 @@ const COMP_ROWS: CompRow[] = [
   { section: 'Pricing' },
   { feature: 'Starting price',    pinonit: 'Free',        calendly: 'Free',         acuity: '$16/mo' },
   { feature: 'Pro / Paid plan',   pinonit: '$9.99/mo',       calendly: '$16/mo',       acuity: '$20/mo' },
-  { feature: 'Referral earnings', pinonit: '$1/mo/user',  calendly: false,          acuity: false },
   { section: 'Calendly does not do this' },
   { feature: 'WhatsApp reminders', pinonit: true, calendly: false, acuity: false },
   { feature: 'Voice reminders & critical alerts', pinonit: true, calendly: false, acuity: false },
@@ -327,16 +297,12 @@ export function CalendlyAlternative() {
   const navigate = useNavigate();
   usePageMeta(CALENDLY_ALT_META);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [refs, setRefs] = useState(20);
   const [statsVisible, setStatsVisible] = useState(false);
   const statsRef = useRef<HTMLDivElement>(null);
-
-  const calc = calcEarnings(refs);
 
   const users    = useCounter(24800, 2000, statsVisible);
   const meetings = useCounter(412000, 2200, statsVisible);
   const reminders = useCounter(1380000, 2400, statsVisible);
-  const earnings  = useCounter(58200, 2000, statsVisible);
 
   useEffect(() => {
     if (!loading && user) navigate('/dashboard', { replace: true });
@@ -365,7 +331,6 @@ export function CalendlyAlternative() {
             <a href="#features" className="px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Features</a>
             <a href="#reminders" className="px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Reminders</a>
             <a href="#pricing" className="px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Pricing</a>
-            <a href="#earn" className="px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Referral Program</a>
           </div>
 
           <div className="flex items-center gap-2">
@@ -398,7 +363,6 @@ export function CalendlyAlternative() {
             <a href="#reminders" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-brand-500 transition-colors">Reminders</a>
             <Link to="/why-pinonit" onClick={() => setMobileMenuOpen(false)} className="py-2 font-semibold text-brand-600 dark:text-brand-400">Why we beat Calendly →</Link>
             <a href="#pricing" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-brand-500 transition-colors">Pricing</a>
-            <a href="#earn" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-brand-500 transition-colors">Referral Program</a>
           </div>
         )}
       </nav>
@@ -772,12 +736,11 @@ export function CalendlyAlternative() {
 
       {/* ── 4. SOCIAL PROOF / STATS BAR ── */}
       <div ref={statsRef} className="border-y border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/30 py-14 px-6">
-        <div className="max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
+        <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
           {[
             { val: users,    suffix: '+', label: 'Total users',             color: 'text-brand-500 dark:text-brand-400' },
             { val: meetings, suffix: '+', label: 'Meetings scheduled',      color: 'text-indigo-600 dark:text-indigo-500' },
             { val: reminders,suffix: '+', label: 'Reminders sent',          color: 'text-teal-600 dark:text-teal-400' },
-            { val: earnings, prefix: '$', label: 'Referral earnings paid',  color: 'text-amber-500 dark:text-amber-400' },
           ].map(({ val, suffix, prefix, label, color }) => (
             <div key={label}>
               <p className={`text-3xl sm:text-4xl font-extrabold tabular-nums ${color}`}>
@@ -820,7 +783,7 @@ export function CalendlyAlternative() {
                 'Bookings sync to Google / Outlook',
                 'Doc Center: NDAs, waivers, invoices, quotes',
                 'Paid Booking storefront',
-                'Calendly import + referral credits',
+                'Calendly import',
               ].map((f) => (
                 <li key={f} className="flex items-start gap-2.5">
                   <div className="h-4 w-4 rounded-full bg-white/25 flex items-center justify-center shrink-0 mt-0.5">
@@ -835,190 +798,6 @@ export function CalendlyAlternative() {
             </Link>
           </div>
 
-          <p className="mt-6 text-center text-sm text-slate-400 dark:text-slate-500">
-            <span className="font-semibold text-indigo-600 dark:text-indigo-500">Refer {REFERRALS_TO_COVER_PLAN} people → $1 credits cover your {PRO_PRICE_LABEL}/month plan.</span>{' '}
-            Refer more → PinOnIt pays you $1/mo per person.
-          </p>
-        </div>
-      </section>
-
-      {/* ── 6. REFERRAL EARNINGS CALCULATOR ── */}
-      <section id="earn" className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 py-24 px-6 scroll-mt-16">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-32 -right-32 h-96 w-96 rounded-full bg-indigo-600/10 blur-3xl" />
-          <div className="absolute -bottom-16 -left-16 h-64 w-64 rounded-full bg-brand-500/8 blur-3xl" />
-        </div>
-
-        <div className="relative max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-indigo-600/30 bg-indigo-600/10 text-indigo-500 text-xs font-bold mb-5">
-              <DollarSign className="h-3 w-3" /> Referral Earnings Program
-            </div>
-            <h2 className="text-3xl md:text-5xl font-black text-white leading-tight mb-4">
-              Share PinOnIt.<br />
-              Get paid every month.
-            </h2>
-            <p className="text-slate-400 text-lg max-w-xl mx-auto mb-2">
-              Earn <strong className="text-white">$1/month</strong> for every person you refer to Pro — permanently.
-            </p>
-            <p className="text-slate-500 text-sm italic">
-              "Think of it as a permanent commission on every customer you bring in."
-            </p>
-          </div>
-
-          {/* Milestone tiles */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-10">
-            {MILESTONES.map((m) => (
-              <button
-                key={m.refs}
-                onClick={() => setRefs(m.refs)}
-                className={`text-left rounded-2xl border p-4 transition-all ${
-                  refs === m.refs
-                    ? 'border-indigo-600 bg-indigo-600/15 shadow-lg shadow-indigo-600/10'
-                    : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/8'
-                }`}
-              >
-                <p className={`text-xs font-bold mb-1.5 ${refs === m.refs ? 'text-indigo-500' : 'text-slate-500'}`}>{m.label}</p>
-                <p className="text-lg font-black text-white leading-tight">{m.result}</p>
-                <p className="text-xs text-slate-500 mt-1">{m.detail}</p>
-              </button>
-            ))}
-          </div>
-
-          {/* Slider calculator */}
-          <div className="bg-white/5 border border-white/10 rounded-3xl p-8">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-base font-semibold text-slate-300">How many people will you refer?</p>
-              <span className="text-4xl font-black text-indigo-500 tabular-nums">{refs}</span>
-            </div>
-
-            <input
-              type="range"
-              min={1}
-              max={1000}
-              value={refs}
-              onChange={(e) => setRefs(Number(e.target.value))}
-              className="w-full h-2 rounded-full bg-slate-700 accent-indigo-600 cursor-pointer mb-10"
-            />
-
-            <div className="grid grid-cols-3 gap-6 text-center">
-              <div>
-                <p className="text-xs text-slate-500 uppercase tracking-widest mb-3">Monthly</p>
-                {calc.monthlyEarn > 0 ? (
-                  <p className="text-3xl md:text-4xl font-black text-indigo-500 leading-none">
-                    +${calc.monthlyEarn.toLocaleString()}<span className="text-xl">/mo</span>
-                  </p>
-                ) : calc.isFree ? (
-                  <p className="text-3xl md:text-4xl font-black text-indigo-500 leading-none">FREE</p>
-                ) : (
-                  <p className="text-3xl md:text-4xl font-black text-white leading-none">
-                    ${calc.monthlyCost}<span className="text-xl">/mo</span>
-                  </p>
-                )}
-                <p className="text-xs text-slate-500 mt-2">
-                  {calc.monthlyEarn > 0 ? 'paid to you' : calc.isFree ? 'Pro plan cost' : 'after discount'}
-                </p>
-              </div>
-
-              <div className="border-x border-white/10">
-                <p className="text-xs text-slate-500 uppercase tracking-widest mb-3">Yearly</p>
-                {calc.yearlyEarn > 0 ? (
-                  <p className="text-3xl md:text-4xl font-black text-indigo-500 leading-none">
-                    +${calc.yearlyEarn.toLocaleString()}<span className="text-xl">/yr</span>
-                  </p>
-                ) : (
-                  <p className="text-3xl md:text-4xl font-black text-white leading-none">
-                    ${(calc.monthlyCost * 12)}<span className="text-xl">/yr</span>
-                  </p>
-                )}
-                <p className="text-xs text-slate-500 mt-2">
-                  {calc.yearlyEarn > 0 ? 'passive income' : 'total cost'}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-xs text-slate-500 uppercase tracking-widest mb-3">Pro plan</p>
-                {calc.isFree ? (
-                  <p className="text-3xl md:text-4xl font-black text-indigo-500 leading-none">FREE</p>
-                ) : (
-                  <p className="text-3xl md:text-4xl font-black text-white leading-none">
-                    {6 - refs} <span className="text-xl">more</span>
-                  </p>
-                )}
-                <p className="text-xs text-slate-500 mt-2">
-                  {calc.isFree ? '+ earning extra cash' : 'referrals until free'}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-8 text-center">
-            <Link
-              to="/signup"
-              className="inline-flex items-center gap-2 px-10 py-4 bg-brand-600 hover:bg-brand-500 text-white font-black text-lg rounded-full transition-all shadow-xl shadow-brand-500/30"
-            >
-              Get My Free Referral Link <ArrowRight className="h-5 w-5" />
-            </Link>
-            <p className="mt-3 text-slate-500 text-sm">1,000 referrals = ${money(1000 - PRO_PRICE)}/mo. Yours. Every month.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* ── 7. HOW REFERRAL PROGRAM WORKS ── */}
-      <section className="py-24 px-6 bg-white dark:bg-slate-950">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3">The referral program</p>
-            <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4">
-              How it works
-            </h2>
-            <p className="text-slate-500 dark:text-slate-400 text-lg max-w-2xl mx-auto">
-              Three steps. No catch. No expiry. 1,000 referrals = ${money(1000 - PRO_PRICE)}/mo. <strong className="text-slate-800 dark:text-slate-200">Yours. Every month.</strong>
-            </p>
-          </div>
-
-          <div className="grid sm:grid-cols-3 gap-6 mb-10">
-            {[
-              { icon: Link2,       n: '01', title: 'Get your unique link',      desc: 'Every account gets a permanent referral link instantly — no approval, no minimum.' },
-              { icon: Users,       n: '02', title: 'Share with your network',   desc: 'Post on LinkedIn, add to your email footer, or share directly with colleagues.' },
-              { icon: DollarSign,  n: '03', title: 'Earn $1/mo per subscriber forever', desc: 'Each time someone you referred pays their $9.99/mo, $1 flows to you. Automatically. Every single month.' },
-            ].map((step) => (
-              <div key={step.n} className="relative text-center">
-                <div className="hidden sm:block absolute top-10 left-[calc(50%+28px)] right-[calc(-50%+28px)] h-px bg-gradient-to-r from-indigo-300 to-transparent dark:from-indigo-700 pointer-events-none last:hidden" />
-                <div className="h-16 w-16 rounded-2xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center mx-auto mb-5 relative">
-                  <step.icon className="h-7 w-7 text-indigo-600 dark:text-indigo-500" />
-                  <span className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-indigo-600 text-white text-xs font-black flex items-center justify-center">{step.n.replace('0', '')}</span>
-                </div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">{step.title}</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-xs mx-auto">{step.desc}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Permanent stake callout */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-700 to-indigo-600 p-8 text-center">
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-2 left-4 text-8xl font-black text-white select-none">$</div>
-              <div className="absolute bottom-2 right-4 text-8xl font-black text-white select-none">∞</div>
-            </div>
-            <p className="relative text-indigo-100 text-sm font-semibold mb-2 uppercase tracking-widest">Social proof</p>
-            <p className="relative text-2xl md:text-3xl font-black text-white leading-snug max-w-2xl mx-auto">
-              "Think of it as owning a permanent stake in every customer you bring in."
-            </p>
-            <div className="relative mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-xl mx-auto text-center">
-              {[
-                { n: String(REFERRALS_TO_COVER_PLAN), label: 'refs = Free Pro' },
-                { n: '20', label: `refs = +$${money(20 - PRO_PRICE)}/mo` },
-                { n: '100', label: `refs = +$${money(100 - PRO_PRICE)}/mo` },
-                { n: '1,000', label: `refs = +$${money(1000 - PRO_PRICE)}/mo` },
-              ].map((c) => (
-                <div key={c.n} className="bg-white/10 rounded-xl px-3 py-3">
-                  <p className="text-xl font-black text-white">{c.n}</p>
-                  <p className="text-xs text-indigo-100 mt-0.5">{c.label}</p>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </section>
 
@@ -1050,7 +829,6 @@ export function CalendlyAlternative() {
             <a href="#reminders" className="hover:text-slate-900 dark:hover:text-white transition-colors">Reminders</a>
             <a href="#compare" className="hover:text-slate-900 dark:hover:text-white transition-colors">vs. Calendly</a>
             <a href="#pricing" className="hover:text-slate-900 dark:hover:text-white transition-colors">Pricing</a>
-            <a href="#earn" className="hover:text-slate-900 dark:hover:text-white transition-colors">Referral Program</a>
           </div>
           <div className="text-center md:text-right">
             <p className="text-sm text-slate-400">&copy; 2026 Miami Expeditions LLC. All Rights Reserved.</p>

@@ -14,7 +14,7 @@ const LEGACY_BULLETS = [
   'Bookings sync to Google / Outlook',
   'Doc Center: NDAs, waivers, invoices, quotes',
   'Paid Booking storefront',
-  'Calendly import + referral credits',
+  'Calendly import',
 ];
 
 export function LandingPricingCard({ variant }: Props) {

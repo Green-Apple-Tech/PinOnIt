@@ -6,7 +6,6 @@ import {
   PRO_PRICE,
   PRO_PRICE_CENTS,
   PRO_PRICE_LABEL,
-  REFERRALS_TO_COVER_PLAN,
   STRIPE_PRO_PRICE_ID,
 } from './pricing';
 import { PINONIT_SOFTWARE } from './seoIdentity';
@@ -70,31 +69,35 @@ describe('new Pro checkout', () => {
     expect(webhook).toContain('stripe.subscriptions.retrieve');
     expect(webhook).toContain('applyStripeSubscription');
     expect(webhook).not.toContain('subscriptions.update');
-    expect(webhook).toContain('amount_cents: 100');
+    expect(webhook).not.toContain('amount_cents: 100');
+    expect(webhook).not.toContain('createBalanceTransaction');
     expect(webhook).not.toContain('amount_cents: 899');
     expect(webhook).not.toContain('amount_cents: 999');
   });
 
-  it('keeps referral rewards at $1 and explains that 10 credits cover $9.99', () => {
-    expect(REFERRALS_TO_COVER_PLAN).toBe(10);
-    expect(REFERRALS_TO_COVER_PLAN).toBe(Math.ceil(PRO_PRICE));
-
-    const billing = read('src/pages/Billing.tsx');
-    const settings = read('src/pages/Settings.tsx');
-    const why = read('src/lib/whyPinonit.ts');
-    const compare = read('src/pages/CalendlyAlternative.tsx');
-    const terms = read('src/pages/Terms.tsx');
-    const leaderboard = read('src/pages/Leaderboard.tsx');
-
-    for (const source of [billing, settings, why, compare]) {
-      expect(source).not.toContain('Refer 6');
-      expect(source).not.toContain('Refer 9');
-      expect(source).toContain('REFERRALS_TO_COVER_PLAN');
+  it('removes the $1 customer referral promotion and keeps signup links working', () => {
+    const pages = [
+      'src/pages/Landing.tsx',
+      'src/pages/Billing.tsx',
+      'src/pages/Settings.tsx',
+      'src/lib/whyPinonit.ts',
+      'src/pages/CalendlyAlternative.tsx',
+      'src/components/Auth.tsx',
+      'src/components/landing/LandingPricingCard.tsx',
+    ];
+    for (const page of pages) {
+      const source = read(page);
+      expect(source).not.toContain('earn $1');
+      expect(source).not.toContain('$1/month');
+      expect(source).not.toContain('$1/mo');
+      expect(source).not.toContain('Referral Program');
     }
-    expect(terms).toContain('$1/month');
-    expect(terms).toContain('up to $9.99/month');
-    expect(leaderboard).toContain('Refer 10 and your plan is free');
-    expect(settings).toContain('credits cover a {PRO_PRICE_LABEL} subscription');
+    expect(read('src/pages/Terms.tsx')).toContain('ended on October 15, 2026');
+    expect(read('src/pages/Leaderboard.tsx')).toContain('has ended');
+    expect(read('src/App.tsx')).toContain('/signup?ref=');
+    expect(read('src/components/Auth.tsx')).not.toContain('referral-signup');
+    expect(read('src/lib/pricing.ts')).toContain("price_1UBerwIVv38UYFOXg43WzEWL");
+    expect(read('supabase/functions/_shared/stripeSubscription.ts')).toContain(OLD_PRICE_ID);
   });
 
   it('shows $9.99 in marketing copy and structured data, with no secret keys in the frontend', () => {

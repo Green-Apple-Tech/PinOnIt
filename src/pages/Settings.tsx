@@ -15,8 +15,8 @@ import { DEFAULT_TERMS_TEXT } from '../lib/terms';
 import { formatErrorMessage } from '../lib/errors';
 import {
   Save, Loader2, Copy, Check, Code, Palette, ExternalLink, Upload, X,
-  ImagePlus, CheckCircle2, AlertCircle, Link2, QrCode, Users, Gift,
-  TrendingUp, DollarSign, Calendar, Video, Wifi, WifiOff, BellRing, Plus, Trash2, Phone, PhoneCall,
+  ImagePlus, CheckCircle2, AlertCircle, Link2, QrCode,
+  Calendar, Video, Wifi, WifiOff, BellRing, Plus, Trash2, Phone, PhoneCall,
   Mail, Smartphone, MessageSquare, Shield,
 } from 'lucide-react';
 import { QRModal } from '../components/QRModal';
@@ -34,7 +34,6 @@ import { DocsTemplateLibrary } from '../components/DocsTemplateLibrary';
 import { PaymentLinkFields } from '../components/PaymentLinkFields';
 import { SmsBookingConsent } from '../components/SmsConsentText';
 import { SESSION_TIMEOUT_OPTIONS, sessionTimeoutOptionValue } from '../lib/sessionTimeout';
-import { PRO_PRICE_LABEL, REFERRALS_TO_COVER_PLAN } from '../lib/pricing';
 
 const AnalyticsPage = lazy(() => import('./Analytics').then((m) => ({ default: m.AnalyticsPage })));
 const BillingPage = lazy(() => import('./Billing').then((m) => ({ default: m.BillingPage })));
@@ -43,11 +42,11 @@ const ActivityPage = lazy(() => import('./Activity').then((m) => ({ default: m.A
 const ServicesPage = lazy(() => import('./Services').then((m) => ({ default: m.ServicesPage })));
 const ContactsPage = lazy(() => import('./Contacts').then((m) => ({ default: m.ContactsPage })));
 
-type SettingsSection = 'general' | 'availability' | 'activity' | 'analytics' | 'billing' | 'event-types' | 'contacts' | 'docs' | 'branding' | 'integrations' | 'referrals';
+type SettingsSection = 'general' | 'availability' | 'activity' | 'analytics' | 'billing' | 'event-types' | 'contacts' | 'docs' | 'branding' | 'integrations';
 type SettingsTab = 'profile' | 'booking_page' | 'embed' | 'coworkers' | 'advanced';
 type QuoteLineDefault = { description: string; amount: number };
 
-const SECTION_TABS: SettingsSection[] = ['availability', 'activity', 'analytics', 'billing', 'event-types', 'contacts', 'docs', 'branding', 'integrations', 'referrals'];
+const SECTION_TABS: SettingsSection[] = ['availability', 'activity', 'analytics', 'billing', 'event-types', 'contacts', 'docs', 'branding', 'integrations'];
 const TOP_LEVEL_SECTIONS: { key: SettingsSection; label: string }[] = [
   { key: 'general', label: 'General' },
   { key: 'availability', label: 'Availability' },
@@ -56,7 +55,6 @@ const TOP_LEVEL_SECTIONS: { key: SettingsSection; label: string }[] = [
   { key: 'docs', label: 'Docs' },
   { key: 'branding', label: 'Branding' },
   { key: 'integrations', label: 'Integrations' },
-  { key: 'referrals', label: 'Referrals' },
   { key: 'activity', label: 'Activity' },
   { key: 'analytics', label: 'Analytics' },
   { key: 'billing', label: 'Billing' },
@@ -1021,7 +1019,7 @@ export function SettingsPage() {
       </Suspense>
 
       {/* General / docs / branding / integrations / referrals */}
-      {(section === 'general' || section === 'docs' || section === 'branding' || section === 'integrations' || section === 'referrals') && (
+      {(section === 'general' || section === 'docs' || section === 'branding' || section === 'integrations') && (
         <>
 
       {section === 'general' && (
@@ -2003,11 +2001,6 @@ export function SettingsPage() {
         </div>
       )}
 
-      {/* REFERRALS */}
-      {section === 'referrals' && (
-        <ReferralsTab userId={user?.id ?? null} profile={profile} />
-      )}
-
       {section === 'general' && tab === 'advanced' && profile?.id && (
         <BookingBlocksSettings hostId={profile.id} />
       )}
@@ -2022,202 +2015,6 @@ export function SettingsPage() {
         </>
       )}
     </main>
-  );
-}
-
-// ── Referrals tab ─────────────────────────────────────────────────────────────
-
-interface ReferralRow {
-  id: string;
-  referred_email: string | null;
-  status: string;
-  converted_at: string | null;
-  created_at: string;
-}
-
-interface ReferralCredit {
-  amount_cents: number;
-  stripe_credit_applied: boolean;
-}
-
-function ReferralsTab({ userId, profile }: { userId: string | null; profile: import('../lib/types').Profile | null }) {
-  const [referrals, setReferrals] = useState<ReferralRow[]>([]);
-  const [credits, setCredits] = useState<ReferralCredit[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState(false);
-
-  const referralCode = profile?.referral_code ?? '';
-  const referralLink = referralCode ? `${window.location.origin}/signup?ref=${referralCode}` : '';
-
-  useEffect(() => {
-    if (!userId) return;
-    Promise.all([
-      supabase.from('referrals').select('*').eq('referrer_id', userId).order('created_at', { ascending: false }),
-      supabase.from('referral_credits').select('amount_cents, stripe_credit_applied').eq('user_id', userId),
-    ]).then(([{ data: refs }, { data: creds }]) => {
-      setReferrals(refs ?? []);
-      setCredits(creds ?? []);
-      setLoading(false);
-    });
-  }, [userId]);
-
-  const totalConverted = referrals.filter((r) => r.status === 'converted').length;
-  const totalSignups = referrals.filter((r) => r.status !== 'pending').length;
-  const appliedCreditsCents = credits.filter((c) => c.stripe_credit_applied).reduce((s, c) => s + c.amount_cents, 0);
-  const pendingCreditsCents = credits.filter((c) => !c.stripe_credit_applied).reduce((s, c) => s + c.amount_cents, 0);
-  const monthlyDiscount = Math.min(totalConverted, REFERRALS_TO_COVER_PLAN);
-  const monthlyEarning = totalConverted > REFERRALS_TO_COVER_PLAN ? (totalConverted - REFERRALS_TO_COVER_PLAN) : 0;
-
-  const copy = () => {
-    navigator.clipboard.writeText(referralLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  if (loading) {
-    return <div className="py-16 text-center text-slate-400 text-sm"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></div>;
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="bg-gradient-to-r from-indigo-600 to-indigo-500 p-px rounded-2xl shadow-lg shadow-indigo-500/10">
-        <div className="bg-white dark:bg-slate-900 rounded-2xl p-6">
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Your referral program</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Share your link. Earn $1 off for each person who upgrades to Pro. {REFERRALS_TO_COVER_PLAN} credits cover a {PRO_PRICE_LABEL} subscription.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 text-center">
-              <div className="flex items-center justify-center gap-1 mb-1"><Gift className="h-4 w-4 text-indigo-600" /></div>
-              <p className="text-xl font-bold text-slate-900 dark:text-white">{totalConverted}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Converted</p>
-            </div>
-            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 text-center">
-              <div className="flex items-center justify-center gap-1 mb-1"><Users className="h-4 w-4 text-indigo-600" /></div>
-              <p className="text-xl font-bold text-slate-900 dark:text-white">{totalSignups}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Signed up</p>
-            </div>
-            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 text-center">
-              <div className="flex items-center justify-center gap-1 mb-1"><DollarSign className="h-4 w-4 text-indigo-600" /></div>
-              <p className="text-xl font-bold text-slate-900 dark:text-white">
-                {monthlyEarning > 0 ? `+$${monthlyEarning}` : `-$${monthlyDiscount}`}
-              </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {monthlyEarning > 0 ? 'Monthly payout' : 'Monthly credit'}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {totalConverted > REFERRALS_TO_COVER_PLAN && (
-        <div className="flex items-start gap-3 p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 rounded-xl success">
-          <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
-          <div>
-            <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">You're earning monthly payments!</p>
-            <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">
-              With {totalConverted} active referrals, you earn ${monthlyEarning}/month above your Pro subscription.
-            </p>
-          </div>
-        </div>
-      )}
-      {totalConverted >= REFERRALS_TO_COVER_PLAN && totalConverted <= REFERRALS_TO_COVER_PLAN && (
-        <div className="flex items-start gap-3 p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 rounded-xl success">
-          <Check className="h-5 w-5 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
-          <div>
-            <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">Pro is fully covered!</p>
-            <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">{REFERRALS_TO_COVER_PLAN} active referrals fully covers your $9.99/month.</p>
-          </div>
-        </div>
-      )}
-
-      <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-3">
-        <div className="flex items-center gap-2 mb-1">
-          <Link2 className="h-4 w-4 text-indigo-600" />
-          <h3 className="font-semibold text-slate-900 dark:text-white">Your referral link</h3>
-        </div>
-        <p className="text-sm text-slate-500 dark:text-slate-400">Share this link. When someone signs up and upgrades to Pro, you automatically earn $1 off your monthly bill.</p>
-        {referralLink ? (
-          <div className="flex items-center gap-2">
-            <div className="flex-1 flex items-center gap-2 px-3 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden">
-              <span className="text-sm text-indigo-600 dark:text-indigo-400 font-mono truncate">{referralLink}</span>
-            </div>
-            <button
-              onClick={copy}
-              className="shrink-0 px-3 py-2.5 text-white text-sm font-medium rounded-lg transition-colors inline-flex items-center gap-1.5 hover:opacity-90"
-            style={{ backgroundColor: '#5864C6' }}
-            >
-              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-              {copied ? 'Copied!' : 'Copy'}
-            </button>
-          </div>
-        ) : (
-          <p className="text-sm text-slate-400 italic">Loading your referral code...</p>
-        )}
-        {referralCode && (
-          <p className="text-xs text-slate-400 dark:text-slate-500">Your code: <span className="font-mono font-semibold text-slate-700 dark:text-slate-300">{referralCode}</span></p>
-        )}
-      </div>
-
-      {credits.length > 0 && (
-        <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-3">
-          <h3 className="font-semibold text-slate-900 dark:text-white">Credit summary</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-lg">
-              <p className="text-xs text-slate-500 dark:text-slate-400">Applied to date</p>
-              <p className="text-lg font-bold text-slate-900 dark:text-white">${(appliedCreditsCents / 100).toFixed(2)}</p>
-            </div>
-            <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
-              <p className="text-xs text-slate-500 dark:text-slate-400">Pending next cycle</p>
-              <p className="text-lg font-bold text-indigo-600 dark:text-indigo-500">${(pendingCreditsCents / 100).toFixed(2)}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800">
-          <h3 className="font-semibold text-slate-900 dark:text-white">Referral history</h3>
-        </div>
-        {referrals.length === 0 ? (
-          <div className="py-12 text-center">
-            <Users className="h-8 w-8 text-slate-200 dark:text-slate-700 mx-auto mb-2" />
-            <p className="text-sm text-slate-500 dark:text-slate-400">No referrals yet</p>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Share your link to start earning credits.</p>
-          </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 dark:border-slate-800">
-                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wide">Email</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wide">Status</th>
-                <th className="text-right px-6 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wide hidden sm:table-cell">Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {referrals.map((r) => (
-                <tr key={r.id} className="border-b border-slate-50 dark:border-slate-800/50 last:border-0">
-                  <td className="px-6 py-3 text-slate-700 dark:text-slate-300 font-mono text-xs">{r.referred_email ?? '—'}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                      r.status === 'converted'
-                        ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
-                        : r.status === 'signed_up'
-                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-                    }`}>
-                      {r.status === 'converted' && <Check className="h-3 w-3" />}
-                      {r.status === 'converted' ? 'Pro' : r.status === 'signed_up' ? 'Signed up' : 'Pending'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-3 text-right text-xs text-slate-400 dark:text-slate-500 hidden sm:table-cell">
-                    {new Date(r.created_at).toLocaleDateString()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </div>
   );
 }
 

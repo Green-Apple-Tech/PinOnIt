@@ -185,20 +185,15 @@ const sections: Section[] = [
   },
   {
     icon: Gift,
-    title: 'Referral Program',
+    title: 'Customer referrals',
     content: (
       <div className="space-y-3">
         <p>
-          PinOnIt offers a referral program that rewards you when people you refer subscribe to Pro. Program details, eligibility, and payout rules may change; the following applies unless we notify you otherwise.
+          The $1 customer referral program ended on October 15, 2026. No new $1 credits are issued. A link that still contains <span className="font-mono">?ref=</span> opens ordinary signup and does not create a reward. Historical referral records, if any, stay in place.
         </p>
-        <ul className="space-y-2 pl-4">
-          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Credit:</strong> You earn $1/month in credit for each referred user who becomes and remains an active Pro subscriber.</span></li>
-          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Plan offset:</strong> Credits first offset your own Pro subscription cost (up to $9.99/month). Once your plan is fully covered, additional referral earnings accumulate as cash credits.</span></li>
-          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Payout threshold:</strong> Cash credits are eligible for payout once your accumulated balance reaches a minimum of $10.</span></li>
-          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Conditions:</strong> Credits are only earned while the referred user maintains an active paid Pro subscription. Credits are forfeited if the referred user cancels or downgrades.</span></li>
-          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Abuse:</strong> Self-referrals, fake accounts, and referral fraud will result in immediate account termination and forfeiture of all credits.</span></li>
-          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Changes:</strong> We reserve the right to modify or discontinue the referral program at any time with 30 days' notice to existing participants.</span></li>
-        </ul>
+        <p>
+          These terms previously required 30 days' notice to existing participants before this program changed. On the effective date there were no referral relationships, pending rewards, or issued credits.
+        </p>
       </div>
     ),
   },
@@ -406,7 +401,7 @@ export function TermsPage() {
               Terms of Service
             </h1>
           </div>
-          <p className="text-sm text-slate-400 dark:text-slate-500">Last updated: October 12, 2026</p>
+          <p className="text-sm text-slate-400 dark:text-slate-500">Last updated: October 15, 2026</p>
           <p className="mt-4 text-sm leading-relaxed text-slate-600 dark:text-slate-400 p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl">
             These Terms govern the PinOnIt platform, a DBA of Miami Expeditions LLC.
           </p>

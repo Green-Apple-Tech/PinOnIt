@@ -1,4 +1,3 @@
-import { PRO_PRICE_LABEL, REFERRALS_TO_COVER_PLAN } from './pricing';
 
 export type CompareValue = boolean | string;
 
@@ -118,13 +117,6 @@ export const CALENDLY_EXCLUSIVES: ExclusiveFeature[] = [
     desc: 'Bring over your event types and keep your old Calendly link working while you switch.',
     tag: 'Not on Calendly',
   },
-  {
-    id: 'referral',
-    icon: '💵',
-    title: 'Referral program: $1/mo credit',
-    desc: `Refer ${REFERRALS_TO_COVER_PLAN} people and Pro at ${PRO_PRICE_LABEL}/month is covered. Refer more and PinOnIt pays you $1/month per person.`,
-    tag: 'Not on Calendly',
-  },
 ];
 
 export const WHY_PINONIT = {
@@ -155,7 +147,6 @@ export const WHY_PINONIT = {
     { id: 'smsalign', label: 'Align & book over SMS', pinonit: true, calendly: false },
     { id: 'preenter', label: 'Pre-enter someone’s availability', pinonit: true, calendly: false },
     { id: 'import', label: 'Calendly import', pinonit: true, calendly: false },
-    { id: 'referral', label: 'Referral credit', pinonit: '$1/mo', calendly: false },
     { id: 'deposits', label: 'Deposits at booking', pinonit: true, calendly: '$16+/mo' },
     { id: 'types', label: 'Unlimited event types', pinonit: true, calendly: '$16+/mo' },
     { id: 'price', label: 'Monthly price', pinonit: '$9.99', calendly: '$16+' },

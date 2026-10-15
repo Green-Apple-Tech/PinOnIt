@@ -83,7 +83,7 @@ export function CreatorDashboardPage() {
       <div>
         <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Creator partner · draft program</p>
         <h1 className="text-2xl font-bold mt-1">Your creator dashboard</h1>
-        <p className="text-sm text-slate-500 mt-2">This is separate from the $1 customer referral credit in Settings.</p>
+        <p className="text-sm text-slate-500 mt-2">Creator commissions stay off while this program is a draft.</p>
       </div>
       {note && <p className="text-sm">{note} <Link className="underline" to="/creators">Apply</Link></p>}
       {creator && (

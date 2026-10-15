@@ -279,7 +279,6 @@ const extraSitemap: Array<{ loc: string; changefreq: string; priority: string; l
   { loc: `${PINONIT_ORG.url}/sms-consent`, changefreq: 'yearly', priority: '0.3' },
   { loc: `${PINONIT_ORG.url}/acceptable-use`, changefreq: 'yearly', priority: '0.3' },
   { loc: `${PINONIT_ORG.url}/status`, changefreq: 'weekly', priority: '0.2' },
-  { loc: `${PINONIT_ORG.url}/leaderboard`, changefreq: 'weekly', priority: '0.2' },
 ].map((u) => ({ ...u, lastmod: CONTENT_CHANGED }));
 
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
