@@ -1,4 +1,4 @@
-import { normalizePhoneE164 } from './phone';
+import { normalizePhoneE164 } from './phone.ts';
 
 /** Browser origins allowed to call reminder-intake when REMINDER_INTAKE_ORIGINS is unset. */
 export const DEFAULT_INTAKE_ORIGINS = [
