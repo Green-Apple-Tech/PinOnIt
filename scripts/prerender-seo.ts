@@ -14,6 +14,12 @@ import {
   websiteJsonLd,
 } from '../src/lib/jsonLd.ts';
 import { injectSeoShell, SEO_SHELLS } from '../src/lib/seoShells.ts';
+import {
+  applyDocumentCenterShell,
+  documentCenterSampleFiles,
+  documentCenterShellSpecs,
+  documentCenterSitemapEntries,
+} from '../src/lib/documentCenter.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = join(root, 'public', 'seo-static');
@@ -282,6 +288,8 @@ const extraSitemap: Array<{ loc: string; changefreq: string; priority: string; l
   { loc: `${PINONIT_ORG.url}/leaderboard`, changefreq: 'weekly', priority: '0.2' },
 ].map((u) => ({ ...u, lastmod: CONTENT_CHANGED }));
 
+extraSitemap.push(...documentCenterSitemapEntries());
+
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${extraSitemap
@@ -297,12 +305,28 @@ writeFileSync(sitemapPath, sitemap);
 console.log('wrote', sitemapPath);
 
 const dist = join(root, 'dist');
+for (const sample of documentCenterSampleFiles()) {
+  const rel = join('templates', sample.state, `${sample.slug}.txt`);
+  const targets = [join(root, 'public', rel)];
+  if (existsSync(dist)) targets.push(join(dist, rel));
+  for (const file of targets) {
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, sample.body);
+  }
+}
+
 if (existsSync(dist)) {
   cpSync(outDir, join(dist, 'seo-static'), { recursive: true });
   cpSync(sitemapPath, join(dist, 'sitemap.xml'));
   const indexHtml = readFileSync(join(dist, 'index.html'), 'utf8');
   if (!indexHtml.includes('<!--seo-snapshot-->')) {
     throw new Error('dist/index.html is missing seo-snapshot markers. Run vite build before prerender.');
+  }
+  for (const spec of documentCenterShellSpecs()) {
+    const dir = join(dist, 'templates', ...spec.dir);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'index.html'), applyDocumentCenterShell(indexHtml, spec));
+    console.log('wrote', join(dir, 'index.html'));
   }
   const shellDir = join(dist, 'seo-shell');
   mkdirSync(shellDir, { recursive: true });

@@ -14,6 +14,10 @@ export function Footer() {
             Field notes
           </Link>
           <span className="hidden sm:inline">|</span>
+          <Link to="/templates/" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+            Templates
+          </Link>
+          <span className="hidden sm:inline">|</span>
           <Link to="/why-pinonit" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
             Why PinOnIt
           </Link>

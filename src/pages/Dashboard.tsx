@@ -27,6 +27,7 @@ import {
   EXAMPLE_PAID_CONSULTATION_NAME,
   isExamplePaidConsultation,
 } from '../lib/eventTypes';
+import { isDocumentCenterSendPath } from '../lib/documentCenter';
 import { isSignNowSendPath } from '../lib/signNow';
 type NavItem = {
   to: string;
@@ -506,7 +507,7 @@ export function Dashboard() {
   // Auto-show wizard only for genuinely new users — runs once after ALL data has loaded
   useEffect(() => {
     if (wizardChecked || !profile || loading || !subscriptionLoaded) return;
-    if (isSignNowSendPath(location.pathname, location.search)) {
+    if (isSignNowSendPath(location.pathname, location.search) || isDocumentCenterSendPath(location.pathname, location.search)) {
       if (showWizard) setShowWizard(false);
       return;
     }

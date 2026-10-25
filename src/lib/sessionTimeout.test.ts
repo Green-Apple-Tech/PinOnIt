@@ -25,6 +25,8 @@ describe('session timeout', () => {
   });
 
   it('leaves a public booking page open when the host session is idle', () => {
+    expect(isPublicBookingPath('/templates')).toBe(false);
+    expect(isPublicBookingPath('/templates/florida/miami/roofing-contract')).toBe(false);
     expect(isPublicBookingPath('/peter-stebbins')).toBe(true);
     expect(isPublicBookingPath('/peter-stebbins/services')).toBe(true);
     expect(inactivitySignOutDestination('/peter-stebbins')).toBeNull();

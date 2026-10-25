@@ -6,6 +6,7 @@ import { SigningQr } from '../components/SigningQr';
 import { useAuth } from '../hooks/useAuth';
 import { ContactAutocomplete } from '../components/ContactAutocomplete';
 import { splitContactName, type ContactPickerSelection } from '../lib/contactPicker';
+import { documentCenterComposerPrefill } from '../lib/documentCenter';
 import { supabase } from '../lib/supabase';
 import { PHONE_HINT, PHONE_PLACEHOLDER, blurFormatPhone, normalizePhoneE164 } from '../lib/phone';
 import { revealTool } from '../lib/progressiveDisclosure';
@@ -102,9 +103,12 @@ export function CreateDocumentPage() {
   const nameParam = searchParams.get('name');
   const phoneParam = searchParams.get('phone');
   const emailParam = searchParams.get('email');
+  const docCenterParam = searchParams.get('docCenter');
   const entryMode: DocsEntryMode = resolveDocsEntryMode(modeParam, actionParam);
   const initialType: SmbDocumentType =
     typeParam && isSmbDocumentType(typeParam) ? typeParam : 'nda';
+  const centerPrefill = initialType === 'contract' ? documentCenterComposerPrefill(docCenterParam) : null;
+  const centerRecipient = splitContactName(centerPrefill?.recipientName);
 
   const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
   const [hostOverrides, setHostOverrides] = useState<HostDocumentTemplate[]>([]);
@@ -114,17 +118,17 @@ export function CreateDocumentPage() {
   const [customTypeLabel, setCustomTypeLabel] = useState('');
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadTemplateName, setUploadTemplateName] = useState('');
-  const [recipientFirstName, setRecipientFirstName] = useState('');
-  const [recipientLastName, setRecipientLastName] = useState('');
+  const [recipientFirstName, setRecipientFirstName] = useState(centerRecipient.firstName);
+  const [recipientLastName, setRecipientLastName] = useState(centerRecipient.lastName);
   const [recipientEmail, setRecipientEmail] = useState('');
   const [recipientPhone, setRecipientPhone] = useState('');
   const [phonePrompt, setPhonePrompt] = useState('');
   const phoneInputRef = useRef<HTMLInputElement>(null);
-  const [topic, setTopic] = useState('');
-  const [businessName, setBusinessName] = useState('');
+  const [topic, setTopic] = useState(centerPrefill?.topic ?? '');
+  const [businessName, setBusinessName] = useState(centerPrefill?.businessName ?? '');
   const [activityOptions, setActivityOptions] = useState<string[]>([]);
   const businessNameHydrated = useRef(false);
-  const [customText, setCustomText] = useState(() => defaultWaiverText());
+  const [customText, setCustomText] = useState(() => centerPrefill?.text || defaultWaiverText());
   /** Default from ?mode= when present; otherwise from document type. */
   const [verificationRequired, setVerificationRequired] = useState(() =>
     modeParam === 'sign' || modeParam === 'send' || actionParam === 'sign' || actionParam === 'send'
@@ -295,6 +299,12 @@ export function CreateDocumentPage() {
 
   useEffect(() => {
     if (isLibraryPdf) return;
+    const center = documentType === 'contract' ? documentCenterComposerPrefill(docCenterParam) : null;
+    if (center) {
+      setCustomText(center.text);
+      setTopic((current) => current.trim() || center.topic);
+      return;
+    }
     if (documentType === 'waiver') {
       setCustomText(defaultWaiverText(hostOverrideText || profile?.waiver_template));
       return;
@@ -314,6 +324,7 @@ export function CreateDocumentPage() {
     hostOverrideText,
     profile?.waiver_template,
     selectedTemplate?.full_text,
+    docCenterParam,
   ]);
 
   // Seed / refresh summary cache for the recipient (not shown on this page).

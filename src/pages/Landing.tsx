@@ -99,6 +99,7 @@ export function Landing() {
             <a href="#tools" className="px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">What you get</a>
             <a href="#pricing" className="px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Pricing</a>
             <a href="#faq" className="px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">FAQ</a>
+            <Link to="/templates/" className="px-3 py-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Templates</Link>
           </div>
 
           <div className="flex items-center gap-2">
@@ -125,6 +126,7 @@ export function Landing() {
             <a href="#tools" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-brand-500 transition-colors">What you get</a>
             <a href="#pricing" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-brand-500 transition-colors">Pricing</a>
             <a href="#faq" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-brand-500 transition-colors">FAQ</a>
+            <Link to="/templates/" onClick={() => setMobileMenuOpen(false)} className="py-2 hover:text-brand-500 transition-colors">Templates</Link>
           </div>
         )}
       </nav>
@@ -258,6 +260,7 @@ export function Landing() {
             <Link to="/docusign-alternative" className="hover:text-slate-900 dark:hover:text-white transition-colors">Affordable DocuSign alternative</Link>
             <Link to="/sign-by-text" className="hover:text-slate-900 dark:hover:text-white transition-colors">Sign documents by text</Link>
             <Link to="/blog" className="hover:text-slate-900 dark:hover:text-white transition-colors">Field notes</Link>
+            <Link to="/templates/" className="hover:text-slate-900 dark:hover:text-white transition-colors">Templates</Link>
             <a href="#pricing" className="hover:text-slate-900 dark:hover:text-white transition-colors">Pricing</a>
             <a href="#faq" className="hover:text-slate-900 dark:hover:text-white transition-colors">FAQ</a>
           </div>

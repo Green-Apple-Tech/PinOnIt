@@ -1,3 +1,5 @@
+import { documentCenterNextParam } from './documentCenter';
+
 /** Public page for “sign your doc by text.” */
 export const SIGN_NOW_PATH = '/sign-now';
 
@@ -41,6 +43,8 @@ export function postLoginDestination(stored: string | null, onboardingCompleted:
     ? stored
     : '/dashboard';
   if (safe === SIGN_NOW_SEND_PATH) return SIGN_NOW_SEND_PATH;
+  const fromTemplate = documentCenterNextParam(safe);
+  if (fromTemplate) return fromTemplate;
   if (!onboardingCompleted) return '/dashboard?onboarding=1';
   return safe;
 }

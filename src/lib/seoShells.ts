@@ -19,6 +19,7 @@ const LINKS = [
   { href: '/contractor-booking-app', label: 'Appointment scheduling for contractors' },
   { href: '/solutions', label: 'Solutions' },
   { href: '/blog', label: 'Field notes' },
+  { href: '/templates/', label: 'Templates' },
 ];
 
 export const SEO_SHELLS: SeoShell[] = [

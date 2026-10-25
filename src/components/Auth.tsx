@@ -5,6 +5,7 @@ import { useTheme } from '../hooks/useTheme';
 import { supabase } from '../lib/supabase';
 import { Loader2, Mail, Lock, User, ArrowLeft, Sun, Moon, Eye, EyeOff } from 'lucide-react';
 import { IOS_OAUTH_SAFARI_MESSAGE, clearOauthStart, isIosIsolatedWebView, readIosStandalone } from '../lib/oauthLogin';
+import { documentCenterNextParam } from '../lib/documentCenter';
 import { postLoginDestination, signNowNextParam } from '../lib/signNow';
 
 type View = 'login' | 'signup' | 'forgot';
@@ -40,9 +41,12 @@ export function AuthForm() {
   // sign-now passes ?next= so Google, Microsoft, and email all land on the one-page send screen.
   const locationState = (window.history.state?.usr as { from?: { pathname: string; search?: string } }) ?? {};
   const fromLocation = locationState.from;
+  const fromHref = fromLocation ? `${fromLocation.pathname}${fromLocation.search ?? ''}` : null;
   const signNowRedirect = signNowNextParam(searchParams.get('next'))
-    ?? signNowNextParam(fromLocation ? `${fromLocation.pathname}${fromLocation.search ?? ''}` : null);
-  const redirectTo = signNowRedirect ?? fromLocation?.pathname ?? '/dashboard';
+    ?? signNowNextParam(fromHref);
+  const templateRedirect = documentCenterNextParam(searchParams.get('next'))
+    ?? documentCenterNextParam(fromHref);
+  const redirectTo = signNowRedirect ?? templateRedirect ?? fromLocation?.pathname ?? '/dashboard';
   const oauthInFlight = useRef(false);
   const pendingOauth = useRef<'google' | 'microsoft' | null>(null);
   const isolatedOauth = isIosIsolatedWebView(
@@ -62,7 +66,7 @@ export function AuthForm() {
     }
   }, [searchParams]);
   const { theme, toggleTheme } = useTheme();
-  const [view, setView] = useState<View>(refCode || signNowRedirect ? 'signup' : 'login');
+  const [view, setView] = useState<View>(refCode || signNowRedirect || templateRedirect ? 'signup' : 'login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -193,7 +197,11 @@ export function AuthForm() {
             {view === 'login'
               ? 'Sign in to continue to your dashboard'
               : view === 'signup'
-              ? (signNowRedirect ? 'Next you’ll add the one-page document.' : 'Scheduling + reminders, set up in 2 minutes')
+              ? (signNowRedirect
+                ? 'Next you’ll add the one-page document.'
+                : templateRedirect
+                  ? 'Next you’ll review the template and send it for signature.'
+                  : 'Scheduling + reminders, set up in 2 minutes')
               : "Enter your email and we'll send you a reset link"}
           </p>
         </div>
