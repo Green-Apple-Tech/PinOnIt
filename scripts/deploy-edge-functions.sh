@@ -55,6 +55,8 @@ deploy sms-inbound --no-verify-jwt
 deploy reddit-opportunity-search --no-verify-jwt
 deploy reddit-oauth-start
 deploy reddit-oauth-callback --no-verify-jwt
+# Partner sites authenticate with x-intake-secret, not a Supabase JWT.
+deploy reminder-intake --no-verify-jwt
 
 echo ""
 echo "Done. OAuth callbacks deployed with --no-verify-jwt (Google + Microsoft + Calendly + Zoom + Stripe webhook)."

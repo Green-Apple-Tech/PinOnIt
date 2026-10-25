@@ -654,6 +654,48 @@ async function fireServiceReminder(opts: {
   return sent;
 }
 
+type IntakeRecipient = { email: string; phone: string };
+
+function intakeRecipientColumnMissing(error: { code?: string; message?: string }): boolean {
+  const message = error.message ?? '';
+  return error.code === '42703'
+    || error.code === 'PGRST204'
+    || /recipient_email|recipient_phone|schema cache/i.test(message);
+}
+
+/** Partner intake stores the person on the reminder. Missing columns keep host delivery. */
+async function loadIntakeRecipients(
+  supabase: SupabaseClient,
+  reminderIds: string[],
+): Promise<{ ok: true; byId: Map<string, IntakeRecipient> } | { ok: false }> {
+  const ids = [...new Set(reminderIds.filter(Boolean))];
+  const byId = new Map<string, IntakeRecipient>();
+  if (!ids.length) return { ok: true, byId };
+  for (let i = 0; i < ids.length; i += 200) {
+    const chunk = ids.slice(i, i + 200);
+    const { data, error } = await supabase
+      .from('personal_reminders')
+      .select('id, recipient_email, recipient_phone')
+      .in('id', chunk);
+    if (error) {
+      if (intakeRecipientColumnMissing(error)) {
+        console.warn('personal reminder recipient columns are not available yet; delivering to host profiles');
+        return { ok: true, byId: new Map() };
+      }
+      console.error('personal reminder recipient lookup failed:', error.message);
+      return { ok: false };
+    }
+    for (const row of data ?? []) {
+      const record = row as { id?: string; recipient_email?: string | null; recipient_phone?: string | null };
+      byId.set(String(record.id ?? ''), {
+        email: String(record.recipient_email || '').trim(),
+        phone: String(record.recipient_phone || '').trim(),
+      });
+    }
+  }
+  return { ok: true, byId };
+}
+
 async function dispatchPersonalReminders(supabase: SupabaseClient): Promise<number> {
   const now = Date.now();
   // Catch a missed day-before email if the dispatcher was down, but not old jobs
@@ -670,6 +712,12 @@ async function dispatchPersonalReminders(supabase: SupabaseClient): Promise<numb
     console.error('personal reminder jobs query failed:', error.message);
     return 0;
   }
+  const intakeLoaded = await loadIntakeRecipients(
+    supabase,
+    (jobs ?? []).map((job) => String(job.reminder_id ?? '')),
+  );
+  if (!intakeLoaded.ok) return 0;
+  const intakeRecipients = intakeLoaded.byId;
   const activeHosts = await loadActiveHostIds(
     supabase,
     (jobs ?? []).map((j) => j.host_id as string),
@@ -722,18 +770,24 @@ async function dispatchPersonalReminders(supabase: SupabaseClient): Promise<numb
       bodyParts.push(disclaimer);
       if (ackUrl) bodyParts.push(`Mark it done so the extra reminders stop: ${ackUrl}`);
     }
+    const intake = intakeRecipients.get(String(job.reminder_id ?? ''));
+    const intakeEmail = intake?.email ?? '';
+    const intakePhone = intake?.phone ?? '';
+    const hostEmail = (hostProfile?.notification_email || hostProfile?.email || '').trim();
+    const hostPhone = (hostProfile?.phone || '').trim();
+    const hostWhatsapp = (hostProfile?.whatsapp_number || hostProfile?.phone || '').trim();
     const msg = bodyParts.join('\n\n');
     let ok = false;
     let recipient = '(none)';
     let err: string | undefined;
     if (job.channel === 'email') {
       const resendKey = Deno.env.get('RESEND_API_KEY');
-      const to = (hostProfile?.notification_email || hostProfile?.email || '').trim();
+      const to = intakeEmail || hostEmail;
       recipient = to || '(none)';
       if (!resendKey || !to) err = 'no email';
       else ok = await sendResendEmail([to], headline, msg, resendKey);
     } else if (job.channel === 'sms') {
-      const to = (hostProfile?.phone || '').trim();
+      const to = intakePhone || hostPhone;
       recipient = to || '(none)';
       if (!to) err = 'no phone';
       else {
@@ -742,7 +796,7 @@ async function dispatchPersonalReminders(supabase: SupabaseClient): Promise<numb
         err = result.error;
       }
     } else if (job.channel === 'whatsapp') {
-      const to = (hostProfile?.whatsapp_number || hostProfile?.phone || '').trim();
+      const to = hostWhatsapp;
       recipient = to || '(none)';
       if (!to) err = 'no phone';
       else {
@@ -761,7 +815,7 @@ async function dispatchPersonalReminders(supabase: SupabaseClient): Promise<numb
         err = result.error;
       }
     } else if (job.channel === 'voice') {
-      const to = (hostProfile?.phone || '').trim();
+      const to = hostPhone;
       recipient = to || '(none)';
       if (!to) err = 'no phone';
       else {
@@ -788,7 +842,9 @@ async function dispatchPersonalReminders(supabase: SupabaseClient): Promise<numb
       body: err ? `${msg}\n\n${err}` : msg,
     });
     if (ok) sent++;
-    if (job.channel !== 'voice') {
+    const deliveredToIntake = (job.channel === 'email' && Boolean(intakeEmail))
+      || (job.channel === 'sms' && Boolean(intakePhone));
+    if (job.channel !== 'voice' && !deliveredToIntake) {
       const due = reminder.due_at ? new Date(reminder.due_at) : null;
       sent += await sendAlsoCopies({
         supabase,
