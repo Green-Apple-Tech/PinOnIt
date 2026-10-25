@@ -27,6 +27,11 @@ import { SeoIntentPage } from './pages/SeoIntentPage';
 import { INTENT_PAGES } from './lib/seoIntentPages';
 import { BlogIndexPage, BlogPostPage } from './pages/Blog';
 import { PhoneShotsPage } from './pages/PhoneShots';
+import {
+  DocumentCenterDocPage,
+  DocumentCenterIndexPage,
+  DocumentCenterLegalPage,
+} from './pages/DocumentCenter';
 
 function CampaignParamCapture() {
   const { search, pathname } = useLocation();
@@ -194,6 +199,10 @@ function App() {
             <Route path="/reminders" element={<CampaignLandingPage slug="reminders" />} />
             <Route path="/why-pinonit" element={<WhyPinOnItPage />} />
             <Route path="/legal-templates" element={<LegalTemplatesPage />} />
+            <Route path="/templates" element={<DocumentCenterIndexPage />} />
+            <Route path="/templates/privacy" element={<DocumentCenterLegalPage kind="privacy" />} />
+            <Route path="/templates/terms" element={<DocumentCenterLegalPage kind="terms" />} />
+            <Route path="/templates/:state/:city/:document" element={<DocumentCenterDocPage />} />
             <Route path="/blog" element={<BlogIndexPage />} />
             <Route path="/blog/:slug" element={<BlogPostPage />} />
             <Route path="/terms" element={<TermsPage />} />

@@ -75,7 +75,8 @@ describe('PWA navigation denylist', () => {
 
   it('disables HTML navigate fallback in vite config', () => {
     const src = readFileSync(new URL('../../vite.config.ts', import.meta.url), 'utf8');
-    expect(src).toContain('navigateFallbackDenylist: [/.*/]');
+    expect(src).toContain('navigateFallback: null');
+    expect(src).not.toContain('navigateFallbackDenylist');
     expect(src).toContain("globPatterns: ['assets/**/*.{js,css}', 'pinonit_logo.png']");
   });
 });

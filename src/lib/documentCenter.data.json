@@ -1,0 +1,317 @@
+{
+  "roofing-contract": {
+    "title": "Roofing Contract",
+    "trade": "Roofing",
+    "keyword": "roofing contract template",
+    "intro": "A written roofing contract spells out the roof scope, materials, price, permit responsibility and payment schedule before any shingles come off.",
+    "fields": [
+      "Contractor business name",
+      "Contractor license #",
+      "Owner name",
+      "Property address",
+      "Scope of work",
+      "Contract price ($)",
+      "Deposit ($)",
+      "Start date",
+      "Estimated completion",
+      "Roof type / material",
+      "Squares",
+      "Tear-off layers"
+    ],
+    "body": [
+      "1. PARTIES. This roofing agreement is between [Contractor business name] (License # [__]) (\"Contractor\") and [Owner name] (\"Owner\").",
+      "2. PROPERTY. [Property address]",
+      "3. SCOPE OF WORK. Contractor will perform: [describe roofing work, materials, brands, warranty].",
+      "4. PRICE AND PAYMENT. Total price $[__]. Deposit $[__]. Balance due [schedule]. Owner may request lien releases before each payment.",
+      "5. PERMITS AND SCHEDULE. Contractor will obtain required permits. Estimated start [date]; estimated completion [date].",
+      "6. CHANGES. Changes must be in writing and signed by both parties.",
+      "7. WARRANTY. [workmanship warranty terms]",
+      "8. ELECTRONIC SIGNATURES. The parties agree to sign this agreement electronically.",
+      "NOTICE (Fla. Stat. 713.015): ACCORDING TO FLORIDA'S CONSTRUCTION LIEN LAW (SECTIONS 713.001 - 713.37, FLORIDA STATUTES), THOSE WHO WORK ON YOUR PROPERTY OR PROVIDE MATERIALS AND SERVICES AND ARE NOT PAID IN FULL HAVE A RIGHT TO ENFORCE THEIR CLAIM FOR PAYMENT AGAINST YOUR PROPERTY. THIS CLAIM IS KNOWN AS A CONSTRUCTION LIEN. IF YOUR CONTRACTOR OR A SUBCONTRACTOR FAILS TO PAY SUBCONTRACTORS, SUB-SUBCONTRACTORS, OR MATERIAL SUPPLIERS, THOSE PEOPLE WHO ARE OWED MONEY MAY LOOK TO YOUR PROPERTY FOR PAYMENT, EVEN IF YOU HAVE ALREADY PAID YOUR CONTRACTOR IN FULL. IF YOU FAIL TO PAY YOUR CONTRACTOR, YOUR CONTRACTOR MAY ALSO HAVE A LIEN ON YOUR PROPERTY. THIS MEANS IF A LIEN IS FILED YOUR PROPERTY COULD BE SOLD AGAINST YOUR WILL TO PAY FOR LABOR, MATERIALS, OR OTHER SERVICES THAT YOUR CONTRACTOR OR A SUBCONTRACTOR MAY HAVE FAILED TO PAY. TO PROTECT YOURSELF, YOU SHOULD STIPULATE IN THIS CONTRACT THAT BEFORE ANY PAYMENT IS MADE, YOUR CONTRACTOR IS REQUIRED TO PROVIDE YOU WITH A WRITTEN RELEASE OF LIEN FROM ANY PERSON OR COMPANY THAT HAS PROVIDED TO YOU A \"NOTICE TO OWNER.\" FLORIDA'S CONSTRUCTION LIEN LAW IS COMPLEX, AND IT IS RECOMMENDED THAT YOU CONSULT AN ATTORNEY.",
+      "FLORIDA HOMEOWNERS' CONSTRUCTION RECOVERY FUND: PAYMENT, UP TO A LIMITED AMOUNT, MAY BE AVAILABLE FROM THE FLORIDA HOMEOWNERS' CONSTRUCTION RECOVERY FUND IF YOU LOSE MONEY ON A PROJECT PERFORMED UNDER CONTRACT, WHERE THE LOSS RESULTS FROM SPECIFIED VIOLATIONS OF FLORIDA LAW BY A LICENSED CONTRACTOR. FOR INFORMATION ABOUT THE RECOVERY FUND AND FILING A CLAIM, CONTACT THE FLORIDA CONSTRUCTION INDUSTRY LICENSING BOARD AT THE FOLLOWING TELEPHONE NUMBER AND ADDRESS: [insert board address and phone as set by board rule]",
+      "Owner signature/date: ____________   Contractor signature/date: ____________"
+    ],
+    "facts": {
+      "florida": [
+        {
+          "title": "Construction lien notice (over $2,500)",
+          "text": "Any direct contract greater than $2,500 between an owner and a contractor for improvements to a dwelling of up to four units must include Florida's Construction Lien Law notice in at least 12-point, capitalized, boldface type, signed and dated by the owner.",
+          "url": "https://www.flsenate.gov/Laws/Statutes/2025/713.015",
+          "citation": "Fla. Stat. § 713.015"
+        },
+        {
+          "title": "Homeowners' Construction Recovery Fund notice",
+          "text": "Contracts for repair, restoration, improvement or construction to residential real property must include a written statement about the Florida Homeowners' Construction Recovery Fund, unless labor and materials total $2,500 or less.",
+          "url": "https://www.flsenate.gov/Laws/Statutes/2025/489.1425",
+          "citation": "Fla. Stat. § 489.1425"
+        },
+        {
+          "title": "Deposits over 10%",
+          "text": "A contractor who takes more than 10% of the contract price as an initial payment on residential work must apply for needed permits within 30 days and start work within 90 days after permits issue, unless there is just cause or the owner agreed in writing to longer periods.",
+          "url": "https://www.flsenate.gov/Laws/Statutes/2025/489.126",
+          "citation": "Fla. Stat. § 489.126"
+        },
+        {
+          "title": "License number on contracts",
+          "text": "A registered or certified contractor's registration or certification number must appear on each offer of services, proposal, bid, contract or advertisement.",
+          "url": "https://www.flsenate.gov/Laws/Statutes/2025/489.119",
+          "citation": "Fla. Stat. § 489.119(5)(b)"
+        },
+        {
+          "title": "Electronic signatures",
+          "text": "Florida's Uniform Electronic Transaction Act defines electronic signatures and gives electronic records and signatures legal effect in transactions the parties agree to conduct electronically.",
+          "url": "https://www.flsenate.gov/Laws/Statutes/2025/668.50",
+          "citation": "Fla. Stat. § 668.50"
+        }
+      ]
+    }
+  },
+  "hvac-service-agreement": {
+    "title": "HVAC Installation & Service Agreement",
+    "trade": "HVAC",
+    "keyword": "hvac contract template",
+    "intro": "An HVAC agreement covers equipment, installation scope, maintenance visits, warranty and payment for AC and heating work.",
+    "fields": [
+      "Contractor business name",
+      "Contractor license #",
+      "Owner name",
+      "Property address",
+      "Scope of work",
+      "Contract price ($)",
+      "Deposit ($)",
+      "Start date",
+      "Estimated completion",
+      "Equipment make/model",
+      "Tonnage / SEER",
+      "Maintenance visits per year"
+    ],
+    "body": [
+      "1. PARTIES. This HVAC agreement is between [Contractor business name] (License # [__]) (\"Contractor\") and [Owner name] (\"Owner\").",
+      "2. PROPERTY. [Property address]",
+      "3. SCOPE OF WORK. Contractor will perform: [describe HVAC work, materials, brands, warranty].",
+      "4. PRICE AND PAYMENT. Total price $[__]. Deposit $[__]. Balance due [schedule]. Owner may request lien releases before each payment.",
+      "5. PERMITS AND SCHEDULE. Contractor will obtain required permits. Estimated start [date]; estimated completion [date].",
+      "6. CHANGES. Changes must be in writing and signed by both parties.",
+      "7. WARRANTY. [workmanship warranty terms]",
+      "8. ELECTRONIC SIGNATURES. The parties agree to sign this agreement electronically.",
+      "NOTICE (Fla. Stat. 713.015): ACCORDING TO FLORIDA'S CONSTRUCTION LIEN LAW (SECTIONS 713.001 - 713.37, FLORIDA STATUTES), THOSE WHO WORK ON YOUR PROPERTY OR PROVIDE MATERIALS AND SERVICES AND ARE NOT PAID IN FULL HAVE A RIGHT TO ENFORCE THEIR CLAIM FOR PAYMENT AGAINST YOUR PROPERTY. THIS CLAIM IS KNOWN AS A CONSTRUCTION LIEN. IF YOUR CONTRACTOR OR A SUBCONTRACTOR FAILS TO PAY SUBCONTRACTORS, SUB-SUBCONTRACTORS, OR MATERIAL SUPPLIERS, THOSE PEOPLE WHO ARE OWED MONEY MAY LOOK TO YOUR PROPERTY FOR PAYMENT, EVEN IF YOU HAVE ALREADY PAID YOUR CONTRACTOR IN FULL. IF YOU FAIL TO PAY YOUR CONTRACTOR, YOUR CONTRACTOR MAY ALSO HAVE A LIEN ON YOUR PROPERTY. THIS MEANS IF A LIEN IS FILED YOUR PROPERTY COULD BE SOLD AGAINST YOUR WILL TO PAY FOR LABOR, MATERIALS, OR OTHER SERVICES THAT YOUR CONTRACTOR OR A SUBCONTRACTOR MAY HAVE FAILED TO PAY. TO PROTECT YOURSELF, YOU SHOULD STIPULATE IN THIS CONTRACT THAT BEFORE ANY PAYMENT IS MADE, YOUR CONTRACTOR IS REQUIRED TO PROVIDE YOU WITH A WRITTEN RELEASE OF LIEN FROM ANY PERSON OR COMPANY THAT HAS PROVIDED TO YOU A \"NOTICE TO OWNER.\" FLORIDA'S CONSTRUCTION LIEN LAW IS COMPLEX, AND IT IS RECOMMENDED THAT YOU CONSULT AN ATTORNEY.",
+      "FLORIDA HOMEOWNERS' CONSTRUCTION RECOVERY FUND: PAYMENT, UP TO A LIMITED AMOUNT, MAY BE AVAILABLE FROM THE FLORIDA HOMEOWNERS' CONSTRUCTION RECOVERY FUND IF YOU LOSE MONEY ON A PROJECT PERFORMED UNDER CONTRACT, WHERE THE LOSS RESULTS FROM SPECIFIED VIOLATIONS OF FLORIDA LAW BY A LICENSED CONTRACTOR. FOR INFORMATION ABOUT THE RECOVERY FUND AND FILING A CLAIM, CONTACT THE FLORIDA CONSTRUCTION INDUSTRY LICENSING BOARD AT THE FOLLOWING TELEPHONE NUMBER AND ADDRESS: [insert board address and phone as set by board rule]",
+      "Owner signature/date: ____________   Contractor signature/date: ____________"
+    ],
+    "facts": {
+      "florida": [
+        {
+          "title": "Construction lien notice (over $2,500)",
+          "text": "Any direct contract greater than $2,500 between an owner and a contractor for improvements to a dwelling of up to four units must include Florida's Construction Lien Law notice in at least 12-point, capitalized, boldface type, signed and dated by the owner.",
+          "url": "https://www.flsenate.gov/Laws/Statutes/2025/713.015",
+          "citation": "Fla. Stat. § 713.015"
+        },
+        {
+          "title": "Homeowners' Construction Recovery Fund notice",
+          "text": "Contracts for repair, restoration, improvement or construction to residential real property must include a written statement about the Florida Homeowners' Construction Recovery Fund, unless labor and materials total $2,500 or less.",
+          "url": "https://www.flsenate.gov/Laws/Statutes/2025/489.1425",
+          "citation": "Fla. Stat. § 489.1425"
+        },
+        {
+          "title": "Deposits over 10%",
+          "text": "A contractor who takes more than 10% of the contract price as an initial payment on residential work must apply for needed permits within 30 days and start work within 90 days after permits issue, unless there is just cause or the owner agreed in writing to longer periods.",
+          "url": "https://www.flsenate.gov/Laws/Statutes/2025/489.126",
+          "citation": "Fla. Stat. § 489.126"
+        },
+        {
+          "title": "License number on contracts",
+          "text": "A registered or certified contractor's registration or certification number must appear on each offer of services, proposal, bid, contract or advertisement.",
+          "url": "https://www.flsenate.gov/Laws/Statutes/2025/489.119",
+          "citation": "Fla. Stat. § 489.119(5)(b)"
+        },
+        {
+          "title": "Electronic signatures",
+          "text": "Florida's Uniform Electronic Transaction Act defines electronic signatures and gives electronic records and signatures legal effect in transactions the parties agree to conduct electronically.",
+          "url": "https://www.flsenate.gov/Laws/Statutes/2025/668.50",
+          "citation": "Fla. Stat. § 668.50"
+        }
+      ]
+    }
+  },
+  "plumbing-contract": {
+    "title": "Plumbing Contract",
+    "trade": "Plumbing",
+    "keyword": "plumbing contract template",
+    "intro": "A plumbing contract records the fixtures, repairs or repiping to be done, the price, and who pulls permits.",
+    "fields": [
+      "Contractor business name",
+      "Contractor license #",
+      "Owner name",
+      "Property address",
+      "Scope of work",
+      "Contract price ($)",
+      "Deposit ($)",
+      "Start date",
+      "Estimated completion",
+      "Fixtures / systems",
+      "Permit required? (Y/N)"
+    ],
+    "body": [
+      "1. PARTIES. This plumbing agreement is between [Contractor business name] (License # [__]) (\"Contractor\") and [Owner name] (\"Owner\").",
+      "2. PROPERTY. [Property address]",
+      "3. SCOPE OF WORK. Contractor will perform: [describe plumbing work, materials, brands, warranty].",
+      "4. PRICE AND PAYMENT. Total price $[__]. Deposit $[__]. Balance due [schedule]. Owner may request lien releases before each payment.",
+      "5. PERMITS AND SCHEDULE. Contractor will obtain required permits. Estimated start [date]; estimated completion [date].",
+      "6. CHANGES. Changes must be in writing and signed by both parties.",
+      "7. WARRANTY. [workmanship warranty terms]",
+      "8. ELECTRONIC SIGNATURES. The parties agree to sign this agreement electronically.",
+      "NOTICE (Fla. Stat. 713.015): ACCORDING TO FLORIDA'S CONSTRUCTION LIEN LAW (SECTIONS 713.001 - 713.37, FLORIDA STATUTES), THOSE WHO WORK ON YOUR PROPERTY OR PROVIDE MATERIALS AND SERVICES AND ARE NOT PAID IN FULL HAVE A RIGHT TO ENFORCE THEIR CLAIM FOR PAYMENT AGAINST YOUR PROPERTY. THIS CLAIM IS KNOWN AS A CONSTRUCTION LIEN. IF YOUR CONTRACTOR OR A SUBCONTRACTOR FAILS TO PAY SUBCONTRACTORS, SUB-SUBCONTRACTORS, OR MATERIAL SUPPLIERS, THOSE PEOPLE WHO ARE OWED MONEY MAY LOOK TO YOUR PROPERTY FOR PAYMENT, EVEN IF YOU HAVE ALREADY PAID YOUR CONTRACTOR IN FULL. IF YOU FAIL TO PAY YOUR CONTRACTOR, YOUR CONTRACTOR MAY ALSO HAVE A LIEN ON YOUR PROPERTY. THIS MEANS IF A LIEN IS FILED YOUR PROPERTY COULD BE SOLD AGAINST YOUR WILL TO PAY FOR LABOR, MATERIALS, OR OTHER SERVICES THAT YOUR CONTRACTOR OR A SUBCONTRACTOR MAY HAVE FAILED TO PAY. TO PROTECT YOURSELF, YOU SHOULD STIPULATE IN THIS CONTRACT THAT BEFORE ANY PAYMENT IS MADE, YOUR CONTRACTOR IS REQUIRED TO PROVIDE YOU WITH A WRITTEN RELEASE OF LIEN FROM ANY PERSON OR COMPANY THAT HAS PROVIDED TO YOU A \"NOTICE TO OWNER.\" FLORIDA'S CONSTRUCTION LIEN LAW IS COMPLEX, AND IT IS RECOMMENDED THAT YOU CONSULT AN ATTORNEY.",
+      "FLORIDA HOMEOWNERS' CONSTRUCTION RECOVERY FUND: PAYMENT, UP TO A LIMITED AMOUNT, MAY BE AVAILABLE FROM THE FLORIDA HOMEOWNERS' CONSTRUCTION RECOVERY FUND IF YOU LOSE MONEY ON A PROJECT PERFORMED UNDER CONTRACT, WHERE THE LOSS RESULTS FROM SPECIFIED VIOLATIONS OF FLORIDA LAW BY A LICENSED CONTRACTOR. FOR INFORMATION ABOUT THE RECOVERY FUND AND FILING A CLAIM, CONTACT THE FLORIDA CONSTRUCTION INDUSTRY LICENSING BOARD AT THE FOLLOWING TELEPHONE NUMBER AND ADDRESS: [insert board address and phone as set by board rule]",
+      "Owner signature/date: ____________   Contractor signature/date: ____________"
+    ],
+    "facts": {
+      "florida": [
+        {
+          "title": "Construction lien notice (over $2,500)",
+          "text": "Any direct contract greater than $2,500 between an owner and a contractor for improvements to a dwelling of up to four units must include Florida's Construction Lien Law notice in at least 12-point, capitalized, boldface type, signed and dated by the owner.",
+          "url": "https://www.flsenate.gov/Laws/Statutes/2025/713.015",
+          "citation": "Fla. Stat. § 713.015"
+        },
+        {
+          "title": "Homeowners' Construction Recovery Fund notice",
+          "text": "Contracts for repair, restoration, improvement or construction to residential real property must include a written statement about the Florida Homeowners' Construction Recovery Fund, unless labor and materials total $2,500 or less.",
+          "url": "https://www.flsenate.gov/Laws/Statutes/2025/489.1425",
+          "citation": "Fla. Stat. § 489.1425"
+        },
+        {
+          "title": "Deposits over 10%",
+          "text": "A contractor who takes more than 10% of the contract price as an initial payment on residential work must apply for needed permits within 30 days and start work within 90 days after permits issue, unless there is just cause or the owner agreed in writing to longer periods.",
+          "url": "https://www.flsenate.gov/Laws/Statutes/2025/489.126",
+          "citation": "Fla. Stat. § 489.126"
+        },
+        {
+          "title": "License number on contracts",
+          "text": "A registered or certified contractor's registration or certification number must appear on each offer of services, proposal, bid, contract or advertisement.",
+          "url": "https://www.flsenate.gov/Laws/Statutes/2025/489.119",
+          "citation": "Fla. Stat. § 489.119(5)(b)"
+        },
+        {
+          "title": "Electronic signatures",
+          "text": "Florida's Uniform Electronic Transaction Act defines electronic signatures and gives electronic records and signatures legal effect in transactions the parties agree to conduct electronically.",
+          "url": "https://www.flsenate.gov/Laws/Statutes/2025/668.50",
+          "citation": "Fla. Stat. § 668.50"
+        }
+      ]
+    }
+  },
+  "lawn-care-contract": {
+    "title": "Lawn Care Service Contract",
+    "trade": "Lawn care",
+    "keyword": "lawn care contract template",
+    "intro": "A recurring lawn care contract sets the visit schedule, services (mowing, edging, fertilizing), price per visit or month, and how either side can cancel.",
+    "fields": [
+      "Company name",
+      "Customer name",
+      "Service address",
+      "Services included",
+      "Visit frequency",
+      "Price per visit/month ($)",
+      "Start date",
+      "Cancellation notice (days)"
+    ],
+    "body": [
+      "1. PARTIES. [Company name] (\"Provider\") and [Customer name] (\"Customer\").",
+      "2. SERVICE ADDRESS. [address]",
+      "3. SERVICES. [mowing, edging, trimming, blowing, fertilizer (by certified applicator), etc.]",
+      "4. SCHEDULE. [weekly/biweekly], season [dates].",
+      "5. PRICE. $[__] per [visit/month], billed [when]. Late fee [__].",
+      "6. ACCESS & PETS. Customer will keep gates unlocked and pets secured on service days.",
+      "7. CANCELLATION. Either party may cancel with [__] days' written notice (text or email OK).",
+      "8. ELECTRONIC SIGNATURES. The parties agree to sign electronically.",
+      "Customer signature/date: ____________   Provider signature/date: ____________"
+    ],
+    "facts": {
+      "florida": [
+        {
+          "title": "Fertilizer applicator certification",
+          "text": "Since January 1, 2014, any person applying commercial fertilizer to an urban landscape in Florida must hold a limited certification for urban landscape commercial fertilizer application.",
+          "url": "https://www.flsenate.gov/Laws/Statutes/2025/482.1562",
+          "citation": "Fla. Stat. § 482.1562"
+        },
+        {
+          "title": "Electronic signatures",
+          "text": "Florida's Uniform Electronic Transaction Act defines electronic signatures and gives electronic records and signatures legal effect in transactions the parties agree to conduct electronically.",
+          "url": "https://www.flsenate.gov/Laws/Statutes/2025/668.50",
+          "citation": "Fla. Stat. § 668.50"
+        }
+      ]
+    }
+  },
+  "residential-lease-agreement": {
+    "title": "Residential Lease Agreement",
+    "trade": "Landlords",
+    "keyword": "florida lease agreement",
+    "intro": "A residential lease sets rent, term, deposit, and the house rules between a landlord and tenant. Florida's Residential Landlord and Tenant Act (Chapter 83, Part II) adds required disclosures.",
+    "fields": [
+      "Landlord name",
+      "Landlord notice address",
+      "Tenant name(s)",
+      "Property address",
+      "Lease start",
+      "Lease end",
+      "Monthly rent ($)",
+      "Security deposit ($)",
+      "Where deposit is held (bank)",
+      "Pets allowed?"
+    ],
+    "body": [
+      "1. PARTIES. Landlord [name], notice address [address] (Fla. Stat. 83.50). Tenant(s) [names].",
+      "2. PREMISES. [address, unit].",
+      "3. TERM. From [start] to [end].",
+      "4. RENT. $[__] per month due on the [__] day, paid by [method]. Late fee [__].",
+      "5. SECURITY DEPOSIT. $[__], held at [Florida financial institution] as required by Fla. Stat. 83.49. [Include the deposit disclosure required by 83.49(2).]",
+      "6. UTILITIES. [who pays which].",
+      "7. MAINTENANCE & ACCESS. [terms].",
+      "8. PETS / SMOKING / OCCUPANTS. [terms].",
+      "RADON GAS: Radon is a naturally occurring radioactive gas that, when it has accumulated in a building in sufficient quantities, may present health risks to persons who are exposed to it over time. Levels of radon that exceed federal and state guidelines have been found in buildings in Florida. Additional information regarding radon and radon testing may be obtained from your county health department.",
+      "LEAD PAINT: If built before 1978, attach the federal lead-based paint disclosure and pamphlet.",
+      "9. ELECTRONIC SIGNATURES. The parties agree to sign electronically.",
+      "Landlord signature/date: ____________   Tenant signature/date: ____________"
+    ],
+    "facts": {
+      "florida": [
+        {
+          "title": "Landlord name and address",
+          "text": "At or before the start of the tenancy, the landlord must disclose in writing the name and address of the landlord or a person authorized to receive notices.",
+          "url": "https://www.flsenate.gov/Laws/Statutes/2025/83.50",
+          "citation": "Fla. Stat. § 83.50"
+        },
+        {
+          "title": "Security deposit notice",
+          "text": "The landlord must, in the lease or within 30 days of receiving a deposit or advance rent, give the tenant written notice about how the deposit is held.",
+          "url": "https://www.flsenate.gov/Laws/Statutes/2025/83.49",
+          "citation": "Fla. Stat. § 83.49(2)"
+        },
+        {
+          "title": "Returning the deposit",
+          "text": "If the landlord makes no claim, the deposit must be returned within 15 days after the lease ends; to make a claim, the landlord must send written notice by certified mail within 30 days.",
+          "url": "https://www.flsenate.gov/Laws/Statutes/2025/83.49",
+          "citation": "Fla. Stat. § 83.49(3)"
+        },
+        {
+          "title": "Radon disclosure",
+          "text": "A radon gas notification must appear on at least one document signed at or before execution of a rental agreement for any building (transient stays of 45 days or less excepted).",
+          "url": "https://www.flsenate.gov/Laws/Statutes/2025/404.056",
+          "citation": "Fla. Stat. § 404.056(5)"
+        },
+        {
+          "title": "Lead-based paint (pre-1978 housing)",
+          "text": "Federal law requires lead-based paint disclosure for most housing built before 1978.",
+          "url": "https://www.epa.gov/lead/real-estate-disclosure",
+          "citation": "EPA lead disclosure rule"
+        },
+        {
+          "title": "Electronic signatures",
+          "text": "Florida's Uniform Electronic Transaction Act defines electronic signatures and gives electronic records and signatures legal effect in transactions the parties agree to conduct electronically.",
+          "url": "https://www.flsenate.gov/Laws/Statutes/2025/668.50",
+          "citation": "Fla. Stat. § 668.50"
+        }
+      ]
+    }
+  }
+}

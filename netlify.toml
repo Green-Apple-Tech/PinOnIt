@@ -256,6 +256,20 @@
   to = "/index.html"
   status = 200
 
+# Document Center. Files on disk win; this keeps /templates off booking-shell.
+[[redirects]]
+  from = "/templates"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/templates/"
+  to = "/index.html"
+  status = 200
+[[redirects]]
+  from = "/templates/*"
+  to = "/index.html"
+  status = 200
+
 # Host booking slugs — Netlify function forces text/html Content-Type
 [[redirects]]
   from = "/:slug"

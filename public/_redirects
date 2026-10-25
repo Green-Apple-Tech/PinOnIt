@@ -73,6 +73,12 @@
 /d/:token  /.netlify/functions/document-shell?token=:token  200!
 /embed.js  /embed.js  200
 
+# Document Center. Real files (sample .txt, prerendered index.html) win.
+# This fallback keeps /templates off the booking-slug function.
+/templates  /index.html  200
+/templates/  /index.html  200
+/templates/*  /index.html  200
+
 # Host booking slugs — Netlify function rewrites Supabase HTML to text/html
 # (Supabase Edge Forces text/plain on HTML bodies; browsers then show source).
 /:slug  /.netlify/functions/booking-shell?slug=:slug  200
