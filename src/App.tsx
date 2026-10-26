@@ -21,6 +21,7 @@ import { SessionManager } from './components/SessionManager';
 import { CampaignLandingPage } from './pages/CampaignLandingPage';
 import { SignNowPage } from './pages/SignNow';
 import { captureCampaignParams } from './lib/campaignAttribution';
+import { captureTrialPromo } from './lib/trialPromo';
 import { logMarketingVisit } from './lib/marketingVisits';
 import { GuestNoIndex } from './components/GuestNoIndex';
 import { SeoIntentPage } from './pages/SeoIntentPage';
@@ -32,6 +33,7 @@ function CampaignParamCapture() {
   const { search, pathname } = useLocation();
   useEffect(() => {
     captureCampaignParams(search, pathname);
+    captureTrialPromo(search);
     void logMarketingVisit(pathname);
   }, [search, pathname]);
   return null;

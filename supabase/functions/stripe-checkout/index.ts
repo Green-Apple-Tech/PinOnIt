@@ -1,6 +1,7 @@
 import Stripe from 'npm:stripe@17.7.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { isAllowedCheckoutPriceId, isRealStripeCustomerId } from '../_shared/stripeSubscription.ts';
+import { resolveCheckoutTrial } from '../../../shared/trialPromo.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -57,7 +58,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const { price_id, app_url, trial_period_days, wizard_step } = await req.json();
+    const { price_id, app_url, trial_period_days, wizard_step, promo } = await req.json();
     if (!price_id || typeof price_id !== 'string' || !isAllowedCheckoutPriceId(price_id)) {
       return new Response(JSON.stringify({ error: 'Invalid price_id' }), {
         status: 400,
@@ -106,15 +107,17 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const requestedTrial = trial_period_days ? Number(trial_period_days) : 0;
-    const trialDays = Number.isFinite(requestedTrial) ? Math.min(Math.max(0, Math.floor(requestedTrial)), 60) : 0;
+    // Promo codes pick the trial. A code is never converted from the client's trial_period_days.
+    const trial = resolveCheckoutTrial({ promo, trial_period_days });
+    const trialDays = trial.days;
     const stepParam = wizard_step ? `&wizard_step=${wizard_step}` : '';
     const trialParam = trialDays > 0 ? `&trial_days=${trialDays}` : '';
+    const promoMetadata = trial.promo ? { trial_promo: trial.promo } : {};
 
     const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
       customer: customerId,
       client_reference_id: user.id,
-      metadata: { supabase_user_id: user.id },
+      metadata: { supabase_user_id: user.id, ...promoMetadata },
       mode: 'subscription',
       line_items: [{ price: resolvedPriceId, quantity: 1 }],
       success_url: wizard_step
@@ -123,7 +126,7 @@ Deno.serve(async (req: Request) => {
       cancel_url: `${origin}/dashboard/settings?tab=billing&checkout=cancelled`,
       payment_method_collection: 'always',
       subscription_data: {
-        metadata: { supabase_user_id: user.id },
+        metadata: { supabase_user_id: user.id, ...promoMetadata },
       },
     };
 

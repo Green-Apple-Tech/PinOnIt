@@ -106,6 +106,45 @@ curl -sS -X POST \
 
 A date with no time is 9:00 in `timezone` (default `America/New_York`). Email fires 24 hours before and at that time. SMS fires 1 hour before. New signups are limited to 8 reminders per email and 24 per connection IP each hour.
 
+## Trial signup links
+
+Share these links. `stripe-checkout` maps the code. It does not trust a `trial_period_days` value sent with a code. With no code, a requested trial is still capped at 90 days. An unknown code is a 14-day trial.
+
+| Code | Link | Trial |
+| --- | --- | --- |
+| `FREE60` | https://pinonit.com/signup?promo=FREE60 | 60 days, card on file |
+| `SWITCH` | https://pinonit.com/signup?promo=SWITCH | 90 days, for people replacing both Calendly and DocuSign |
+
+The code is stored in the browser and sent to checkout after signup. `FREE60` and `SWITCH` are not secrets.
+
+## Lead alerts
+
+`lead-alert` texts `LEAD_ALERT_PHONE` when another project reports a new lead. `save-bot-lead` calls it after a bot lead is saved. Callers send a shared secret. The function does not accept a Supabase user JWT as its authorization.
+
+Deploy with `--no-verify-jwt` (`./scripts/deploy-edge-functions.sh` does this). SMS uses the existing `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_PHONE_NUMBER`.
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `LEAD_ALERT_TOKEN` | yes | Shared secret. Callers send it in the `x-lead-alert-token` header. |
+| `LEAD_ALERT_PHONE` | yes | E.164 phone that receives the SMS, for example `+13055550100`. |
+
+`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are already available to Edge Functions. A missing token or phone returns 503. A wrong token returns 401. The lead row is still saved if the text fails.
+
+```bash
+curl -sS -X POST \
+  'https://adlusgtlwgcfyxgeoias.supabase.co/functions/v1/lead-alert' \
+  -H 'Content-Type: application/json' \
+  -H 'x-lead-alert-token: YOUR_TOKEN' \
+  -d '{
+    "source": "PinOnIt",
+    "name": "Ada Lovelace",
+    "contact": "ada@example.com",
+    "note": "Replacing Calendly and DocuSign"
+  }'
+```
+
+The text looks like `New lead (PinOnIt): Ada Lovelace – ada@example.com – Replacing Calendly and DocuSign`.
+
 ## Legal
 
 - [Terms of Service](https://pinonit.com/terms)

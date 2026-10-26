@@ -30,6 +30,7 @@ import { WIZARD_STEPS as STEPS, type WizardStep as Step } from '../lib/wizardSte
 import { TrialTermsNotice } from './TrialTermsNotice';
 import { recordPlatformTermsAcceptance } from '../lib/platformLegal';
 import { STRIPE_PRO_PRICE_ID } from '../lib/pricing';
+import { checkoutTrialFields, readTrialPromo, trialDaysForPromo } from '../lib/trialPromo';
 import { iosOauthBlockMessage } from '../lib/oauthLogin';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -865,8 +866,8 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep, openCa
           body: JSON.stringify({
             price_id: STRIPE_PRO_PRICE_ID,
             app_url: window.location.origin,
-            trial_period_days: trialDays,
             wizard_step: resumeStep,
+            ...checkoutTrialFields({ promo: readTrialPromo(), trialPeriodDays: trialDays }),
           }),
         }
       );
@@ -1207,7 +1208,9 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep, openCa
     switch (step) {
       // ── Step 0: Welcome ──────────────────────────────────────────────────────
       case 'welcome': {
-        const firstChargeDate60 = (() => { const d = new Date(); d.setDate(d.getDate() + 60); return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }); })();
+        const storedPromo = readTrialPromo();
+        const cardTrialDays = storedPromo ? trialDaysForPromo(storedPromo) : 60;
+        const firstChargeDate = (() => { const d = new Date(); d.setDate(d.getDate() + cardTrialDays); return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }); })();
 
         // Already Pro — skip any trial offer screens entirely and go straight to setup
         if (showTrialOffer && isAlreadyPro) {
@@ -1224,9 +1227,9 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep, openCa
                 <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-indigo-100 dark:bg-indigo-900/30 mb-4">
                   <Gift className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
                 </div>
-                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Start your free 60-day trial</h2>
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Start your free {cardTrialDays}-day trial</h2>
                 <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm max-w-sm mx-auto">
-                  Your card will not be charged until <strong className="text-slate-700 dark:text-slate-200">{firstChargeDate60}</strong>. Cancel any time before then and you will never be billed.
+                  Your card will not be charged until <strong className="text-slate-700 dark:text-slate-200">{firstChargeDate}</strong>. Cancel any time before then and you will never be billed.
                 </p>
               </div>
 
@@ -1248,7 +1251,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep, openCa
               </div>
 
               <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3 mb-5 text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
-                Running it alongside Calendly? Take your time — no charge until <strong>{firstChargeDate60}</strong>.
+                Running it alongside Calendly? Take your time — no charge until <strong>{firstChargeDate}</strong>.
               </div>
 
               <label className="flex items-start gap-3 cursor-pointer mb-5">
@@ -1259,7 +1262,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep, openCa
                   className="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600"
                 />
                 <span className="text-xs text-slate-600 dark:text-slate-400">
-                  I agree to be charged $9.99/mo after my 60-day trial ends on {firstChargeDate60}, unless I cancel before then.
+                  I agree to be charged $9.99/mo after my {cardTrialDays}-day trial ends on {firstChargeDate}, unless I cancel before then.
                 </span>
               </label>
 
@@ -1268,7 +1271,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep, openCa
               )}
 
               <button
-                onClick={() => handleTrialCheckout(60)}
+                onClick={() => handleTrialCheckout(cardTrialDays)}
                 disabled={!trialAgreed || trialCheckoutLoading}
                 className="w-full py-3 disabled:opacity-50 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 text-sm mb-2 hover:opacity-90"
                 style={{ backgroundColor: '#5864C6' }}
@@ -1291,7 +1294,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep, openCa
                 </div>
                 <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Start your free trial</h2>
                 <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm max-w-sm mx-auto">
-                  Full Pro for 14 days — <strong className="text-slate-700 dark:text-slate-200">no credit card</strong>. Want 60 days? Add a card below. $0 today; billing starts when the trial ends.
+                  Full Pro for 14 days — <strong className="text-slate-700 dark:text-slate-200">no credit card</strong>. Want {cardTrialDays} days? Add a card below. $0 today; billing starts when the trial ends.
                 </p>
               </div>
 
@@ -1325,12 +1328,12 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep, openCa
                 Start 14-day trial — no card
               </button>
               <button
-                onClick={() => handleTrialCheckout(60, STEPS.indexOf('business_type'))}
+                onClick={() => handleTrialCheckout(cardTrialDays, STEPS.indexOf('business_type'))}
                 disabled={trialCheckoutLoading}
                 className="w-full mt-2 py-3 border-2 border-brand-600 text-brand-700 dark:text-brand-300 hover:bg-brand-50 dark:hover:bg-brand-950/30 disabled:opacity-50 font-semibold rounded-xl transition-all flex items-center justify-center gap-2 text-sm"
               >
                 {trialCheckoutLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gift className="h-4 w-4" />}
-                60 days with card — $0 today
+                {cardTrialDays} days with card — $0 today
               </button>
               <TrialTermsNotice className="mt-4" />
             </div>
