@@ -34,7 +34,7 @@ describe('draftFromLastQuote', () => {
       tax_percent: 7,
       pay_elsewhere_url: 'https://paypal.me/x',
       pay_elsewhere_label: 'Pay',
-      pay_mode: null,
+      pay_mode: undefined,
       pay_amount_cents: null,
       recipient_name: 'Jane Smith',
     });

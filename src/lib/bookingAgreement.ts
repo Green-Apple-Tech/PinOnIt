@@ -62,7 +62,9 @@ export function resolveBookingAgreement(service: {
 } | null {
   if (!service.require_nda) return null;
   const typeExplicit = isBookingAgreementType(service.booking_agreement_type);
-  const type = typeExplicit ? service.booking_agreement_type : 'nda';
+  const type: BookingAgreementType = typeExplicit
+    ? (service.booking_agreement_type as BookingAgreementType)
+    : 'nda';
   const filePath = service.booking_agreement_file_path?.trim() || null;
   const fileName = service.booking_agreement_file_name?.trim() || null;
   if (filePath) {
