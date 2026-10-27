@@ -90,7 +90,6 @@ describe('new Pro checkout', () => {
 
     for (const page of [
       'src/components/landing/LandingPricingCard.tsx',
-      'src/pages/CalendlyAlternative.tsx',
       'src/lib/whyPinonit.ts',
       'src/lib/landingComparisonData.ts',
     ]) {

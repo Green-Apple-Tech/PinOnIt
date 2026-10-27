@@ -13,6 +13,7 @@ import {
   intentCanonical,
 } from './seoIdentity';
 import { MORE_INTENT_PAGES } from './seoMoreIntentPages';
+export { INTENT_OG_IMAGE, INTENT_PATHS } from './seoPaths';
 
 export type IntentFaq = { q: string; a: string };
 
@@ -61,9 +62,6 @@ export type IntentPage = {
   metaDescription: string;
   canonical: string;
 };
-
-const OG = 'https://pinonit.com/og-why-pinonit.png';
-export const INTENT_OG_IMAGE = OG;
 
 export { COMPARE_NOTE, intentCanonical };
 
@@ -404,7 +402,5 @@ export function intentPageBySlug(slug: string) {
 export function intentPageByPath(path: string) {
   return INTENT_PAGES.find((p) => p.path === path) ?? null;
 }
-
-export const INTENT_PATHS = INTENT_PAGES.map((p) => p.path);
 
 export const INTENT_RESERVED_SLUGS = INTENT_PAGES.map((p) => p.slug);

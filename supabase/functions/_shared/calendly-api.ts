@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import {
   CALENDLY_API_BASE,
   refreshCalendlyToken,
@@ -127,7 +128,7 @@ function parseAvailabilityRules(
 
 // deno-lint-ignore no-explicit-any
 export async function fetchCalendlyImportViaOAuth(
-  supabase: any,
+  supabase: SupabaseClient,
   integration: IntegrationRow,
   clientId: string,
   clientSecret: string

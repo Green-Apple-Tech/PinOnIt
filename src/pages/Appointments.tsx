@@ -482,12 +482,20 @@ export function AppointmentsPage() {
     ]);
     setBookings((bookRes.data ?? []) as Booking[]);
     setServices((svcRes.data ?? []) as Service[]);
-    const evts = (extEvtRes.data ?? []).map((e: any) => ({
+    const evts = ((extEvtRes.data ?? []) as Array<{
+      id: string;
+      title: string;
+      start_at: string;
+      end_at: string;
+      all_day: boolean | null;
+      also_remind_ids: string[] | null;
+      connected_calendars: { provider?: string | null } | null;
+    }>).map((e) => ({
       id: e.id,
       title: e.title,
       start_at: e.start_at,
       end_at: e.end_at,
-      all_day: e.all_day,
+      all_day: e.all_day ?? false,
       provider: e.connected_calendars?.provider ?? 'external',
       also_remind_ids: e.also_remind_ids,
     }));
@@ -548,7 +556,7 @@ export function AppointmentsPage() {
       list = list.filter(b =>
         b.guest_name.toLowerCase().includes(q) ||
         (b.guest_email ?? '').toLowerCase().includes(q) ||
-        (b as any).services?.name?.toLowerCase().includes(q)
+        (b.services?.name ?? '').toLowerCase().includes(q)
       );
     }
     return list;
@@ -614,8 +622,8 @@ export function AppointmentsPage() {
           body: JSON.stringify({}),
         }
       );
-      const json = await res.json();
-      const total = Object.values(json.results ?? {}).reduce((acc: number, r: any) => acc + (r.synced ?? 0), 0);
+      const json = await res.json() as { results?: Record<string, { synced?: number }> };
+      const total = Object.values(json.results ?? {}).reduce((acc, r) => acc + (r.synced ?? 0), 0);
       setSyncMsg(`Synced ${total} event${total !== 1 ? 's' : ''}`);
       await loadData();
     } catch {
@@ -1338,7 +1346,7 @@ export function AppointmentsPage() {
 
                       {/* App bookings */}
                       {dayBookings.map(b => {
-                        const svc = (b as any).services;
+                        const svc = b.services;
                         const LocIcon = getLocationIcon(svc?.location_type);
                         const isCanceled = b.status === 'canceled';
                         const isCompleted = b.status === 'completed';

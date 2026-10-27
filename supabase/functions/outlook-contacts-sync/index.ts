@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { dedupeContactRows } from "../_shared/dedupe-contacts.ts";
 import { normalizeImportedContacts } from "../_shared/normalize-imported-contacts.ts";
 
@@ -57,13 +57,13 @@ async function refreshOutlookToken(refreshToken: string): Promise<{ access_token
 
 // deno-lint-ignore no-explicit-any
 async function importOutlookContacts(
-  supabase: any,
+  supabase: SupabaseClient,
   hostId: string,
   accessToken: string,
 ): Promise<{ imported: number; fetched: number; error?: string }> {
   console.log("[outlook-contacts-sync] Fetching Microsoft Graph contacts...");
 
-  let contacts: GraphContact[] = [];
+  const contacts: GraphContact[] = [];
   let nextUrl: string | null = `https://graph.microsoft.com/v1.0/me/contacts?$select=displayName,emailAddresses,mobilePhone,companyName,businessPhones&$top=999`;
 
   while (nextUrl) {
@@ -225,7 +225,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    let result = await importOutlookContacts(admin, user.id, accessToken);
+    const result = await importOutlookContacts(admin, user.id, accessToken);
 
     if (result.error === "contacts_permission_not_granted") {
       return new Response(JSON.stringify({

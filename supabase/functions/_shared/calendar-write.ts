@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import {
   ensureCalendarAccessToken,
   type ConnectedCalendarRow,
@@ -185,7 +186,7 @@ function parseExternalRefs(raw: unknown): ExternalCalendarEventRef[] {
 
 // deno-lint-ignore no-explicit-any
 export async function loadWritableCalendars(
-  supabase: any,
+  supabase: SupabaseClient,
   hostId: string,
   calendarIds: string[] | null | undefined,
   purpose: 'scheduling' | 'reminders',
@@ -211,7 +212,7 @@ export async function loadWritableCalendars(
 
 // deno-lint-ignore no-explicit-any
 export async function resolveBookingCalendarIds(
-  supabase: any,
+  supabase: SupabaseClient,
   hostId: string,
   serviceId: string | null,
 ): Promise<string[]> {
@@ -234,7 +235,7 @@ export async function resolveBookingCalendarIds(
 
 // deno-lint-ignore no-explicit-any
 export async function writeEventToCalendars(
-  supabase: any,
+  supabase: SupabaseClient,
   hostId: string,
   calendarIds: string[],
   payload: CalendarEventPayload,
@@ -261,7 +262,7 @@ export async function writeEventToCalendars(
 
 // deno-lint-ignore no-explicit-any
 export async function deleteExternalCalendarEvents(
-  supabase: any,
+  supabase: SupabaseClient,
   hostId: string,
   refs: ExternalCalendarEventRef[],
 ): Promise<void> {
@@ -291,7 +292,7 @@ export async function deleteExternalCalendarEvents(
 
 // deno-lint-ignore no-explicit-any
 export async function updateExternalCalendarEvents(
-  supabase: any,
+  supabase: SupabaseClient,
   hostId: string,
   refs: ExternalCalendarEventRef[],
   payload: CalendarEventPayload,

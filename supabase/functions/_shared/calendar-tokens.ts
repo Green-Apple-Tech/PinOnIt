@@ -1,4 +1,5 @@
 /** OAuth token refresh for Google Calendar and Microsoft Graph. */
+import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 
 export type ConnectedCalendarRow = {
   id: string;
@@ -72,9 +73,8 @@ export async function refreshOutlookToken(
   };
 }
 
-// deno-lint-ignore no-explicit-any
 export async function ensureCalendarAccessToken(
-  supabase: any,
+  supabase: SupabaseClient,
   cal: ConnectedCalendarRow,
 ): Promise<string | null> {
   let accessToken = cal.access_token;

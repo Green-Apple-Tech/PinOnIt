@@ -1,4 +1,4 @@
-import { INTENT_PATHS } from './seoIntentPages';
+import { INTENT_PATHS } from './seoPaths';
 import { readCampaignParams } from './campaignAttribution';
 
 const SESSION_KEY = 'pinonit_mkt_logged';

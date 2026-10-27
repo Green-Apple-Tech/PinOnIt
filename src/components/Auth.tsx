@@ -8,6 +8,7 @@ import { IOS_OAUTH_SAFARI_MESSAGE, clearOauthStart, isIosIsolatedWebView, readIo
 import { postLoginDestination, signNowNextParam } from '../lib/signNow';
 import { REFERRAL_PROGRAM_ENDS_ON_LABEL, referralRewardsOpen } from '../lib/referralRetirement';
 import { normalizePromoCode, trialDaysForPromo } from '../lib/trialPromo';
+import { persistSignupAttribution } from '../lib/campaignAttribution';
 
 type View = 'login' | 'signup' | 'forgot';
 
@@ -90,7 +91,6 @@ export function AuthForm() {
         // If signed up via referral link, record it
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user?.id) {
-          const { persistSignupAttribution } = await import('../lib/campaignAttribution');
           const { recordPlatformTermsAcceptance } = await import('../lib/platformLegal');
           const { referralRewardsOpen, recordCustomerReferral } = await import('../lib/referralRetirement');
           await persistSignupAttribution(session.user.id);

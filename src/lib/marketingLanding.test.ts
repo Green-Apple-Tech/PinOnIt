@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { HOW_IT_WORKS_STEPS, MARKETING_ANNOUNCEMENT_HREF, TRIAL_FRICTION_LINE } from './marketingLanding';
-import { PWA_NAV_DENYLIST_SOURCES } from './pwaWorkbox';
 
 describe('marketing landing copy', () => {
   it('uses the no-card 14-day trial line', () => {
@@ -65,17 +64,12 @@ describe('how-it-works sticky demo', () => {
   });
 });
 
-describe('PWA navigation denylist', () => {
-  it('covers guest token prefixes', () => {
-    const joined = PWA_NAV_DENYLIST_SOURCES.join(' ');
-    for (const prefix of ['/d', '/q', '/r', '/c', '/s', '/poll']) {
-      expect(joined).toContain(`^${prefix}`);
-    }
-  });
-
-  it('disables HTML navigate fallback in vite config', () => {
+describe('PWA navigation fallback', () => {
+  it('does not serve index.html for any navigation, including guest token routes', () => {
     const src = readFileSync(new URL('../../vite.config.ts', import.meta.url), 'utf8');
-    expect(src).toContain('navigateFallbackDenylist: [/.*/]');
+    expect(src).toContain('navigateFallback: null');
+    expect(src).toContain('runtimeCaching: []');
     expect(src).toContain("globPatterns: ['assets/**/*.{js,css}', 'pinonit_logo.png']");
+    expect(src).not.toContain('navigateFallbackDenylist');
   });
 });

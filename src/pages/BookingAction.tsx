@@ -89,8 +89,8 @@ export function BookingActionPage() {
     );
   }
 
-  const service = booking.services as any;
-  const hostProfile = booking.profiles as any;
+  const service = booking.services;
+  const hostProfile = booking.profiles;
   const actionLabel = action === 'confirm' ? 'Confirm' : action === 'cancel' ? 'Cancel' : 'Reschedule';
   const actionColor = action === 'confirm' ? 'brand' : action === 'cancel' ? 'red' : 'blue';
 
@@ -241,7 +241,7 @@ export function BookingActionPage() {
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Pick a new time</h2>
             <p className="text-slate-500 dark:text-slate-400 mb-4">Choose a new slot. Your name and contact stay the same.</p>
             <Link
-              to={rescheduleHref || `/${hostProfile.slug}`}
+              to={rescheduleHref || `/${hostProfile?.slug ?? ''}`}
               className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium rounded-lg transition-colors"
             >
               Book new time <ArrowRight className="h-4 w-4" />

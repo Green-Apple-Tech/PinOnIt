@@ -1,5 +1,5 @@
 import { PINONIT_ORG } from './seoIdentity';
-import { INTENT_PATHS } from './seoIntentPages';
+import { INTENT_PATHS } from './seoPaths';
 
 export type BlogLink = { href: string; text: string };
 

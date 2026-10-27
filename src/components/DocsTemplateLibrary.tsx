@@ -113,8 +113,9 @@ export function DocsTemplateLibrary({ hostId, waiverTemplate, onWaiverTemplateCh
   }, [loading, searchParams]);
 
   useEffect(() => {
+    const timers = debounceTimers.current;
     return () => {
-      for (const t of Object.values(debounceTimers.current)) {
+      for (const t of Object.values(timers)) {
         if (t) window.clearTimeout(t);
       }
     };

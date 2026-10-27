@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { sendTwilioSmsGuarded } from "../_shared/sms-send-gate.ts";
 import { NOREPLY_FROM } from "../_shared/contact-email.ts";
-import { isValidSlackWebhookUrl, notifySlackWebhook } from "../_shared/slack-webhook.ts";
+import { notifySlackWebhook } from "../_shared/slack-webhook.ts";
 import { hostAllowsSms } from "../_shared/sms-compliance.ts";
 
 const corsHeaders = {

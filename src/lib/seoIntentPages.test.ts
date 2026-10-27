@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { PINONIT_CORE_SENTENCE, PINONIT_SOFTWARE } from './seoIdentity';
 import { PRO_PRICE } from './pricing';
 import { INTENT_PAGES } from './seoIntentPages';
+import { INTENT_PATHS } from './seoPaths';
 import { softwareApplicationJsonLd, websiteJsonLd } from './jsonLd';
 
 const REQUIRED_PATHS = [
@@ -34,6 +35,7 @@ describe('SEO intent pages', () => {
     for (const required of REQUIRED_PATHS) {
       expect(paths).toContain(required);
     }
+    expect(paths).toEqual([...INTENT_PATHS]);
     for (const page of INTENT_PAGES) {
       expect(page.opening).toBe(PINONIT_CORE_SENTENCE);
       expect(page.metaTitle).toContain('PinOnIt');

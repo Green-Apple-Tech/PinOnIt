@@ -605,24 +605,24 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
       confirmation_redirect_url: svc.confirmation_redirect_url ?? null,
       location: svc.location ?? '', location_type: svc.location_type ?? 'video',
       payment_provider: ((svc.payment_provider as string) === 'stripe' ? 'none' : (svc.payment_provider ?? 'none')) as Service['payment_provider'],
-      paypal_me_link: (svc as Service).paypal_handle ?? (svc as any).paypal_me_link ?? null,
-      paypal_handle: (svc as Service).paypal_handle ?? (svc as any).paypal_me_link ?? null,
+      paypal_me_link: svc.paypal_handle ?? svc.paypal_me_link ?? null,
+      paypal_handle: svc.paypal_handle ?? svc.paypal_me_link ?? null,
       paypal_currency: svc.paypal_currency ?? 'USD',
       venmo_handle: (svc as Service).venmo_handle ?? null,
       cashapp_handle: (svc as Service).cashapp_handle ?? (svc as Service).cashapp_tag ?? null,
       zelle_handle: (svc as Service).zelle_handle ?? (svc as Service).zelle_contact ?? null,
       payment_link: (svc as Service).payment_link ?? null,
       payment_link_label: (svc as Service).payment_link_label ?? null,
-      payment_methods: (svc as any).payment_methods ?? [],
-      require_terms: (svc as any).require_terms ?? false,
-      require_nda: (svc as any).require_nda ?? false,
+      payment_methods: svc.payment_methods ?? [],
+      require_terms: svc.require_terms ?? false,
+      require_nda: svc.require_nda ?? false,
       booking_agreement_type: svc.booking_agreement_type || 'waiver',
       booking_agreement_text: svc.booking_agreement_text ?? '',
       booking_agreement_file_id: svc.booking_agreement_file_id ?? null,
       booking_agreement_file_path: svc.booking_agreement_file_path ?? null,
       booking_agreement_file_name: svc.booking_agreement_file_name ?? null,
-      show_description_on_booking_page: (svc as any).show_description_on_booking_page ?? true,
-      show_description_on_paid_booking: (svc as any).show_description_on_paid_booking ?? true,
+      show_description_on_booking_page: svc.show_description_on_booking_page ?? true,
+      show_description_on_paid_booking: svc.show_description_on_paid_booking ?? true,
       is_recurring: svc.is_recurring ?? false,
       recurrence_frequency: svc.recurrence_frequency ?? null,
       recurrence_interval_days: svc.recurrence_interval_days ?? null,
@@ -637,7 +637,7 @@ export function ServicesPage({ embedded = false }: { embedded?: boolean }) {
     setOfferKind(offerKindFromPrice(svc.price_cents ?? 0));
     setShowAdvanced(false);
     setActiveTab('basic');
-    setSelectedCalendarIds((svc as any).booking_calendar_ids ?? []);
+    setSelectedCalendarIds(svc.booking_calendar_ids ?? []);
     setAddingQ(false);
     const [questionsRes, remindersRes] = await Promise.all([
       supabase.from('booking_questions').select('*').eq('service_id', svc.id).order('sort_order'),
