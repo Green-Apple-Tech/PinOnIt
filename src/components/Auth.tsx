@@ -6,7 +6,9 @@ import { supabase } from '../lib/supabase';
 import { Loader2, Mail, Lock, User, ArrowLeft, Sun, Moon, Eye, EyeOff } from 'lucide-react';
 import { IOS_OAUTH_SAFARI_MESSAGE, clearOauthStart, isIosIsolatedWebView, readIosStandalone } from '../lib/oauthLogin';
 import { postLoginDestination, signNowNextParam } from '../lib/signNow';
-import { REFERRAL_PROGRAM_ENDS_ON_LABEL, referralRewardsOpen } from '../lib/referralRetirement';
+import { REFERRAL_PROGRAM_ENDS_ON_LABEL, recordCustomerReferral, referralRewardsOpen } from '../lib/referralRetirement';
+import { recordPlatformTermsAcceptance } from '../lib/platformLegal';
+import { readCreatorTouch } from '../lib/creatorAttribution';
 import { normalizePromoCode, trialDaysForPromo } from '../lib/trialPromo';
 import { persistSignupAttribution } from '../lib/campaignAttribution';
 
@@ -91,8 +93,6 @@ export function AuthForm() {
         // If signed up via referral link, record it
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user?.id) {
-          const { recordPlatformTermsAcceptance } = await import('../lib/platformLegal');
-          const { referralRewardsOpen, recordCustomerReferral } = await import('../lib/referralRetirement');
           await persistSignupAttribution(session.user.id);
           void recordPlatformTermsAcceptance(session.user.id);
           const rewardsOpen = referralRewardsOpen();
@@ -100,7 +100,6 @@ export function AuthForm() {
             void recordCustomerReferral(session.access_token, refCode);
           }
           if (!refCode || !rewardsOpen) {
-            const { readCreatorTouch } = await import('../lib/creatorAttribution');
             const creator = readCreatorTouch();
             if (creator) {
               void supabase.rpc('claim_creator_attribution', { p_code: creator.code });

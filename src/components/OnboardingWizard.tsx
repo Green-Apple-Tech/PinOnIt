@@ -29,6 +29,7 @@ import { US_REGIONS } from '../lib/usSalesTax';
 import { WIZARD_STEPS as STEPS, type WizardStep as Step } from '../lib/wizardSteps';
 import { TrialTermsNotice } from './TrialTermsNotice';
 import { recordPlatformTermsAcceptance } from '../lib/platformLegal';
+import { readCreatorTouch } from '../lib/creatorAttribution';
 import { STRIPE_PRO_PRICE_ID } from '../lib/pricing';
 import { checkoutTrialFields, readTrialPromo, trialDaysForPromo } from '../lib/trialPromo';
 import { iosOauthBlockMessage } from '../lib/oauthLogin';
@@ -858,7 +859,7 @@ export function OnboardingWizard({ onClose, isModal = false, initialStep, openCa
         await supabase.from('profiles').update({ onboarding_step: resumeStep }).eq('id', user.id);
       }
 
-      const creatorTouch = (await import('../lib/creatorAttribution')).readCreatorTouch();
+      const creatorTouch = readCreatorTouch();
       if (creatorTouch) await supabase.rpc('claim_creator_attribution', { p_code: creatorTouch.code });
 
       const res = await fetch(

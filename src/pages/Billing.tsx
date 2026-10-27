@@ -8,6 +8,7 @@ import { effectivePlan, isActivePlan, isComplimentaryPro } from '../lib/plan';
 import { PRO_PRICE, PRO_PRICE_LABEL, REFERRALS_TO_COVER_PLAN, STRIPE_PRO_PRICE_ID } from '../lib/pricing';
 import { REFERRAL_PROGRAM_ENDS_ON_LABEL, referralRewardsOpen } from '../lib/referralRetirement';
 import { recordPlatformTermsAcceptance } from '../lib/platformLegal';
+import { readCreatorTouch } from '../lib/creatorAttribution';
 import { checkoutTrialFields, readTrialPromo, trialDaysForPromo } from '../lib/trialPromo';
 import { TrialTermsNotice } from '../components/TrialTermsNotice';
 import {
@@ -141,7 +142,6 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
         return;
       }
       if (user) void recordPlatformTermsAcceptance(user.id);
-      const { readCreatorTouch } = await import('../lib/creatorAttribution');
       const body: Record<string, unknown> = {
         price_id: PRICE_ID,
         app_url: window.location.origin,
