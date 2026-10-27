@@ -37,6 +37,10 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // Terser minifies this worker only when mode is production. On Node 18 that
+        // worker throws "crypto is not defined" after Vite has already printed the
+        // bundle, which is the Bolt/Netlify publish failure. The site JS stays minified.
+        mode: 'development',
         // Static hashed assets only. Never precache HTML (SPA shell, seo-static, guest pages).
         globPatterns: ['assets/**/*.{js,css}', 'pinonit_logo.png'],
         globIgnores: ['**/seo-static/**', '**/embed.js', '**/screenshots/**', '**/Screenshot*'],
