@@ -202,7 +202,7 @@ const sections: Section[] = [
         <p>All payments are processed securely by <strong>Stripe, Inc.</strong> By providing payment information, you authorize us to charge your payment method on a recurring monthly basis.</p>
         <ul className="space-y-2 pl-4">
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Billing cycle:</strong> Pro subscriptions are billed monthly on the anniversary of your subscription start date.</span></li>
-          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>No refunds:</strong> All subscription payments are non-refundable. If you cancel, you retain access until the end of your current billing period.</span></li>
+          <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>30-day money-back guarantee:</strong> If you ask within 30 days of your first Pro subscription payment, we will refund that first payment. Later renewal payments are not covered. We may refuse a refund, including when an account violates these Terms or the charge was already refunded or disputed. If you cancel, you keep access until the end of the period you already paid for, unless that first payment is refunded.</span></li>
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Cancellation:</strong> You may cancel your subscription at any time from your Billing settings. Cancellation takes effect at the end of the current billing period.</span></li>
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Free trials:</strong> New accounts may start a 14-day Pro trial with no credit card after agreeing to these Terms and our Privacy Policy. A 60-day Pro trial is available when you add a payment method ($0 is charged at signup). When a 60-day trial ends, your subscription bills automatically at the standard monthly rate unless you cancel first. The 14-day no-card trial does not store a card and does not auto-charge; add a card before it ends to keep Pro.</span></li>
           <li className="flex gap-2"><span className="text-brand-500 font-bold shrink-0">·</span><span><strong>Failed payments:</strong> If a payment fails, we will attempt to retry. Continued failure may result in your account becoming read-only until you reactivate.</span></li>
@@ -398,7 +398,7 @@ export function TermsPage() {
               Terms of Service
             </h1>
           </div>
-          <p className="text-sm text-slate-400 dark:text-slate-500">Last updated: October 15, 2026</p>
+          <p className="text-sm text-slate-400 dark:text-slate-500">Last updated: October 27, 2026</p>
           <p className="mt-4 text-sm leading-relaxed text-slate-600 dark:text-slate-400 p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl">
             These Terms govern the PinOnIt platform, a DBA of Miami Expeditions LLC.
           </p>
