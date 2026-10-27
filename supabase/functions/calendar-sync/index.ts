@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { ensureCalendarAccessToken } from "../_shared/calendar-tokens.ts";
 
 // calendar_events columns (including new conflict-aware ones):
@@ -59,20 +59,6 @@ interface GraphEvent {
   categories?: string[];
 }
 
-// ── iCal / CalDAV types ───────────────────────────────────────────────────────
-
-interface ICalEvent {
-  id: string;
-  summary?: string;
-  transp?: string;   // "TRANSPARENT" | "OPAQUE"
-  status?: string;   // "CONFIRMED" | "TENTATIVE" | "CANCELLED"
-  start: string;
-  end: string;
-  allDay: boolean;
-  attendeeSelfStatus?: string;
-  calendarName?: string;
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -89,23 +75,12 @@ function isHolidayCalendarName(name: string): boolean {
   return n.includes("holiday") || n.includes("public holiday") || n.includes("national holiday");
 }
 
-/** Titles that should always block (company-defined absence types) */
-const BLOCKING_TITLE_KEYWORDS = [
-  "vacation", "pto", "out of office", "ooo", "leave", "sick day", "sick leave",
-  "annual leave", "personal day", "time off", "holiday", "parental leave",
-];
-
-function titleIndicatesBlocking(title: string): boolean {
-  const t = title.toLowerCase();
-  return BLOCKING_TITLE_KEYWORDS.some((kw) => t.includes(kw));
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Google Calendar sync
 // ─────────────────────────────────────────────────────────────────────────────
 
 // deno-lint-ignore no-explicit-any
-async function syncGoogle(supabase: any, cal: ConnectedCalendar): Promise<{ synced: number; error?: string }> {
+async function syncGoogle(supabase: SupabaseClient, cal: ConnectedCalendar): Promise<{ synced: number; error?: string }> {
   const accessToken = await ensureCalendarAccessToken(supabase, cal);
   if (!accessToken) {
     return {
@@ -121,8 +96,8 @@ async function syncGoogle(supabase: any, cal: ConnectedCalendar): Promise<{ sync
   const timeMax = new Date(now); timeMax.setMonth(timeMax.getMonth() + 3);
 
   // Fetch all user's calendar list to identify birthday/holiday calendars
-  let birthdayCalIds = new Set<string>();
-  let holidayCalIds = new Set<string>();
+  const birthdayCalIds = new Set<string>();
+  const holidayCalIds = new Set<string>();
   try {
     const calListRes = await fetch(
       "https://www.googleapis.com/calendar/v3/users/me/calendarList",
@@ -270,7 +245,7 @@ async function syncGoogle(supabase: any, cal: ConnectedCalendar): Promise<{ sync
 // ─────────────────────────────────────────────────────────────────────────────
 
 // deno-lint-ignore no-explicit-any
-async function syncOutlook(supabase: any, cal: ConnectedCalendar): Promise<{ synced: number; error?: string }> {
+async function syncOutlook(supabase: SupabaseClient, cal: ConnectedCalendar): Promise<{ synced: number; error?: string }> {
   const accessToken = await ensureCalendarAccessToken(supabase, cal);
   if (!accessToken) {
     return {
@@ -569,7 +544,7 @@ function parseIcsEvents(
 }
 
 // deno-lint-ignore no-explicit-any
-async function syncIcal(supabase: any, cal: ConnectedCalendar): Promise<{ synced: number; error?: string }> {
+async function syncIcal(supabase: SupabaseClient, cal: ConnectedCalendar): Promise<{ synced: number; error?: string }> {
   const rawUrl = (cal.calendar_id || "").trim();
   if (!rawUrl) {
     return {

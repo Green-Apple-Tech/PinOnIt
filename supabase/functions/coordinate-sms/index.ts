@@ -318,7 +318,7 @@ function buildCoordInviteSms(
   }
 
   const tod = formatTimeOfDayPhrase(todKeys);
-  let msg =
+  const msg =
     `Hi ${participantName}! ${hostName} is looking for a ${dur} meeting within ${tf}${titleClause} — ${tod}. Reply with times that work for you.`;
   return msg + locationClause;
 }

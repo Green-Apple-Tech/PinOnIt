@@ -7,27 +7,13 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthCallback } from './components/AuthCallback';
 import { ToastContainer } from './components/Toast';
 import { Landing } from './pages/Landing';
-import { WhyPinOnItPage } from './pages/WhyPinOnIt';
-import { LegalTemplatesPage } from './pages/LegalTemplates';
-import { TermsPage } from './pages/Terms';
-import { PrivacyPage } from './pages/Privacy';
-import { SmsConsentPage } from './pages/SmsConsent';
-import { AcceptableUsePage } from './pages/AcceptableUse';
-import { LeaderboardPage } from './pages/Leaderboard';
-import { StatusPage } from './pages/Status';
-import { ReminderDonePage } from './pages/ReminderDone';
 import { NotFoundPage } from './pages/NotFound';
 import { SessionManager } from './components/SessionManager';
-import { CampaignLandingPage } from './pages/CampaignLandingPage';
-import { SignNowPage } from './pages/SignNow';
 import { captureCampaignParams } from './lib/campaignAttribution';
 import { captureTrialPromo } from './lib/trialPromo';
 import { logMarketingVisit } from './lib/marketingVisits';
 import { GuestNoIndex } from './components/GuestNoIndex';
-import { SeoIntentPage } from './pages/SeoIntentPage';
-import { INTENT_PAGES } from './lib/seoIntentPages';
-import { BlogIndexPage, BlogPostPage } from './pages/Blog';
-import { PhoneShotsPage } from './pages/PhoneShots';
+import { INTENT_PATHS } from './lib/seoPaths';
 
 function CampaignParamCapture() {
   const { search, pathname } = useLocation();
@@ -120,6 +106,55 @@ const StandingJobsPage = lazy(() =>
 const AIChat = lazy(() =>
   import('./components/AIChat').then((m) => ({ default: m.AIChat })),
 );
+const SeoIntentPage = lazy(() =>
+  import('./pages/SeoIntentPage').then((m) => ({ default: m.SeoIntentPage })),
+);
+const SignNowPage = lazy(() =>
+  import('./pages/SignNow').then((m) => ({ default: m.SignNowPage })),
+);
+const CampaignLandingPage = lazy(() =>
+  import('./pages/CampaignLandingPage').then((m) => ({ default: m.CampaignLandingPage })),
+);
+const WhyPinOnItPage = lazy(() =>
+  import('./pages/WhyPinOnIt').then((m) => ({ default: m.WhyPinOnItPage })),
+);
+const LegalTemplatesPage = lazy(() =>
+  import('./pages/LegalTemplates').then((m) => ({ default: m.LegalTemplatesPage })),
+);
+const BlogIndexPage = lazy(() =>
+  import('./pages/Blog').then((m) => ({ default: m.BlogIndexPage })),
+);
+const BlogPostPage = lazy(() =>
+  import('./pages/Blog').then((m) => ({ default: m.BlogPostPage })),
+);
+const TermsPage = lazy(() =>
+  import('./pages/Terms').then((m) => ({ default: m.TermsPage })),
+);
+const PrivacyPage = lazy(() =>
+  import('./pages/Privacy').then((m) => ({ default: m.PrivacyPage })),
+);
+const SmsConsentPage = lazy(() =>
+  import('./pages/SmsConsent').then((m) => ({ default: m.SmsConsentPage })),
+);
+const AcceptableUsePage = lazy(() =>
+  import('./pages/AcceptableUse').then((m) => ({ default: m.AcceptableUsePage })),
+);
+const LeaderboardPage = lazy(() =>
+  import('./pages/Leaderboard').then((m) => ({ default: m.LeaderboardPage })),
+);
+const StatusPage = lazy(() =>
+  import('./pages/Status').then((m) => ({ default: m.StatusPage })),
+);
+const PhoneShotsPage = lazy(() =>
+  import('./pages/PhoneShots').then((m) => ({ default: m.PhoneShotsPage })),
+);
+const ReminderDonePage = lazy(() =>
+  import('./pages/ReminderDone').then((m) => ({ default: m.ReminderDonePage })),
+);
+
+function LazyPage({ children }: { children: ReactNode }) {
+  return <Suspense fallback={<DashboardFallback />}>{children}</Suspense>;
+}
 
 function DashboardFallback() {
   return (
@@ -187,25 +222,25 @@ function App() {
           <Routes>
             {/* Fixed paths must come before the /:slug wildcard */}
             <Route path="/" element={<Landing />} />
-            {INTENT_PAGES.map((page) => (
-              <Route key={page.path} path={page.path} element={<SeoIntentPage />} />
+            {INTENT_PATHS.map((path) => (
+              <Route key={path} path={path} element={<LazyPage><SeoIntentPage /></LazyPage>} />
             ))}
             <Route path="/calendly-alternative-for-small-business" element={<Navigate to="/calendly-alternative" replace />} />
-            <Route path="/sign-now" element={<SignNowPage />} />
-            <Route path="/nda" element={<CampaignLandingPage slug="nda" />} />
-            <Route path="/reminders" element={<CampaignLandingPage slug="reminders" />} />
-            <Route path="/why-pinonit" element={<WhyPinOnItPage />} />
-            <Route path="/legal-templates" element={<LegalTemplatesPage />} />
-            <Route path="/blog" element={<BlogIndexPage />} />
-            <Route path="/blog/:slug" element={<BlogPostPage />} />
-            <Route path="/terms" element={<TermsPage />} />
-            <Route path="/privacy" element={<PrivacyPage />} />
-            <Route path="/sms-consent" element={<SmsConsentPage />} />
-            <Route path="/acceptable-use" element={<AcceptableUsePage />} />
-            <Route path="/leaderboard" element={<LeaderboardPage />} />
-            <Route path="/status" element={<StatusPage />} />
-            <Route path="/shots/phone" element={<PhoneShotsPage />} />
-            <Route path="/reminder-done/:token" element={<ReminderDonePage />} />
+            <Route path="/sign-now" element={<LazyPage><SignNowPage /></LazyPage>} />
+            <Route path="/nda" element={<LazyPage><CampaignLandingPage slug="nda" /></LazyPage>} />
+            <Route path="/reminders" element={<LazyPage><CampaignLandingPage slug="reminders" /></LazyPage>} />
+            <Route path="/why-pinonit" element={<LazyPage><WhyPinOnItPage /></LazyPage>} />
+            <Route path="/legal-templates" element={<LazyPage><LegalTemplatesPage /></LazyPage>} />
+            <Route path="/blog" element={<LazyPage><BlogIndexPage /></LazyPage>} />
+            <Route path="/blog/:slug" element={<LazyPage><BlogPostPage /></LazyPage>} />
+            <Route path="/terms" element={<LazyPage><TermsPage /></LazyPage>} />
+            <Route path="/privacy" element={<LazyPage><PrivacyPage /></LazyPage>} />
+            <Route path="/sms-consent" element={<LazyPage><SmsConsentPage /></LazyPage>} />
+            <Route path="/acceptable-use" element={<LazyPage><AcceptableUsePage /></LazyPage>} />
+            <Route path="/leaderboard" element={<LazyPage><LeaderboardPage /></LazyPage>} />
+            <Route path="/status" element={<LazyPage><StatusPage /></LazyPage>} />
+            <Route path="/shots/phone" element={<LazyPage><PhoneShotsPage /></LazyPage>} />
+            <Route path="/reminder-done/:token" element={<LazyPage><ReminderDonePage /></LazyPage>} />
             <Route path="/login" element={<AuthForm />} />
             <Route path="/signup" element={<AuthForm />} />
             <Route path="/ref/:code" element={<RefRedirect />} />

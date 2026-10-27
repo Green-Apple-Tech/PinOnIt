@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
+
 export type BookingAuthRow = {
   id: string;
   host_id: string;
@@ -7,7 +9,7 @@ export type BookingAuthRow = {
 };
 
 export async function loadAuthorizedBooking(
-  supabase: { from: (table: string) => any },
+  supabase: SupabaseClient,
   bookingId: string,
   hostId: string,
   actionToken: string | undefined,

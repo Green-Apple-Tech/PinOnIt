@@ -2,7 +2,7 @@
 // DEPLOY (required): supabase functions deploy google-calendar-callback --no-verify-jwt --project-ref adlusgtlwgcfyxgeoias
 // Or run: ./scripts/deploy-edge-functions.sh
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { parseOAuthContext, isValidOAuthUserId } from "../_shared/oauth-state.ts";
 import { dedupeContactRows } from "../_shared/dedupe-contacts.ts";
 
@@ -37,7 +37,7 @@ interface GooglePerson {
 }
 
 // deno-lint-ignore no-explicit-any
-async function storeEvents(supabase: any, hostId: string, calRowId: string, events: GoogleEvent[]): Promise<{ stored: number; error?: string }> {
+async function storeEvents(supabase: SupabaseClient, hostId: string, calRowId: string, events: GoogleEvent[]): Promise<{ stored: number; error?: string }> {
   const rows = events
     .filter((e) => e.status !== "cancelled")
     .map((e) => ({
@@ -76,10 +76,10 @@ async function storeEvents(supabase: any, hostId: string, calRowId: string, even
 }
 
 // deno-lint-ignore no-explicit-any
-async function importGoogleContacts(supabase: any, hostId: string, accessToken: string): Promise<{ imported: number; fetched: number; error?: string }> {
+async function importGoogleContacts(supabase: SupabaseClient, hostId: string, accessToken: string): Promise<{ imported: number; fetched: number; error?: string }> {
   console.log("[contacts] Fetching Google People API contacts...");
 
-  let connections: GooglePerson[] = [];
+  const connections: GooglePerson[] = [];
   let pageToken: string | undefined;
 
   do {
@@ -182,7 +182,7 @@ Deno.serve(async (req: Request) => {
   // Use service role — Google redirects here, there is no user session
   const supabaseAdmin = createClient(supabaseUrl, serviceKey);
 
-  let redirectBase = "https://pinonit.com/dashboard/appointments";
+  const redirectBase = "https://pinonit.com/dashboard/appointments";
 
   console.log("[callback] Function invoked, method:", req.method);
   console.log("[callback] GOOGLE_CLIENT_ID present:", !!clientId);
@@ -199,9 +199,9 @@ Deno.serve(async (req: Request) => {
     console.log("[callback] error param:", errorParam ?? "none");
 
     const oauth = parseOAuthContext(state);
-    let redirectBase = oauth.redirectBase;
+    const redirectBase = oauth.redirectBase;
     let userId = oauth.userId;
-    let source = oauth.source;
+    const source = oauth.source;
 
     console.log("[callback] Decoded userId from state:", userId);
     console.log("[callback] Decoded source from state:", source);

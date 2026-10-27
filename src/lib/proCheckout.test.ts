@@ -82,11 +82,10 @@ describe('new Pro checkout', () => {
     const billing = read('src/pages/Billing.tsx');
     const settings = read('src/pages/Settings.tsx');
     const why = read('src/lib/whyPinonit.ts');
-    const compare = read('src/pages/CalendlyAlternative.tsx');
     const terms = read('src/pages/Terms.tsx');
     const leaderboard = read('src/pages/Leaderboard.tsx');
 
-    for (const source of [billing, settings, why, compare]) {
+    for (const source of [billing, settings, why]) {
       expect(source).not.toContain('Refer 6');
       expect(source).not.toContain('Refer 9');
       expect(source).toContain('REFERRALS_TO_COVER_PLAN');

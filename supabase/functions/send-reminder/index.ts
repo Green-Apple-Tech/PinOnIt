@@ -2,7 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { appendSmsOptOut, appendSmsGuestFooters } from '../_shared/sms-opt-out.ts';
 import { smsIsOptedOut } from '../_shared/sms-send-gate.ts';
 import { NOREPLY_FROM, SUPPORT_EMAIL } from '../_shared/contact-email.ts';
-import { bookingAllowsGuestSms, bookingAllowsGuestWhatsapp, hostAllowsSms, hostAllowsWhatsapp } from '../_shared/sms-compliance.ts';
+import { bookingAllowsGuestSms, bookingAllowsGuestWhatsapp } from '../_shared/sms-compliance.ts';
 import { isServiceRoleRequest, jsonAuthError, hostIdFromJwt } from '../_shared/callerAuth.ts';
 import { isValidSlackWebhookUrl, notifySlackWebhook } from '../_shared/slack-webhook.ts';
 import { parseAlsoPeople, resolveAlsoPeople, type AlsoPerson } from '../_shared/reminder-also.ts';
@@ -1722,10 +1722,6 @@ Deno.serve(async (req: Request) => {
         let guestPhone: string | null = null;
         let notifyVia: unknown = null;
         let hostEmail: string | null = null;
-        let hostPhone: string | null = null;
-        let hostWhatsapp: string | null = null;
-        let hostSmsConsent = false;
-        let hostWhatsappConsent = false;
         let hostName = 'PinOnIt';
         let meetLink: string | null = null;
         let alsoPeople: AlsoPerson[] = [];
@@ -1749,10 +1745,6 @@ Deno.serve(async (req: Request) => {
           const hp = booking.profiles as Record<string, unknown> | null;
           hostName = (hp?.full_name as string) || hostName;
           hostEmail = ((hp?.notification_email as string) || (hp?.email as string) || null);
-          hostPhone = (hp?.phone as string) || null;
-          hostWhatsapp = (hp?.whatsapp_number as string) || hostPhone;
-          hostSmsConsent = hostAllowsSms(hp);
-          hostWhatsappConsent = hostAllowsWhatsapp(hp);
           alsoPeople = resolveAlsoPeople(parseAlsoPeople(hp?.reminder_also), {
             serviceId: booking.service_id as string | null,
             bookingAlsoIds: booking.also_remind_ids,
@@ -1774,10 +1766,6 @@ Deno.serve(async (req: Request) => {
             .maybeSingle();
           hostName = hp?.full_name || hostName;
           hostEmail = hp?.notification_email || hp?.email || null;
-          hostPhone = hp?.phone || null;
-          hostWhatsapp = hp?.whatsapp_number || hostPhone;
-          hostSmsConsent = hostAllowsSms(hp);
-          hostWhatsappConsent = hostAllowsWhatsapp(hp);
           guestName = hostName;
           alsoPeople = resolveAlsoPeople(parseAlsoPeople(hp?.reminder_also), {
             bookingAlsoIds: ev.also_remind_ids,

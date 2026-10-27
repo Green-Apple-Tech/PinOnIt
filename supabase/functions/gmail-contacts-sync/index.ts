@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { dedupeContactRows } from "../_shared/dedupe-contacts.ts";
 import { normalizeImportedContacts } from "../_shared/normalize-imported-contacts.ts";
 
@@ -48,13 +48,13 @@ async function refreshGoogleToken(refreshToken: string): Promise<{ access_token:
 
 // deno-lint-ignore no-explicit-any
 async function importGoogleContacts(
-  supabase: any,
+  supabase: SupabaseClient,
   hostId: string,
   accessToken: string,
 ): Promise<{ imported: number; fetched: number; error?: string }> {
   console.log("[gmail-contacts-sync] Fetching Google People API contacts...");
 
-  let connections: GooglePerson[] = [];
+  const connections: GooglePerson[] = [];
   let pageToken: string | undefined;
 
   do {

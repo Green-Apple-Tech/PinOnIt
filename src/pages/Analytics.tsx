@@ -276,10 +276,10 @@ export function AnalyticsPage({ embedded }: { embedded?: boolean }) {
                 {[...confirmed].reverse().slice(0, 10).map((b) => (
                   <div key={b.id} className="flex items-center justify-between gap-3 px-5 py-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: (b.services as any)?.color ?? '#1a56db' }} />
+                      <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: b.services?.color ?? '#1a56db' }} />
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{b.guest_name}</p>
-                        <p className="text-xs text-gray-400 dark:text-slate-500 truncate">{(b.services as any)?.name ?? 'Meeting'}</p>
+                        <p className="text-xs text-gray-400 dark:text-slate-500 truncate">{b.services?.name ?? 'Meeting'}</p>
                       </div>
                     </div>
                     <div className="shrink-0 text-right">

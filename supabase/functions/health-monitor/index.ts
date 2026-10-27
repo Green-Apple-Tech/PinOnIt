@@ -205,8 +205,6 @@ Deno.serve(async (req: Request) => {
         error_message: "SMS alert sent: down",
       });
     } else if (allRecentDown && !recentAlert) {
-      // 15+ min down
-      const timeStr = new Date().toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "2-digit", minute: "2-digit" });
       await sendSms(
         `PinOnIt has been down 15+ min. Check ${APP_URL}/status and redeploy via Bolt Cloud if needed.`
       );

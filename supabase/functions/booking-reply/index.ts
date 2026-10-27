@@ -133,7 +133,7 @@ Deno.serve(async (req: Request) => {
     }
 
     return jsonResponse({ error: 'Unhandled action' }, 400);
-  } catch (err) {
+  } catch {
     return jsonResponse({ error: 'An error occurred processing your request' }, 500);
   }
 });

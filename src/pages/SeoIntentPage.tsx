@@ -5,7 +5,8 @@ import { JsonLd } from '../components/JsonLd';
 import { useTheme } from '../hooks/useTheme';
 import { usePageMeta } from '../lib/pageMeta';
 import { signupHref } from '../lib/campaignAttribution';
-import { INTENT_OG_IMAGE, INTENT_PAGES } from '../lib/seoIntentPages';
+import { INTENT_PAGES } from '../lib/seoIntentPages';
+import { INTENT_OG_IMAGE } from '../lib/seoPaths';
 import { MarketingStickyHeader } from '../components/landing/MarketingAnnouncementBar';
 import {
   faqPageJsonLd,

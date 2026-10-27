@@ -2,7 +2,7 @@
 // DEPLOY (required): supabase functions deploy outlook-calendar-callback --no-verify-jwt --project-ref adlusgtlwgcfyxgeoias
 // Or run: ./scripts/deploy-edge-functions.sh
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { parseOAuthContext, isValidOAuthUserId } from "../_shared/oauth-state.ts";
 import { dedupeContactRows } from "../_shared/dedupe-contacts.ts";
 
@@ -38,7 +38,7 @@ interface GraphContact {
 }
 
 // deno-lint-ignore no-explicit-any
-async function storeEvents(supabase: any, hostId: string, calRowId: string, events: GraphEvent[]): Promise<{ stored: number; error?: string }> {
+async function storeEvents(supabase: SupabaseClient, hostId: string, calRowId: string, events: GraphEvent[]): Promise<{ stored: number; error?: string }> {
   const rows = events
     .filter((e) => !e.isCancelled)
     .map((e) => ({
@@ -77,10 +77,10 @@ async function storeEvents(supabase: any, hostId: string, calRowId: string, even
 }
 
 // deno-lint-ignore no-explicit-any
-async function importOutlookContacts(supabase: any, hostId: string, accessToken: string): Promise<{ imported: number; fetched: number; error?: string }> {
+async function importOutlookContacts(supabase: SupabaseClient, hostId: string, accessToken: string): Promise<{ imported: number; fetched: number; error?: string }> {
   console.log("[outlook-contacts] Fetching Microsoft Graph contacts...");
 
-  let contacts: GraphContact[] = [];
+  const contacts: GraphContact[] = [];
   let nextUrl: string | null = "https://graph.microsoft.com/v1.0/me/contacts?$select=displayName,emailAddresses,mobilePhone,companyName,businessPhones&$top=999";
 
   while (nextUrl) {
@@ -156,7 +156,7 @@ async function importOutlookContacts(supabase: any, hostId: string, accessToken:
 
 // deno-lint-ignore no-explicit-any
 async function persistOutlookTokens(
-  supabase: any,
+  supabase: SupabaseClient,
   uid: string,
   tokens: MicrosoftTokenResponse,
 ): Promise<void> {
@@ -232,8 +232,8 @@ Deno.serve(async (req: Request) => {
 
     const oauth = parseOAuthContext(state);
     redirectBase = oauth.redirectBase;
-    let uid = oauth.userId ?? "";
-    let source = oauth.source;
+    const uid = oauth.userId ?? "";
+    const source = oauth.source;
 
     console.log("[outlook-callback] Decoded uid from state:", uid || "none");
     console.log("[outlook-callback] Decoded source from state:", source);

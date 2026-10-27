@@ -51,8 +51,7 @@ const SOCIAL_ICONS: Record<string, string> = {
   pinterest: iconPinterest,
 };
 
-const SOCIAL_KEYS = ['linkedin','twitter','facebook','instagram','youtube','tiktok','threads','whatsapp','telegram','discord','pinterest'] as const;
-type SocialKey = typeof SOCIAL_KEYS[number];
+type SocialKey = 'linkedin' | 'twitter' | 'facebook' | 'instagram' | 'youtube' | 'tiktok' | 'threads' | 'whatsapp' | 'telegram' | 'discord' | 'pinterest';
 
 function esc(s: string): string {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');

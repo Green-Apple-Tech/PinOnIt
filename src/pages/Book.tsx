@@ -1169,8 +1169,8 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
     { id: 'warm',  bg: '#fdf6ec', surface: '#fef9f3', border: '#e8d5bc', text: '#3b2a1a', muted: '#8a6a50', btnBg: '#c0622a', btnText: '#ffffff', accentBar: '#c0622a' },
   ];
   const cleanTheme = THEMES_BOOK[0];
-  const paidSettings = (host as any)?.paid_booking_settings as PaidBookingSettings | undefined;
-  const paidThemeId = (((host as any)?.paid_booking_theme ?? 'clean') as ThemeId);
+  const paidSettings = host?.paid_booking_settings;
+  const paidThemeId: ThemeId = host?.paid_booking_theme ?? 'clean';
 
   const pageTheme = isPaidBookingPage
     ? (THEMES_BOOK.find((t) => t.id === paidThemeId) ?? cleanTheme)
@@ -1556,8 +1556,8 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
                     );
                   };
                   if (pageUseCategories && pageCategories.length > 0) {
-                    const grouped = pageCategories.map((cat) => ({ cat, svcs: services.filter((s) => (s as any).category === cat) })).filter((g) => g.svcs.length > 0);
-                    const ungrouped = services.filter((s) => !pageCategories.includes((s as any).category));
+                    const grouped = pageCategories.map((cat) => ({ cat, svcs: services.filter((s) => s.category === cat) })).filter((g) => g.svcs.length > 0);
+                    const ungrouped = services.filter((s) => !s.category || !pageCategories.includes(s.category));
                     return (
                       <div className="space-y-6">
                         {grouped.map(({ cat, svcs }) => (

@@ -14,7 +14,7 @@ import {
   type BlogPost,
 } from '../lib/blogPosts';
 import { blogIndexJsonLd, blogPostingJsonLd, organizationJsonLd } from '../lib/jsonLd';
-import { INTENT_OG_IMAGE } from '../lib/seoIntentPages';
+import { INTENT_OG_IMAGE } from '../lib/seoPaths';
 import { MarketingStickyHeader } from '../components/landing/MarketingAnnouncementBar';
 
 function BlogChrome({ children }: { children: ReactNode }) {

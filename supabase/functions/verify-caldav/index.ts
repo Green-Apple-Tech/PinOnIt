@@ -60,7 +60,7 @@ Deno.serve(async (req: Request) => {
 </A:propfind>`;
 
     let verifyOk = false;
-    let calendarName = "iCloud Calendar";
+    const calendarName = "iCloud Calendar";
 
     try {
       const resp = await fetch(caldavUrl, {
