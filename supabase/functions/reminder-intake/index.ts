@@ -6,12 +6,12 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { hostPlanIsActive } from '../_shared/hostPlan.ts';
 import {
+  DEFAULT_INTAKE_ORIGINS,
   buildIntakeTranscript,
   intakeNoteLine,
   intakeRateLimited,
   mergeIntakeContact,
   normalizeIp,
-  parseIntakeOrigins,
   requestOriginAllowed,
   secretsMatch,
   validateIntake,
@@ -26,13 +26,8 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 type DbError = { code?: string; message?: string } | null;
 
 Deno.serve(async (req: Request) => {
-  const origins = parseIntakeOrigins(Deno.env.get('REMINDER_INTAKE_ORIGINS'));
   const origin = req.headers.get('Origin');
-  if (origins.invalid) {
-    console.error('REMINDER_INTAKE_ORIGINS is invalid');
-    return json(req, { error: 'not_configured', message: 'Reminder intake is not configured.' }, 503, []);
-  }
-  const allowed = origins.origins;
+  const allowed = [...DEFAULT_INTAKE_ORIGINS];
 
   if (req.method === 'OPTIONS') {
     if (origin && !requestOriginAllowed(origin, allowed)) {

@@ -74,7 +74,8 @@ Set these Edge Function secrets before using it:
 | --- | --- | --- |
 | `REMINDER_INTAKE_SECRET` | yes | Shared secret. Callers send it in `x-intake-secret`. |
 | `REMINDER_INTAKE_HOST_ID` | yes | Active PinOnIt user that owns the contacts and reminder rows. |
-| `REMINDER_INTAKE_ORIGINS` | no | Comma-separated https origins. Defaults to `https://businesslicensebycity.com`, `https://www.businesslicensebycity.com`, `https://rentalrulesbycity.com`, and `https://www.rentalrulesbycity.com`. |
+
+Allowed browser origins are `https://businesslicensebycity.com`, `https://www.businesslicensebycity.com`, `https://rentalrulesbycity.com`, and `https://www.rentalrulesbycity.com`.
 
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are already available to Edge Functions.
 

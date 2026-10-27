@@ -1,6 +1,6 @@
 import { normalizePhoneE164 } from './phone.ts';
 
-/** Browser origins allowed to call reminder-intake when REMINDER_INTAKE_ORIGINS is unset. */
+/** Browser origins allowed to call reminder-intake. */
 export const DEFAULT_INTAKE_ORIGINS = [
   'https://businesslicensebycity.com',
   'https://www.businesslicensebycity.com',
