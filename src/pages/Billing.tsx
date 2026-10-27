@@ -8,6 +8,7 @@ import { effectivePlan, isActivePlan, isComplimentaryPro } from '../lib/plan';
 import { PRO_PRICE, PRO_PRICE_LABEL, REFERRALS_TO_COVER_PLAN, STRIPE_PRO_PRICE_ID } from '../lib/pricing';
 import { REFERRAL_PROGRAM_ENDS_ON_LABEL, referralRewardsOpen } from '../lib/referralRetirement';
 import { recordPlatformTermsAcceptance } from '../lib/platformLegal';
+import { checkoutTrialFields, readTrialPromo, trialDaysForPromo } from '../lib/trialPromo';
 import { TrialTermsNotice } from '../components/TrialTermsNotice';
 import {
   Check, Zap, Loader2, AlertCircle,
@@ -61,6 +62,8 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
   const referralLink = profile?.referral_code
     ? `${window.location.origin}/ref/${profile.referral_code}`
     : '';
+  const storedPromo = readTrialPromo();
+  const promoTrialDays = storedPromo ? trialDaysForPromo(storedPromo) : null;
 
   // Heal plan from Stripe (webhook can lag or miss) and show success after checkout
   useEffect(() => {
@@ -148,7 +151,10 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
         body.creator_code = creatorTouch.code;
         await supabase.rpc('claim_creator_attribution', { p_code: creatorTouch.code });
       }
-      if (trialDays) body.trial_period_days = trialDays;
+      Object.assign(body, checkoutTrialFields({
+        promo: trialDays ? readTrialPromo() : null,
+        trialPeriodDays: trialDays,
+      }));
 
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout`,
@@ -369,11 +375,13 @@ export function BillingPage({ embedded }: { embedded?: boolean }) {
                   Subscribe — ${PRO_PRICE}/mo
                 </button>
                 <button
-                  onClick={() => handleUpgrade(60)}
+                  onClick={() => handleUpgrade(promoTrialDays ?? 60)}
                   disabled={checkoutLoading}
                   className="w-full mt-2 py-3 rounded-xl text-sm font-semibold border-2 border-brand-600 text-brand-700 transition-all inline-flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-brand-50"
                 >
-                  60 days free — card on file (Calendly switchers)
+                  {promoTrialDays
+                    ? `${promoTrialDays} days free — card on file`
+                    : '60 days free — card on file (Calendly switchers)'}
                 </button>
                 <TrialTermsNotice className="mt-4" />
               </>

@@ -73,6 +73,7 @@ export function PhoneShotsPage() {
     title: 'Phone shots',
     description: 'Phone screenshots of PinOnIt tools.',
     url: 'https://pinonit.com/shots/phone',
+    image: 'https://pinonit.com/og-why-pinonit.png',
     robots: 'noindex, nofollow',
   });
 

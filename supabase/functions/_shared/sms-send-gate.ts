@@ -123,3 +123,57 @@ export async function sendTwilioSmsGuarded(
     return { ok: false, error: e instanceof Error ? e.message : 'send failed' };
   }
 }
+
+/**
+ * Operator SMS from TWILIO_PHONE_NUMBER (account SID + auth token).
+ * Same STOP check as sendTwilioSmsGuarded. Guest reminders keep using the messaging service.
+ */
+export async function sendTwilioSmsFromNumber(
+  supabase: SupabaseClient,
+  to: string | null | undefined,
+  body: string,
+  opts?: { appendOptOut?: boolean },
+): Promise<TwilioSendResult> {
+  const phone = (to || '').trim();
+  if (!phone) return { ok: false, skipped: 'no_phone', error: 'no phone' };
+
+  if (await smsIsOptedOut(supabase, phone)) {
+    return { ok: false, skipped: 'opted_out', error: 'recipient opted out (STOP)' };
+  }
+
+  const twilioSid = Deno.env.get('TWILIO_ACCOUNT_SID');
+  const twilioToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+  const from = Deno.env.get('TWILIO_PHONE_NUMBER');
+  if (!twilioSid || !twilioToken || !from) {
+    return { ok: false, skipped: 'not_configured', error: 'SMS is not configured' };
+  }
+
+  const text = opts?.appendOptOut === false ? body : appendSmsOptOut(body);
+  try {
+    const res = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: 'Basic ' + btoa(`${twilioSid}:${twilioToken}`),
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          From: from,
+          To: phone,
+          Body: text,
+        }),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.text();
+      console.error('Twilio SMS failed:', err);
+      return { ok: false, error: err };
+    }
+    const json = await res.json() as { sid?: string };
+    return { ok: true, sid: json.sid };
+  } catch (e) {
+    console.error('Twilio SMS error:', e);
+    return { ok: false, error: e instanceof Error ? e.message : 'send failed' };
+  }
+}

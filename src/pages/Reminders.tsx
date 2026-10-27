@@ -347,7 +347,10 @@ export function RemindersPage({
         new Set(loadedRules.map((r) => r.template_id)),
       );
       const defaults = await ensureDefaultGuestEmailReminders(profile.id, loadedTemplates);
-      const allTemplates = [...loadedTemplates, ...(defaults.templates as MessageTemplate[])];
+      const allTemplates = [
+        ...loadedTemplates,
+        ...(defaults.templates as unknown as MessageTemplate[]),
+      ];
       setTemplates(allTemplates);
       setRules([
         ...loadedRules,

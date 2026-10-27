@@ -7,6 +7,7 @@ import { Loader2, Mail, Lock, User, ArrowLeft, Sun, Moon, Eye, EyeOff } from 'lu
 import { IOS_OAUTH_SAFARI_MESSAGE, clearOauthStart, isIosIsolatedWebView, readIosStandalone } from '../lib/oauthLogin';
 import { postLoginDestination, signNowNextParam } from '../lib/signNow';
 import { REFERRAL_PROGRAM_ENDS_ON_LABEL, referralRewardsOpen } from '../lib/referralRetirement';
+import { normalizePromoCode, trialDaysForPromo } from '../lib/trialPromo';
 
 type View = 'login' | 'signup' | 'forgot';
 
@@ -37,6 +38,8 @@ export function AuthForm() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const refCode = searchParams.get('ref');
+  const promoCode = normalizePromoCode(searchParams.get('promo') ?? '');
+  const promoTrialDays = promoCode ? trialDaysForPromo(promoCode) : null;
   // Read intended destination from router state (set by ProtectedRoute) or fall back to dashboard.
   // sign-now passes ?next= so Google, Microsoft, and email all land on the one-page send screen.
   const locationState = (window.history.state?.usr as { from?: { pathname: string; search?: string } }) ?? {};
@@ -63,7 +66,7 @@ export function AuthForm() {
     }
   }, [searchParams]);
   const { theme, toggleTheme } = useTheme();
-  const [view, setView] = useState<View>(refCode || signNowRedirect ? 'signup' : 'login');
+  const [view, setView] = useState<View>(refCode || signNowRedirect || promoCode ? 'signup' : 'login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -198,6 +201,14 @@ export function AuthForm() {
               : "Enter your email and we'll send you a reset link"}
           </p>
         </div>
+
+        {promoCode && view === 'signup' && (
+          <div className="mb-6 p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 rounded-xl text-sm text-emerald-800 dark:text-emerald-300">
+            {promoCode === 'SWITCH'
+              ? `Replacing Calendly and DocuSign? This link includes a ${promoTrialDays}-day Pro trial when you add a card.`
+              : `This link includes a ${promoTrialDays}-day Pro trial when you add a card.`}
+          </div>
+        )}
 
         {refCode && view === 'signup' && referralRewardsOpen() && (
           <div className="mb-6 flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/40 rounded-xl text-sm text-indigo-700 dark:text-indigo-500">

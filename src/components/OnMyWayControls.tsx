@@ -45,7 +45,7 @@ export function OnMyWayControls({ booking, compact, onSent }: Props) {
   const send = async (channel: 'sms' | 'email') => {
     const minutes = clampOnMyWayEta(custom.trim() ? Number(custom) : eta);
     if (minutes == null) {
-      toast('ETA must be between 1 and 180 minutes.');
+      toast.error('ETA must be between 1 and 180 minutes.');
       return;
     }
     setSending(true);
@@ -53,7 +53,7 @@ export function OnMyWayControls({ booking, compact, onSent }: Props) {
       const { data: sessionData } = await supabase.auth.getSession();
       const access = sessionData.session?.access_token;
       if (!access) {
-        toast('Sign in again to send.');
+        toast.error('Sign in again to send.');
         return;
       }
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-on-my-way`, {
@@ -72,7 +72,7 @@ export function OnMyWayControls({ booking, compact, onSent }: Props) {
         on_my_way_eta_minutes?: number;
       };
       if (!res.ok || !json.ok) {
-        toast(json.error || 'Could not send.');
+        toast.error(json.error || 'Could not send.');
         return;
       }
       onSent?.({
@@ -80,7 +80,7 @@ export function OnMyWayControls({ booking, compact, onSent }: Props) {
         on_my_way_eta_minutes: json.on_my_way_eta_minutes || minutes,
       });
       setOpen(false);
-      toast(channel === 'sms' ? 'On-my-way text sent.' : 'On-my-way email sent.');
+      toast.success(channel === 'sms' ? 'On-my-way text sent.' : 'On-my-way email sent.');
       void refreshProfile();
     } finally {
       setSending(false);

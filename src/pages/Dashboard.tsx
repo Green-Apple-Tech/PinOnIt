@@ -428,6 +428,8 @@ export function Dashboard() {
       })();
       const message = trialDays === '60'
         ? `🎉 60-day Pro trial active — no charge until ${firstChargeDate}. Running it alongside Calendly? Take your time.`
+        : trialDays === '90'
+        ? `🎉 90-day Pro trial active — no charge until ${firstChargeDate}. Replacing Calendly and DocuSign? Take your time.`
         : `🎉 Pro trial active — ${trialDays} days free, no charge until ${firstChargeDate}.`;
       setTrialToast({ message });
     } else {
