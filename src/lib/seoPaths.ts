@@ -18,4 +18,5 @@ export const INTENT_PATHS: readonly string[] = [
   '/service-business-software',
   '/calendly-docusign-alternative',
   '/solutions',
+  '/realestate',
 ];

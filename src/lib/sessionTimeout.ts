@@ -59,6 +59,7 @@ const PUBLIC_APP_ROOTS = new Set([
   'nda',
   'onboarding',
   'privacy',
+  'realestate',
   'reminders',
   'sign-now',
   'signup',

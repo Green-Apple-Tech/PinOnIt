@@ -618,6 +618,7 @@ export const MORE_INTENT_PAGES: IntentPage[] = [
         heading: 'Product',
         links: [
           { path: '/service-business-software', label: 'Service business software' },
+          { path: '/realestate', label: 'Real estate agents' },
           { path: '/why-pinonit', label: 'Why PinOnIt' },
           { path: '/legal-templates', label: 'Waiver templates' },
           { path: '/blog', label: 'Field notes' },
@@ -648,5 +649,63 @@ export const MORE_INTENT_PAGES: IntentPage[] = [
     metaTitle: 'Solutions | PinOnIt',
     metaDescription: `PinOnIt solutions: booking, SMS reminders, Sign-by-Text, quotes, and simple documents for small service businesses. ${PINONIT_PRICE_MONTHLY} after a 14-day trial.`,
     canonical: intentCanonical('/solutions'),
+  },
+  {
+    slug: 'realestate',
+    path: '/realestate',
+    eyebrow: 'For agents',
+    h1: 'Booking, reminders, and a signature for real estate agents',
+    opening: PINONIT_CORE_SENTENCE,
+    body: [
+      'An agent needs three things on a phone: a link the client can use to book a showing or a listing appointment, a reminder so they actually arrive, and a short agreement they can sign before anyone drives across town.',
+      'PinOnIt is that workflow. The client books from a text. A reminder goes out by SMS, WhatsApp, email, or a voice call. You send a simple visit or listing agreement by text, and they sign in the phone browser. They do not install an app or make an account.',
+      'This is not a transaction desk, a forms library, or a closing system. Purchase contracts, deeds, and anything your brokerage requires a lawyer or a specific form for still belong there. The sample below is a starting point, not a form you should send as-is.',
+    ],
+    audience: 'Independent agents and small teams who book showings and listing visits from a phone.',
+    features: [
+      'One booking link for showings and listing appointments',
+      'Reminders by text, WhatsApp, email, or a voice call',
+      'A simple agreement sent by text for a finger signature',
+      'No app and no account for the client',
+      `Same ${PINONIT_PRICE_MONTHLY} plan as every other PinOnIt workflow`,
+    ],
+    workflow:
+      'Text the booking link. They pick a time. PinOnIt reminds them. If you need a short agreement signed first, send it by text and they sign on the phone.',
+    sections: [
+      {
+        h2: 'What the agent sends',
+        text: 'A booking link, a reminder, and when you need it, one agreement. The client pays you on your own Zelle, Cash App, Venmo, or PayPal link. PinOnIt does not take the money.',
+      },
+      {
+        h2: 'A sample agreement, not legal advice',
+        text: 'Not legal advice. Have a lawyer review anything you send. A usable draft names the agent and the client, the property address, the appointment time, and what you will do at that visit (show the home, or walk the listing). It says they agree to sign electronically, and it leaves a signature line. It is not a purchase contract, a listing agreement for your brokerage, or a disclosure packet.',
+      },
+      { h2: 'What does it cost?', text: PINONIT_COST },
+    ],
+    related: [
+      { path: '/booking-with-sms-reminders', label: 'Booking with SMS reminders' },
+      { path: '/sign-by-text', label: 'Sign-by-Text' },
+      { path: '/forms-and-waivers', label: 'Forms and waivers' },
+      { path: '/send-estimate-by-text', label: 'Send an estimate by text' },
+    ],
+    faq: [
+      {
+        q: 'Does my client need an app?',
+        a: 'No. They open the booking link or the signature link in the phone browser.',
+      },
+      {
+        q: 'Can I use this for a purchase contract?',
+        a: 'No. Use it for a showing or a listing visit and a short agreement you have had reviewed. Closings, deeds, and brokerage-required forms stay in your existing system.',
+      },
+      {
+        q: 'What does it cost?',
+        a: `Pro is ${PINONIT_PRICE_MONTHLY} after the trial. There is no separate real-estate price.`,
+      },
+    ],
+    cta: CTA,
+    ctaTo: '/signup',
+    metaTitle: 'Booking and signatures for real estate agents | PinOnIt',
+    metaDescription: `Agents book a showing, send a reminder, and collect a simple signature by text. ${PINONIT_PRICE_MONTHLY} after trial. Not a closing desk, and not legal advice.`,
+    canonical: intentCanonical('/realestate'),
   },
 ];

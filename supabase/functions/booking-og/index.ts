@@ -53,6 +53,7 @@ const RESERVED = new Set([
   'service-business-software',
   'calendly-docusign-alternative',
   'solutions',
+  'realestate',
   'blog',
   'terms',
   'privacy',

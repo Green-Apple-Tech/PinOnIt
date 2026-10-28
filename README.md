@@ -146,6 +146,22 @@ curl -sS -X POST \
 
 The text looks like `New lead (PinOnIt): Ada Lovelace – ada@example.com – Replacing Calendly and DocuSign`.
 
+## Zip Owners
+
+A verified Zip Owners subscriber can receive Pro at no charge, with no extra trial. The grant is its own `plan_grants.kind` (`zip_owners`). It does not convert a complimentary or creator grant, and it does not change a Stripe subscription, including a card trial. A no-card local trial is ended when the grant starts, so the days do not stack. When Zip Owners ends, the grant ends and the normal $9.99 checkout applies.
+
+The website publish does not read `ZIP_OWNERS_SYNC_TOKEN`. Apply `supabase/migrations/20261028170000_zip_owners_grant.sql` before the first call. Deploy the function with `--no-verify-jwt` because the caller sends the shared secret, not a user JWT:
+
+```bash
+supabase functions deploy zip-owners-sync --no-verify-jwt --project-ref adlusgtlwgcfyxgeoias
+```
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `ZIP_OWNERS_SYNC_TOKEN` | yes, at request time | Shared secret. Callers send it in the `x-zip-owners-token` header. |
+
+If the token is missing, the function returns 503 and grants nobody.
+
 ## Legal
 
 - [Terms of Service](https://pinonit.com/terms)

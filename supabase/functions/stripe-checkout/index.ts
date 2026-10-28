@@ -107,6 +107,22 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    const zipEmail = (user.email ?? '').trim().toLowerCase();
+    if (zipEmail) {
+      const { data: zipGrant } = await supabase
+        .from('plan_grants')
+        .select('email')
+        .eq('email', zipEmail)
+        .eq('kind', 'zip_owners')
+        .maybeSingle();
+      if (zipGrant) {
+        return new Response(JSON.stringify({ error: 'zip_owners_grant' }), {
+          status: 409,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     // Promo codes pick the trial. A code is never converted from the client's trial_period_days.
     const trial = resolveCheckoutTrial({ promo, trial_period_days });
     const trialDays = trial.days;

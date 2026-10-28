@@ -166,6 +166,10 @@
   to = "/seo-static/solutions.html"
   status = 200
 [[redirects]]
+  from = "/realestate"
+  to = "/seo-static/realestate.html"
+  status = 200
+[[redirects]]
   from = "/blog"
   to = "/seo-static/blog/index.html"
   status = 200
