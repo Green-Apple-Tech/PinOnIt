@@ -1,7 +1,17 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import { SITE_OG, usePageMeta } from '../lib/pageMeta';
 
 export function NotFoundPage() {
+  usePageMeta({
+    title: 'Page not found | PinOnIt',
+    description: "This page doesn't exist or may have been moved.",
+    url: typeof window !== 'undefined' ? window.location.href : 'https://pinonit.com/404',
+    image: SITE_OG.image,
+    robots: 'noindex',
+    omitCanonical: true,
+  });
+
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 flex flex-col items-center justify-center px-6 text-center">
       <div className="mb-6">

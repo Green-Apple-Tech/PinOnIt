@@ -120,9 +120,9 @@ export const CALENDLY_EXCLUSIVES: ExclusiveFeature[] = [
 ];
 
 export const WHY_PINONIT = {
-  seoTitle: 'Calendly alternative for small business | PinOnIt',
+  seoTitle: 'Why PinOnIt: Booking, Signing and Reminders by Text | PinOnIt',
   seoDescription:
-    'PinOnIt is the Calendly alternative for small business: Sign by Text, easy booking, WhatsApp and voice reminders, two-way SMS, quotes, QR codes — from $9.99/mo.',
+    'Calendly books meetings. PinOnIt runs your business: Sign-by-Text, booking, WhatsApp and voice reminders, two-way SMS, quotes and QR codes from $9.99/mo.',
   ogImage: 'https://pinonit.com/og-why-pinonit.png',
   canonical: 'https://pinonit.com/why-pinonit',
   heroHeadline: 'Calendly books meetings. PinOnIt runs your business.',

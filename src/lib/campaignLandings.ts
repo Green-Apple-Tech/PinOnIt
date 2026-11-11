@@ -79,7 +79,7 @@ export const CAMPAIGN_PAGES: Record<string, CampaignCopy> = {
     disclaimer: LEGAL_DISCLAIMER,
     metaTitle: 'Send an NDA over text | PinOnIt Doc Center',
     metaDescription:
-      'Send an NDA over text in 30 seconds. No app or login for the other person — they verify by SMS and sign on their phone. Also waivers, contracts, invoices, and receipts.',
+      'Send an NDA by text in about 30 seconds. The other person verifies with an SMS code and signs on their phone, with no app or login. Waivers and contracts too.',
     loggedInCtaTo: '/dashboard/documents/new',
     loggedInCtaLabel: 'Open Doc Center',
   },

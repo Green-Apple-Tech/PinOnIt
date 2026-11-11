@@ -50,6 +50,8 @@
 /blog/pricing-the-job-before-you-leave-the-driveway  /seo-static/blog/pricing-the-job-before-you-leave-the-driveway.html  200
 /blog/why-email-reminders-still-leave-empty-chairs  /seo-static/blog/why-email-reminders-still-leave-empty-chairs.html  200
 /blog/collecting-a-waiver-on-a-phone-at-check-in  /seo-static/blog/collecting-a-waiver-on-a-phone-at-check-in.html  200
+# Unknown posts. Known posts above win.
+/blog/*  /404.html  404
 /terms  /seo-shell/terms.html  200
 /privacy  /seo-shell/privacy.html  200
 /sms-consent  /seo-shell/sms-consent.html  200

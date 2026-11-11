@@ -193,6 +193,11 @@
   from = "/blog/collecting-a-waiver-on-a-phone-at-check-in"
   to = "/seo-static/blog/collecting-a-waiver-on-a-phone-at-check-in.html"
   status = 200
+# Unknown posts. Known posts above win. A real 404, not the homepage.
+[[redirects]]
+  from = "/blog/*"
+  to = "/404.html"
+  status = 404
 [[redirects]]
   from = "/sign-now"
   to = "/seo-shell/sign-now.html"
@@ -265,6 +270,7 @@
   status = 200
 
 # Host booking slugs — Netlify function forces text/html Content-Type
+# The verification .txt is a real file, and this rule is not forced, so the file wins.
 [[redirects]]
   from = "/:slug"
   to = "/.netlify/functions/booking-shell?slug=:slug"
@@ -290,6 +296,16 @@
 
 # Never cache the HTML shell. Do not put a year-long cache on /assets/* —
 # a Publish race 404 would be stored as immutable and the page stays blank.
+[[headers]]
+  for = "/b97f17963f0e56a0bcb1cf8fe55b0704.txt"
+  [headers.values]
+    Content-Type = "text/plain; charset=utf-8"
+
+[[headers]]
+  for = "/404.html"
+  [headers.values]
+    X-Robots-Tag = "noindex"
+
 [[headers]]
   for = "/creators"
   [headers.values]

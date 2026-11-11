@@ -24,9 +24,9 @@ const LINKS = [
 export const SEO_SHELLS: SeoShell[] = [
   {
     file: 'why-pinonit.html',
-    title: 'Calendly alternative for small business | PinOnIt',
+    title: 'Why PinOnIt: Booking, Signing and Reminders by Text | PinOnIt',
     description:
-      'PinOnIt is the Calendly alternative for small business: Sign by Text, easy booking, WhatsApp and voice reminders, two-way SMS, quotes, QR codes — from $9.99/mo.',
+      'Calendly books meetings. PinOnIt runs your business: Sign-by-Text, booking, WhatsApp and voice reminders, two-way SMS, quotes and QR codes from $9.99/mo.',
     canonical: 'https://pinonit.com/why-pinonit',
     h1: 'Calendly books meetings. PinOnIt runs your business.',
     paragraphs: [
@@ -50,9 +50,9 @@ export const SEO_SHELLS: SeoShell[] = [
   },
   {
     file: 'legal-templates.html',
-    title: 'Waiver and liability form templates — PinOnIt',
+    title: 'Waiver and Liability Form Templates | PinOnIt',
     description:
-      'PinOnIt built-in waivers are general starting points. Requirements vary by state and activity. Download a form from a legal template site and upload it once to send for signature.',
+      "PinOnIt's built-in waivers are general starting points. Rules vary by state and activity, so upload your own form once and send it for signature by text.",
     canonical: 'https://pinonit.com/legal-templates',
     h1: 'Waiver and liability form templates',
     paragraphs: [
@@ -64,7 +64,7 @@ export const SEO_SHELLS: SeoShell[] = [
     file: 'nda.html',
     title: 'Send an NDA over text | PinOnIt Doc Center',
     description:
-      'Send an NDA over text in 30 seconds. No app or login for the other person — they verify by SMS and sign on their phone. Also waivers, contracts, invoices, and receipts.',
+      'Send an NDA by text in about 30 seconds. The other person verifies with an SMS code and signs on their phone, with no app or login. Waivers and contracts too.',
     canonical: 'https://pinonit.com/nda',
     h1: 'Send an NDA over text — verified and signed in 30 seconds',
     paragraphs: [
@@ -166,31 +166,27 @@ function esc(s: string) {
     .replace(/"/g, '&quot;');
 }
 
+function replaceQuoted(html: string, pattern: RegExp, value: string): string {
+  return html.replace(pattern, (_match, open: string, close: string) => `${open}${value}${close}`);
+}
+
 export function injectSeoShell(indexHtml: string, shell: SeoShell): string {
   let html = indexHtml;
-  html = html.replace(/<title>[\s\S]*?<\/title>/, `<title>${esc(shell.title)}</title>`);
-  html = html.replace(
-    /(<meta name="description" content=")[^"]*(")/,
-    `$1${esc(shell.description)}$2`,
-  );
+  const title = esc(shell.title);
+  const description = esc(shell.description);
+  html = html.replace(/<title>[\s\S]*?<\/title>/, () => `<title>${title}</title>`);
+  html = replaceQuoted(html, /(<meta name="description" content=")[^"]*(")/, description);
   const canonical = `<link rel="canonical" href="${esc(shell.canonical)}" />`;
   if (html.includes('rel="canonical"')) {
-    html = html.replace(/<link rel="canonical" href="[^"]*"\s*\/?>/, canonical);
+    html = html.replace(/<link rel="canonical" href="[^"]*"\s*\/?>/, () => canonical);
   } else {
-    html = html.replace('</title>', `</title>\n    ${canonical}`);
+    html = html.replace('</title>', () => `</title>\n    ${canonical}`);
   }
-  html = html.replace(
-    /(<meta property="og:url" content=")[^"]*(")/,
-    `$1${esc(shell.canonical)}$2`,
-  );
-  html = html.replace(
-    /(<meta property="og:title" content=")[^"]*(")/,
-    `$1${esc(shell.title)}$2`,
-  );
-  html = html.replace(
-    /(<meta property="og:description" content=")[^"]*(")/,
-    `$1${esc(shell.description)}$2`,
-  );
+  html = replaceQuoted(html, /(<meta property="og:url" content=")[^"]*(")/, esc(shell.canonical));
+  html = replaceQuoted(html, /(<meta property="og:title" content=")[^"]*(")/, title);
+  html = replaceQuoted(html, /(<meta property="og:description" content=")[^"]*(")/, description);
+  html = replaceQuoted(html, /(<meta name="twitter:title" content=")[^"]*(")/, title);
+  html = replaceQuoted(html, /(<meta name="twitter:description" content=")[^"]*(")/, description);
   const snapshot = [
     `<h1>${esc(shell.h1)}</h1>`,
     ...shell.paragraphs.map((p) => `<p>${esc(p)}</p>`),
@@ -199,6 +195,6 @@ export function injectSeoShell(indexHtml: string, shell: SeoShell): string {
   if (!html.includes('<!--seo-snapshot-->') || !html.includes('<!--/seo-snapshot-->')) {
     throw new Error('index.html is missing seo-snapshot markers');
   }
-  html = html.replace(/<!--seo-snapshot-->[\s\S]*?<!--\/seo-snapshot-->/, `<!--seo-snapshot-->${snapshot}<!--/seo-snapshot-->`);
+  html = html.replace(/<!--seo-snapshot-->[\s\S]*?<!--\/seo-snapshot-->/, () => `<!--seo-snapshot-->${snapshot}<!--/seo-snapshot-->`);
   return html;
 }

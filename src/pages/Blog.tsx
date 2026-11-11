@@ -1,4 +1,4 @@
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { ArrowRight, Moon, Sun } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Footer } from '../components/Footer';
@@ -16,6 +16,7 @@ import {
 import { blogIndexJsonLd, blogPostingJsonLd, organizationJsonLd } from '../lib/jsonLd';
 import { INTENT_OG_IMAGE } from '../lib/seoPaths';
 import { MarketingStickyHeader } from '../components/landing/MarketingAnnouncementBar';
+import { NotFoundPage } from './NotFound';
 
 function BlogChrome({ children }: { children: ReactNode }) {
   const { theme, toggleTheme } = useTheme();
@@ -151,6 +152,6 @@ function PostArticle({ post }: { post: BlogPost }) {
 export function BlogPostPage() {
   const { slug } = useParams();
   const post = slug ? blogPostBySlug(slug) : null;
-  if (!post) return <Navigate to="/blog" replace />;
+  if (!post) return <NotFoundPage />;
   return <PostArticle post={post} />;
 }

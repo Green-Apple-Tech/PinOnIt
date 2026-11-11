@@ -1,9 +1,9 @@
 import { DOCS_TEMPLATE_UPLOAD_PATH } from './hostDocuments';
 
 export const LEGAL_TEMPLATES_META = {
-  title: 'Waiver and liability form templates — PinOnIt',
+  title: 'Waiver and Liability Form Templates | PinOnIt',
   description:
-    'PinOnIt built-in waivers are general starting points. Requirements vary by state and activity. Download a form from a legal template site and upload it once to send for signature.',
+    "PinOnIt's built-in waivers are general starting points. Rules vary by state and activity, so upload your own form once and send it for signature by text.",
   url: 'https://pinonit.com/legal-templates',
   ogImage: 'https://pinonit.com/og-why-pinonit.png',
 };

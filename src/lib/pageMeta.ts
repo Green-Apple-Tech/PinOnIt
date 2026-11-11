@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 export const SITE_OG = {
   title: 'Run your business by text | PinOnIt',
   description:
-    'PinOnIt helps small businesses send documents for signature by text, create quotes, schedule appointments, and send reminders. Customers pay you on your own Zelle, Cash App, Venmo, or PayPal link. $9.99/month.',
+    'Send quotes, get documents signed, book appointments and send reminders, all by text. Customers pay your own Zelle, Cash App, Venmo or PayPal link. $9.99/mo.',
   url: 'https://pinonit.com/',
   image: 'https://pinonit.com/og-why-pinonit.png',
   /** Large landscape banner for the marketing site. */
@@ -46,6 +46,8 @@ export function usePageMeta(opts: {
   twitterCard?: 'summary' | 'summary_large_image';
   /** Guest token pages should pass noindex, nofollow. */
   robots?: string;
+  /** 404 pages must not advertise the homepage as their canonical URL. */
+  omitCanonical?: boolean;
 }) {
   useEffect(() => {
     const prev = document.title;
@@ -68,7 +70,11 @@ export function usePageMeta(opts: {
     upsertMeta('meta[name="twitter:title"]', { name: 'twitter:title', content: shareTitle });
     upsertMeta('meta[name="twitter:description"]', { name: 'twitter:description', content: opts.description });
     upsertMeta('meta[name="twitter:image"]', { name: 'twitter:image', content: opts.image });
-    upsertLink('canonical', opts.url);
+    if (opts.omitCanonical) {
+      document.head.querySelector('link[rel="canonical"]')?.remove();
+    } else {
+      upsertLink('canonical', opts.url);
+    }
     if (opts.robots) {
       upsertMeta('meta[name="robots"]', { name: 'robots', content: opts.robots });
     }
@@ -88,5 +94,5 @@ export function usePageMeta(opts: {
         upsertMeta('meta[name="robots"]', { name: 'robots', content: 'index, follow' });
       }
     };
-  }, [opts.title, opts.description, opts.url, opts.image, opts.ogTitle, opts.twitterCard, opts.robots]);
+  }, [opts.title, opts.description, opts.url, opts.image, opts.ogTitle, opts.twitterCard, opts.robots, opts.omitCanonical]);
 }

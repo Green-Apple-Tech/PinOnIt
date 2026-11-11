@@ -509,15 +509,19 @@ export function BookPage({ rescheduleSession }: { rescheduleSession?: Reschedule
   const continueRef = useRef<HTMLDivElement>(null);
 
   const shareTitle = bookingShareTitle(host);
+  const pageMissing = !loading && !host && !singleUseLinkInvalid && !linkExpired;
   usePageMeta({
-    title: `${shareTitle} | PinOnIt`,
-    ogTitle: shareTitle,
-    description: bookingShareDescription(host),
-    url: slug ? bookingShareCanonical(slug) : 'https://pinonit.com',
+    title: pageMissing ? 'Page not found | PinOnIt' : `${shareTitle} | PinOnIt`,
+    ogTitle: pageMissing ? 'Page not found | PinOnIt' : shareTitle,
+    description: pageMissing ? "This page doesn't exist or may have been moved." : bookingShareDescription(host),
+    url: pageMissing
+      ? (typeof window !== 'undefined' ? window.location.href : 'https://pinonit.com/404')
+      : (slug ? bookingShareCanonical(slug) : 'https://pinonit.com'),
     image: bookingShareImage(host),
     // Smaller side thumbnail in iMessage / social (vs large homepage banner)
     twitterCard: 'summary',
-    robots: token ? 'noindex, nofollow' : undefined,
+    robots: pageMissing ? 'noindex' : token ? 'noindex, nofollow' : undefined,
+    omitCanonical: pageMissing,
   });
 
   const handleDateSelect = useCallback((dateKey: string) => {

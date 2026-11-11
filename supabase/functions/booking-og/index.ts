@@ -169,6 +169,25 @@ Deno.serve(async (req: Request) => {
   }
 
   const slug = slugFromRequest(req).toLowerCase();
+  const isBookingSlug = Boolean(slug) && !RESERVED.has(slug) && SLUG_RE.test(slug);
+  let host: BookingShareHost | null = null;
+  if (isBookingSlug) {
+    host = await loadHost(slug);
+    if (!host) {
+      return new Response(
+        `<!doctype html><html lang="en"><head><meta charset="UTF-8" /><title>Page not found | PinOnIt</title><meta name="robots" content="noindex" /></head><body><h1>Page not found</h1><p>This page doesn't exist or may have been moved.</p><p><a href="/">Back to home</a></p></body></html>`,
+        {
+          status: 404,
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': 'public, max-age=60',
+            'X-Robots-Tag': 'noindex',
+          },
+        },
+      );
+    }
+  }
+
   const cacheKey = slug || '_';
   const cached = pageCache.get(cacheKey);
   if (cached && cached.exp > Date.now()) {
@@ -181,12 +200,6 @@ Deno.serve(async (req: Request) => {
       status: 503,
       headers: { 'Content-Type': 'text/plain; charset=utf-8' },
     });
-  }
-
-  const isBookingSlug = Boolean(slug) && !RESERVED.has(slug) && SLUG_RE.test(slug);
-  let host: BookingShareHost | null = null;
-  if (isBookingSlug) {
-    host = await loadHost(slug);
   }
 
   let meta: {

@@ -82,7 +82,7 @@ export const MORE_INTENT_PAGES: IntentPage[] = [
     cta: CTA,
     ctaTo: '/signup',
     metaTitle: 'Affordable DocuSign alternative for small business | PinOnIt',
-    metaDescription: `An affordable DocuSign alternative for a small business: sign documents by text, with an SMS code and an audit record. PinOnIt is ${PINONIT_PRICE_MONTHLY} after trial. Not a full DocuSign replacement.`,
+    metaDescription: 'An affordable DocuSign alternative for small businesses: sign documents by text with an SMS code and an audit record. $9.99/month after trial.',
     canonical: intentCanonical('/docusign-alternative'),
   },
   {
@@ -135,7 +135,7 @@ export const MORE_INTENT_PAGES: IntentPage[] = [
     cta: 'Try Sign-by-Text',
     ctaTo: '/signup',
     metaTitle: 'Sign documents by text | PinOnIt',
-    metaDescription: `Sign documents by text. Send an SMS link, they enter a code, and they sign with a finger. The code checks phone access, not legal identity. PinOnIt is ${PINONIT_PRICE_MONTHLY}.`,
+    metaDescription: 'Send an SMS link, they enter a code and sign with a finger. The code checks phone access, not legal identity. PinOnIt Sign-by-Text is $9.99/month.',
     canonical: intentCanonical('/sign-by-text'),
   },
   {
@@ -500,7 +500,7 @@ export const MORE_INTENT_PAGES: IntentPage[] = [
     cta: CTA,
     ctaTo: '/signup',
     metaTitle: 'Service business software | PinOnIt',
-    metaDescription: `Affordable, mobile-first software for small service businesses: booking, SMS reminders, Sign-by-Text, quotes, and simple documents. PinOnIt is ${PINONIT_PRICE_MONTHLY} after trial.`,
+    metaDescription: 'Mobile-first software for small service businesses: booking, SMS reminders, Sign-by-Text, quotes and simple documents. $9.99/month after trial.',
     canonical: intentCanonical('/service-business-software'),
   },
   {
@@ -565,7 +565,7 @@ export const MORE_INTENT_PAGES: IntentPage[] = [
     cta: CTA,
     ctaTo: '/signup',
     metaTitle: 'Calendly and DocuSign alternative for small shops | PinOnIt',
-    metaDescription: `PinOnIt covers basic Calendly-style booking with SMS reminders and basic DocuSign-style signatures by text. ${PINONIT_PRICE_MONTHLY} after trial — not a full clone of either product.`,
+    metaDescription: 'Basic Calendly-style booking with SMS reminders plus basic DocuSign-style signatures by text, in one app for $9.99/month after trial. Not a full clone.',
     canonical: intentCanonical('/calendly-docusign-alternative'),
   },
   {
