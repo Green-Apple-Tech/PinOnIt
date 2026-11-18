@@ -105,9 +105,6 @@ const CreatorDashboardPage = lazy(() =>
 const CreatorAdminPage = lazy(() =>
   import('./pages/CreatorAdmin').then((m) => ({ default: m.CreatorAdminPage })),
 );
-const RedditOpportunitiesPage = lazy(() =>
-  import('./pages/RedditOpportunities').then((m) => ({ default: m.RedditOpportunitiesPage })),
-);
 const StandingJobsPage = lazy(() =>
   import('./pages/StandingJobs').then((m) => ({ default: m.StandingJobsPage })),
 );
@@ -319,7 +316,6 @@ function App() {
               <Route path="documents" element={<DocumentsPage />} />
               <Route path="documents/new" element={<DocumentsNewRoute />} />
               <Route path="marketing-traffic" element={<MarketingTrafficPage />} />
-              <Route path="reddit-opportunities" element={<RedditOpportunitiesPage />} />
               <Route path="creator" element={<CreatorDashboardPage />} />
               <Route path="creator-admin" element={<CreatorAdminPage />} />
             </Route>

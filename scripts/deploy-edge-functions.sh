@@ -50,11 +50,6 @@ deploy write-calendar-event
 deploy parse-personal-reminder
 deploy ack-personal-reminder --no-verify-jwt
 deploy sms-inbound --no-verify-jwt
-# Scheduled discovery calls this with a shared secret, not a user JWT.
-# The function still rejects anyone who is not staff and does not have that secret.
-deploy reddit-opportunity-search --no-verify-jwt
-deploy reddit-oauth-start
-deploy reddit-oauth-callback --no-verify-jwt
 # Partner sites authenticate with x-intake-secret, not a Supabase JWT.
 deploy reminder-intake --no-verify-jwt
 # Other projects authenticate with x-lead-alert-token, not a Supabase JWT.
