@@ -18,6 +18,10 @@ export function Footer() {
             Why PinOnIt
           </Link>
           <span className="hidden sm:inline">|</span>
+          <Link to="/templates" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+            Document Center
+          </Link>
+          <span className="hidden sm:inline">|</span>
           <Link to="/legal-templates" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
             Waiver templates
           </Link>

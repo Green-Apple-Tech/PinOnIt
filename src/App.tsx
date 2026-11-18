@@ -126,6 +126,12 @@ const WhyPinOnItPage = lazy(() =>
 const LegalTemplatesPage = lazy(() =>
   import('./pages/LegalTemplates').then((m) => ({ default: m.LegalTemplatesPage })),
 );
+const DocumentCenterIndexPage = lazy(() =>
+  import('./pages/DocumentCenter').then((m) => ({ default: m.DocumentCenterIndexPage })),
+);
+const DocumentCenterTemplatePage = lazy(() =>
+  import('./pages/DocumentCenter').then((m) => ({ default: m.DocumentCenterTemplatePage })),
+);
 const BlogIndexPage = lazy(() =>
   import('./pages/Blog').then((m) => ({ default: m.BlogIndexPage })),
 );
@@ -239,6 +245,8 @@ function App() {
             <Route path="/reminders" element={<LazyPage><CampaignLandingPage slug="reminders" /></LazyPage>} />
             <Route path="/why-pinonit" element={<LazyPage><WhyPinOnItPage /></LazyPage>} />
             <Route path="/legal-templates" element={<LazyPage><LegalTemplatesPage /></LazyPage>} />
+            <Route path="/templates" element={<LazyPage><DocumentCenterIndexPage /></LazyPage>} />
+            <Route path="/templates/:slug" element={<LazyPage><DocumentCenterTemplatePage /></LazyPage>} />
             <Route path="/blog" element={<LazyPage><BlogIndexPage /></LazyPage>} />
             <Route path="/blog/:slug" element={<LazyPage><BlogPostPage /></LazyPage>} />
             <Route path="/terms" element={<LazyPage><TermsPage /></LazyPage>} />

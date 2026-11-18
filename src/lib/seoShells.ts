@@ -1,5 +1,11 @@
 /** Crawlable copy for public pages that still boot the React app. Must match the page visitors see. */
 
+import {
+  DOCUMENT_CENTER_DISCLAIMER,
+  DOCUMENT_CENTER_INDEX,
+  DOCUMENT_CENTER_TEMPLATES,
+} from './documentCenter';
+
 export type SeoShell = {
   file: string;
   title: string;
@@ -156,6 +162,36 @@ export const SEO_SHELLS: SeoShell[] = [
     ],
     links: [{ href: '/', label: 'PinOnIt home' }],
   },
+  {
+    file: 'templates.html',
+    title: DOCUMENT_CENTER_INDEX.title,
+    description: DOCUMENT_CENTER_INDEX.description,
+    canonical: DOCUMENT_CENTER_INDEX.canonical,
+    h1: DOCUMENT_CENTER_INDEX.h1,
+    paragraphs: [DOCUMENT_CENTER_INDEX.intro, DOCUMENT_CENTER_DISCLAIMER],
+    links: [
+      ...DOCUMENT_CENTER_TEMPLATES.map((t) => ({ href: t.path, label: t.title })),
+      { href: '/legal-templates', label: 'Waiver templates' },
+      ...LINKS,
+    ],
+  },
+  ...DOCUMENT_CENTER_TEMPLATES.map((t) => ({
+    file: `templates-${t.slug}.html`,
+    title: t.metaTitle,
+    description: t.metaDescription,
+    canonical: `https://pinonit.com${t.path}`,
+    h1: t.h1,
+    paragraphs: [t.summary, DOCUMENT_CENTER_DISCLAIMER],
+    links: [
+      { href: '/templates', label: 'Document Center' },
+      ...DOCUMENT_CENTER_TEMPLATES.filter((other) => other.slug !== t.slug).map((other) => ({
+        href: other.path,
+        label: other.title,
+      })),
+      { href: '/legal-templates', label: 'Waiver templates' },
+    ],
+  })),
+
 ];
 
 function esc(s: string) {

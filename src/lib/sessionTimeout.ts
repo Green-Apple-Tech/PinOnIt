@@ -65,6 +65,7 @@ const PUBLIC_APP_ROOTS = new Set([
   'signup',
   'sms-consent',
   'status',
+  'templates',
   'terms',
   'why-pinonit',
 ]);
