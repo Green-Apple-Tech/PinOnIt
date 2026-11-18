@@ -14,6 +14,7 @@ import {
   websiteJsonLd,
 } from '../src/lib/jsonLd.ts';
 import { injectSeoShell, SEO_SHELLS } from '../src/lib/seoShells.ts';
+import { DOCUMENT_CENTER_INDEX, DOCUMENT_CENTER_TEMPLATES } from '../src/lib/documentCenter.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = join(root, 'public', 'seo-static');
@@ -271,6 +272,12 @@ const extraSitemap: Array<{ loc: string; changefreq: string; priority: string; l
   ...BLOG_POSTS.map((p) => ({ loc: p.canonical, changefreq: 'monthly', priority: '0.5' })),
   { loc: `${PINONIT_ORG.url}/why-pinonit`, changefreq: 'monthly', priority: '0.7' },
   { loc: `${PINONIT_ORG.url}/legal-templates`, changefreq: 'monthly', priority: '0.6' },
+  { loc: DOCUMENT_CENTER_INDEX.canonical, changefreq: 'weekly', priority: '0.8' },
+  ...DOCUMENT_CENTER_TEMPLATES.map((t) => ({
+    loc: `${PINONIT_ORG.url}${t.path}`,
+    changefreq: 'monthly',
+    priority: '0.7',
+  })),
   { loc: `${PINONIT_ORG.url}/sign-now`, changefreq: 'monthly', priority: '0.8' },
   { loc: `${PINONIT_ORG.url}/nda`, changefreq: 'monthly', priority: '0.6' },
   { loc: `${PINONIT_ORG.url}/reminders`, changefreq: 'monthly', priority: '0.6' },

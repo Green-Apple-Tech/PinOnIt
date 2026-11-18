@@ -75,6 +75,14 @@ export function LegalTemplatesPage() {
             You can download a state-specific form from a legal template site, upload it into PinOnIt once,
             and send it for signature by text.
           </p>
+          <p className="mt-4 text-slate-600 dark:text-slate-300 leading-relaxed">
+            For Miami and Florida trade starting templates — handyman, contractor estimates, lawn care,
+            cleaning, and painting — see the{' '}
+            <Link to="/templates" className="text-brand-600 dark:text-brand-400 font-medium hover:underline">
+              Document Center
+            </Link>
+            .
+          </p>
 
           <section className="mt-10">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">Example template sites</h2>

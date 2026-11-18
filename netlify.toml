@@ -106,6 +106,30 @@
   to = "/seo-shell/legal-templates.html"
   status = 200
 [[redirects]]
+  from = "/templates"
+  to = "/seo-shell/templates.html"
+  status = 200
+[[redirects]]
+  from = "/templates/miami-fl-handyman-service-agreement"
+  to = "/seo-shell/templates-miami-fl-handyman-service-agreement.html"
+  status = 200
+[[redirects]]
+  from = "/templates/florida-contractor-estimate-invoice"
+  to = "/seo-shell/templates-florida-contractor-estimate-invoice.html"
+  status = 200
+[[redirects]]
+  from = "/templates/miami-lawn-care-service-agreement"
+  to = "/seo-shell/templates-miami-lawn-care-service-agreement.html"
+  status = 200
+[[redirects]]
+  from = "/templates/miami-house-cleaning-service-agreement"
+  to = "/seo-shell/templates-miami-house-cleaning-service-agreement.html"
+  status = 200
+[[redirects]]
+  from = "/templates/florida-painting-contractor-agreement"
+  to = "/seo-shell/templates-florida-painting-contractor-agreement.html"
+  status = 200
+[[redirects]]
   from = "/docusign-alternative-simple-signatures"
   to = "/seo-static/docusign-alternative-simple-signatures.html"
   status = 200
