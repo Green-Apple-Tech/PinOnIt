@@ -1,6 +1,7 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { INTENT_OG_IMAGE } from '../src/lib/seoPaths.ts';
 import { INTENT_PAGES } from '../src/lib/seoIntentPages.ts';
 import { BLOG_INDEX, BLOG_POSTS, type BlogPost } from '../src/lib/blogPosts.ts';
 import { PINONIT_CORE_SENTENCE, PINONIT_ORG, PINONIT_PRICE_MONTHLY } from '../src/lib/seoIdentity.ts';
@@ -94,11 +95,12 @@ function pageHtml(page: (typeof INTENT_PAGES)[number]) {
   <meta property="og:title" content="${esc(page.metaTitle)}" />
   <meta property="og:description" content="${esc(page.metaDescription)}" />
   <meta property="og:url" content="${esc(page.canonical)}" />
-  <meta property="og:image" content="https://pinonit.com/og-why-pinonit.png" />
+  <meta property="og:image" content="${esc(INTENT_OG_IMAGE)}" />
   <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${esc(page.metaTitle)}" />
   <meta name="twitter:description" content="${esc(page.metaDescription)}" />
+  <meta name="twitter:image" content="${esc(INTENT_OG_IMAGE)}" />
   <meta name="robots" content="index, follow" />
   <link rel="icon" type="image/png" href="/pinonit_logo.png" />
   <script type="application/ld+json">${JSON.stringify(ld)}</script>
@@ -173,11 +175,12 @@ function shell(title: string, description: string, canonical: string, ld: unknow
   <meta property="og:title" content="${esc(title)}" />
   <meta property="og:description" content="${esc(description)}" />
   <meta property="og:url" content="${esc(canonical)}" />
-  <meta property="og:image" content="https://pinonit.com/og-why-pinonit.png" />
+  <meta property="og:image" content="${esc(INTENT_OG_IMAGE)}" />
   <meta property="og:type" content="article" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${esc(title)}" />
   <meta name="twitter:description" content="${esc(description)}" />
+  <meta name="twitter:image" content="${esc(INTENT_OG_IMAGE)}" />
   <meta name="robots" content="index, follow" />
   <link rel="icon" type="image/png" href="/pinonit_logo.png" />
   <script type="application/ld+json">${JSON.stringify(ld)}</script>
@@ -259,7 +262,35 @@ for (const post of BLOG_POSTS) {
   console.log('wrote', file);
 }
 
-const CONTENT_CHANGED = '2026-10-14';
+// Date the page's content or SEO tags last changed. Do not stamp every URL with one day.
+// 2026-11-11: titles and descriptions in commit 93f1a4b (the Nov SEO pass).
+// 2026-11-18: Document Center templates published.
+// 2026-11-22: twitter:image on intent and blog pages, and the shorter Calendly title.
+const LASTMOD_SEO_COPY = '2026-11-11';
+const LASTMOD_TEMPLATES = '2026-11-18';
+const LASTMOD_SHARE_TAGS = '2026-11-22';
+const SEO_COPY_PATHS = new Set([
+  '/',
+  '/why-pinonit',
+  '/legal-templates',
+  '/sign-now',
+  '/nda',
+  '/reminders',
+  '/terms',
+  '/privacy',
+  '/sms-consent',
+  '/acceptable-use',
+  '/status',
+]);
+
+function lastmodFor(loc: string): string {
+  const path = loc === PINONIT_ORG.url || loc === `${PINONIT_ORG.url}/`
+    ? '/'
+    : loc.slice(PINONIT_ORG.url.length);
+  if (path === '/templates' || path.startsWith('/templates/')) return LASTMOD_TEMPLATES;
+  if (SEO_COPY_PATHS.has(path)) return LASTMOD_SEO_COPY;
+  return LASTMOD_SHARE_TAGS;
+}
 
 const extraSitemap: Array<{ loc: string; changefreq: string; priority: string; lastmod?: string }> = [
   { loc: `${PINONIT_ORG.url}/`, changefreq: 'weekly', priority: '1.0' },
@@ -286,7 +317,7 @@ const extraSitemap: Array<{ loc: string; changefreq: string; priority: string; l
   { loc: `${PINONIT_ORG.url}/sms-consent`, changefreq: 'yearly', priority: '0.3' },
   { loc: `${PINONIT_ORG.url}/acceptable-use`, changefreq: 'yearly', priority: '0.3' },
   { loc: `${PINONIT_ORG.url}/status`, changefreq: 'weekly', priority: '0.2' },
-].map((u) => ({ ...u, lastmod: CONTENT_CHANGED }));
+].map((u) => ({ ...u, lastmod: lastmodFor(u.loc) }));
 
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

@@ -150,7 +150,7 @@ const CORE_INTENT_PAGES: IntentPage[] = [
     ],
     cta: 'Start 14-day trial',
     ctaTo: '/signup',
-    metaTitle: 'Calendly Alternative with SMS, WhatsApp & Voice Reminders | PinOnIt',
+    metaTitle: 'Calendly Alternative with SMS & WhatsApp Reminders | PinOnIt',
     metaDescription: `Looking for a Calendly alternative? PinOnIt combines online scheduling with SMS, WhatsApp and voice reminders, plus Sign-by-Text tools for ${PINONIT_PRICE_MONTHLY}.`,
     canonical: intentCanonical('/calendly-alternative'),
   },

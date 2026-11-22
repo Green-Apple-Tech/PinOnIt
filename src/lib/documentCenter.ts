@@ -39,7 +39,7 @@ export const DOCUMENT_CENTER_INDEX = {
   path: '/templates',
   title: 'Document Center — Miami and Florida trade templates | PinOnIt',
   description:
-    'Free starting templates for Miami and Florida trades. Fill a service agreement or estimate, then send it for signature by text. Signing requires a free PinOnIt account. $9.99/month after a 14-day trial.',
+    'Free Miami and Florida service agreement and estimate templates. Fill one in and send it for signature by text with a free PinOnIt account.',
   h1: 'Document Center',
   eyebrow: 'Miami & Florida templates',
   intro:

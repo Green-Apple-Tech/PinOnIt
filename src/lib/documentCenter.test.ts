@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   DOCUMENT_CENTER_CTA,
@@ -72,6 +73,28 @@ describe('document center', () => {
     expect(documentCenterSignupHref('miami-fl-handyman-service-agreement')).toBe(
       '/signup?utm_source=document-center&utm_medium=templates&utm_campaign=document-center&utm_content=miami-fl-handyman-service-agreement',
     );
+  });
+
+  it('keeps the index description within a search-snippet length', () => {
+    expect(DOCUMENT_CENTER_INDEX.description.length).toBeLessThanOrEqual(160);
+    expect(DOCUMENT_CENTER_INDEX.description.length).toBeGreaterThan(40);
+  });
+
+  it('serves /templates from the document-center shell before the booking slug rule', () => {
+    const redirects = readFileSync(new URL('../../public/_redirects', import.meta.url), 'utf8');
+    const netlify = readFileSync(new URL('../../netlify.toml', import.meta.url), 'utf8');
+    const booking = redirects.search(/^\/:slug\s/m);
+    expect(booking).toBeGreaterThan(0);
+    const rules = [
+      '/templates  /seo-shell/templates.html  200',
+      ...DOCUMENT_CENTER_TEMPLATES.map((t) => `${t.path}  /seo-shell/templates-${t.slug}.html  200`),
+    ];
+    for (const rule of rules) {
+      const at = redirects.indexOf(rule);
+      expect(at).toBeGreaterThan(-1);
+      expect(at).toBeLessThan(booking);
+      expect(netlify).toContain(`to = "${rule.split('  ')[1]}"`);
+    }
   });
 
   it('fills placeholders and links each template to the others', () => {
