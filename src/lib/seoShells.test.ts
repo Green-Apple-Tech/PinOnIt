@@ -23,6 +23,11 @@ describe('seo shells', () => {
       expect(html).toContain(`<title>${shell.title}</title>`);
       expect(html).toContain(`<h1>${shell.h1.replace(/&/g, '&amp;')}</h1>`);
       expect(html).toContain(`<link rel="canonical" href="${shell.canonical}" />`);
+      expect(html).not.toMatch(/<link rel="canonical" href="https:\/\/pinonit.com\/"\s*\/?>/);
+      expect(html).toContain(`<meta property="og:url" content="${shell.canonical}" />`);
+      expect(html).toContain(`<meta property="og:title" content="${shell.title}" />`);
+      expect(html).toContain('<meta name="twitter:card" content="summary_large_image" />');
+      expect(html).toContain('<meta name="twitter:image" content="https://pinonit.com/og-why-pinonit.png" />');
       expect(html).toContain(`<meta name="twitter:title" content="${shell.title}" />`);
       expect(html).toContain(`<meta name="twitter:description" content="${shell.description}" />`);
       expect(html).toContain('id="boot-splash"');

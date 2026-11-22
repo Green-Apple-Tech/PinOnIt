@@ -168,7 +168,11 @@ export const SEO_SHELLS: SeoShell[] = [
     description: DOCUMENT_CENTER_INDEX.description,
     canonical: DOCUMENT_CENTER_INDEX.canonical,
     h1: DOCUMENT_CENTER_INDEX.h1,
-    paragraphs: [DOCUMENT_CENTER_INDEX.intro, DOCUMENT_CENTER_DISCLAIMER],
+    paragraphs: [
+      DOCUMENT_CENTER_INDEX.intro,
+      ...DOCUMENT_CENTER_TEMPLATES.map((t) => `${t.title}. ${t.summary}`),
+      DOCUMENT_CENTER_DISCLAIMER,
+    ],
     links: [
       ...DOCUMENT_CENTER_TEMPLATES.map((t) => ({ href: t.path, label: t.title })),
       { href: '/legal-templates', label: 'Waiver templates' },

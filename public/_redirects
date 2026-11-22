@@ -28,6 +28,13 @@
 /reminders  /seo-shell/reminders.html  200
 /why-pinonit  /seo-shell/why-pinonit.html  200
 /legal-templates  /seo-shell/legal-templates.html  200
+# Document Center. Must sit above /:slug or booking-shell 404s /templates.
+/templates  /seo-shell/templates.html  200
+/templates/miami-fl-handyman-service-agreement  /seo-shell/templates-miami-fl-handyman-service-agreement.html  200
+/templates/florida-contractor-estimate-invoice  /seo-shell/templates-florida-contractor-estimate-invoice.html  200
+/templates/miami-lawn-care-service-agreement  /seo-shell/templates-miami-lawn-care-service-agreement.html  200
+/templates/miami-house-cleaning-service-agreement  /seo-shell/templates-miami-house-cleaning-service-agreement.html  200
+/templates/florida-painting-contractor-agreement  /seo-shell/templates-florida-painting-contractor-agreement.html  200
 /docusign-alternative-simple-signatures  /seo-static/docusign-alternative-simple-signatures.html  200
 /docusign-alternative  /seo-static/docusign-alternative.html  200
 /sign-by-text  /seo-static/sign-by-text.html  200

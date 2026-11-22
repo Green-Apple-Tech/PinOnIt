@@ -57,9 +57,36 @@ describe('SEO intent pages', () => {
   it('lists every intent URL in the sitemap and omits the retired Calendly slug', () => {
     const xml = readFileSync(new URL('../../public/sitemap.xml', import.meta.url), 'utf8');
     expect(xml).not.toContain('calendly-alternative-for-small-business');
+    expect(xml).not.toContain('<lastmod>2026-10-14</lastmod>');
+    expect(xml).toContain('<loc>https://pinonit.com/</loc><lastmod>2026-11-11</lastmod>');
+    expect(xml).toContain('<loc>https://pinonit.com/templates</loc><lastmod>2026-11-18</lastmod>');
+    expect(xml).toContain('<loc>https://pinonit.com/templates/miami-lawn-care-service-agreement</loc><lastmod>2026-11-18</lastmod>');
+    expect(xml).toContain('<loc>https://pinonit.com/why-pinonit</loc><lastmod>2026-11-11</lastmod>');
+    expect(xml).toContain('<loc>https://pinonit.com/calendly-alternative</loc><lastmod>2026-11-22</lastmod>');
+    expect(xml).toContain('<loc>https://pinonit.com/blog</loc><lastmod>2026-11-22</lastmod>');
     for (const page of INTENT_PAGES) {
       expect(xml).toContain(`${page.canonical}</loc>`);
     }
+  });
+
+  it('keeps the Calendly alternative title within a search-result length', () => {
+    const page = INTENT_PAGES.find((p) => p.path === '/calendly-alternative');
+    expect(page?.metaTitle).toBe('Calendly Alternative with SMS & WhatsApp Reminders | PinOnIt');
+    expect(page!.metaTitle.length).toBeLessThanOrEqual(60);
+  });
+
+  it('writes twitter:card and twitter:image into every prerendered public page', () => {
+    const image = '<meta name="twitter:image" content="https://pinonit.com/og-why-pinonit.png" />';
+    const card = '<meta name="twitter:card" content="summary_large_image" />';
+    for (const page of INTENT_PAGES) {
+      const html = readFileSync(new URL(`../../public/seo-static/${page.slug}.html`, import.meta.url), 'utf8');
+      expect(html).toContain(card);
+      expect(html).toContain(image);
+      expect(html).toContain('<meta property="og:image" content="https://pinonit.com/og-why-pinonit.png" />');
+    }
+    const blogIndex = readFileSync(new URL('../../public/seo-static/blog/index.html', import.meta.url), 'utf8');
+    expect(blogIndex).toContain(card);
+    expect(blogIndex).toContain(image);
   });
 
   it('derives SoftwareApplication price from the live Pro config', () => {
